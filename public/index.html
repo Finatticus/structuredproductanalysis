@@ -5,7 +5,7 @@
 <title>Structured Products Analytics</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <style>
-*{box-sizing:border-box;font-family:"Segoe UI", "Noto Sans TC", Arial, sans-serif;}
+*{box-sizing:border-box;font-family:"Segoe UI","Noto Sans TC",Arial,sans-serif;}
 body{margin:0;height:100vh;background:linear-gradient(135deg,#f5f7fa,#e8edf3);display:flex;align-items:center;justify-content:center;color:#1f2937;}
 .login-card{width:380px;background:#fff;padding:36px 40px;border-radius:14px;box-shadow:0 20px 40px rgba(0,0,0,0.08);}
 .logo{text-align:center;margin-bottom:28px;}
@@ -41,7 +41,7 @@ button:hover{background:#143a5c;}
   <button onclick="login()">登入</button>
   <button onclick="register()">註冊</button>
 
-  <div class="error" id="errorMsg">帳號或密碼錯誤，或尚未審核</div>
+  <div class="error" id="errorMsg"></div>
   <div class="footer">© 2026 Fixed Coupon Note (FCN)</div>
 </div>
 
@@ -50,21 +50,29 @@ function login() {
   const username=document.getElementById("username").value.trim();
   const password=document.getElementById("password").value;
   const errorMsg=document.getElementById("errorMsg");
+  errorMsg.style.display="none";
 
   fetch("/login",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({username,password})
   })
-  .then(res=>{if(res.status===200) window.location.href="123.html"; else errorMsg.style.display="block";});
+  .then(res=>{
+    if(res.status===200) window.location.href="123.html";
+    else return res.text().then(msg=>{ errorMsg.textContent=msg; errorMsg.style.display="block"; });
+  })
+  .catch(()=>{ errorMsg.textContent="登入失敗"; errorMsg.style.display="block"; });
 }
 
 function register() {
   const username=document.getElementById("username").value.trim();
   const password=document.getElementById("password").value;
   const errorMsg=document.getElementById("errorMsg");
+  errorMsg.style.display="none";
 
-  if(!username || !password){ errorMsg.textContent="帳號和密碼不能空白"; errorMsg.style.display="block"; return; }
+  if(!username || !password){
+    errorMsg.textContent="帳號和密碼不能空白"; errorMsg.style.display="block"; return;
+  }
 
   fetch("/register",{
     method:"POST",
@@ -72,12 +80,12 @@ function register() {
     body:JSON.stringify({username,password})
   })
   .then(res=>res.text())
-  .then(msg=>alert(msg))
+  .then(msg=>{ alert(msg); document.getElementById("username").value=""; document.getElementById("password").value=""; })
   .catch(()=>alert("註冊失敗"));
 }
 
-// Enter 鍵登入
 document.addEventListener("keydown",function(e){if(e.key==="Enter") login();});
 </script>
+
 </body>
 </html>

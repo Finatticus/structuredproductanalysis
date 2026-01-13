@@ -2,47 +2,51 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>管理員介面</title>
+<title>Admin Panel</title>
 <style>
-body{font-family:Arial,sans-serif;margin:20px;}
+body{font-family:"Segoe UI","Noto Sans TC",Arial,sans-serif;padding:20px;background:#f5f7fa;}
 table{border-collapse:collapse;width:100%;}
-th,td{border:1px solid #ccc;padding:8px;text-align:center;}
-button{padding:5px 10px;cursor:pointer;}
+th,td{border:1px solid #ccc;padding:8px;text-align:left;}
+th{background:#0f2a44;color:#fff;}
+button{padding:5px 10px;border:none;border-radius:5px;background:#0f2a44;color:#fff;cursor:pointer;}
+button:hover{background:#143a5c;}
 </style>
 </head>
 <body>
-<h1>管理員介面</h1>
-<table id="userTable">
-<tr><th>ID</th><th>帳號</th><th>密碼</th><th>狀態</th><th>操作</th></tr>
+<h2>帳號管理</h2>
+<table>
+<thead><tr><th>ID</th><th>帳號</th><th>狀態</th><th>操作</th></tr></thead>
+<tbody id="userTable"></tbody>
 </table>
 
 <script>
 function loadUsers() {
   fetch("/admin/users")
-  .then(res=>res.json())
-  .then(data=>{
-    const table=document.getElementById("userTable");
-    table.innerHTML="<tr><th>ID</th><th>帳號</th><th>密碼</th><th>狀態</th><th>操作</th></tr>";
-    data.forEach(u=>{
-      const row=document.createElement("tr");
-      row.innerHTML=`<td>${u.id}</td><td>${u.username}</td><td>${u.password}</td><td>${u.status}</td>
-        <td>${u.status==='pending'?'<button onclick="approve('+u.id+')">批准</button>':'已批准'}</td>`;
-      table.appendChild(row);
+    .then(res=>res.json())
+    .then(data=>{
+      const tbody=document.getElementById("userTable");
+      tbody.innerHTML="";
+      data.forEach(user=>{
+        const tr=document.createElement("tr");
+        tr.innerHTML=`<td>${user.id}</td><td>${user.username}</td><td>${user.status}</td>
+        <td>${user.status==='pending'?`<button onclick="approve(${user.id})">批准</button>`:""}</td>`;
+        tbody.appendChild(tr);
+      });
     });
-  });
 }
 
-function approve(id){
+function approve(id) {
   fetch("/admin/approve",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({id})
   })
-  .then(res=>res.json())
-  .then(()=>loadUsers());
+  .then(res=>res.text())
+  .then(msg=>{ alert(msg); loadUsers(); })
+  .catch(()=>alert("操作失敗"));
 }
 
-window.onload=loadUsers;
+loadUsers();
 </script>
 </body>
 </html>
