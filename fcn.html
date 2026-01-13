@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鳳凰式票據評價系統 - 穩定性優化版</title>
+    <title>鳳凰式票據評價系統 - UI 優化版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    
     <style>
         :root {
             --bg-color: #f4f7fa;
@@ -55,7 +57,7 @@
 
         .stock-charts-area { display: grid; grid-template-columns: 1fr; gap: 30px; }
         .stock-card { background: var(--card-bg); padding: 25px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(60,64,67,.1); }
-        .canvas-container { height: 420px; width: 100%; margin-top: 15px; }
+        .canvas-container { height: 420px; width: 100%; margin-top: 15px; cursor: crosshair; }
 
         .stats-panel { margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .stat-box { background: var(--accent); padding: 15px; border-radius: 6px; text-align: center; border: 1px solid rgba(26,115,232,0.1); }
@@ -77,8 +79,18 @@
             <div class="input-group"><label>KI Observation</label><select id="kiType"><option value="AKI">AKI (Continuous)</option><option value="EKI">EKI (Maturity Only)</option></select></div>
             <div class="input-group"><label>Strike (%)</label><input type="number" id="strikePct" value="75"></div>
             <div class="input-group"><label>Duration (Mon)</label><input type="number" id="months" value="6"></div>
-            <div class="input-group"><label>Annual Coupon</label><input type="number" id="coupon" value="0.1484" step="0.0001"></div>
+            <div class="input-group"><label>Annual Coupon (%)</label><input type="number" id="coupon" value="14.84" step="0.01"></div>
             <div class="input-group"><label>Simulations</label><input type="number" id="simN" value="5000"></div>
+            <div class="input-group">
+                <label>Chart Range (Years)</label>
+                <select id="chartYears">
+                    <option value="1">1 Year</option>
+                    <option value="2">2 Years</option>
+                    <option value="3">3 Years</option>
+                    <option value="5">5 Years</option>
+                    <option value="10">10 Years</option>
+                </select>
+            </div>
         </div>
         <button id="runBtn">Generate Quantitative Analysis</button>
         <div id="loading">Calculating volatility and Monte Carlo paths...</div>
@@ -97,6 +109,7 @@
         </div>
 
         <h3 style="margin-top:40px; margin-bottom:15px; border-left: 4px solid var(--primary); padding-left: 10px;">Technical Analysis Window</h3>
+        <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 10px;">💡 操作提示：滾輪縮放 X 軸，拖曳移動區間。Y 軸會隨當前畫面股價自動調整高度。</p>
 
         <div id="techOptions">
             <label class="tech-option active"><input type="radio" name="tech" value="none" checked><span>Price / Vol</span></label>
@@ -118,10 +131,6 @@ let techChartInstances = {};
 let globalStockData = {};
 let currentVolDays = 126;
 
-/**
- *Seedable Random Number Generator (LCG)
- *用於固定蒙地卡羅模擬的隨機性
- */
 class SeededRandom {
     constructor(seed = 12345) { this.seed = seed; }
     next() {
@@ -130,7 +139,6 @@ class SeededRandom {
     }
 }
 
-// 修改 randn 使用固定種子生成的偽隨機數
 function seededRandn(rng) {
     let u=0, v=0;
     while(u===0) u = rng.next();
@@ -181,10 +189,14 @@ document.getElementById('runBtn').addEventListener('click', async () => {
         const symbols = document.getElementById('symbols').value.split(',').map(s => s.trim().toUpperCase()).filter(s => s);
         const apiKey = document.getElementById('apiKey').value;
         const months = parseInt(document.getElementById('months').value);
+        const years = parseInt(document.getElementById('chartYears').value);
+        const outputSize = Math.max(750, years * 265); 
+
         currentVolDays = months * 21;
 
         await Promise.all(symbols.map(async (s) => {
-            const res = await fetch(`https://api.twelvedata.com/time_series?symbol=${s}&interval=1day&outputsize=750&apikey=${apiKey}`).then(r => r.json());
+            const res = await fetch(`https://api.twelvedata.com/time_series?symbol=${s}&interval=1day&outputsize=${outputSize}&apikey=${apiKey}`).then(r => r.json());
+            if(!res.values) throw new Error(`API 錯誤 (${s}): ${res.message || '請檢查 Key'}`);
             const vals = res.values.reverse();
             globalStockData[s] = { labels: vals.map(v => v.datetime), prices: vals.map(v => parseFloat(v.close)), volumes: vals.map(v => parseFloat(v.volume)), name: s };
         }));
@@ -198,31 +210,32 @@ document.getElementById('runBtn').addEventListener('click', async () => {
         });
 
         const retsMatrix = [];
-        for(let i=750-250; i<750; i++) retsMatrix.push(symbols.map(s => Math.log(globalStockData[s].prices[i] / globalStockData[s].prices[i-1])));
+        const histLen = globalStockData[symbols[0]].prices.length;
+        for(let i=histLen-250; i<histLen; i++) retsMatrix.push(symbols.map(s => Math.log(globalStockData[s].prices[i] / globalStockData[s].prices[i-1])));
         const corMat = Array.from({length: dim}, (_, i) => Array.from({length: dim}, (_, j) => i === j ? 1 : getCorrelation(retsMatrix.map(r => r[i]), retsMatrix.map(r => r[j]))));
 
-        const params = { symbols, S0: symbols.map(s => globalStockData[s].prices.slice(-1)[0]), KO: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('koPct').value/100)), AKI: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('kiPct').value/100)), K: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('strikePct').value/100)), V: vols, COR: corMat, N: parseInt(document.getElementById('simN').value), D: months * 21, R: parseFloat(document.getElementById('coupon').value), r: 0.0517, CDS: 0.0018, totalMonths: months, kiType: document.getElementById('kiType').value };
+        // 修改處：在傳入 params 之前將 coupon 除以 100
+        const inputCoupon = parseFloat(document.getElementById('coupon').value) / 100;
+
+        const params = { symbols, S0: symbols.map(s => globalStockData[s].prices.slice(-1)[0]), KO: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('koPct').value/100)), AKI: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('kiPct').value/100)), K: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('strikePct').value/100)), V: vols, COR: corMat, N: parseInt(document.getElementById('simN').value), D: months * 21, R: inputCoupon, r: 0.0517, CDS: 0.0018, totalMonths: months, kiType: document.getElementById('kiType').value };
 
         const mcResult = runSimulation(params);
         renderMCResults(mcResult, params);
         initTechCharts(symbols);
         resSec.style.display = 'block';
-    } catch (e) { alert("Error: " + e.message); }
+    } catch (e) { alert("錯誤: " + e.message); }
     finally { btn.disabled = false; loader.style.display = 'none'; }
 });
 
 function runSimulation(p) {
     const {S0, KO, AKI, K, V, COR, N, D, R, r, CDS, totalMonths, symbols, kiType} = p;
     const dim = symbols.length, dt = 1/252, L = dynamicCholesky(COR);
-
-    // 初始化固定種子的隨機生成器
     const rng = new SeededRandom(42);
 
     let payoffs = [], periods = [], scCounts = new Array(totalMonths + 2).fill(0), worstCounts = new Array(dim).fill(0);
     for (let n = 0; n < N; n++) {
         let St = [...S0], kiTouched = false, ended = false;
         for (let d = 1; d <= D; d++) {
-            // 使用種子化隨機數
             let dz = math.multiply(L, Array.from({length: dim}, () => seededRandn(rng)));
             for (let i = 0; i < dim; i++) {
                 St[i] *= Math.exp((r - 0.5 * V[i]**2) * dt + V[i] * Math.sqrt(dt) * dz[i]);
@@ -281,7 +294,14 @@ function initTechCharts(symbols) {
 
 function updateSingleStockChart(symbol) {
     const data = globalStockData[symbol];
-    const prices = data.prices, labels = data.labels.slice(-252), displayPrices = prices.slice(-252);
+    const years = parseInt(document.getElementById('chartYears').value);
+    const displayCount = years * 252;
+
+    const prices = data.prices;
+    const labels = data.labels.slice(-displayCount);
+    const displayPrices = prices.slice(-displayCount);
+    const displayVolumes = data.volumes.slice(-displayCount);
+    
     const selectedTech = document.querySelector('input[name="tech"]:checked').value;
     const showLevels = document.getElementById('showPriceLevels').checked;
 
@@ -291,50 +311,82 @@ function updateSingleStockChart(symbol) {
     const kiPrice = S0 * (document.getElementById('kiPct').value / 100);
 
     const datasets = [{ label: "Close Price", data: displayPrices, borderColor: "#1a73e8", borderWidth: 2, pointRadius: 0, fill: false, yAxisID: 'y' }];
+    
     const scales = {
-        y: { position: 'left', ticks:{color: '#202124'}, grid:{color:'#edf2f7'} },
+        y: { 
+            position: 'left', 
+            ticks:{color: '#202124'}, 
+            grid:{color:'#edf2f7'},
+            grace: '5%' 
+        },
         yVol: { position: 'right', display: false },
         x: { ticks:{color: '#5f6368'}, grid:{display:false} }
     };
 
-    datasets.push({ type: 'bar', label: "Volume", data: data.volumes.slice(-252), backgroundColor: 'rgba(26,115,232,0.08)', yAxisID: 'yVol' });
+    datasets.push({ type: 'bar', label: "Volume", data: displayVolumes, backgroundColor: 'rgba(26,115,232,0.08)', yAxisID: 'yVol' });
 
     if(showLevels) {
-        const line = (val, label, color) => ({ label, data: new Array(252).fill(val), borderColor: color, borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, fill: false });
-        datasets.push(line(koPrice, `KO Level (${koPrice.toFixed(1)})`, '#f29900'));
-        datasets.push(line(strikePrice, `Strike Level (${strikePrice.toFixed(1)})`, '#188038'));
-        datasets.push(line(kiPrice, `KI Level (${kiPrice.toFixed(1)})`, '#d93025'));
+        const line = (val, label, color) => ({ label, data: new Array(displayPrices.length).fill(val), borderColor: color, borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, fill: false });
+        datasets.push(line(koPrice, `KO (${koPrice.toFixed(1)})`, '#f29900'));
+        datasets.push(line(strikePrice, `Strike (${strikePrice.toFixed(1)})`, '#188038'));
+        datasets.push(line(kiPrice, `KI (${kiPrice.toFixed(1)})`, '#d93025'));
 
         const dStrike = displayPrices.filter(p => p < strikePrice).length;
         const dKI = displayPrices.filter(p => p < kiPrice).length;
         document.getElementById(`stats_${symbol}`).innerHTML = `
-            <div class="stat-box"><span class="stat-label">Total Days (1Y)</span><span class="stat-num">252</span></div>
-            <div class="stat-box"><span class="stat-label">Days < Strike</span><span class="stat-num" style="color:var(--success)">${dStrike} (${(dStrike/252*100).toFixed(1)}%)</span></div>
-            <div class="stat-box"><span class="stat-label">Days < KI</span><span class="stat-num" style="color:var(--danger)">${dKI} (${(dKI/252*100).toFixed(1)}%)</span></div>
+            <div class="stat-box"><span class="stat-label">Total Days (${years}Y)</span><span class="stat-num">${displayPrices.length}</span></div>
+            <div class="stat-box"><span class="stat-label">Days < Strike</span><span class="stat-num" style="color:var(--success)">${dStrike} (${(dStrike/displayPrices.length*100).toFixed(1)}%)</span></div>
+            <div class="stat-box"><span class="stat-label">Days < KI</span><span class="stat-num" style="color:var(--danger)">${dKI} (${(dKI/displayPrices.length*100).toFixed(1)}%)</span></div>
         `;
     } else { document.getElementById(`stats_${symbol}`).innerHTML = ''; }
 
     if(selectedTech !== 'none') {
         scales.yInd = { position: 'right', ticks:{color:'#5f6368'}, grid:{drawOnChartArea:false} };
         if(selectedTech === 'ma') {
-            datasets.push({ label: "MA20", data: Calc.MA(prices, 20).slice(-252), borderColor: "#f9ab00", borderWidth: 1, pointRadius: 0, yAxisID: 'yInd' });
-            datasets.push({ label: "MA60", data: Calc.MA(prices, 60).slice(-252), borderColor: "#34a853", borderWidth: 1, pointRadius: 0, yAxisID: 'yInd' });
-            datasets.push({ label: "MA200", data: Calc.MA(prices, 200).slice(-252), borderColor: "#a142f4", borderWidth: 1, pointRadius: 0, yAxisID: 'yInd' });
+            datasets.push({ label: "MA20", data: Calc.MA(prices, 20).slice(-displayCount), borderColor: "#f9ab00", borderWidth: 1, pointRadius: 0, yAxisID: 'yInd' });
+            datasets.push({ label: "MA60", data: Calc.MA(prices, 60).slice(-displayCount), borderColor: "#34a853", borderWidth: 1, pointRadius: 0, yAxisID: 'yInd' });
+            datasets.push({ label: "MA200", data: Calc.MA(prices, 200).slice(-displayCount), borderColor: "#a142f4", borderWidth: 1, pointRadius: 0, yAxisID: 'yInd' });
         } else if(selectedTech === 'bias') {
-            datasets.push({ label: "BIAS(20)", data: Calc.BIAS(prices, 20).slice(-252), borderColor: "#1a73e8", borderWidth: 2, pointRadius: 0, yAxisID: 'yInd' });
+            datasets.push({ label: "BIAS(20)", data: Calc.BIAS(prices, 20).slice(-displayCount), borderColor: "#1a73e8", borderWidth: 2, pointRadius: 0, yAxisID: 'yInd' });
         } else if(selectedTech === 'rsi') {
-            datasets.push({ label: "RSI(14)", data: Calc.RSI(prices).slice(-252), borderColor: "#e67c73", borderWidth: 1.5, pointRadius: 0, yAxisID: 'yInd' });
+            datasets.push({ label: "RSI(14)", data: Calc.RSI(prices).slice(-displayCount), borderColor: "#e67c73", borderWidth: 1.5, pointRadius: 0, yAxisID: 'yInd' });
         } else if(selectedTech === 'macd') {
             const m = Calc.MACD(prices);
-            datasets.push({ label: "MACD", data: m.macd.slice(-252), borderColor: "#a142f4", borderWidth: 1.5, pointRadius: 0, yAxisID: 'yInd' });
+            datasets.push({ label: "MACD", data: m.macd.slice(-displayCount), borderColor: "#a142f4", borderWidth: 1.5, pointRadius: 0, yAxisID: 'yInd' });
         } else if(selectedTech === 'hv') {
-            datasets.push({ label: `HV`, data: Calc.HV(prices, currentVolDays).slice(-252), borderColor: "#5f6368", borderWidth: 2, pointRadius: 0, yAxisID: 'yInd' });
+            datasets.push({ label: `HV`, data: Calc.HV(prices, currentVolDays).slice(-displayCount), borderColor: "#5f6368", borderWidth: 2, pointRadius: 0, yAxisID: 'yInd' });
         }
     }
 
     const ctx = document.getElementById(`chart_${symbol}`).getContext('2d');
     if(techChartInstances[symbol]) techChartInstances[symbol].destroy();
-    techChartInstances[symbol] = new Chart(ctx, { type: 'line', data: { labels, datasets }, options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index', intersect:false}, scales, plugins:{legend:{labels:{boxWidth: 10, font:{size:11}}}} } });
+    
+    techChartInstances[symbol] = new Chart(ctx, { 
+        type: 'line', 
+        data: { labels, datasets }, 
+        options: { 
+            responsive:true, 
+            maintainAspectRatio:false, 
+            interaction:{mode:'index', intersect:false}, 
+            scales, 
+            plugins:{
+                legend:{labels:{boxWidth: 10, font:{size:11}}},
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x', 
+                        onPanComplete: ({chart}) => { chart.update('none'); }
+                    },
+                    zoom: {
+                        wheel: { enabled: true },
+                        pinch: { enabled: true },
+                        mode: 'x', 
+                        overScaleMode: 'y'
+                    }
+                }
+            } 
+        } 
+    });
 }
 
 document.getElementById('techOptions').addEventListener('change', (e) => {
@@ -346,6 +398,12 @@ document.getElementById('techOptions').addEventListener('change', (e) => {
         document.getElementById('lvlBtn').classList.toggle('active', e.target.checked);
     }
     Object.keys(techChartInstances).forEach(s => updateSingleStockChart(s));
+});
+
+document.getElementById('chartYears').addEventListener('change', () => {
+    if (Object.keys(globalStockData).length > 0) {
+        Object.keys(techChartInstances).forEach(s => updateSingleStockChart(s));
+    }
 });
 </script>
 </body>
