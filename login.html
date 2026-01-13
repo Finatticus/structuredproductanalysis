@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Structured Products Analytics - 登入</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    * { box-sizing: border-box; font-family: "Segoe UI", "Noto Sans TC", Arial, sans-serif; }
+    body { margin: 0; height: 100vh; background: linear-gradient(135deg, #f5f7fa, #e8edf3); display: flex; align-items: center; justify-content: center; color: #1f2937; }
+    .login-card { width: 380px; background: #ffffff; padding: 36px 40px; border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.08); }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .logo h1 { margin: 0; font-size: 22px; color: #0f2a44; font-weight: 600; }
+    .logo span { font-size: 13px; color: #6b7280; }
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-size: 13px; margin-bottom: 6px; color: #374151; }
+    input { width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 14px; }
+    input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+    button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: #0f2a44; color: #ffffff; font-size: 15px; font-weight: 500; cursor: pointer; }
+    button:hover { background: #143a5c; }
+    .error { display: none; margin-top: 14px; font-size: 13px; color: #b91c1c; text-align: center; }
+    .footer { margin-top: 26px; font-size: 12px; text-align: center; color: #6b7280; }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-card">
+    <div class="logo">
+      <h1>Structured Products Analytics</h1>
+      <span>Internal Access</span>
+    </div>
+
+    <div class="form-group">
+      <label>帳號</label>
+      <input type="text" id="username" placeholder="Username" />
+    </div>
+
+    <div class="form-group">
+      <label>密碼</label>
+      <input type="password" id="password" placeholder="Password" />
+    </div>
+
+    <button onclick="login()">登入</button>
+
+    <div class="error" id="errorMsg">帳號或密碼錯誤</div>
+
+    <div class="footer">© 2026 Fixed Coupon Note (FCN)</div>
+  </div>
+
+  <script>
+    // ===============================
+    // 登入函式
+    // ===============================
+    async function login() {
+      const username = document.getElementById("username").value.trim(); // 取得使用者輸入的帳號
+      const password = document.getElementById("password").value; // 取得密碼
+      const errorMsg = document.getElementById("errorMsg");
+      errorMsg.style.display = "none"; // 先隱藏錯誤訊息
+
+      try {
+        // 使用 fetch 送 POST 請求到後端 /login API
+        const res = await fetch("http://localhost:3000/login", {
+          method: "POST", // 一定要 POST
+          headers: { "Content-Type": "application/json" }, // 告訴後端我們送的是 JSON
+          body: JSON.stringify({ username, password }) // 將帳號密碼包成 JSON
+        });
+
+        const data = await res.json(); // 解析後端回傳 JSON
+
+        if (!res.ok) { // 如果 HTTP 狀態碼不是 200-299
+          errorMsg.innerText = data.message; // 顯示後端回傳的錯誤訊息
+          errorMsg.style.display = "block";
+          return;
+        }
+
+        // 成功登入
+        localStorage.setItem("token", data.token); // 儲存 JWT，日後可用於保護頁面
+        window.location.href = "123.html"; // 登入成功導向主頁
+      } catch (err) {
+        // 如果 fetch 出錯（網路問題或伺服器沒開）
+        errorMsg.innerText = "伺服器錯誤，請稍後再試";
+        errorMsg.style.display = "block";
+      }
+    }
+
+    // ===============================
+    // Enter 鍵登入
+    // ===============================
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") login();
+    });
+  </script>
+
+</body>
+</html>

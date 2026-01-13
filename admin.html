@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>管理員審核 - Structured Products Analytics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: "Segoe UI", "Noto Sans TC", Arial, sans-serif; background:#f5f7fa; padding:20px; color:#1f2937; }
+    h1 { color:#0f2a44; }
+    table { width: 100%; border-collapse: collapse; margin-top:20px; }
+    th, td { border:1px solid #d1d5db; padding:10px; text-align:left; }
+    th { background:#e8edf3; }
+    button { padding:6px 12px; border:none; border-radius:6px; background:#0f2a44; color:white; cursor:pointer; }
+    button:hover { background:#143a5c; }
+    .msg { margin-top:10px; color:green; }
+  </style>
+</head>
+<body>
+
+<h1>管理員審核帳號</h1>
+<p>顯示所有待審核帳號，點擊批准即可通過</p>
+
+<table id="userTable">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>帳號</th>
+      <th>角色</th>
+      <th>狀態</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- 後端資料會自動生成 -->
+  </tbody>
+</table>
+
+<p class="msg" id="msg"></p>
+
+<script>
+async function fetchPendingUsers() {
+  const tbody = document.querySelector("#userTable tbody");
+  tbody.innerHTML = ""; // 清空
+
+  try {
+    const res = await fetch("http://localhost:3000/admin/pending");
+    const users = await res.json();
+
+    users.forEach(u => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${u.id}</td>
+        <td>${u.username}</td>
+        <td>${u.role}</td>
+        <td>${u.status}</td>
+        <td><button onclick="approveUser(${u.id})">批准</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function approveUser(id) {
+  try {
+    const res = await fetch(`http://localhost:3000/admin/approve/${id}`, {
+      method: "POST"
+    });
+    const data = await res.json();
+    document.getElementById("msg").innerText = data.message;
+
+    // 更新列表
+    fetchPendingUsers();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// 頁面載入時取得待審核帳號
+window.onload = fetchPendingUsers;
+</script>
+
+</body>
+</html>
