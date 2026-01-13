@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>管理員介面</title>
+<style>
+body{font-family:Arial,sans-serif;margin:20px;}
+table{border-collapse:collapse;width:100%;}
+th,td{border:1px solid #ccc;padding:8px;text-align:center;}
+button{padding:5px 10px;cursor:pointer;}
+</style>
+</head>
+<body>
+<h1>管理員介面</h1>
+<table id="userTable">
+<tr><th>ID</th><th>帳號</th><th>密碼</th><th>狀態</th><th>操作</th></tr>
+</table>
+
+<script>
+function loadUsers() {
+  fetch("/admin/users")
+  .then(res=>res.json())
+  .then(data=>{
+    const table=document.getElementById("userTable");
+    table.innerHTML="<tr><th>ID</th><th>帳號</th><th>密碼</th><th>狀態</th><th>操作</th></tr>";
+    data.forEach(u=>{
+      const row=document.createElement("tr");
+      row.innerHTML=`<td>${u.id}</td><td>${u.username}</td><td>${u.password}</td><td>${u.status}</td>
+        <td>${u.status==='pending'?'<button onclick="approve('+u.id+')">批准</button>':'已批准'}</td>`;
+      table.appendChild(row);
+    });
+  });
+}
+
+function approve(id){
+  fetch("/admin/approve",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id})
+  })
+  .then(res=>res.json())
+  .then(()=>loadUsers());
+}
+
+window.onload=loadUsers;
+</script>
+</body>
+</html>
