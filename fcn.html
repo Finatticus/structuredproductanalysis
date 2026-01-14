@@ -227,7 +227,7 @@
             <div class="card-wrapper chart-auto">
                 <h3 style="font-size: 1rem; text-align: left; border-left: 4px solid var(--primary); padding-left: 10px;">相關係數矩陣 Correlation (<span id="corPeriodLabel"></span>)</h3>
                 <div id="heatmapArea" class="heatmap-container"></div>
-                <p style="font-size: 1rem; color: var(--text-sub); text-align: center; margin-top: 5px;">💡 紅色是正相關，藍色是負相關，計算期間與產品 Duration 同步</p>
+                <p style="font-size: 1rem; color: var(--text-sub); text-align: center; margin-top: 5px;">💡 紅色是正相關，藍色是負相關，計算期間與產品 Duration 同步或採共同存續期（對齊各標的交易日數）。</p>
             </div>
             <div class="card-wrapper chart-auto">
                 <h3 style="font-size: 1rem; text-align: left; border-left: 4px solid var(--warning); padding-left: 10px;">歷史回測 (Historical Backtest)</h3>
@@ -263,7 +263,7 @@
     </div>
     <h4 style="margin: 0 0 12px 0; color: #3c4043; font-size: 1rem; font-weight: 600;">⚠️ 重要風險聲明與投資警語</h4>
     <p style="font-size: 0.85rem; margin-bottom: 15px;">
-        本模型提供之分析數據（包含但不限於預期報酬、勝率及安全性分析）係基於 <span style="color: #b71c1c;"><b>蒙地卡羅模擬模型 (Monte Carlo Simulation)</b></span> 及歷史股價數據計算而成。相關模擬結果乃建立在「假設市場未來波動規律與歷史數據一致」之前提下，僅供學術研究與投資參考，<span style="text-decoration: underline;">並不代表、亦不保證未來之市場表現或實際投資收益</span>。</p>
+        本模型提供之分析數據（包含但不限於預期報酬、勝率及安全性分析）係基於 <span style="color: #b71c1c;"><b>蒙地卡羅模擬模型 (Monte Carlo Simulation)</b></span> 及歷史股價數據計算而成，以每月固定21天開盤日為假設運算。相關模擬結果乃建立在「假設市場未來波動規律與歷史數據一致」之前提下，僅供學術研究與投資參考，<span style="text-decoration: underline;">並不代表、亦不保證未來之市場表現或實際投資收益</span>。</p>
     <ul style="padding-left: 18px; font-size: 0.8rem; color: #70757a; list-style-type: square;">
         <li style="margin-bottom: 6px;"><b style="color: #5f6368;">模型限制：</b> 統計機率模型無法預測極端黑天鵝事件、政治動盪或公司結構性突發改變。</li>
         <li style="margin-bottom: 6px;"><b style="color: #5f6368;">歷史回測：</b> 歷史績效僅供參考，過去市場走勢不必然於未來重複發生。</li>
@@ -339,20 +339,54 @@ const volSkewRaw = parseFloat(document.getElementById('volSkew').value) || 0;
 const volMultiplier = 1 + (volSkewRaw / 100);
         const dim = symbols.length;
 const vols = symbols.map(s => {
-    const p = globalStockData[s].prices.slice(-(currentVolDays + 1));
-    let rets = [];
-    for(let i=1; i<p.length; i++) rets.push(Math.log(p[i]/p[i-1]));
-    const baseVol = math.std(rets) * Math.sqrt(252);
-    return baseVol * volMultiplier; 
-});
+            const p = globalStockData[s].prices;
+            // 確保取樣長度不超過該股票現有的總天數
+            const actualVolDays = Math.min(p.length - 1, currentVolDays);
+            const sample = p.slice(-(actualVolDays + 1));
+            let rets = [];
+            for(let i = 1; i < sample.length; i++) {
+                rets.push(Math.log(sample[i] / sample[i-1]));
+            }
+            const baseVol = math.std(rets) * Math.sqrt(252);
+            return baseVol * volMultiplier; 
+        });
+
+        // --- 2. 數據對齊：計算相關係數矩陣 ---
         const retsMatrix = [];
-        const histLen = globalStockData[symbols[0]].prices.length;
-        const corWindow = currentVolDays;
+        const corWindow = currentVolDays; 
         document.getElementById('corPeriodLabel').innerText = `${months}M / ${corWindow}D`;
-        for(let i=histLen-corWindow; i<histLen; i++) {
-            retsMatrix.push(symbols.map(s => Math.log(globalStockData[s].prices[i] / (globalStockData[s].prices[i-1] || globalStockData[s].prices[i]))));
+
+        // 核心修正：統一從每檔股票的最後一天往前回推，確保矩陣每一列都有數據
+        for (let i = 0; i < corWindow; i++) {
+            let row = [];
+            let isValidDay = true;
+            for (let s of symbols) {
+                const p = globalStockData[s].prices;
+                const len = p.length;
+                // 如果該股票資料長度不足以回推到這一天，標記為無效
+                if (len - 2 - i < 0) {
+                    isValidDay = false;
+                    break;
+                }
+                const currentP = p[len - 1 - i];
+                const prevP = p[len - 2 - i];
+                row.push(Math.log(currentP / prevP));
+            }
+            // 只有當所有標的在那一天都有資料時，才計入相關係數樣本
+            if (isValidDay) {
+                retsMatrix.push(row);
+            }
         }
-        const corMat = Array.from({length: dim}, (_, i) => Array.from({length: dim}, (_, j) => i === j ? 1 : getCorrelation(retsMatrix.map(r => r[i]), retsMatrix.map(r => r[j]))));
+
+        // 防呆機制：如果重疊的天數太少，拋出錯誤
+        if (retsMatrix.length < 20) {
+            throw new Error(`標的物數據重疊天數不足(僅 ${retsMatrix.length} 天)，無法計算可靠的相關係數。請縮短天期或更換標的。`);
+        }
+const corMat = Array.from({length: dim}, (_, i) => 
+            Array.from({length: dim}, (_, j) => 
+                i === j ? 1 : getCorrelation(retsMatrix.map(r => r[i]), retsMatrix.map(r => r[j]))
+            )
+        );
         const inputCoupon = parseFloat(document.getElementById('coupon').value) / 100;
         const params = { symbols, S0: symbols.map(s => globalStockData[s].prices.slice(-1)[0]), KO: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('koPct').value/100)), AKI: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('kiPct').value/100)), K: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('strikePct').value/100)), V: vols, COR: corMat, N: parseInt(document.getElementById('simN').value), D: months * 21, R: inputCoupon, r: 0.03, CDS: 0.005, totalMonths: months, kiType: document.getElementById('kiType').value,gMonths: gMonths };
         const mcResult = runSimulation(params);
@@ -738,7 +772,7 @@ function updateSingleStockChart(symbol) {
             datasets.push({ label: "MA60", data: Calc.MA(allPrices, 60).slice(-displayCount), borderColor: "#34a853", borderWidth: 1, pointRadius: 0, yAxisID: 'yInd' });
             datasets.push({ label: "MA200", data: Calc.MA(allPrices, 200).slice(-displayCount), borderColor: "#a142f4", borderWidth: 1, pointRadius: 0, yAxisID: 'yInd' });
         } else if(selectedTech === 'bias') {
-            datasets.push({ label: "BIAS(20)", data: Calc.BIAS(allPrices, 20).slice(-displayCount), borderColor: "#1a73e8", borderWidth: 2, pointRadius: 0, yAxisID: 'yInd' });
+            datasets.push({ label: "BIAS(20)", data: Calc.BIAS(allPrices, 20).slice(-displayCount), borderColor: "#33bf00", borderWidth: 2, pointRadius: 0, yAxisID: 'yInd' });
         } else if(selectedTech === 'rsi') {
             datasets.push({ label: "RSI(14)", data: Calc.RSI(allPrices).slice(-displayCount), borderColor: "#e67c73", borderWidth: 1.5, pointRadius: 0, yAxisID: 'yInd' });
         } else if(selectedTech === 'macd') {
