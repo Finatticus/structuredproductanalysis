@@ -7,7 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
- 
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
     <style>
         :root {
             --bg-color: #f4f7fa;
@@ -35,7 +35,7 @@
         #loading { display: none; text-align: center; margin: 20px 0; color: var(--primary); font-weight: bold; }
         .result-section { display: none; margin-top: 20px; }
      
-        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .metric-card {
             background: var(--card-bg);
             padding: 20px;
@@ -101,16 +101,20 @@
         .long-term-panel { background: #fff; border: 1px solid var(--primary); border-radius: 8px; padding: 15px; margin-top: 20px; }
         .safety-analysis-panel { background: #fff; border: 1px solid var(--danger); border-radius: 8px; padding: 15px; }
         .recovery-analysis-panel { background: #fff; border: 1px solid #673ab7; border-radius: 8px; padding: 15px; }
+
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Fixed Coupon Note (FCN) Analysis Terminal</h1>
+    <h1 style="display: flex; justify-content: space-between; align-items: center;">
+    <span>Fixed Coupon Note (FCN) Analysis Terminal</span>
+    <span id="hiddenReturn" style="color: var(--bg-color); font-size: 1rem; user-select: all;">-</span>
+</h1>
     <div class="config-panel">
         <div class="grid">
             <div class="input-group"><label>API Key</label><input type="text" id="apiKey" value="d7de0902b30e47dead805e170f78bac6"></div>
-            <div class="input-group"><label>股票代號 (1-3檔,用逗號分隔)</label><input type="text" id="symbols" value="TSLA,TSM,NVDA"></div>
-            <div class="input-group"><label>天期 (1-12月)</label><input type="number" id="months" value="6"></div>
+            <div class="input-group"><label>股票代號 (用逗號分隔)</label><input type="text" id="symbols" value="TSLA,TSM,NVDA"></div>
+            <div class="input-group"><label>天期 (月)</label><input type="number" id="months" value="6"></div>
             <div class="input-group"><label>履約價 Strike (%)</label><input type="number" id="strikePct" value="75"></div>
             <div class="input-group"><label>年化配息率 Coupon (%)</label><input type="number" id="coupon" value="15" step="0.01"></div>
             <div class="input-group"><label>提前出場價 KO (%)</label><input type="number" id="koPct" value="100"></div>
@@ -118,6 +122,12 @@
             <div class="input-group"><label>下限價 KI (%)</label><input type="number" id="kiPct" value="60"></div>
             <div class="input-group"><label>下限價觀察頻率 KI Freq</label><select id="kiType"><option value="AKI">AKI(每日觀察)</option><option value="EKI">EKI(到期觀察)</option></select></div>
             <div class="input-group"><label>模擬次數 Simulations</label><input type="number" id="simN" value="10000"></div>
+<div class="input-group">
+    <label title="如果未來這段期間，市場整體的波動程度比歷史平均高（或低）x% 時，我的 FCN 分析結果會如何？&#10;&#10;可以使用VIX看過去特定期間的平均，對比目前VIX指數抓波動度傾斜程度&#10;如果 VIX 目前在 15（低點），但歷史平均在 20，你可能需要將波動度向上調整 20-30% ...以此類推&#10;&#10;或是如以下簡單區分範例(僅供參考)&#10;基準 (Base Case)：Skew = 0% （完全依照過去歷史）&#10;牛市 (Bull Case)：Skew = -10%（預期未來趨於平穩）&#10;熊市 (Bear Case)：Skew = +20%（預期未來市場動盪）">
+        波動度傾斜 Vol Skew (%) <span style="cursor:help; color:var(--primary);">ⓘ</span>
+    </label>
+    <input type="number" id="volSkew" value="0" step="1">
+</div>
             <div class="input-group">
                 <label>技術分析期間 (年)</label>
                 <select id="chartYears">
@@ -144,15 +154,15 @@
 </div>
             <div class="metric-card orange">
                 <div class="metric-header">
-                    <span class="metric-title">平均存續期間 AVG DURATION</span>
-                    <span class="metric-icon">⏳</span>
+                    <span class="metric-icon">⏳ </span><span class="metric-title">平均存續期間 AVG DURATION</span>
                 </div>
                 <span id="avgPeriod" class="metric-value">-</span>
                 <div class="metric-subtext">預期存續天數 (含提前出場機率)</div>
             </div>
             <div class="metric-card green">
                 <div class="metric-header">
-                    <span class="metric-title">歷史波動度 HISTORICAL VOLATILITY</span>
+                    <span class="metric-icon">📜 </span><span class="metric-title">
+<span class="metric-title">歷史波動度 HISTORICAL VOLATILITY</span>
                     <span id="volPeriodLabel" style="font-size:0.7rem; color:var(--text-sub);">(-)</span>
                 </div>
                 <div id="volList" class="vol-grid">
@@ -160,6 +170,40 @@
                 </div>
                <div class="metric-subtext">各標的年化歷史波動率 (對應產品天期)</div>
             </div>
+
+<div class="metric-card" style="grid-column: 1 / -1; height: auto;">
+    <div class="metric-header">
+        <span class="metric-title">風險分析 RISK ANALYSIS (VaR & CVaR)</span>
+    </div>
+    <div style="width: 100%; overflow-x: auto;">
+        <table style="width: 100%; font-size: 0.9rem; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--border); color: var(--text-sub);">
+                    <th style="padding: 8px;">信心水準</th>
+                    <th style="padding: 8px;">99%</th>
+                    <th style="padding: 8px;">97%</th>
+                    <th style="padding: 8px;">95%</th>
+                    <th style="padding: 8px;">90%</th>
+                    <th style="padding: 8px;">85%</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 8px; font-weight: bold; color: var(--danger);">VaR (最大損失)</td>
+                    <td id="var99">-</td><td id="var97">-</td><td id="var95">-</td><td id="var90">-</td><td id="var85">-</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; font-weight: bold; color: var(--warning);">CVaR (極端平均)</td>
+                    <td id="cvar99">-</td><td id="cvar97">-</td><td id="cvar95">-</td><td id="cvar90">-</td><td id="cvar85">-</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="metric-subtext" style="margin-top: 10px;">
+        VaR 代表在該機率下的預期最大損失；CVaR 則代表若發生極端狀況，平均會損失多少本金。
+    </div>
+</div>
+
         </div>
         <div class="mc-main-charts">
             <div class="card-wrapper chart-h350"><canvas id="scenarioChart"></canvas></div>
@@ -185,7 +229,7 @@
                 <p style="font-size: 1rem; color: var(--text-sub); text-align: center;">💡 一個週期(比照天期)前，進入市場的實際表現</p>
             </div>
         </div>
-        <h3 style="margin-top:40px; margin-bottom:15px; border-left: 4px solid var(--primary); padding-left: 10px;">Technical Analysis & Long-term Strategy Backtest</h3>
+        <h3 style="margin-top:40px; margin-bottom:15px; border-left: 4px solid var(--primary); padding-left: 10px;">技術分析 & 回測結果 Technical Analysis & Long-term Backtesting</h3>
         <div id="techOptions">
             <label class="tech-option active"><input type="radio" name="tech" value="none" checked><span>給我乾淨的線圖就好</span></label>
             <label class="tech-option"><input type="radio" name="tech" value="ma"><span>移動平均線MA (20/60/200)</span></label>
@@ -277,13 +321,16 @@ document.getElementById('runBtn').addEventListener('click', async () => {
             const vals = res.values.reverse();
             globalStockData[s] = { labels: vals.map(v => v.datetime), prices: vals.map(v => parseFloat(v.close)), volumes: vals.map(v => parseFloat(v.volume)), name: s };
         }));
+const volSkewRaw = parseFloat(document.getElementById('volSkew').value) || 0;
+const volMultiplier = 1 + (volSkewRaw / 100);
         const dim = symbols.length;
-        const vols = symbols.map(s => {
-            const p = globalStockData[s].prices.slice(-(currentVolDays + 1));
-            let rets = [];
-            for(let i=1; i<p.length; i++) rets.push(Math.log(p[i]/p[i-1]));
-            return math.std(rets) * Math.sqrt(252);
-        });
+const vols = symbols.map(s => {
+    const p = globalStockData[s].prices.slice(-(currentVolDays + 1));
+    let rets = [];
+    for(let i=1; i<p.length; i++) rets.push(Math.log(p[i]/p[i-1]));
+    const baseVol = math.std(rets) * Math.sqrt(252);
+    return baseVol * volMultiplier; 
+});
         const retsMatrix = [];
         const histLen = globalStockData[symbols[0]].prices.length;
         const corWindow = currentVolDays;
@@ -301,26 +348,46 @@ document.getElementById('runBtn').addEventListener('click', async () => {
         initTechCharts(symbols);
         resSec.style.display = 'block';
     } catch (e) { alert("錯誤: " + e.message); }
-    finally { btn.disabled = false; loader.style.display = 'none'; } }); function runSimulation(p) {const {S0, KO, AKI, K, V, COR, N, D, R, r, CDS, totalMonths, symbols, kiType, gMonths} = p;const dim = symbols.length, dt = 1/252, L = dynamicCholesky(COR);const rng = new SeededRandom(42);
-    let payoffs = [],periods = [],scCounts = new Array(totalMonths + 2).fill(0),worstCounts = new Array(dim).fill(0);
-    const minKoDays = gMonths * 21;
+    finally { btn.disabled = false; loader.style.display = 'none'; } }); 
+
+function runSimulation(p) {
+    const {S0, KO, AKI, K, V, COR, N, D, R, r, CDS, totalMonths, symbols, kiType, gMonths} = p;
+    const dim = symbols.length;
+    const dt = 1/252;
+    const L = dynamicCholesky(COR);
+    const rng = new SeededRandom(42);
+    
+    let payoffs = [], periods = [], scCounts = new Array(totalMonths + 2).fill(0), worstCounts = new Array(dim).fill(0);
+    const minKoDays = gMonths * 21; // 保證期天數
+
     for (let n = 0; n < N; n++) {
         let St = [...S0], kiTouched = false, ended = false;
+        
         for (let d = 1; d <= D; d++) {
+            // 生成隨機路徑
             let dz = math.multiply(L, Array.from({length: dim}, () => seededRandn(rng)));
             for (let i = 0; i < dim; i++) {
                 St[i] *= Math.exp((r - 0.5 * V[i]**2) * dt + V[i] * Math.sqrt(dt) * dz[i]);
                 if (kiType === "AKI" && St[i] < AKI[i]) kiTouched = true;
             }
+
+            // --- 每日觀察 KO 邏輯 ---
             if (d >= minKoDays) {
+                // 檢查是否「所有」資產當天收盤價都 >= KO 門檻
                 if (St.every((s, i) => s >= KO[i])) {
-                    payoffs.push(100 * (1 + (d/252)*R) * Math.exp(-(r+CDS)*(d/252)));
+                    let payoff = 100 * (1 + (d/252)*R) * Math.exp(-(r+CDS)*(d/252));
+                    payoffs.push(payoff);
                     periods.push(d);
-                    let monthIdx = Math.floor((d - 1) / 21);
-                    monthIdx = Math.max(0, Math.min(monthIdx, totalMonths - 1));
-                    scCounts[monthIdx]++;
+                    
+                    // 歸類到對應的月份統計
+                    let mIdx = Math.min(Math.floor((d-1)/21), totalMonths - 1);
+                    scCounts[mIdx]++;
                     ended = true;
-                    break;}}
+                    break; // 觸發 KO，跳出天數循環
+                }
+            }
+
+            // 到期處理
             if (d === D && !ended) {
                 if (kiType === "EKI" && St.some((s, i) => s < AKI[i])) kiTouched = true;
                 let disc = Math.exp(-(r+CDS)*(D/252));
@@ -338,49 +405,107 @@ document.getElementById('runBtn').addEventListener('click', async () => {
             }
         }
     }
-    return { avgReturn: math.mean(payoffs), avgDay: math.mean(periods), scenarioProbs: scCounts.map(c => (c / N) * 100), worstAssetProbs: worstCounts.map(c => (c / N) * 100) }; }
- 
+const sortedPayoffs = [...payoffs].sort((a, b) => a - b);
+    const levels = [0.01, 0.03, 0.05, 0.10, 0.15]; // 對應 99, 97, 95, 90, 85 信心水準
+    const riskData = {};
+
+    levels.forEach(alpha => {
+        const index = Math.floor(N * alpha);
+        const label = Math.round((1 - alpha) * 100);
+        
+        riskData[`VaR${label}`] = sortedPayoffs[index] - 100;
+        
+        // CVaR: 尾部極端情況的平均損失
+        const worstCase = sortedPayoffs.slice(0, index);
+        const avgWorstPayoff = worstCase.reduce((a, b) => a + b, 0) / (worstCase.length || 1);
+        riskData[`CVaR${label}`] = avgWorstPayoff - 100;
+    });
+
+    return { 
+        avgReturn: math.mean(payoffs), 
+        avgDay: math.mean(periods), 
+        scenarioProbs: scCounts.map(c => (c / N) * 100), 
+        worstAssetProbs: worstCounts.map(c => (c / N) * 100),
+        riskResults: riskData 
+    };
+}
+
 function runBacktest(p) {
     const {symbols, D, R, totalMonths, kiType} = p;
     const histLen = globalStockData[symbols[0]].prices.length;
     const startIndex = histLen - D - 1;
     if (startIndex < 0) return;
+    
     const startPrices = symbols.map(s => globalStockData[s].prices[startIndex]);
-    const KO = startPrices.map(s => s * (document.getElementById('koPct').value / 100));
-    const AKI = startPrices.map(s => s * (document.getElementById('kiPct').value / 100));
-    const K = startPrices.map(s => s * (document.getElementById('strikePct').value / 100));
-    let kiTouched = false, event = "Maturity (到期)", daysToEvent = D, finalPayoff = 0;
-    let koTrackers = new Array(symbols.length).fill(false);
+    const KO_Level = parseFloat(document.getElementById('koPct').value) / 100;
+    const KI_Level = parseFloat(document.getElementById('kiPct').value) / 100;
+    const Strike_Level = parseFloat(document.getElementById('strikePct').value) / 100;
+    
+    const KO = startPrices.map(s => s * KO_Level);
+    const AKI = startPrices.map(s => s * KI_Level);
+    const K = startPrices.map(s => s * Strike_Level);
+    
+    let kiTouched = false;
+    let event = "Maturity (到期)";
+    let daysToEvent = D;
+    let finalPayoff = 0;
+
     for (let d = 1; d <= D; d++) {
         const currentIndex = startIndex + d;
         const currentPrices = symbols.map(s => globalStockData[s].prices[currentIndex]);
+
+        // 1. 每日判斷 KI (AKI 為觀察期間任一資產跌破)
         for (let i = 0; i < symbols.length; i++) {
-            if (kiType === "AKI" && currentPrices[i] < AKI[i]) kiTouched = true;
-            if (currentPrices[i] >= KO[i]) koTrackers[i] = true;
+            if (kiType === "AKI" && currentPrices[i] < AKI[i]) {
+                kiTouched = true;
+            }
         }
+
+        // 2. 每日判斷 KO (保證期間結束後，每天觀察是否所有資產同時高於 KO)
         const minKoDays = (p.gMonths * 21);
-        if (d >= minKoDays && d % 21 === 0 && koTrackers.every(status => status === true)) {
-            event = `Knock-Out (第 ${d} 天提前出場)`; daysToEvent = d;
-            finalPayoff = 100 * (1 + (d / 252) * R); break;
+        if (d >= minKoDays) {
+            // 判斷當天所有股票是否都高於等於 KO 價格
+            const isKOToday = currentPrices.every((price, i) => price >= KO[i]);
+            
+            if (isKOToday) {
+                event = `Knock-Out (第 ${d} 天提前出場)`; 
+                daysToEvent = d;
+                // 報酬計算：通常按實際持有天數折算年化利息
+                finalPayoff = 100 * (1 + (d / 252) * R); 
+                break; // 提前結束迴圈
+            }
         }
+
+        // 3. 到期日判斷 (如果前面沒中途 KO)
         if (d === D) {
-            if (kiType === "EKI" && currentPrices.some((s, i) => s < AKI[i])) kiTouched = true;
+            // EKI 到期才看是否跌破
+            if (kiType === "EKI" && currentPrices.some((s, i) => s < AKI[i])) {
+                kiTouched = true;
+            }
+
+            // 判斷最後領回 (未觸及 KI 或 最終價格都大於等於 Strike)
             if (!kiTouched || currentPrices.every((s, i) => s >= K[i])) {
-                event = "Full Repayment (滿期贖回)"; finalPayoff = 100 * (1 + (D / 252) * R);
+                event = "Full Repayment (滿期贖回)"; 
+                finalPayoff = 100 * (1 + (D / 252) * R);
             } else {
                 event = "KI Delivery (實物交割)";
+                // 計算最差表現資產的報酬
                 const perf = currentPrices.map((s, i) => s / K[i]);
-                const worstPerf = Math.min(...perf); finalPayoff = 100 * (D / 252 * R) + (100 * worstPerf);
+                const worstPerf = Math.min(...perf); 
+                // 報酬 = 應得利息 + (100 * 最差資產表現)
+                finalPayoff = 100 * (D / 252 * R) + (100 * worstPerf);
             }
         }
     }
+
+    // 更新介面
     document.getElementById('btStart').innerText = globalStockData[symbols[0]].labels[startIndex];
     document.getElementById('btEnd').innerText = globalStockData[symbols[0]].labels[startIndex + daysToEvent];
     document.getElementById('btStatus').innerText = event;
     document.getElementById('btDays').innerText = `${daysToEvent} Days`;
     document.getElementById('btReturn').innerText = (finalPayoff - 100).toFixed(2) + "%";
-    document.getElementById('btReturn').style.color = (finalPayoff >= 100) ? "var(--success)" : "var(--danger)"; }
- 
+    document.getElementById('btReturn').style.color = (finalPayoff >= 100) ? "var(--success)" : "var(--danger)";
+} 
 function dynamicCholesky(A) {
     const n = A.length; let L = Array.from({length: n}, () => new Array(n).fill(0));
     for (let i = 0; i < n; i++) { for (let j = 0; j <= i; j++) {
@@ -388,21 +513,136 @@ function dynamicCholesky(A) {
         L[i][j] = (i === j) ? Math.sqrt(Math.max(A[i][i] - s, 0)) : (1.0 / L[j][j] * (A[i][j] - s));
     } } return L;
 }
+
 function renderMCResults(res, params) {
+    // 強制在渲染前註冊插件 (解決標籤不顯示的問題)
+    if (typeof ChartDataLabels !== 'undefined') {
+        Chart.register(ChartDataLabels);
+    }
+
+    // 更新上方數值卡片
     document.getElementById('avgReturn').innerText = res.avgReturn.toFixed(4);
     document.getElementById('avgPeriod').innerText = res.avgDay.toFixed(1) + " Days";
     document.getElementById('volPeriodLabel').innerText = `(${currentVolDays}D)`;
+document.getElementById('hiddenReturn').innerText = `µ: ${res.avgReturn.toFixed(2)}%`;
+const riskLevels = [99, 97, 95, 90, 85]; // 確保這裡有定義層級
+    riskLevels.forEach(lvl => {
+        const varVal = res.riskResults[`VaR${lvl}`];
+        const cvarVal = res.riskResults[`CVaR${lvl}`];
+        
+        const varElem = document.getElementById(`var${lvl}`);
+        const cvarElem = document.getElementById(`cvar${lvl}`);
+
+        if (varElem && cvarElem) {
+            // 顯示百分比並強制顯示正負號
+            varElem.innerText = (varVal / 100).toLocaleString(undefined, {
+                style: 'percent', 
+                minimumFractionDigits: 2, 
+                signDisplay: 'always'
+            });
+            // 負數顯示紅色 (#e74c3c)，正數顯示綠色 (#2ecc71)
+            varElem.style.color = varVal < 0 ? "#e74c3c" : "#2ecc71";
+
+            cvarElem.innerText = (cvarVal / 100).toLocaleString(undefined, {
+                style: 'percent', 
+                minimumFractionDigits: 2, 
+                signDisplay: 'always'
+            });
+            cvarElem.style.color = cvarVal < 0 ? "#e74c3c" : "#2ecc71";
+        }
+    });
+    // 更新波動率列表
     const volList = document.getElementById('volList');
-    volList.innerHTML = params.symbols.map((s, i) => `<div class="vol-item"><span class="vol-symbol">${s}</span><span class="vol-num">${(params.V[i]*100).toFixed(2)}%</span></div>`).join('');
-    if(mcScenarioChart) mcScenarioChart.destroy();mcScenarioChart = new Chart(document.getElementById('scenarioChart'), { type: 'bar',data: { labels: [...Array(params.totalMonths).keys()].map(i => `KO M${i+1}`).concat(["到期-現金", "實物履約"]), 
-datasets: [{ label: 'Probability (%)', data: res.scenarioProbs, backgroundColor: '#1a73e8' }] }, 
-options: { responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true, text:'蒙地卡羅模擬機率分布',font: { size: 18, weight: 'bold' }},legend: { labels: { font: { size: 12 } } }  },scales: { x: { ticks: { font: { size: 12 } } },
- y: { ticks: { font: { size: 12 } } }} }  });
+    volList.innerHTML = params.symbols.map((s, i) => 
+        `<div class="vol-item"><span class="vol-symbol">${s}</span><span class="vol-num">${(params.V[i]*100).toFixed(2)}%</span></div>`
+    ).join('');
 
+    // --- 蒙地卡羅長條圖 ---
+    if(mcScenarioChart) mcScenarioChart.destroy();
+    mcScenarioChart = new Chart(document.getElementById('scenarioChart'), { 
+        type: 'bar',
+        data: { 
+            labels: [...Array(params.totalMonths).keys()].map(i => `KO M${i+1}`).concat(["到期-現金", "實物履約"]), 
+            datasets: [{ 
+                label: 'Probability (%)', 
+                data: res.scenarioProbs.map(v => v.toFixed(2)), 
+                backgroundColor: '#1a73e8' 
+            }] 
+        }, 
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            layout: {
+                padding: { top: 10 } // 增加頂部間距，防止文字被切掉
+            },
+            plugins: { 
+                // 數據標籤的核心配置
+                datalabels: {
+                    display: true,      // 強制顯示
+                    anchor: 'end',      // 位置在長條末端
+                    align: 'top',       // 對齊長條上方
+                    offset: 5,          // 距離長條 5px
+                    color: '#202124',   // 數字顏色
+                    font: {
+                        weight: 'bold',
+                        size: 13        // 稍微放大一點
+                    },
+                    formatter: function(value) {
+                        return (value > 0) ? value + '%' : ''; // 只有大於 0 才顯示
+                    }
+                },
+                title: { 
+                    display: true, 
+                    text: '蒙地卡羅模擬機率分布', 
+                    font: { size: 18, weight: 'bold' } 
+                },
+                legend: { display: false }
+            },
+            scales: { 
+                x: { ticks: { font: { size: 12 } } },
+                y: { 
+                    beginAtZero: true,
+                    suggestedMax: Math.max(...res.scenarioProbs) * 1.25, // 預留更多空間給標籤
+                    ticks: { font: { size: 12 } } 
+                }
+            } 
+        } 
+    });
+
+    // --- UL實物履約圓餅圖 ---
     if(mcWorstChart) mcWorstChart.destroy();
-    mcWorstChart = new Chart(document.getElementById('worstChart'), { type: 'pie', data: { labels: params.symbols, datasets: [{ data: res.worstAssetProbs, backgroundColor: ['#ea4335', '#f9ab00', '#34a853'] }] 
-}, options: {responsive:true, maintainAspectRatio:false, plugins:{title:{display:true, text:'UL實物履約機率',font: { size: 18, weight: 'bold' } },legend: { position: 'bottom',labels: { font: { size: 14 } } } } } }); }
-
+    mcWorstChart = new Chart(document.getElementById('worstChart'), { 
+        type: 'pie', 
+        data: { 
+            labels: params.symbols, 
+            datasets: [{ 
+                data: res.worstAssetProbs.map(v => v.toFixed(2)), 
+                backgroundColor: ['#ea4335', '#f9ab00', '#34a853', '#4285f4', '#9334e6', '#24c1e0', '#f439a0'] 
+            }] 
+        }, 
+        options: {
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: {
+                datalabels: {
+                    display: true,
+                    color: '#fff',
+                    font: { weight: 'bold', size: 14 },
+                    formatter: (value) => (value > 0) ? value + '%' : ''
+                },
+                title: { 
+                    display: true, 
+                    text: 'UL實物履約機率', 
+                    font: { size: 18, weight: 'bold' } 
+                },
+                legend: { 
+                    position: 'bottom',
+                    labels: { font: { size: 14 } } 
+                } 
+            } 
+        } 
+    }); 
+}
  
 function renderCorrelationHeatmap(symbols, corMat) {
     const container = document.getElementById('heatmapArea'); container.innerHTML = '';
@@ -567,7 +807,7 @@ function updateSingleStockChart(symbol) {
             <div class="stat-box"><span class="stat-label">最差報酬</span><span class="stat-num" style="color:var(--danger)">${minRet}%</span></div>
         </div>
         <p style="font-size: 0.9rem; color: var(--text-sub); margin-top: 10px; line-height: 1.4;">
-            💡 <b>計算邏輯：</b> 模型分析了 5 年內每一個具備完整持有期間的交易日，並固定持有 ${holdDays} 個交易日。在總計 ${totalScenarios} 個測試樣本中，有 ${upCount} 次在持有結束後股價高於買入價。
+            💡 <b>計算邏輯：</b> 模型分析了 ${years} 年內每一個具備完整持有期間的交易日，並固定持有 ${holdDays} 個交易日。在總計 ${totalScenarios} 個測試樣本中，有 ${upCount} 次在持有結束後股價高於買入價。
         </p>`;
  
     document.getElementById(`safety_analysis_${symbol}`).innerHTML = `
@@ -587,7 +827,7 @@ function updateSingleStockChart(symbol) {
         </p>`;
  
     document.getElementById(`recovery_analysis_${symbol}`).innerHTML = `
-        <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #673ab7;">💊恢復力分析 (若到期低於 Strike 需多久解套)</h4>
+        <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #673ab7;">💊 恢復力分析 (若到期低於 Strike 需多久解套)</h4>
         <div class="stats-panel" style="grid-template-columns: repeat(2, 1fr);">
             <div class="stat-box" style="background: #f3e5f5;">
                 <span class="stat-label">平均解套天數 (到期後)</span>
@@ -602,12 +842,33 @@ function updateSingleStockChart(symbol) {
  
     const ctx = document.getElementById(`chart_${symbol}`).getContext('2d');
     if(techChartInstances[symbol]) techChartInstances[symbol].destroy();
-    techChartInstances[symbol] = new Chart(ctx, { type: 'line', data: { labels: displayLabels, datasets }, options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index', intersect:false}, scales, plugins:{ legend:{labels:{boxWidth: 10, font:{size:11}}}, zoom: { pan: { enabled: true, mode: 'x' }, zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x', overScaleMode: 'y' } } } } }); } document.getElementById('techOptions').addEventListener('change', (e) => {
-    if(e.target.name === 'tech') {
+    techChartInstances[symbol] = new Chart(ctx, { 
+        type: 'line', 
+        data: { labels: displayLabels, datasets }, 
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            interaction: { mode: 'index', intersect: false }, 
+            scales, 
+            plugins: { 
+                datalabels: { display: false }, 
+                legend: { labels: { boxWidth: 10, font: { size: 11 } } }, 
+                zoom: { pan: { enabled: true, mode: 'x' }, zoom: {wheel: { enabled: true },pinch: { enabled: true }, mode: 'x', overScaleMode: 'y'}} }} });}
+document.getElementById('techOptions').addEventListener('change', (e) => {
+    if (e.target.name === 'tech') {
         document.querySelectorAll('.tech-option:not(.level-toggle)').forEach(el => el.classList.remove('active'));
-        e.target.closest('.tech-option').classList.add('active');
+        e.target.closest('.tech-option').classList.add('active');}
+    if (e.target.id === 'showPriceLevels') {
+        document.getElementById('lvlBtn').classList.toggle('active', e.target.checked);
     }
-    if(e.target.id === 'showPriceLevels') document.getElementById('lvlBtn').classList.toggle('active', e.target.checked);
-    Object.keys(techChartInstances).forEach(s => updateSingleStockChart(s)); }); document.getElementById('chartYears').addEventListener('change', () => {
-    if (Object.keys(globalStockData).length > 0) Object.keys(techChartInstances).forEach(s => updateSingleStockChart(s)); }); </script> </body> </html>
+    Object.keys(techChartInstances).forEach(s => updateSingleStockChart(s));});
+document.getElementById('chartYears').addEventListener('change', () => {
+    if (Object.keys(globalStockData).length > 0) {
+        Object.keys(techChartInstances).forEach(s => updateSingleStockChart(s));}});
+document.getElementById('months').addEventListener('change', () => {
+    if (Object.keys(globalStockData).length > 0) {
+        Object.keys(techChartInstances).forEach(s => updateSingleStockChart(s));}});
 
+</script>
+</body>
+</html>
