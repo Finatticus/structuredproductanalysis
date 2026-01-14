@@ -102,6 +102,20 @@
         .safety-analysis-panel { background: #fff; border: 1px solid var(--danger); border-radius: 8px; padding: 15px; }
         .recovery-analysis-panel { background: #fff; border: 1px solid #673ab7; border-radius: 8px; padding: 15px; }
 
+@media print {
+    #hiddenReturn {
+        color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        opacity: 0; 
+    }
+
+    /* 確保其他內容在列印時保持可見 */
+    body, .container, .card, h1, h1 span {
+        visibility: visible !important;
+        display: block !important;
+    }
+}
     </style>
 </head>
 <body>
