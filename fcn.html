@@ -633,27 +633,12 @@ document.getElementById('runBtn').addEventListener('click', async () => {
         currentVolDays = months * 21;
 
         // 取得 API 資料
-await Promise.all(symbols.map(async (s) => {
-    // 檢查快取：如果已經抓過該標的資料，直接跳過 fetch
-    if (globalStockData[s] && globalStockData[s].prices.length >= outputSize) {
-        console.log(`使用快取數據: ${s}`);
-        return; 
-    }
-
-    console.log(`發起 API 請求: ${s}`);
-    const res = await fetch(`https://api.twelvedata.com/time_series?symbol=${s}&interval=1day&outputsize=${outputSize}&apikey=${apiKey}`)
-                .then(r => r.json());
-    
-    if(!res.values) throw new Error(`API 錯誤 (${s}): ${res.message || '請檢查 Key'}`);
-    
-    const vals = res.values.reverse();
-    globalStockData[s] = { 
-        labels: vals.map(v => v.datetime), 
-        prices: vals.map(v => parseFloat(v.close)), 
-        volumes: vals.map(v => parseFloat(v.volume)), 
-        name: s 
-    };
-}));
+        await Promise.all(symbols.map(async (s) => {
+            const res = await fetch(`https://api.twelvedata.com/time_series?symbol=${s}&interval=1day&outputsize=${outputSize}&apikey=${apiKey}`).then(r => r.json());
+            if(!res.values) throw new Error(`API 錯誤 (${s}): ${res.message || '請檢查 Key'}`);
+            const vals = res.values.reverse();
+            globalStockData[s] = { labels: vals.map(v => v.datetime), prices: vals.map(v => parseFloat(v.close)), volumes: vals.map(v => parseFloat(v.volume)), name: s };
+        }));
 
         const volSkewRaw = parseFloat(document.getElementById('volSkew').value) || 0;
         const volMultiplier = 1 + (volSkewRaw / 100);
