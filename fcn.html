@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FCN Analysis Terminal - Backtest Pro</title>
+    <title>FCN Analysis Terminal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
@@ -126,22 +126,43 @@
 </h1>
     <div class="config-panel">
         <div class="grid">
-            <div class="input-group"><label>API Key</label><input type="text" id="apiKey" value="d7de0902b30e47dead805e170f78bac6"></div>
             <div class="input-group"><label>股票代號 (用逗號分隔)</label><input type="text" id="symbols" value="TSLA,TSM,NVDA"></div>
             <div class="input-group"><label>天期 (月)</label><input type="number" id="months" value="6"></div>
             <div class="input-group"><label>履約價 Strike (%)</label><input type="number" id="strikePct" value="75"></div>
-            <div class="input-group"><label>年化配息率 Coupon (%)</label><input type="number" id="coupon" value="15" step="0.01"></div>
+ <div class="input-group"><label>下限價 KI (%)</label><input type="number" id="kiPct" value="60"></div>
             <div class="input-group"><label>提前出場價 KO (%)</label><input type="number" id="koPct" value="100"></div>
-            <div class="input-group"><label>保證領息期間 (月)</label><input type="number"id="guaranteedMonths" value="1" min="1"></div>
-            <div class="input-group"><label>下限價 KI (%)</label><input type="number" id="kiPct" value="60"></div>
+            <div class="input-group"><label>年化配息率 Coupon (%)</label><input type="number" id="coupon" value="15" step="0.01"></div>
             <div class="input-group"><label>下限價觀察頻率 KI Freq</label><select id="kiType"><option value="AKI">AKI(每日觀察)</option><option value="EKI">EKI(到期觀察)</option></select></div>
+<div class="input-group">
+    <label>提前出場觀察頻率 KO Freq</label>
+    <select id="koFreq">
+        <option value="Daily">Daily (每日觀察)</option>
+        <option value="PeriodEnd">Period End (每個配息結束日觀察)</option>
+    </select>
+</div>
+<div class="input-group">
+    <label>記憶式提前出場 KO Mode</label>
+    <select id="koMode">
+        <option value="Memory">Yes (記憶式)</option>
+        <option value="Simultaneous">No (非記憶式)</option>
+    </select>
+</div>
+            <div class="input-group"><label>保證領息期間 (月)</label><input type="number"id="guaranteedMonths" value="1" min="1"></div>
+<div class="input-group">
+    <label title="免費API:&#10;每分鐘跑一次模型&#10;單日約可以跑130次">
+        API Key <span style="cursor:help; color:var(--primary);">ⓘ</span>
+    </label>
+    <input type="text" id="apiKey" value="d7de0902b30e47dead805e170f78bac6">
+</div>
             <div class="input-group"><label>模擬次數 Simulations</label><input type="number" id="simN" value="10000"></div>
+
 <div class="input-group">
     <label title="如果未來這段期間，市場整體的波動程度比歷史平均高（或低）x% 時，我的 FCN 分析結果會如何？&#10;&#10;可以使用VIX看過去特定期間的平均，對比目前VIX指數抓波動度傾斜程度&#10;如果 VIX 目前在 15（低點），但歷史平均在 20，你可能需要將波動度向上調整 20-30% ...以此類推&#10;&#10;或是如以下簡單區分範例(僅供參考)&#10;基準 (Base Case)：Skew = 0% （完全依照過去歷史）&#10;牛市 (Bull Case)：Skew = -10%（預期未來趨於平穩）&#10;熊市 (Bear Case)：Skew = +20%（預期未來市場動盪）">
         波動度傾斜 Vol Skew (%) <span style="cursor:help; color:var(--primary);">ⓘ</span>
     </label>
     <input type="number" id="volSkew" value="0" step="1">
 </div>
+
             <div class="input-group">
                 <label>技術分析期間 (年)</label>
                 <select id="chartYears">
@@ -283,10 +304,13 @@ let mcScenarioChart = null, mcWorstChart = null; let techChartInstances = {}; le
     }
 }
 function seededRandn(rng) {
-    let u=0, v=0;
-    while(u===0) u = rng.next();
-    while(v===0) v = rng.next();
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); } function getCorrelation(x, y) {
+    let u = 0, v = 0;
+    while (u === 0) u = rng.next();
+    while (v === 0) v = rng.next();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function getCorrelation(x, y) {
     const muX = math.mean(x), muY = math.mean(y);
     const stdX = math.std(x), stdY = math.std(y);
     let sum = 0;
@@ -388,7 +412,7 @@ const corMat = Array.from({length: dim}, (_, i) =>
             )
         );
         const inputCoupon = parseFloat(document.getElementById('coupon').value) / 100;
-        const params = { symbols, S0: symbols.map(s => globalStockData[s].prices.slice(-1)[0]), KO: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('koPct').value/100)), AKI: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('kiPct').value/100)), K: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('strikePct').value/100)), V: vols, COR: corMat, N: parseInt(document.getElementById('simN').value), D: months * 21, R: inputCoupon, r: 0.03, CDS: 0.005, totalMonths: months, kiType: document.getElementById('kiType').value,gMonths: gMonths };
+        const params = { symbols, S0: symbols.map(s => globalStockData[s].prices.slice(-1)[0]), KO: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('koPct').value/100)), AKI: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('kiPct').value/100)), K: symbols.map((s,i) => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('strikePct').value/100)), V: vols, COR: corMat, N: parseInt(document.getElementById('simN').value), D: months * 21, R: inputCoupon, r: 0.03, CDS: 0.005, totalMonths: months, kiType: document.getElementById('kiType').value,gMonths: gMonths,koFreq: document.getElementById('koFreq').value };
         const mcResult = runSimulation(params);
         renderMCResults(mcResult, params);
         renderCorrelationHeatmap(params.symbols, params.COR);
@@ -399,43 +423,77 @@ const corMat = Array.from({length: dim}, (_, i) =>
     finally { btn.disabled = false; loader.style.display = 'none'; } }); 
 
 function runSimulation(p) {
-    const {S0, KO, AKI, K, V, COR, N, D, R, r, CDS, totalMonths, symbols, kiType, gMonths} = p;
+    const {S0, KO, AKI, K, V, COR, N, D, R, r, CDS, totalMonths, symbols, kiType, gMonths, koFreq, koMode} = p;
     const dim = symbols.length;
     const dt = 1/252;
     const L = dynamicCholesky(COR);
-    const rng = new SeededRandom(42);
-    
+    const rng = new SeededRandom(42); 
     let payoffs = [], periods = [], scCounts = new Array(totalMonths + 2).fill(0), worstCounts = new Array(dim).fill(0);
-    const minKoDays = gMonths * 21; // 保證期天數
+    const minKoDays = gMonths * 21; 
 
     for (let n = 0; n < N; n++) {
-        let St = [...S0], kiTouched = false, ended = false;
-        
+        let St = [...S0];
+        let kiTouched = false;
+        let ended = false;
+        let koReachedEver = new Array(dim).fill(false);
+
         for (let d = 1; d <= D; d++) {
-            // 生成隨機路徑
-            let dz = math.multiply(L, Array.from({length: dim}, () => seededRandn(rng)));
+            // 1. 生成路徑
+            let rawZ = Array.from({length: dim}, () => seededRandn(rng));
+            let dz = new Array(dim).fill(0);
+            for (let i = 0; i < dim; i++) {
+                for (let j = 0; j <= i; j++) {
+                    dz[i] += L[i][j] * rawZ[j];
+                }
+            }
             for (let i = 0; i < dim; i++) {
                 St[i] *= Math.exp((r - 0.5 * V[i]**2) * dt + V[i] * Math.sqrt(dt) * dz[i]);
                 if (kiType === "AKI" && St[i] < AKI[i]) kiTouched = true;
             }
 
-            // --- 每日觀察 KO 邏輯 ---
+            // 2. 嚴格 KO 邏輯
             if (d >= minKoDays) {
-                // 檢查是否「所有」資產當天收盤價都 >= KO 門檻
-                if (St.every((s, i) => s >= KO[i])) {
-                    let payoff = 100 * (1 + (d/252)*R) * Math.exp(-(r+CDS)*(d/252));
-                    payoffs.push(payoff);
-                    periods.push(d);
-                    
-                    // 歸類到對應的月份統計
-                    let mIdx = Math.min(Math.floor((d-1)/21), totalMonths - 1);
-                    scCounts[mIdx]++;
-                    ended = true;
-                    break; // 觸發 KO，跳出天數循環
+                // 只有過了保證期才開始更新記憶
+                for (let i = 0; i < dim; i++) {
+                    if (St[i] >= KO[i]) koReachedEver[i] = true;
+                }
+
+                // 判斷是否為觀察日
+                let isObservationDay = (koFreq === "Daily") ? true : (d % 21 === 0);
+
+                if (isObservationDay) {
+                    let isKoTriggered = false;
+                    if (koMode === "Memory") {
+                        isKoTriggered = koReachedEver.every(reached => reached === true);
+                    } else {
+                        isKoTriggered = St.every((s, i) => s >= KO[i]);
+                    }
+
+                    if (isKoTriggered) {
+                        let payoff = 100 * (1 + (d/252)*R) * Math.exp(-(r+CDS)*(d/252));
+                        payoffs.push(payoff);
+                        periods.push(d);
+
+                        // --- 關鍵修正：歸類邏輯 ---
+                        // d = 21 -> (21/21) - 1 = 0 (M1)
+                        // d = 22 -> floor(22/21) = 1 (M2)
+                        // d = 42 -> (42/21) - 1 = 1 (M2)
+                        let mIdx;
+                        if (d % 21 === 0) {
+                            mIdx = (d / 21) - 1;
+                        } else {
+                            mIdx = Math.floor(d / 21);
+                        }
+                        mIdx = Math.min(mIdx, totalMonths - 1);
+                        
+                        scCounts[mIdx]++;
+                        ended = true;
+                        break;
+                    }
                 }
             }
 
-            // 到期處理
+            // 3. 到期處理
             if (d === D && !ended) {
                 if (kiType === "EKI" && St.some((s, i) => s < AKI[i])) kiTouched = true;
                 let disc = Math.exp(-(r+CDS)*(D/252));
@@ -443,7 +501,7 @@ function runSimulation(p) {
                     payoffs.push(100 * (1 + (D/252)*R) * disc);
                     scCounts[totalMonths]++;
                 } else {
-                    let perf = St.map((s, i) => s / K[i]);
+                    let perf = St.map((s, i) => s / K[i]); 
                     let mP = Math.min(...perf);
                     worstCounts[perf.indexOf(mP)]++;
                     payoffs.push((100*(D/252*R) + 100*mP) * disc);
@@ -453,36 +511,27 @@ function runSimulation(p) {
             }
         }
     }
-const sortedPayoffs = [...payoffs].sort((a, b) => a - b);
-    const levels = [0.01, 0.03, 0.05, 0.10, 0.15]; // 對應 99, 97, 95, 90, 85 信心水準
+    // ...風險計算部分保持不變
+    const sortedPayoffs = [...payoffs].sort((a, b) => a - b);
     const riskData = {};
-
-    levels.forEach(alpha => {
+    [0.01, 0.03, 0.05, 0.10, 0.15].forEach(alpha => {
         const index = Math.floor(N * alpha);
         const label = Math.round((1 - alpha) * 100);
-        
-        riskData[`VaR${label}`] = sortedPayoffs[index] - 100;
-        
-        // CVaR: 尾部極端情況的平均損失
+        riskData[`VaR${label}`] = (sortedPayoffs[index] || 0) - 100;
         const worstCase = sortedPayoffs.slice(0, index);
         const avgWorstPayoff = worstCase.reduce((a, b) => a + b, 0) / (worstCase.length || 1);
-        riskData[`CVaR${label}`] = avgWorstPayoff - 100;
+        riskData[`CVaR${label}`] = (avgWorstPayoff || 0) - 100;
     });
-
-    return { 
-        avgReturn: math.mean(payoffs), 
-        avgDay: math.mean(periods), 
-        scenarioProbs: scCounts.map(c => (c / N) * 100), 
-        worstAssetProbs: worstCounts.map(c => (c / N) * 100),
-        riskResults: riskData 
-    };
-}
-
-function runBacktest(p) {
-    const {symbols, D, R, totalMonths, kiType} = p;
+    return { avgReturn: math.mean(payoffs), avgDay: math.mean(periods), scenarioProbs: scCounts.map(c => (c / N) * 100), worstAssetProbs: worstCounts.map(c => (c / N) * 100), riskResults: riskData };
+}function runBacktest(p) {
+    const {symbols, D, R, totalMonths, kiType, koFreq, gMonths, koMode} = p;
+    
     const histLen = globalStockData[symbols[0]].prices.length;
     const startIndex = histLen - D - 1;
-    if (startIndex < 0) return;
+    if (startIndex < 0) {
+        console.error("歷史數據長度不足以進行回測");
+        return;
+    }
     
     const startPrices = symbols.map(s => globalStockData[s].prices[startIndex]);
     const KO_Level = parseFloat(document.getElementById('koPct').value) / 100;
@@ -493,68 +542,203 @@ function runBacktest(p) {
     const AKI = startPrices.map(s => s * KI_Level);
     const K = startPrices.map(s => s * Strike_Level);
     
+    const minKoDays = gMonths * 21;
+
     let kiTouched = false;
     let event = "Maturity (到期)";
     let daysToEvent = D;
     let finalPayoff = 0;
 
+    let koReachedEver = new Array(symbols.length).fill(false);
+
     for (let d = 1; d <= D; d++) {
         const currentIndex = startIndex + d;
         const currentPrices = symbols.map(s => globalStockData[s].prices[currentIndex]);
 
-        // 1. 每日判斷 KI (AKI 為觀察期間任一資產跌破)
-        for (let i = 0; i < symbols.length; i++) {
-            if (kiType === "AKI" && currentPrices[i] < AKI[i]) {
-                kiTouched = true;
-            }
+        // 1. 每日判斷 KI (AKI)
+        if (kiType === "AKI" && currentPrices.some((price, i) => price < AKI[i])) {
+            kiTouched = true;
         }
 
-        // 2. 每日判斷 KO (保證期間結束後，每天觀察是否所有資產同時高於 KO)
-        const minKoDays = (p.gMonths * 21);
-        if (d >= minKoDays) {
-            // 判斷當天所有股票是否都高於等於 KO 價格
-            const isKOToday = currentPrices.every((price, i) => price >= KO[i]);
-            
-            if (isKOToday) {
-                event = `Knock-Out (第 ${d} 天提前出場)`; 
+        // 2. 判斷 KO 觀察日
+        let isObservationDay = (koFreq === "Daily") 
+            ? (d >= minKoDays) 
+            : (d >= minKoDays && d % 21 === 0);
+
+        if (isObservationDay) {
+            // --- 比照 runSimulation 邏輯：在觀察日更新狀態並判斷 ---
+            for (let i = 0; i < symbols.length; i++) {
+                if (currentPrices[i] >= KO[i]) {
+                    koReachedEver[i] = true;
+                }
+            }
+
+            let isKoTriggered = false;
+            if (koMode === "Memory") {
+                isKoTriggered = koReachedEver.every(reached => reached === true);
+            } else {
+                isKoTriggered = currentPrices.every((price, i) => price >= KO[i]);
+            }
+
+            if (isKoTriggered) {
+                event = `KO 提前出場 (第 ${d} 天提前出場)`;
                 daysToEvent = d;
-                // 報酬計算：通常按實際持有天數折算年化利息
-                finalPayoff = 100 * (1 + (d / 252) * R); 
-                break; // 提前結束迴圈
+                finalPayoff = 100 * (1 + (d / 252) * R);
+                break;
             }
         }
 
-        // 3. 到期日判斷 (如果前面沒中途 KO)
+        // 3. 到期日判斷
         if (d === D) {
-            // EKI 到期才看是否跌破
             if (kiType === "EKI" && currentPrices.some((s, i) => s < AKI[i])) {
                 kiTouched = true;
             }
 
-            // 判斷最後領回 (未觸及 KI 或 最終價格都大於等於 Strike)
             if (!kiTouched || currentPrices.every((s, i) => s >= K[i])) {
                 event = "Full Repayment (滿期贖回)"; 
                 finalPayoff = 100 * (1 + (D / 252) * R);
             } else {
                 event = "KI Delivery (實物交割)";
-                // 計算最差表現資產的報酬
+                // 注意：這裡分母使用 K[i] 是您原本的邏輯，維持不變
                 const perf = currentPrices.map((s, i) => s / K[i]);
                 const worstPerf = Math.min(...perf); 
-                // 報酬 = 應得利息 + (100 * 最差資產表現)
                 finalPayoff = 100 * (D / 252 * R) + (100 * worstPerf);
             }
         }
     }
 
-    // 更新介面
+    // 更新介面 UI
     document.getElementById('btStart').innerText = globalStockData[symbols[0]].labels[startIndex];
     document.getElementById('btEnd').innerText = globalStockData[symbols[0]].labels[startIndex + daysToEvent];
     document.getElementById('btStatus').innerText = event;
     document.getElementById('btDays').innerText = `${daysToEvent} Days`;
     document.getElementById('btReturn').innerText = (finalPayoff - 100).toFixed(2) + "%";
     document.getElementById('btReturn').style.color = (finalPayoff >= 100) ? "var(--success)" : "var(--danger)";
-} 
-function dynamicCholesky(A) {
+}
+/**
+ * 按鈕點擊事件監聽
+ */
+document.getElementById('runBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('runBtn'), loader = document.getElementById('loading'), resSec = document.getElementById('result-section');
+    btn.disabled = true; loader.style.display = 'block'; resSec.style.display = 'none';
+    
+    try {
+        const symbols = document.getElementById('symbols').value.split(',').map(s => s.trim().toUpperCase()).filter(s => s);
+        const apiKey = document.getElementById('apiKey').value;
+        const months = parseInt(document.getElementById('months').value);
+        const gMonths = parseInt(document.getElementById('guaranteedMonths').value) || 1;
+        const years = parseInt(document.getElementById('chartYears').value);
+        const outputSize = Math.max(1000, years * 265 + (months * 21)); 
+        
+        currentVolDays = months * 21;
+
+        // 取得 API 資料
+await Promise.all(symbols.map(async (s) => {
+    // 檢查快取：如果已經抓過該標的資料，直接跳過 fetch
+    if (globalStockData[s] && globalStockData[s].prices.length >= outputSize) {
+        console.log(`使用快取數據: ${s}`);
+        return; 
+    }
+
+    console.log(`發起 API 請求: ${s}`);
+    const res = await fetch(`https://api.twelvedata.com/time_series?symbol=${s}&interval=1day&outputsize=${outputSize}&apikey=${apiKey}`)
+                .then(r => r.json());
+    
+    if(!res.values) throw new Error(`API 錯誤 (${s}): ${res.message || '請檢查 Key'}`);
+    
+    const vals = res.values.reverse();
+    globalStockData[s] = { 
+        labels: vals.map(v => v.datetime), 
+        prices: vals.map(v => parseFloat(v.close)), 
+        volumes: vals.map(v => parseFloat(v.volume)), 
+        name: s 
+    };
+}));
+
+        const volSkewRaw = parseFloat(document.getElementById('volSkew').value) || 0;
+        const volMultiplier = 1 + (volSkewRaw / 100);
+        const dim = symbols.length;
+
+        // 計算波動率
+        const vols = symbols.map(s => {
+            const p = globalStockData[s].prices;
+            const actualVolDays = Math.min(p.length - 1, currentVolDays);
+            const sample = p.slice(-(actualVolDays + 1));
+            let rets = [];
+            for(let i = 1; i < sample.length; i++) {
+                rets.push(Math.log(sample[i] / sample[i-1]));
+            }
+            const baseVol = math.std(rets) * Math.sqrt(252);
+            return baseVol * volMultiplier; 
+        });
+
+        // 計算相關係數矩陣
+        const retsMatrix = [];
+        const corWindow = currentVolDays; 
+        document.getElementById('corPeriodLabel').innerText = `${months}M / ${corWindow}D`;
+
+        for (let i = 0; i < corWindow; i++) {
+            let row = [];
+            let isValidDay = true;
+            for (let s of symbols) {
+                const p = globalStockData[s].prices;
+                const len = p.length;
+                if (len - 2 - i < 0) {
+                    isValidDay = false;
+                    break;
+                }
+                const currentP = p[len - 1 - i];
+                const prevP = p[len - 2 - i];
+                row.push(Math.log(currentP / prevP));
+            }
+            if (isValidDay) retsMatrix.push(row);
+        }
+
+        if (retsMatrix.length < 20) throw new Error(`標的物數據重疊天數不足`);
+
+        const corMat = Array.from({length: dim}, (_, i) => 
+            Array.from({length: dim}, (_, j) => 
+                i === j ? 1 : getCorrelation(retsMatrix.map(r => r[i]), retsMatrix.map(r => r[j]))
+            )
+        );
+
+        const inputCoupon = parseFloat(document.getElementById('coupon').value) / 100;
+
+        // 整合參數 (包含 gMonths 與 koFreq)
+        const params = { 
+            symbols, 
+            S0: symbols.map(s => globalStockData[s].prices.slice(-1)[0]), 
+            KO: symbols.map(s => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('koPct').value/100)), 
+            AKI: symbols.map(s => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('kiPct').value/100)), 
+            K: symbols.map(s => globalStockData[s].prices.slice(-1)[0] * (document.getElementById('strikePct').value/100)), 
+            V: vols, 
+            COR: corMat, 
+            N: parseInt(document.getElementById('simN').value), 
+            D: months * 21, 
+            R: inputCoupon, 
+            r: 0.03, 
+            CDS: 0.005, 
+            totalMonths: months, 
+            kiType: document.getElementById('kiType').value,
+            gMonths: gMonths,
+            koFreq: document.getElementById('koFreq').value,
+    koMode: document.getElementById('koMode').value 
+        };
+
+        // 執行運算
+        const mcResult = runSimulation(params);
+        renderMCResults(mcResult, params);
+        renderCorrelationHeatmap(params.symbols, params.COR);
+        runBacktest(params); // 現在 params 裡有 gMonths 和 koFreq 了
+        initTechCharts(symbols);
+        resSec.style.display = 'block';
+
+    } catch (e) { 
+        alert("錯誤: " + e.message); 
+    } finally { 
+        btn.disabled = false; loader.style.display = 'none'; 
+    }
+});function dynamicCholesky(A) {
     const n = A.length; let L = Array.from({length: n}, () => new Array(n).fill(0));
     for (let i = 0; i < n; i++) { for (let j = 0; j <= i; j++) {
         let s = 0; for (let k = 0; k < j; k++) s += L[i][k] * L[j][k];
