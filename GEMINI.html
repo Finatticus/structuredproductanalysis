@@ -2,87 +2,77 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Gemini 產品說明書稽核器</title>
+    <title>我的私人 Gemini 聊天室</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; }
-        .controls { background: #fff; border: 1px solid #e0e0e0; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h2 { color: #1a73e8; }
-        textarea, input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px; }
-        #output { white-space: pre-wrap; background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 5px solid #1a73e8; margin-top: 20px; min-height: 100px; }
-        button { background: #1a73e8; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; }
+        body { font-family: -apple-system, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background-color: #f0f2f5; }
+        .chat-container { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; }
+        #chat-box { height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fafafa; display: flex; flex-direction: column; }
+        .msg { margin-bottom: 10px; padding: 10px; border-radius: 8px; max-width: 80% }
+        .user-msg { background: #007bff; color: white; align-self: flex-end; }
+        .ai-msg { background: #e9ecef; color: #333; align-self: flex-start; white-space: pre-wrap; }
+        input[type="password"], textarea { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; background: #28a745; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 16px; }
         button:disabled { background: #ccc; }
     </style>
 </head>
 <body>
-    <h2>📁 Gemini 文件比對助手</h2>
-    <div class="controls">
-        <label><b>1. API Key:</b></label>
-        <input type="password" id="apiKey" placeholder="在此輸入您的 Gemini API Key">
-        
-        <label><b>2. 選擇產品說明書 (PDF):</b></label><br>
-        <input type="file" id="fileInput" accept="application/pdf"><br><br>
-        
-        <label><b>3. 分析指令 (Prompt):</b></label>
-        <textarea id="promptInput">這是一份結構型商品的產品說明書，請幫我詳細列出它的：
-1. 下限價格觀察頻率與具體觀察區間（日期）
-2. 提前出場的頻率與具體觀察區間（日期）
-3. 連結標的名稱</textarea>
-        
-        <button id="btn">開始分析文件</button>
+
+<div class="chat-container">
+    <h2>💬 私人 Gemini 聊天</h2>
+    
+    <input type="password" id="apiKey" placeholder="在此輸入 API Key">
+    
+    <div id="chat-box">
+        <div class="msg ai-msg">你好！請輸入 API Key 並開始跟我聊天吧。</div>
     </div>
 
-    <h3>分析結果：</h3>
-    <div id="output">尚未開始分析...</div>
+    <textarea id="userInput" placeholder="輸入訊息..." rows="3"></textarea>
+    <button id="sendBtn">傳送訊息</button>
+</div>
 
-    <script type="module">
-        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+<script type="module">
+    import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
-        // 直接用事件監聽，避開 window 綁定問題
-        document.getElementById('btn').addEventListener('click', async () => {
-            const API_KEY = document.getElementById("apiKey").value;
-            const fileInput = document.getElementById("fileInput");
-            const output = document.getElementById("output");
-            const btn = document.getElementById("btn");
+    const chatBox = document.getElementById('chat-box');
+    const sendBtn = document.getElementById('sendBtn');
+    const userInput = document.getElementById('userInput');
 
-            if (!API_KEY) return alert("請輸入 API Key");
-            if (fileInput.files.length === 0) return alert("請選擇檔案");
+    // 輔助函式：新增對話框
+    function appendMessage(role, text) {
+        const div = document.createElement('div');
+        div.className = `msg ${role === 'user' ? 'user-msg' : 'ai-msg'}`;
+        div.innerText = text;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
 
-            btn.disabled = true;
-            output.innerText = "🚀 正在傳輸資料給 AI，請稍候...";
+    sendBtn.addEventListener('click', async () => {
+        const API_KEY = document.getElementById("apiKey").value;
+        const prompt = userInput.value.trim();
 
-            try {
-                const genAI = new GoogleGenerativeAI(API_KEY);
-                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        if (!API_KEY) return alert("請輸入 API Key");
+        if (!prompt) return;
 
-                const file = fileInput.files[0];
-                const base64Data = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                    reader.readAsDataURL(file);
-                });
+        appendMessage('user', prompt);
+        userInput.value = '';
+        sendBtn.disabled = true;
 
-                // 修改後的呼叫方式，更穩定
-                const contents = [
-                    {
-                        inlineData: {
-                            data: base64Data,
-                            mimeType: "application/pdf"
-                        }
-                    },
-                    { text: document.getElementById("promptInput").value }
-                ];
+        try {
+            const genAI = new GoogleGenerativeAI(API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-                const result = await model.generateContent(contents);
-                const response = await result.response;
-                output.innerText = response.text();
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const aiText = response.text();
+            
+            appendMessage('ai', aiText);
+        } catch (error) {
+            appendMessage('ai', "❌ 錯誤：" + error.message);
+        } finally {
+            sendBtn.disabled = false;
+        }
+    });
+</script>
 
-            } catch (error) {
-                console.error(error);
-                output.innerHTML = `<span style="color:red">❌ 發生錯誤：${error.message}</span><br><small>請檢查 API Key 是否正確或是否正在使用 VPN/公司網路。</small>`;
-            } finally {
-                btn.disabled = false;
-            }
-        });
-    </script>
 </body>
 </html>
