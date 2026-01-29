@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>我的私人 Gemini 辨識工具</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 20px auto; line-height: 1.6; }
+        #output { white-space: pre-wrap; background: #f4f4f4; padding: 15px; border-radius: 8px; min-height: 100px; }
+        .controls { margin-bottom: 20px; border: 1px solid #ccc; padding: 15px; border-radius: 8px; }
+        input, button { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h2>Gemini 文件辨識助手</h2>
+    
+    <div class="controls">
+        <label>1. 輸入 API Key:</label><br>
+        <input type="password" id="apiKey" placeholder="在此輸入您的 Gemini API Key" style="width: 80%"><br><br>
+        
+        <label>2. 選擇 PDF 檔案:</label><br>
+        <input type="file" id="fileInput" accept="application/pdf"><br><br>
+        
+        <label>3. 輸入指令 (Prompt):</label><br>
+        <textarea id="promptInput" style="width: 100%; height: 60px;">這是一份結構型商品的產品說明書，請幫我列出它的：
+1. 下限價格觀察頻率與區間
+2. 提前出場的頻率與觀察區間</textarea><br>
+        
+        <button onclick="runAi()" id="btn">開始分析</button>
+    </div>
+
+    <h3>分析結果：</h3>
+    <div id="output">等待指令中...</div>
+
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+        window.runAi = async () => {
+            const API_KEY = document.getElementById("apiKey").value;
+            const fileInput = document.getElementById("fileInput");
+            const output = document.getElementById("output");
+            const btn = document.getElementById("btn");
+
+            if (!API_KEY) return alert("請輸入 API Key");
+            if (fileInput.files.length === 0) return alert("請選擇檔案");
+
+            btn.disabled = true;
+            output.innerText = "思考中... (這可能需要幾秒鐘，視檔案大小而定)";
+
+            try {
+                // 1. 初始化 AI
+                const genAI = new GoogleGenerativeAI(API_KEY);
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+                // 2. 將 PDF 轉為 Base64 格式
+                const file = fileInput.files[0];
+                const base64Data = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                    reader.readAsDataURL(file);
+                });
+
+                // 3. 呼叫 Gemini
+                const result = await model.generateContent([
+                    {
+                        inlineData: {
+                            data: base64Data,
+                            mimeType: "application/pdf"
+                        }
+                    },
+                    document.getElementById("promptInput").value
+                ]);
+
+                const text = result.response.text();
+                output.innerText = text;
+            } catch (error) {
+                output.innerText = "發生錯誤：" + error.message;
+            } finally {
+                btn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>
