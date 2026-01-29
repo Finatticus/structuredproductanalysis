@@ -3,34 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 私人助理 (Groq 版)</title>
+    <title>AI 私人助理 (中繼穩壓版)</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background-color: #f5f7f9; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        .header { background: #343a40; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .header input { width: 250px; padding: 8px; border-radius: 4px; border: none; }
-        #chat-window { flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .bubble { max-width: 85%; padding: 12px 16px; border-radius: 12px; font-size: 15px; line-height: 1.6; }
-        .user { align-self: flex-end; background: #007bff; color: white; }
-        .ai { align-self: flex-start; background: white; border: 1px solid #dee2e6; color: #333; }
-        .error { background: #fff5f5; border: 1px solid #feb2b2; color: #c53030; align-self: center; font-size: 13px; }
-        .input-bar { background: white; padding: 20px; border-top: 1px solid #ddd; display: flex; gap: 10px; }
-        textarea { flex-grow: 1; height: 50px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; resize: none; }
-        button { background: #28a745; color: white; border: none; padding: 0 25px; border-radius: 8px; cursor: pointer; }
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        .setup-panel { background: white; padding: 15px; border-bottom: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .setup-panel input { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        #chat-window { flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .bubble { max-width: 80%; padding: 10px 14px; border-radius: 15px; font-size: 15px; line-height: 1.5; }
+        .user { align-self: flex-end; background: #0084ff; color: white; border-bottom-right-radius: 4px; }
+        .ai { align-self: flex-start; background: #e4e6eb; color: #050505; border-bottom-left-radius: 4px; white-space: pre-wrap; }
+        .input-area { background: white; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #ddd; }
+        textarea { flex-grow: 1; border: 1px solid #ddd; border-radius: 20px; padding: 10px 15px; resize: none; height: 40px; font-size: 15px; outline: none; }
+        button { background: #0084ff; color: white; border: none; padding: 0 20px; border-radius: 20px; cursor: pointer; font-weight: bold; }
         button:disabled { background: #ccc; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <strong>AI 助手 (Llama 3)</strong>
-    <input type="password" id="apiKey" placeholder="在此輸入 Groq API Key (gsk_...)">
+<div class="setup-panel">
+    <input type="password" id="apiKey" placeholder="1. 貼上 Groq API Key (gsk_...)">
+    <input type="text" id="proxyUrl" placeholder="2. 貼上 Cloudflare Worker 網址 (https://...)">
 </div>
 
 <div id="chat-window">
-    <div class="bubble ai">你好！請輸入 API Key 後即可開始。這是一個直接連線到 Groq 的純前端網頁。</div>
+    <div class="bubble ai">設定完成後，即可在公司網路避開封鎖跟我聊天！</div>
 </div>
 
-<div class="input-bar">
+<div class="input-area">
     <textarea id="userInput" placeholder="輸入訊息..."></textarea>
     <button id="sendBtn">傳送</button>
 </div>
@@ -39,35 +38,31 @@
     const chatWindow = document.getElementById('chat-window');
     const sendBtn = document.getElementById('sendBtn');
     const userInput = document.getElementById('userInput');
-    const apiKeyInput = document.getElementById('apiKey');
-
-    // 歷史紀錄，讓 AI 有記憶
     let messages = [];
 
-    function addMessage(role, text, isError = false) {
+    function addMessage(role, text) {
         const div = document.createElement('div');
-        div.className = `bubble ${role} ${isError ? 'error' : ''}`;
+        div.className = `bubble ${role === 'user' ? 'user' : 'ai'}`;
         div.innerText = text;
         chatWindow.appendChild(div);
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    async function callAI() {
-        const key = apiKeyInput.value.trim();
+    async function sendMessage() {
+        const key = document.getElementById('apiKey').value.trim();
+        const proxy = document.getElementById('proxyUrl').value.trim().replace(/\/$/, "");
         const content = userInput.value.trim();
 
-        if (!key) return alert("請輸入 API Key！");
-        if (!content) return;
+        if (!key || !proxy || !content) return alert("請填寫 Key、網址與訊息");
 
         addMessage('user', content);
         userInput.value = '';
         sendBtn.disabled = true;
-
-        // 加入歷史紀錄
         messages.push({ role: "user", content: content });
 
         try {
-            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            // 關鍵：連向你的 Cloudflare 中繼站
+            const response = await fetch(`${proxy}/openai/v1/chat/completions`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${key}`,
@@ -75,31 +70,25 @@
                 },
                 body: JSON.stringify({
                     model: "llama-3.3-70b-versatile",
-                    messages: messages,
-                    temperature: 0.7
+                    messages: messages
                 })
             });
 
             const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error?.message || `HTTP 錯誤 ${response.status}`);
-            }
+            if (!response.ok) throw new Error(data.error?.message || "請求失敗");
 
             const aiText = data.choices[0].message.content;
             addMessage('ai', aiText);
             messages.push({ role: "assistant", content: aiText });
-
-        } catch (error) {
-            addMessage('ai', `❌ 錯誤：${error.message}`, true);
-            console.error(error);
+        } catch (e) {
+            addMessage('ai', "❌ 出錯了：" + e.message);
         } finally {
             sendBtn.disabled = false;
         }
     }
 
-    sendBtn.onclick = callAI;
-    userInput.onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); callAI(); } };
+    sendBtn.onclick = sendMessage;
+    userInput.onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 </script>
 
 </body>
