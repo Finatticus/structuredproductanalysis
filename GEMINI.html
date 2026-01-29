@@ -2,102 +2,55 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的私人 Gemini 聊天室</title>
+    <title>Gemini 私人對話 (Debug 版)</title>
     <style>
-        :root { --primary-color: #1a73e8; --bg-color: #f0f2f5; }
-        body { font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg-color); margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        
-        /* 頂部設定區 */
-        .settings { background: white; padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; gap: 10px; align-items: center; }
-        input[type="password"] { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-
-        /* 對話紀錄區 */
-        #chat-container { flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .bubble { max-width: 80%; padding: 12px 16px; border-radius: 18px; line-height: 1.5; word-wrap: break-word; font-size: 15px; }
-        .user { align-self: flex-end; background-color: var(--primary-color); color: white; border-bottom-right-radius: 4px; }
-        .ai { align-self: flex-start; background-color: white; color: #333; border-bottom-left-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); white-space: pre-wrap; }
-
-        /* 底部輸入區 */
-        .input-area { background: white; padding: 20px; border-top: 1px solid #ddd; display: flex; gap: 10px; }
-        textarea { flex-grow: 1; border: 1px solid #ccc; border-radius: 8px; padding: 10px; resize: none; height: 50px; font-size: 15px; }
-        button { background: var(--primary-color); color: white; border: none; padding: 0 20px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #1557b0; }
-        button:disabled { background: #ccc; }
+        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; background: #f4f4f4; }
+        #chat-box { height: 300px; overflow-y: auto; border: 1px solid #ccc; background: white; padding: 10px; margin-bottom: 10px; border-radius: 8px; }
+        .error-msg { color: red; background: #ffdada; padding: 10px; border-radius: 5px; font-size: 12px; margin-top: 10px; border: 1px solid red; }
+        textarea { width: 100%; height: 60px; margin-bottom: 10px; }
+        input { width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box; }
     </style>
 </head>
 <body>
-
-<div class="settings">
-    <strong>API Key:</strong>
-    <input type="password" id="apiKey" placeholder="在此輸入您的 Gemini API Key">
-    <button onclick="document.getElementById('chat-container').innerHTML=''" style="background:#666; padding: 5px 10px; font-size: 12px;">清空對話</button>
-</div>
-
-<div id="chat-container">
-    <div class="bubble ai">你好！我是 Gemini。輸入 API Key 後即可開始聊天。</div>
-</div>
-
-<div class="input-area">
-    <textarea id="userInput" placeholder="輸入訊息... (Shift+Enter 換行)"></textarea>
+    <h3>Gemini 對話測試</h3>
+    <input type="password" id="apiKey" placeholder="貼上你的 API Key">
+    <div id="chat-box"></div>
+    <textarea id="userInput" placeholder="輸入訊息..."></textarea>
     <button id="sendBtn">傳送</button>
-</div>
+    <div id="debug-info"></div>
 
-<script type="module">
-    import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
-    let chatSession = null; // 用於儲存對話狀態
+        const btn = document.getElementById('sendBtn');
+        const debugInfo = document.getElementById('debug-info');
 
-    const container = document.getElementById('chat-container');
-    const input = document.getElementById('userInput');
-    const btn = document.getElementById('sendBtn');
+        btn.onclick = async () => {
+            const key = document.getElementById('apiKey').value.trim();
+            const text = document.getElementById('userInput').value;
+            debugInfo.innerHTML = ""; // 清除舊錯誤
 
-    function addBubble(role, text) {
-        const div = document.createElement('div');
-        div.className = `bubble ${role}`;
-        div.innerText = text;
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-    }
+            if(!key) return alert("請輸入 Key");
 
-    async function handleChat() {
-        const key = document.getElementById('apiKey').value;
-        const prompt = input.value.trim();
-
-        if (!key) return alert("請先輸入 API Key");
-        if (!prompt || btn.disabled) return;
-
-        addBubble('user', prompt);
-        input.value = '';
-        btn.disabled = true;
-
-        try {
-            // 如果還沒建立過 Session，就初始化一個
-            if (!chatSession) {
+            try {
                 const genAI = new GoogleGenerativeAI(key);
+                // 強制指定使用 flash 模型，這是免費額度最穩定的
                 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                chatSession = model.startChat({ history: [] });
+                
+                const result = await model.generateContent(text);
+                const response = await result.response;
+                document.getElementById('chat-box').innerHTML += `<div><b>AI:</b> ${response.text()}</div>`;
+            } catch (e) {
+                console.error(e);
+                // 這裡會抓出真正的錯誤原因
+                debugInfo.innerHTML = `<div class="error-msg">
+                    <b>偵測到錯誤：</b><br>
+                    狀態碼: ${e.status || '未知'}<br>
+                    原因: ${e.message}<br>
+                    建議：請確認 Key 是否正確，或嘗試切換手機網路（避開公司防火牆）。
+                </div>`;
             }
-
-            const result = await chatSession.sendMessage(prompt);
-            const response = await result.response;
-            addBubble('ai', response.text());
-        } catch (error) {
-            addBubble('ai', "❌ 錯誤：" + error.message);
-            chatSession = null; // 出錯時重置 Session
-        } finally {
-            btn.disabled = false;
-        }
-    }
-
-    btn.addEventListener('click', handleChat);
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleChat();
-        }
-    });
-</script>
-
+        };
+    </script>
 </body>
 </html>
