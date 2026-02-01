@@ -1,0 +1,8 @@
+﻿{
+  "name": "sn-quant-api",
+  "version": "1.0.0",
+  "dependencies": {
+    "mathjs": "^11.8.0",
+    "cors": "^2.8.5"
+  }
+}
