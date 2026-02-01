@@ -1,5 +1,5 @@
 ﻿{
-  "name": "sn-quant-api",
+  "name": "structuredproductanalysis",
   "version": "1.0.0",
   "dependencies": {
     "mathjs": "^11.8.0",
