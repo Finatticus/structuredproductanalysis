@@ -1,5 +1,33 @@
 ﻿const math = require('mathjs');
 
+export default function handler(req, res) {
+    // --- 新增這段：處理 CORS ---
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*'); // 測試時先設為 *，之後可改為您的網頁網址
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+    // 處理預檢請求 (Preflight)
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+    // -----------------------
+
+    if (req.method === 'POST') {
+        try {
+            const params = req.body;
+            // 這裡放原本的 runSimulation 邏輯
+            const result = runSimulation(params); 
+            res.status(200).json(result);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    } else {
+        res.status(405).send('Method Not Allowed');
+    }
+}
+
 function runSimulation(p) {
     const {S0, KO, koStep, AKI, K, V, COR, N, D, R, r, totalMonths, symbols, kiType, gMonths, koFreq, koMode} = p;
     const dim = symbols.length;
@@ -117,16 +145,3 @@ function runSimulation(p) {
     };
 }
 
-
-export default function handler(req, res) {
-    // 簡單的安全性檢查（只接受 POST）
-    if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
-    
-    try {
-        const params = req.body;
-        const result = runSimulation(params);
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-}
