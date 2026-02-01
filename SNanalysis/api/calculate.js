@@ -1,26 +1,24 @@
 ﻿const math = require('mathjs');
 
 export default function handler(req, res) {
-    // --- 新增這段：處理 CORS ---
+    // --- CORS 處理 ---
     res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*'); // 測試時先設為 *，之後可改為您的網頁網址
+    res.setHeader('Access-Control-Allow-Origin', '*'); 
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-    // 處理預檢請求 (Preflight)
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
     }
-    // -----------------------
 
     if (req.method === 'POST') {
         try {
             const params = req.body;
-            // 這裡放原本的 runSimulation 邏輯
             const result = runSimulation(params); 
             res.status(200).json(result);
         } catch (error) {
+            console.error(error);
             res.status(500).json({ error: error.message });
         }
     } else {
@@ -28,8 +26,43 @@ export default function handler(req, res) {
     }
 }
 
+// 輔助函式：亂數產生器
+class SeededRandom {
+    constructor(seed) { this.seed = seed; }
+    next() {
+        this.seed = (this.seed * 9301 + 49297) % 233280;
+        return this.seed / 233280;
+    }
+}
+
+function seededRandn(rng) {
+    let u = 0, v = 0;
+    while(u === 0) u = rng.next();
+    while(v === 0) v = rng.next();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function dynamicCholesky(matrix) {
+    const n = matrix.length;
+    let l = Array.from({ length: n }, () => new Array(n).fill(0));
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j <= i; j++) {
+            let sum = 0;
+            for (let k = 0; k < j; k++) sum += l[i][k] * l[j][k];
+            if (i === j) {
+                l[i][j] = Math.sqrt(Math.max(0, matrix[i][i] - sum));
+            } else {
+                l[i][j] = (1.0 / l[j][j]) * (matrix[i][j] - sum);
+            }
+        }
+    }
+    return l;
+}
+
+// 核心運算邏輯
 function runSimulation(p) {
-    const {S0, KO, koStep, AKI, K, V, COR, N, D, R, r, totalMonths, symbols, kiType, gMonths, koFreq, koMode} = p;
+    // 注意：原本的 couponType 改由前端 params 傳入，不再從 document 讀取
+    const {S0, KO, koStep, AKI, K, V, COR, N, D, R, r, totalMonths, symbols, kiType, gMonths, koFreq, koMode, couponType = "Fixed"} = p;
     const dim = symbols.length;
     const dt = 1/252;
     const L = dynamicCholesky(COR);
@@ -38,17 +71,12 @@ function runSimulation(p) {
     let scCounts = new Array(totalMonths + 2).fill(0); 
     let worstCounts = new Array(dim).fill(0);
     const minKoDays = gMonths * 21;
-    
-    // 獲取配息模式 (從 UI 讀取，若無此 UI 則預設為 Fixed)
-    const couponType = document.getElementById('couponType') ? document.getElementById('couponType').value : "Fixed";
 
     for (let n = 0; n < N; n++) {
         let St = [...S0];
         let kiTouched = (kiType === "NA"); 
         let ended = false;
         let koReachedEver = new Array(dim).fill(false);
-        
-        // 累計利息計數
         let accruedCouponDays = 0;
         
         for (let d = 1; d <= D; d++) {
@@ -62,16 +90,12 @@ function runSimulation(p) {
                 if (kiType === "AKI" && St[i] < AKI[i]) kiTouched = true;
             }
 
-            // --- 浮動配息計算邏輯 ---
             let isGuaranteed = d <= minKoDays;
             let allAboveStrike = St.every((s, i) => s >= K[i]);
-            
             if (couponType === "Fixed" || isGuaranteed || allAboveStrike) {
                 accruedCouponDays++;
             }
-            // -----------------------
 
-            // KO 邏輯
             let currentStepIdx = Math.floor((d - 1) / 21);
             let currentStepShift = 1 + (currentStepIdx * koStep); 
             let currentKO = KO.map(baseKO => baseKO * currentStepShift);
@@ -88,7 +112,6 @@ function runSimulation(p) {
                         St.every((s, i) => s >= currentKO[i]);
 
                     if (isKoTriggered) {
-                        // 票息計算：使用實際累計的天數
                         let payoff = 100 * (1 + (accruedCouponDays / 252) * R) * Math.exp(-r * (d / 252));
                         payoffs.push(payoff);
                         periods.push(d);
@@ -100,7 +123,6 @@ function runSimulation(p) {
                 }
             }
 
-            // 到期處理
             if (d === D && !ended) {
                 if (kiType === "EKI" && St.some((s, i) => s < AKI[i])) kiTouched = true;
                 let disc = Math.exp(-r * (D / 252));
@@ -114,7 +136,6 @@ function runSimulation(p) {
                     let mP = Math.min(...perf);
                     let worstAssetIdx = perf.indexOf(mP);
                     worstCounts[worstAssetIdx]++;
-                    // 實物交割：累計利息 + 最差資產價值
                     payoffs.push((100 * totalCoupon + 100 * (St[worstAssetIdx] / K[worstAssetIdx])) * disc);
                     scCounts[totalMonths + 1]++;
                 }
@@ -123,7 +144,6 @@ function runSimulation(p) {
         }
     }
 
-    // 計算風險指標 VaR / CVaR
     const sortedPayoffs = [...payoffs].sort((a, b) => a - b);
     const riskData = {};
     [0.01, 0.03, 0.05, 0.10, 0.15].forEach(alpha => {
@@ -144,4 +164,3 @@ function runSimulation(p) {
         riskResults: riskData
     };
 }
-
