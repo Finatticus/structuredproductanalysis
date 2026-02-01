@@ -1,39 +1,30 @@
 ﻿const math = require('mathjs');
 
-export default function handler(req, res) {
-    // --- CORS 處理 ---
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*'); 
+// 這裡改用 module.exports
+module.exports = async (req, res) => {
+    // 強制設定所有請求都先跑這些 Header
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Content-Type');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
 
+    // 關鍵：處理瀏覽器的預檢請求
     if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+        return res.status(200).end();
     }
 
     if (req.method === 'POST') {
         try {
             const params = req.body;
-            const result = runSimulation(params); 
-            res.status(200).json(result);
+            const result = runSimulation(params);
+            return res.status(200).json(result);
         } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: error.message });
+            return res.status(500).json({ error: error.message });
         }
     } else {
-        res.status(405).send('Method Not Allowed');
+        return res.status(405).json({ error: 'Method Not Allowed' });
     }
-}
-
-// 輔助函式：亂數產生器
-class SeededRandom {
-    constructor(seed) { this.seed = seed; }
-    next() {
-        this.seed = (this.seed * 9301 + 49297) % 233280;
-        return this.seed / 233280;
-    }
-}
+};
 
 function seededRandn(rng) {
     let u = 0, v = 0;
