@@ -2,7 +2,7 @@
 {
   "name": "structuredproductanalysis",
   "version": "1.0.0",
-  "main": "api/calculate.js",
+  "main": "SNanalysis/api/calculate.js",
   "engines": {
     "node": "18.x"
   },
