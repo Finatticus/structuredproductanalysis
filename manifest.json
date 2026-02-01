@@ -1,7 +1,7 @@
 ﻿{
   "name": "SN Quant Analytics",
   "short_name": "SN Quant",
-  "start_url": ".",
+  "start_url": "fcn.html",
   "display": "standalone",
   "background_color": "#f4f7fa",
   "theme_color": "#1a4da1",
