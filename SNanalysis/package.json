@@ -1,6 +1,7 @@
 ﻿{
   "name": "structuredproductanalysis",
   "version": "1.0.0",
+  "main": "api/calculate.js",
   "dependencies": {
     "mathjs": "^11.8.0",
     "cors": "^2.8.5"

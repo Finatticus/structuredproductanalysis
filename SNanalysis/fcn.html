@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SN Quant Analytics1</title>
+    <title>SN Quant Analytics2</title>
 <meta name="theme-color" content="#1a4da1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -916,7 +916,8 @@ document.getElementById('loading').style.display = 'flex';
             koFreq: koFreq,
             koMode: koMode,
             kiType: kiType,
-            koStep: koStep / 100
+            koStep: koStep / 100,
+couponType: document.getElementById('couponType') ? document.getElementById('couponType').value : "Fixed"
         };
 document.getElementById('volPeriodLabel').innerText = `(${params.D}天)`;
 const response = await fetch('https://structuredproductanalysis.vercel.app/api/calculate', {
