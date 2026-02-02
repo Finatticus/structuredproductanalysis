@@ -1,24 +1,24 @@
-﻿<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
+<!DOCTYPE html>
+<!-- saved from url=(0063)https://finatticus.github.io/structuredproductanalysis/fcn.html -->
+<html lang="zh-TW"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+   
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SN Quant Analytics</title>
 <meta name="theme-color" content="#1a4da1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="app-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="app-icon.png">
-<link rel="icon" type="image/png" href="app-icon.png"><link rel="manifest" href="manifest.json">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<link rel="apple-touch-icon" href="https://finatticus.github.io/structuredproductanalysis/app-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://finatticus.github.io/structuredproductanalysis/app-icon.png">
+<link rel="icon" type="image/png" href="https://finatticus.github.io/structuredproductanalysis/app-icon.png"><link rel="manifest" href="https://finatticus.github.io/structuredproductanalysis/manifest.json">
+    <script src="./SN Quant Analytics_files/math.js.下載"></script>
+    <script src="./SN Quant Analytics_files/chart.js.下載"></script>
+    <script src="./SN Quant Analytics_files/chartjs-plugin-zoom.min.js.下載"></script>
+<script src="./SN Quant Analytics_files/chartjs-plugin-datalabels@2.2.0"></script>
     <style>
 :root{--bg-color:#f4f7fa;--card-bg:#ffffff;--primary:#1a4da1;--text-main:#2c3e50;--text-sub:#5f6368;--border:#dadce0;--accent:#e8f0fe;--danger:#d93025;--success:#188038;--warning:#f29900;--shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -1px rgba(0,0,0,0.06)}body{font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:var(--bg-color);color:var(--text-main);padding:20px;margin:0}.container{max-width:1650px;margin:0 auto}h1{color:var(--primary);text-align:left;font-size:1.8rem;margin-bottom:25px;font-weight:500;border-bottom:2px solid var(--primary);padding-bottom:10px}h3{color:var(--text-main);font-weight:500;margin-top:0}.config-panel{background:var(--card-bg);padding:25px;border-radius:8px;margin-bottom:25px;box-shadow:0 1px 3px rgba(60,64,67,.3);border:1px solid var(--border)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}.input-group{display:flex;flex-direction:column}label{display:flex;align-items:center;height:32px;margin-bottom:4px;font-size:0.9rem;font-weight:700}input,select{background:#fff;border:1px solid var(--border);color:var(--text-main);padding:10px;border-radius:4px;font-size:0.9rem;transition:border 0.2s}button{background:var(--primary);color:white;padding:12px;border:none;border-radius:4px;cursor:pointer;width:100%;font-size:1rem;font-weight:600;margin-top:20px;transition:background 0.2s}button:hover{background:#1557b0}#loading{display:none;text-align:center;margin:20px 0;color:var(--primary);font-weight:bold}.result-section{display:none;margin-top:20px}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-bottom:30px}.metric-card{background:var(--card-bg);padding:20px;border-radius:12px;border:1px solid var(--border);box-shadow:0 4px 6px rgba(0,0,0,0.04);transition:transform 0.2s;position:relative;overflow:hidden;text-align:center;display:flex;flex-direction:column;align-items:center}.metric-card:hover{transform:translateY(-2px)}.metric-card::before{content:"";position:absolute;top:0;left:0;width:4px;height:100%;background:var(--primary)}.metric-card.orange::before{background:var(--warning)}.metric-card.green::before{background:var(--success)}.metric-header{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;width:100%}.metric-title{font-size:1rem;color:var(--text-sub);font-weight:700;letter-spacing:0.5px}.metric-icon{font-size:1.2rem;opacity:0.7}.metric-value{display:block;font-size:2rem;font-weight:800;color:var(--text-main);margin:5px 0}.metric-subtext{font-size:0.75rem;color:var(--text-sub);margin-top:5px;font-weight:400}.metric-card:has(#avgReturn){display:none}.metric-card[style*="grid-column: 1 / -1"]{text-align:left !important;align-items:flex-start !important}.metric-card[style*="grid-column: 1 / -1"] .metric-header{justify-content:flex-start !important}.metric-card[style*="grid-column: 1 / -1"] table th,.metric-card[style*="grid-column: 1 / -1"] table td{text-align:left;padding-left:0}.vol-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:15px;padding-top:15px;border-top:1px dashed var(--border);width:100%}.vol-item{text-align:center}.vol-symbol{font-size:0.7rem;font-weight:700;color:var(--text-sub);display:block}.vol-num{font-size:0.9rem;font-weight:700;color:var(--primary)}.mc-main-charts{display:grid;grid-template-columns:1.5fr 1fr;gap:20px;margin-bottom:20px}.double-column-area{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:40px}.card-wrapper{background:var(--card-bg);padding:20px;border-radius:8px;border:1px solid var(--border);box-shadow:0 1px 2px rgba(60,64,67,.1);position:relative}.chart-h350{height:350px}.chart-auto{min-height:250px}#techOptions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;margin-bottom:25px;padding:10px;background:#eee;border-radius:8px}.tech-option{background:#fff;padding:8px 16px;border-radius:4px;cursor:pointer;font-size:13px;color:var(--text-sub);border:1px solid var(--border);font-weight:500;transition:all 0.2s}.tech-option.active{background:var(--primary);color:#fff;border-color:var(--primary)}.tech-option.level-toggle{border-color:var(--warning);color:var(--warning)}.tech-option.level-toggle.active{background:var(--warning);color:#fff;border-color:var(--warning)}.tech-option input{display:none}.stock-charts-area{display:grid;grid-template-columns:1fr;gap:30px}.stock-card{background:var(--card-bg);padding:25px;border-radius:8px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(60,64,67,.1)}.canvas-container{height:420px;width:100%;margin-top:15px;cursor:crosshair}.stats-panel{margin-top:15px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px}.stat-box{background:var(--accent);padding:12px;border-radius:6px;text-align:center;border:1px solid rgba(26,115,232,0.1)}.stat-label{font-size:0.7rem;color:var(--text-sub);display:block;margin-bottom:5px;font-weight:600}.stat-num{font-size:1.1rem;font-weight:bold;color:var(--text-main)}.heatmap-container{display:flex;justify-content:center;padding:10px 0;width:100%}.heatmap-grid{display:grid;gap:8px}.heatmap-cell{width:65px;height:65px;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:bold;color:white;border-radius:6px}.heatmap-label{font-size:0.8rem;font-weight:600;color:var(--text-sub);text-align:center;padding:5px}.backtest-list{list-style:none;padding:0;margin:15px 0}.backtest-item{display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border);font-size:0.9rem}.backtest-item:last-child{border-bottom:none}.bt-label{color:var(--text-sub);font-weight:500}.bt-value{font-weight:bold}.analysis-grid-row{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:15px}.long-term-panel{background:#fff;border:1px solid var(--primary);border-radius:8px;padding:15px;margin-top:20px}.safety-analysis-panel{background:#fff;border:1px solid var(--danger);border-radius:8px;padding:15px}.recovery-analysis-panel{background:#fff;border:1px solid #673ab7;border-radius:8px;padding:15px}@media print{#hiddenReturn{color:white !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;opacity:0}body,.container,.card,h1,h1 span{visibility:visible !important;display:block !important}h3[style*="margin-top:40px"]{break-before:page;page-break-before:always}.stock-card{break-after:page;page-break-after:always}}.label-action-group{display:flex;justify-content:space-between;align-items:center;height:32px;margin-bottom:4px}.label-action-group label{margin-bottom:0;white-space:nowrap}.mini-btn-group{display:flex;gap:2px;background:#eee;padding:3px;border-radius:4px;align-self:center}.mini-btn{padding:4px 5px;font-size:11px;cursor:pointer;border-radius:3px;background:transparent;color:var(--text-sub);border:none;font-weight:bold;transition:all 0.2s;width:auto;margin-top:0}.mini-btn.active{background:var(--primary);color:white}.mini-btn.active.warning{background:var(--warning)}.hidden-select{display:none}.input-group>label{margin-bottom:4px}@media (max-width:768px){body{padding:10px}.grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.mc-main-charts,.double-column-area{grid-template-columns:1fr}h1{font-size:1.4rem}.canvas-container{height:300px}.label-action-group{flex-direction:column;align-items:flex-start;height:auto;gap:5px}}@keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}.result-section.active{display:block !important;animation:fadeInUp 0.6s cubic-bezier(0.22,1,0.36,1) forwards}#loading{display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:15px}.loader-spinner{width:40px;height:40px;border:4px solid var(--accent);border-top:4px solid var(--primary);border-radius:50%;animation:spin 1s linear infinite}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}#runBtn:active{transform:scale(0.98)}
 </style></head><body>
-
-
+ 
+ 
 <div class="container">
     <h1 style="display: flex; justify-content: space-between; align-items: center;">
     <span>SN QUANT ANALYTICS</span>
@@ -26,22 +26,28 @@
 </h1>
     <div class="config-panel">
 <div class="grid">
-<div class="input-group" title="FCN: 每月固定配息&#10;DRA: 每月浮動計息 (保證領息期間後，當日所有連結股票收盤價都在履約價Strike之上才計息)">
+<div class="input-group" title="FCN: 每月固定配息
+DRA: 每月浮動計息 (保證領息期間後，當日所有連結股票收盤價都在履約價Strike之上才計息)">
     <label>產品架構</label>
     <select id="couponType" class="form-control">
         <option value="Fixed">FCN (固定配息)</option>
         <option value="Floating">DRA (浮動配息)</option>
     </select>
 </div>
-    <div class="input-group" title="一個連結標的會抓一次API&#10;... 以此類推"><label>股票代號 (用逗號分隔)</label><input type="text" id="symbols" value="TSLA,TSM,NVDA"></div>
+    <div class="input-group" title="一個連結標的會抓一次API
+... 以此類推"><label>股票代號 (用逗號分隔)</label><input type="text" id="symbols" value="TSLA,TSM,NVDA"></div>
     <div class="input-group" title="不保本商品超過12個月要高資產客戶才能下單唷"><label>天期 (月)</label><input type="number" id="months" value="6"></div>
-<div class="input-group" title="默認為每月配息&#10;配息頻率暫時不開放調整"><label>年化配息率 Coupon (%)</label><input type="number" id="coupon" value="15" step="0.01"></div>
+<div class="input-group" title="默認為每月配息
+配息頻率暫時不開放調整"><label>年化配息率 Coupon (%)</label><input type="number" id="coupon" value="15" step="0.01"></div>
     <div class="input-group" title="影響商品條件最大的因素"><label>履約價 Strike (%)</label><input type="number" id="strikePct" value="75"></div>
-
-<div class="input-group" title="觀察期間內沒有觸及下限價&#10;商品就沒有實物交割風險">
+ 
+<div class="input-group" title="觀察期間內沒有觸及下限價
+商品就沒有實物交割風險">
     <div class="label-action-group">
         <label>下限價 KI (%)</label>
-        <div class="mini-btn-group" data-target="kiType" title="AKI是每天觀察&#10;EKI是期末觀察&#10;NA是不設定下限價">
+        <div class="mini-btn-group" data-target="kiType" title="AKI是每天觀察
+EKI是期末觀察
+NA是不設定下限價">
             <div class="mini-btn active" data-value="AKI">AKI</div>
             <div class="mini-btn" data-value="EKI">EKI</div>
             <div class="mini-btn" data-value="NA">NA</div>
@@ -52,18 +58,22 @@
             <option value="NA">NA</option>
         </select>
     </div>
-    <input type="number" id="kiPct" value="60">
+    <input type="number" id="kiPct" value="60" style="background-color: rgb(255, 255, 255); cursor: text; opacity: 1;">
 </div>
-
-    <div class="input-group" title="觀察期間內達到提前出場條件&#10;商品就提前結束">
+ 
+    <div class="input-group" title="觀察期間內達到提前出場條件
+商品就提前結束">
         <div class="label-action-group">
             <label>提前出場 KO (%)</label>
             <div style="display:flex; gap:5px;">
-                <div class="mini-btn-group" data-target="koFreq" title="Daily:每日觀察&#10;Monthly:每月觀察">
+                <div class="mini-btn-group" data-target="koFreq" title="Daily:每日觀察
+Monthly:每月觀察">
                     <div class="mini-btn active" data-value="Daily">Daily</div>
                     <div class="mini-btn" data-value="PeriodEnd">Monthly</div>
                 </div>
-                <div class="mini-btn-group" data-target="koMode" title="記憶&#10;所有標的都「曾經」觀察期間內任一天達到提前出場&#10;不記憶: 要同時達到">
+                <div class="mini-btn-group" data-target="koMode" title="記憶
+所有標的都「曾經」觀察期間內任一天達到提前出場
+不記憶: 要同時達到">
                     <div class="mini-btn active warning" data-value="Memory">記憶</div>
                     <div class="mini-btn" data-value="Simultaneous">不記憶</div>
                 </div>
@@ -73,33 +83,40 @@
         </div>
         <input type="number" id="koPct" value="100">
     </div>
-    <div class="input-group" title="範例:&#10;填寫-5就是每月遞減5%&#10;填寫+5就是每月遞增5%&#10;...以此類推"><label>KO Step 每月遞增(減) (%)</label><input type="number" id="koStep" value="0" step="0.1"></div>
+    <div class="input-group" title="範例:
+填寫-5就是每月遞減5%
+填寫+5就是每月遞增5%
+...以此類推"><label>KO Step 每月遞增(減) (%)</label><input type="number" id="koStep" value="0" step="0.1"></div>
     <div class="input-group" title="設定上不能超過天期"><label>保證領息期間 (月)</label><input type="number" id="guaranteedMonths" value="1" min="1"></div>
 <div style="grid-column: 1 / -1; height: 10px; border-top: 1px dashed var(--border); margin-top: 10px; padding-top: 10px;"></div>
-
-<div class="input-group" title="免費API:&#10;每分鐘8次API請求&#10;單日800次">
-    <label title="免費API:&#10;每分鐘跑一次模型&#10;單日約可以跑130次">
+ 
+<div class="input-group" title="免費API:
+每分鐘8次API請求
+單日800次">
+    <label title="免費API:
+每分鐘跑一次模型
+單日約可以跑130次">
         API Key <span style="cursor:help; color:var(--primary);"></span>
     </label>
-    <input type="password" id="apiKey" value="d7de0902b30e47dead805e170f78bac6" 
-           oncopy="return false" oncut="return false" placeholder="貼上 API Key">
+    <input type="password" id="apiKey" value="d7de0902b30e47dead805e170f78bac6" oncopy="return false" oncut="return false" placeholder="貼上 API Key">
 </div>
 <div class="input-group" title="作為模型的折現率來計算">
     <label>無風險利率 (%)</label>
     <input type="number" id="riskFreeRate" value="5" step="0.1">
 </div>
-<div class="input-group" title="越多次越精準&#10;但沒在做研究也沒必要太多次">
+<div class="input-group" title="越多次越精準
+但沒在做研究也沒必要太多次">
     <label>模擬次數 Simulations</label>
     <input type="number" id="simN" value="10000">
 </div>
-
+ 
 <div class="input-group" title="如果未來這段期間，市場整體的波動程度比歷史平均高（或低）x% 時...">
     <label title="如果未來這段期間，市場整體的波動程度比歷史平均高（或低）x% 時...">
         波動度傾斜 Vol Skew (%) <span style="cursor:help; color:var(--primary);"> </span>
     </label>
     <input type="number" id="volSkew" value="0" step="1">
 </div>
-
+ 
 <div class="input-group" title="針對個股回測專用">
     <label>技術分析期間 (年)</label>
     <select id="chartYears">
@@ -107,13 +124,13 @@
         <option value="2">2 Years</option>
         <option value="3">3 Years</option>
         <option value="4">4 Years</option>
-        <option value="5" selected>5 Years</option>
+        <option value="5" selected="">5 Years</option>
         <option value="7">7 Years</option>
         <option value="10">10 Years</option>
     </select>
 </div>
 </div>
-
+ 
         <button id="runBtn">Generate Quantitative Analysis</button>
         <div id="loading">
     <div class="loader-spinner"></div>
@@ -135,26 +152,26 @@
                     <span class="metric-icon">⏳ </span><span class="metric-title">平均存續期間 AVG DURATION</span>
                 </div>
                 <span id="avgPeriod" class="metric-value">-</span>
-                <div class="metric-subtext">預期存續天數 (含提前出場機率)</div>
+                <div class="metric-subtext">基於蒙地卡羅模擬結果，計算所有可能情境之平均存續天數<br>即為該商品條件下的理論期望存續期間</div>
             </div>
             <div class="metric-card green">
                 <div class="metric-header">
                     <span class="metric-icon">📜 </span><span class="metric-title">
 <span class="metric-title">歷史波動度 HISTORICAL VOLATILITY</span>
                     <span id="volPeriodLabel" style="font-size:0.9rem; color:var(--text-sub);">(-)</span>
-                </div>
+                </span></div>
                 <div id="volList" class="vol-grid">
                     <div class="vol-item"><span class="vol-symbol">N/A</span><span class="vol-num">-</span></div>
                 </div>
-               <div class="metric-subtext">各標的年化歷史波動率 (對應產品天期)</div>
+               <div class="metric-subtext"><br>預設為對應產品天期的年化歷史波動率<br>可以自行更改波動率後重新計算 (有更改波動度的標的會顯示紅色)</div>
             </div>
-
+ 
 <div class="metric-card" style="grid-column: 1 / -1; height: auto; display: flex; flex-direction: column; align-items: center;">
-    
+   
     <div class="metric-header" style="width: 100%; display: flex; justify-content: center; align-items: center; text-align: center;">
-        <span class="metric-title" style="width: 100%; font-size: 16px">風險分析 RISK ANALYSIS (VaR & CVaR)</span>
+        <span class="metric-title" style="width: 100%; font-size: 16px">風險分析 RISK ANALYSIS (VaR &amp; CVaR)</span>
     </div>
-
+ 
     <div style="width: 100%; overflow-x: auto; padding: 0 50px; box-sizing: border-box; margin-top: 15px;">
         <table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
             <thead>
@@ -187,7 +204,7 @@
             </tbody>
         </table>
     </div>
-
+ 
     <div class="metric-subtext" style="margin-top: 15px; text-align: center; width: 100%; color: var(--text-sub);">
         VaR 代表在該機率下的預期最大損失；CVaR 則代表若發生極端狀況，平均會損失多少本金。
     </div>
@@ -217,9 +234,9 @@
                 <p style="font-size: 1rem; color: var(--text-sub); text-align: center;">💡 一個週期(比照天期)前，進入市場的實際表現</p>
             </div>
         </div>
-        <h3 style="margin-top:40px; margin-bottom:15px; border-left: 4px solid var(--primary); padding-left: 10px;">技術分析 & 回測結果 Technical Analysis & Long-term Backtesting</h3>
+        <h3 style="margin-top:40px; margin-bottom:15px; border-left: 4px solid var(--primary); padding-left: 10px;">技術分析 &amp; 回測結果 Technical Analysis &amp; Long-term Backtesting</h3>
         <div id="techOptions">
-            <label class="tech-option active"><input type="radio" name="tech" value="none" checked><span>給我乾淨的線圖就好</span></label>
+            <label class="tech-option active"><input type="radio" name="tech" value="none" checked=""><span>給我乾淨的線圖就好</span></label>
             <label class="tech-option"><input type="radio" name="tech" value="ma"><span>移動平均線MA (20/60/200)</span></label>
             <label class="tech-option"><input type="radio" name="tech" value="bias"><span>乖離率 BIAS 20</span></label>
             <label class="tech-option"><input type="radio" name="tech" value="rsi"><span>相對強弱指標 RSI 14</span></label>
@@ -229,10 +246,10 @@
         </div>
         <div id="stockChartsArea" class="stock-charts-area"></div>
     </div>
-
-<div style="margin-top: 50px; padding: 20px 0; border-top: 1px solid #dadce0; font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; color: #5f6368; line-height: 1.7;">
+ 
+<div style="margin-top: 50px; padding: 20px 0; border-top: 1px solid #dadce0; font-family: &#39;PingFang TC&#39;, &#39;Microsoft JhengHei&#39;, sans-serif; color: #5f6368; line-height: 1.7;">
     <div style="display: flex; align-items: center; margin-bottom: 15px;">
-        <span style="color: #b71c1c; font-weight: bold; font-size: 0.9rem; letter-spacing: 1px;">RISK DISCLOSURE & DISCLAIMER</span>
+        <span style="color: #b71c1c; font-weight: bold; font-size: 0.9rem; letter-spacing: 1px;">RISK DISCLOSURE &amp; DISCLAIMER</span>
         <div style="flex-grow: 1; height: 1px; background-color: #eee; margin-left: 15px;"></div>
     </div>
     <h4 style="margin: 0 0 12px 0; color: #3c4043; font-size: 1rem; font-weight: 600;">⚠️ 重要風險聲明與投資警語</h4>
@@ -245,11 +262,11 @@
         <li style="margin-bottom: 6px;"><b style="color: #5f6368;">審慎評估：</b> 投資人應詳閱商品說明書並確認自身風險承受能力，本平台不負擔任何投資盈虧責任。</li></ul>
     <div style="margin-top: 20px; padding: 10px; border: 1px solid #f1f3f4; background-color: #fafafa; font-size: 0.85rem; color: #b71c1c; text-align: center; font-weight: 500;">投資一定有風險，投資工具交易有賺有賠，申購前應詳閱相關產品說明書及投資人須知，並自行負擔投資損益責任。</div>
 </div>
-
-
+ 
+ 
 </div>
 <script>
-
+ 
 let mcScenarioChart = null, mcWorstChart = null; let techChartInstances = {}; let globalStockData = {}; let currentVolDays = 126; class SeededRandom {
     constructor(seed = 12345) { this.seed = seed; }
     next() {
@@ -263,7 +280,7 @@ function seededRandn(rng) {
     while (v === 0) v = rng.next();
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
-
+ 
 function getCorrelation(x, y) {
     const muX = math.mean(x), muY = math.mean(y);
     const stdX = math.std(x), stdY = math.std(y);
@@ -296,7 +313,7 @@ function getCorrelation(x, y) {
         return parseFloat((Math.sqrt(math.variance(rets)) * Math.sqrt(252) * 100).toFixed(2));
     })
 };
-
+ 
 function runSimulation(p) {
     const {S0, KO, koStep, AKI, K, V, COR, N, D, R, r, totalMonths, symbols, kiType, gMonths, koFreq, koMode} = p;
     const dim = symbols.length;
@@ -304,22 +321,22 @@ function runSimulation(p) {
     const L = dynamicCholesky(COR);
     const rng = new SeededRandom(42);
     let payoffs = [], periods = [];
-    let scCounts = new Array(totalMonths + 2).fill(0); 
+    let scCounts = new Array(totalMonths + 2).fill(0);
     let worstCounts = new Array(dim).fill(0);
     const minKoDays = gMonths * 21;
-    
+   
     // 獲取配息模式 (從 UI 讀取，若無此 UI 則預設為 Fixed)
     const couponType = document.getElementById('couponType') ? document.getElementById('couponType').value : "Fixed";
-
+ 
     for (let n = 0; n < N; n++) {
         let St = [...S0];
-        let kiTouched = (kiType === "NA"); 
+        let kiTouched = (kiType === "NA");
         let ended = false;
         let koReachedEver = new Array(dim).fill(false);
-        
+       
         // 累計利息計數
         let accruedCouponDays = 0;
-        
+       
         for (let d = 1; d <= D; d++) {
             let rawZ = Array.from({length: dim}, () => seededRandn(rng));
             let dz = new Array(dim).fill(0);
@@ -330,32 +347,32 @@ function runSimulation(p) {
                 St[i] *= Math.exp((r - 0.5 * V[i]**2) * dt + V[i] * Math.sqrt(dt) * dz[i]);
                 if (kiType === "AKI" && St[i] < AKI[i]) kiTouched = true;
             }
-
+ 
             // --- 浮動配息計算邏輯 ---
             let isGuaranteed = d <= minKoDays;
             let allAboveStrike = St.every((s, i) => s >= K[i]);
-            
+           
             if (couponType === "Fixed" || isGuaranteed || allAboveStrike) {
                 accruedCouponDays++;
             }
             // -----------------------
-
+ 
             // KO 邏輯
             let currentStepIdx = Math.floor((d - 1) / 21);
-            let currentStepShift = 1 + (currentStepIdx * koStep); 
+            let currentStepShift = 1 + (currentStepIdx * koStep);
             let currentKO = KO.map(baseKO => baseKO * currentStepShift);
-
+ 
             if (d >= minKoDays) {
                 for (let i = 0; i < dim; i++) {
                     if (St[i] >= currentKO[i]) koReachedEver[i] = true;
                 }
-
+ 
                 let isObservationDay = (koFreq === "Daily") ? true : (d % 21 === 0);
                 if (isObservationDay) {
-                    let isKoTriggered = (koMode === "Memory") ? 
-                        koReachedEver.every(v => v === true) : 
+                    let isKoTriggered = (koMode === "Memory") ?
+                        koReachedEver.every(v => v === true) :
                         St.every((s, i) => s >= currentKO[i]);
-
+ 
                     if (isKoTriggered) {
                         // 票息計算：使用實際累計的天數
                         let payoff = 100 * (1 + (accruedCouponDays / 252) * R) * Math.exp(-r * (d / 252));
@@ -368,13 +385,13 @@ function runSimulation(p) {
                     }
                 }
             }
-
+ 
             // 到期處理
             if (d === D && !ended) {
                 if (kiType === "EKI" && St.some((s, i) => s < AKI[i])) kiTouched = true;
                 let disc = Math.exp(-r * (D / 252));
                 let totalCoupon = (accruedCouponDays / 252) * R;
-                
+               
                 if (!kiTouched || St.every((s, i) => s >= K[i])) {
                     payoffs.push(100 * (1 + totalCoupon) * disc);
                     scCounts[totalMonths]++;
@@ -391,7 +408,7 @@ function runSimulation(p) {
             }
         }
     }
-
+ 
     // 計算風險指標 VaR / CVaR
     const sortedPayoffs = [...payoffs].sort((a, b) => a - b);
     const riskData = {};
@@ -404,50 +421,50 @@ function runSimulation(p) {
         const avgPayoff = worstPaths.reduce((a, b) => a + b, 0) / (worstPaths.length || 1);
         riskData[`CVaR${label}`] = avgPayoff - 100;
     });
-
+ 
     return {
-        avgReturn: (math.mean(payoffs) - 100), 
+        avgReturn: (math.mean(payoffs) - 100),
         avgDay: math.mean(periods),
         scenarioProbs: scCounts.map(c => (c / N) * 100),
         worstAssetProbs: worstCounts.map(c => (c / N) * 100),
         riskResults: riskData
     };
 }
-
+ 
 function runBacktest(p) {
     const {symbols, D, R, totalMonths, kiType, koFreq, gMonths, koMode, koStep} = p;
-    
+   
     const histLen = globalStockData[symbols[0]].prices.length;
-    const startIndex = histLen - D - 1; 
+    const startIndex = histLen - D - 1;
     if (startIndex < 0) {
         console.error("歷史數據長度不足以進行回測");
         return;
     }
-    
+   
     const startPrices = symbols.map(s => globalStockData[s].prices[startIndex]);
     const KO_Pct = parseFloat(document.getElementById('koPct').value) / 100;
     const KI_Pct = parseFloat(document.getElementById('kiPct').value) / 100;
     const Strike_Pct = parseFloat(document.getElementById('strikePct').value) / 100;
-    
+   
     const baseKO = startPrices.map(s => s * KO_Pct);
     const AKI = startPrices.map(s => s * KI_Pct);
     const K = startPrices.map(s => s * Strike_Pct);
     const minKoDays = gMonths * 21;
     const couponType = document.getElementById('couponType') ? document.getElementById('couponType').value : "Fixed";
-    
+   
     let kiTouched = (kiType === "NA");
     let event = "Maturity (到期)";
     let daysToEvent = D;
     let finalPayoff = 0;
     let koReachedEver = new Array(symbols.length).fill(false);
-    
+   
     // 累計回測利息
     let accruedCouponDays = 0;
-
+ 
     for (let d = 1; d <= D; d++) {
         const currentIndex = startIndex + d;
         const currentPrices = symbols.map(s => globalStockData[s].prices[currentIndex]);
-
+ 
         // --- 浮動配息計算邏輯 ---
         let isGuaranteed = d <= minKoDays;
         let allAboveStrike = currentPrices.every((price, i) => price >= K[i]);
@@ -455,25 +472,25 @@ function runBacktest(p) {
             accruedCouponDays++;
         }
         // -----------------------
-
+ 
         let currentStepIdx = Math.floor((d - 1) / 21);
         let currentKO = baseKO.map(b => b * (1 + currentStepIdx * koStep));
-
+ 
         if (kiType === "AKI" && currentPrices.some((price, i) => price < AKI[i])) {
             kiTouched = true;
         }
-
+ 
         let isObservationDay = (koFreq === "Daily") ? (d >= minKoDays) : (d >= minKoDays && d % 21 === 0);
-
+ 
         if (isObservationDay) {
             for (let i = 0; i < symbols.length; i++) {
                 if (currentPrices[i] >= currentKO[i]) koReachedEver[i] = true;
             }
-
-            let isKoTriggered = (koMode === "Memory") 
+ 
+            let isKoTriggered = (koMode === "Memory")
                 ? koReachedEver.every(reached => reached === true)
                 : currentPrices.every((price, i) => price >= currentKO[i]);
-
+ 
             if (isKoTriggered) {
                 event = `KO 提前出場 (第 ${d} 天提前出場)`;
                 daysToEvent = d;
@@ -481,24 +498,24 @@ function runBacktest(p) {
                 break;
             }
         }
-
+ 
         if (d === D) {
             if (kiType === "EKI" && currentPrices.some((s, i) => s < AKI[i])) {
                 kiTouched = true;
             }
             let totalCoupon = (accruedCouponDays / 252) * R;
             if (!kiTouched || currentPrices.every((s, i) => s >= K[i])) {
-                event = "Full Repayment (滿期贖回)"; 
+                event = "Full Repayment (滿期贖回)";
                 finalPayoff = 100 * (1 + totalCoupon);
             } else {
                 event = "KI Delivery (實物交割)";
                 const perf = currentPrices.map((s, i) => s / K[i]);
-                const worstPerf = Math.min(...perf); 
+                const worstPerf = Math.min(...perf);
                 finalPayoff = (100 * totalCoupon) + (100 * worstPerf);
             }
         }
     }
-
+ 
     document.getElementById('btStart').innerText = globalStockData[symbols[0]].labels[startIndex];
     document.getElementById('btEnd').innerText = globalStockData[symbols[0]].labels[startIndex + daysToEvent];
     document.getElementById('btStatus').innerText = event;
@@ -506,7 +523,7 @@ function runBacktest(p) {
     document.getElementById('btReturn').innerText = (finalPayoff - 100).toFixed(2) + "%";
     document.getElementById('btReturn').style.color = (finalPayoff >= 100) ? "var(--success)" : "var(--danger)";
 }
-
+ 
 function dynamicCholesky(A) {
     const n = A.length; let L = Array.from({length: n}, () => new Array(n).fill(0));
     for (let i = 0; i < n; i++) { for (let j = 0; j <= i; j++) {
@@ -514,52 +531,58 @@ function dynamicCholesky(A) {
         L[i][j] = (i === j) ? Math.sqrt(Math.max(A[i][i] - s, 0)) : (1.0 / L[j][j] * (A[i][j] - s));
     } } return L;
 }
-
+ 
 function renderMCResults(res, params) {
-    // 銷毀舊圖表防止殘留
     if (window.mcScenarioChart instanceof Chart) window.mcScenarioChart.destroy();
     if (window.mcWorstChart instanceof Chart) window.mcWorstChart.destroy();
-    
+  
     if (typeof ChartDataLabels !== 'undefined') {
         Chart.register(ChartDataLabels);
-    }
-
-    // 1. 更新數據卡片與右上角隱藏的 µ
+   }
     const avgRet = res.avgReturn || 0;
     const avgReturnElem = document.getElementById('avgReturn');
     const hiddenReturnElem = document.getElementById('hiddenReturn');
-
-    // 更新主顯示數值 (淨報酬率)
     if (avgReturnElem) {
         avgReturnElem.innerText = (avgRet >= 0 ? '+' : '') + avgRet.toFixed(2) + "%";
         avgReturnElem.style.color = avgRet >= 0 ? "var(--success)" : "var(--danger)";
     }
-
-    // 【重要】更新右上角隱藏的 µ (預期總價值，如 102.53)
     if (hiddenReturnElem) {
-        // 預期總價值 = 面額 100 + 淨報酬
         const expectedTotalValue = 100 + avgRet;
         hiddenReturnElem.innerText = `µ: ${expectedTotalValue.toFixed(2)}`;
-        // 確保它是顯示狀態
         hiddenReturnElem.style.display = 'inline-block';
         hiddenReturnElem.style.visibility = 'visible';
     }
-
-    // 平均存續天數
     const avgDayElem = document.getElementById('avgPeriod');
     if (avgDayElem) {
         avgDayElem.innerText = (res.avgDay || 0).toFixed(1) + " Days";
+       
+        if (avgDayElem.parentElement) {
+            avgDayElem.parentElement.style.height = '';
+            avgDayElem.parentElement.style.display = 'flex';
+            avgDayElem.parentElement.style.flexDirection = 'column';
+        }
+ 
+        Object.assign(avgDayElem.style, {
+            borderTop: "1px dashed #ccc",
+            marginTop: "15px",
+            paddingTop: "25px",
+            paddingBottom: "10px",
+            width: "100%",
+            textAlign: "center",  
+            fontSize: "1.8em",
+            fontWeight: "bold",
+            color: "var(--primary)",
+            display: "block"  
+        });
     }
-
-    // 2. 風險指標 VaR / CVaR 顯示邏輯 (修復非數值%問題)
+    // 2. 風險指標 VaR / CVaR
     const riskLevels = [99, 97, 95, 90, 85];
     riskLevels.forEach(lvl => {
         const varVal = (res.riskResults && res.riskResults[`VaR${lvl}`] !== undefined) ? res.riskResults[`VaR${lvl}`] : 0;
         const cvarVal = (res.riskResults && res.riskResults[`CVaR${lvl}`] !== undefined) ? res.riskResults[`CVaR${lvl}`] : 0;
-        
+      
         const varElem = document.getElementById(`var${lvl}`);
         const cvarElem = document.getElementById(`cvar${lvl}`);
-
         if (varElem) {
             varElem.innerText = varVal.toFixed(2) + "%";
             varElem.style.color = varVal < 0 ? "var(--danger)" : "var(--success)";
@@ -569,32 +592,50 @@ function renderMCResults(res, params) {
             cvarElem.style.color = cvarVal < 0 ? "var(--danger)" : "var(--success)";
         }
     });
-
-    // 3. 更新波動率列表
+    // 3. 更新波動率列表 (維持紅色標記與對齊功能)
     const volList = document.getElementById('volList');
     if (volList && params.symbols && params.V) {
-        volList.innerHTML = params.symbols.map((s, i) => 
-            `<div class="vol-item"><span class="vol-symbol">${s}</span><span class="vol-num">${(params.V[i]*100).toFixed(2)}%</span></div>`
-        ).join('');
+        volList.style.display = 'flex';
+        volList.style.flexWrap = 'wrap';
+        volList.style.justifyContent = 'center';
+        volList.style.gap = '20px';
+       
+        volList.innerHTML = params.symbols.map((s, i) => {
+            const isModified = params.modifiedFlags ? params.modifiedFlags[i] : false;
+            return `<div class="vol-item" style="display: flex; flex-direction: column; align-items: center; min-width: 80px;">
+                <span class="vol-symbol" style="font-weight: bold; font-size: 1.1em; margin-bottom: 8px; color: ${isModified ? '#dc3545' : 'inherit'}; transition: color 0.3s;">${s}</span>
+                <div style="display:flex; align-items:center; justify-content: center;">
+                    <input type="number" class="vol-input" data-symbol="${s}"
+                           value="${(params.V[i]*100).toFixed(2)}" step="0.1"
+                           style="width: 70px; text-align: right; border: 1px solid #ccc; border-radius: 4px; padding: 4px 2px 4px 4px; font-weight: bold; color: var(--primary);">
+                    <span style="margin-left: 4px; font-size: 0.9em;">%</span>
+                </div>
+             </div>`;
+        }).join('');
     }
-
-    // 4. 繪製蒙地卡羅機率分布圖
+    // 4. 繪製圖表 (維持換行設計)
     const ctxScenario = document.getElementById('scenarioChart');
     if (ctxScenario) {
-        const scenarioLabels = [...Array(params.totalMonths).keys()].map(i => `KO M${i+1}`).concat(["到期-現金", "實物履約"]);
-        window.mcScenarioChart = new Chart(ctxScenario, { 
+        const scenarioLabels = [...Array(params.totalMonths).keys()]
+            .map(i => [`KO`, `M${i+1}`])
+            .concat([
+                ["到期", "現金"],
+                ["實物", "履約"]
+            ]);
+ 
+        window.mcScenarioChart = new Chart(ctxScenario, {
             type: 'bar',
-            data: { 
-                labels: scenarioLabels, 
-                datasets: [{ 
-                    label: '機率 (%)', 
-                    data: (res.scenarioProbs || []).map(v => v.toFixed(2)), 
-                    backgroundColor: '#1a73e8' 
-                }] 
-            }, 
-            options: { 
+            data: {
+                labels: scenarioLabels,
+                datasets: [{
+                    label: '機率 (%)',
+                    data: (res.scenarioProbs || []).map(v => v.toFixed(2)),
+                    backgroundColor: '#1a73e8'
+                }]
+            },
+            options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: { 
+                plugins: {
                     datalabels: {
                         display: true, anchor: 'end', align: 'top', offset: 2, color: '#000000',
                         formatter: v => v > 0 ? v + '%' : '',
@@ -603,25 +644,25 @@ function renderMCResults(res, params) {
                     legend: { display: false },
                     title: { display: true, text: '蒙地卡羅模擬機率分布', font: { size: 16 } }
                 },
-                scales: { 
-                    y: { beginAtZero: true, suggestedMax: Math.max(...(res.scenarioProbs || [100])) * 1.2 } 
+                scales: {
+                    x: { ticks: { maxRotation: 0, minRotation: 0, autoSkip: false, font: { size: 12 } } },
+                    y: { beginAtZero: true, suggestedMax: Math.max(...(res.scenarioProbs || [100])) * 1.2 }
                 }
-            } 
+            }
         });
     }
-
-    // 5. 繪製實物履約圓餅圖
+    // 5. 繪製圓餅圖
     const ctxWorst = document.getElementById('worstChart');
     if (ctxWorst) {
-        window.mcWorstChart = new Chart(ctxWorst, { 
-            type: 'pie', 
-            data: { 
-                labels: params.symbols, 
-                datasets: [{ 
-                    data: (res.worstAssetProbs || []).map(v => v.toFixed(2)), 
-                    backgroundColor: ['#ea4335', '#f9ab00', '#34a853', '#4285f4', '#9334e6'] 
-                }] 
-            }, 
+        window.mcWorstChart = new Chart(ctxWorst, {
+            type: 'pie',
+            data: {
+                labels: params.symbols,
+                datasets: [{
+                    data: (res.worstAssetProbs || []).map(v => v.toFixed(2)),
+                    backgroundColor: ['#ea4335', '#f9ab00', '#34a853', '#4285f4', '#9334e6']
+                }]
+            },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 plugins: {
@@ -631,11 +672,14 @@ function renderMCResults(res, params) {
                         font: { weight: 'bold' , size: 13 }
                     },
                     title: { display: true, text: 'UL實物履約機率分佈', font: { size: 16 } }
-                } 
-            } 
-        }); 
+                }
+            }
+        });
     }
 }
+ 
+ 
+ 
 function renderCorrelationHeatmap(symbols, corMat) {
     const container = document.getElementById('heatmapArea'); container.innerHTML = '';
     const size = symbols.length; const grid = document.createElement('div');
@@ -652,7 +696,6 @@ function renderCorrelationHeatmap(symbols, corMat) {
     }
     container.appendChild(grid);
 }
- 
 function initTechCharts(symbols) {
 const container = document.getElementById('stockChartsArea');
     // --- 關鍵：清空 HTML 內容，防止標籤重複疊加 ---
@@ -682,28 +725,26 @@ function updateSingleStockChart(symbol) {
     const displayCount = years * 252;
     const allPrices = data.prices;
     const labels = data.labels;
-   
+  
     const displayPrices = allPrices.slice(-displayCount);
     const displayVolumes = data.volumes.slice(-displayCount);
     const displayLabels = labels.slice(-displayCount);
- 
     const selectedTech = document.querySelector('input[name="tech"]:checked').value;
     const showLevels = document.getElementById('showPriceLevels').checked;
     const S0 = displayPrices[displayPrices.length - 1];
     const koPrice = S0 * (document.getElementById('koPct').value / 100);
     const strikePrice = S0 * (document.getElementById('strikePct').value / 100);
     const kiPrice = S0 * (document.getElementById('kiPct').value / 100);
- 
     const datasets = [{ label: "Close Price", data: displayPrices, borderColor: "#1a73e8", borderWidth: 2, pointRadius: 0, fill: false, yAxisID: 'y' }];
     const scales = { y: { position: 'left', ticks:{color: '#202124'}, grid:{color:'#edf2f7'}, grace: '5%' }, yVol: { position: 'right', display: false }, x: { ticks:{color: '#5f6368'}, grid:{display:false} } };
     datasets.push({ type: 'bar', label: "Volume", data: displayVolumes, backgroundColor: 'rgba(26,115,232,0.08)', yAxisID: 'yVol' });
-   
+  
     if(showLevels) {
         const line = (val, label, color) => ({ label, data: new Array(displayPrices.length).fill(val), borderColor: color, borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, fill: false });
         datasets.push(line(koPrice, `KO (${koPrice.toFixed(1)})`, '#f29900'));
         datasets.push(line(strikePrice, `Strike (${strikePrice.toFixed(1)})`, '#188038'));
         datasets.push(line(kiPrice, `KI (${kiPrice.toFixed(1)})`, '#d93025'));
-       
+      
         const dStrike = displayPrices.filter(p => p < strikePrice).length;
         const dKI = displayPrices.filter(p => p < kiPrice).length;
         document.getElementById(`stats_${symbol}`).innerHTML = `
@@ -711,7 +752,6 @@ function updateSingleStockChart(symbol) {
             <div class="stat-box"><span class="stat-label">收盤 < Strike 天數</span><span class="stat-num" style="color:var(--success)">${dStrike} (${(dStrike/displayPrices.length*100).toFixed(1)}%)</span></div>
             <div class="stat-box"><span class="stat-label">收盤 < KI 天數</span><span class="stat-num" style="color:var(--danger)">${dKI} (${(dKI/displayPrices.length*100).toFixed(1)}%)</span></div>`;
     }
- 
     if(selectedTech !== 'none') {
         scales.yInd = { position: 'right', ticks:{color:'#5f6368'}, grid:{drawOnChartArea:false} };
         if(selectedTech === 'ma') {
@@ -729,44 +769,41 @@ function updateSingleStockChart(symbol) {
             datasets.push({ label: `HV`, data: Calc.HV(allPrices, currentVolDays).slice(-displayCount), borderColor: "#5f6368", borderWidth: 2, pointRadius: 0, yAxisID: 'yInd' });
         }
     }
- 
     // --- 【核心邏輯修改】長期回測統計 & 安全性分析 ---
     const kiThreshold = parseFloat(document.getElementById('kiPct').value) / 100;
     const strikeThreshold = parseFloat(document.getElementById('strikePct').value) / 100;
-   
+  
     // 嚴格將分析樣本限制在 displayPrices (例如 5 年) 範圍內
     const analysisPrices = displayPrices;
     const totalAvailableDays = analysisPrices.length;
-   
+  
     let upCount = 0, totalScenarios = 0, returns = [];
     let touchKICount = 0, endBelowStrikeCount = 0;
     let expiredBelowStrikeCases = 0;
     let postExpiryRecoveryDaysList = [];
     let currentlyStillUnrecoveredCount = 0;
- 
     // 迴圈終點：totalAvailableDays - holdDays
     // 這樣最後一個進場點 i 的到期日剛好是 analysisPrices 的最後一天 (今天)
     for (let i = 0; i <= totalAvailableDays - holdDays; i++) {
         const entry = analysisPrices[i];
         const strikeVal = entry * strikeThreshold;
         const windowPrices = analysisPrices.slice(i + 1, i + holdDays + 1);
-        const expiryPrice = windowPrices[windowPrices.length - 1]; 
+        const expiryPrice = windowPrices[windowPrices.length - 1];
        
         const change = (expiryPrice - entry) / entry;
         returns.push(change);
         if (change > 0) upCount++;
- 
         if (windowPrices.some(p => p < entry * kiThreshold)) touchKICount++;
-        
+       
         if (expiryPrice < strikeVal) {
             endBelowStrikeCount++;
             expiredBelowStrikeCases++;
-           
+          
             // 計算該到期日在 allPrices 中的全局索引，以便利用剩餘的所有歷史數據觀察恢復狀況
             const expiryGlobalIdx = (allPrices.length - totalAvailableDays) + i + holdDays;
             const futurePrices = allPrices.slice(expiryGlobalIdx);
             const recoverIdx = futurePrices.findIndex(p => p >= strikeVal);
-           
+          
             if (recoverIdx !== -1) {
                 postExpiryRecoveryDaysList.push(recoverIdx);
             } else {
@@ -775,7 +812,6 @@ function updateSingleStockChart(symbol) {
         }
         totalScenarios++;
     }
- 
     const winRate = totalScenarios > 0 ? (upCount / totalScenarios * 100).toFixed(1) : 0;
     const avgRet = returns.length > 0 ? (returns.reduce((a, b) => a + b) / returns.length * 100).toFixed(2) : 0;
     const maxRet = returns.length > 0 ? (Math.max(...returns) * 100).toFixed(2) : 0;
@@ -784,11 +820,10 @@ function updateSingleStockChart(symbol) {
     const strikeProb = totalScenarios > 0 ? (endBelowStrikeCount / totalScenarios * 100).toFixed(1) : 0;
     const avgRecoveryDays = postExpiryRecoveryDaysList.length > 0 ? (postExpiryRecoveryDaysList.reduce((a,b)=>a+b)/postExpiryRecoveryDaysList.length).toFixed(1) : "N/A";
     const stillUnrecoveredPct = expiredBelowStrikeCases > 0 ? (currentlyStillUnrecoveredCount / expiredBelowStrikeCases * 100).toFixed(1) : 0;
- 
     // 取得起始與結束進場日期
     const firstEntryDate = displayLabels[0];
     const lastEntryDate = displayLabels[totalAvailableDays - holdDays];
-
+ 
     document.getElementById(`backtest_long_${symbol}`).innerHTML = `
         <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--primary);">📊 持有 ${months} 個月之長期回測統計 (過去 ${years} 年數據)</h4>
         <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 10px;">進場樣本區間：${firstEntryDate} 至 ${lastEntryDate} (共 ${totalScenarios} 個樣本)</p>
@@ -804,7 +839,6 @@ function updateSingleStockChart(symbol) {
         <p style="font-size: 0.9rem; color: var(--text-sub); margin-top: 10px; line-height: 1.4;">
             💡 <b>計算邏輯：</b> 模型分析了 ${years} 年內每一個具備完整持有期間的交易日，並固定持有 ${holdDays} 個交易日。在總計 ${totalScenarios} 個測試樣本中，有 ${upCount} 次在持有結束後股價高於買入價。
         </p>`;
- 
     document.getElementById(`safety_analysis_${symbol}`).innerHTML = `
         <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--danger);">🛡️ 安全性分析 (持有期內風險)</h4>
         <div class="stats-panel" style="grid-template-columns: repeat(2, 1fr);">
@@ -820,7 +854,6 @@ function updateSingleStockChart(symbol) {
         <p style="font-size: 0.9rem; color: var(--text-sub); margin-top: 10px; line-height: 1.4;">
             💡 <b>風險評估：</b> 基於 ${totalScenarios} 個歷史進場點。曾觸及 KI 表示該期間內股價曾跌至進場價的 ${document.getElementById('kiPct').value}% 以下；而到期低於 Strike 表示回測資料內股價在到期日跌破 ${document.getElementById('strikePct').value}% 以下的概率。
         </p>`;
- 
     document.getElementById(`recovery_analysis_${symbol}`).innerHTML = `
         <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #673ab7;">💊 恢復力分析 (若到期低於 Strike 需多久解套)</h4>
         <div class="stats-panel" style="grid-template-columns: repeat(2, 1fr);">
@@ -834,20 +867,19 @@ function updateSingleStockChart(symbol) {
             </div>
         </div>
         <p style="font-size: 0.9rem; color: var(--text-sub); margin-top:8px;">💡 基於 ${totalScenarios} 次回測資料內，分析當到期股價低於履約價時，要重新站回該履約價所需的天數。</p>`;
- 
     const ctx = document.getElementById(`chart_${symbol}`).getContext('2d');
     if(techChartInstances[symbol]) techChartInstances[symbol].destroy();
-    techChartInstances[symbol] = new Chart(ctx, { 
-        type: 'line', 
-        data: { labels: displayLabels, datasets }, 
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            interaction: { mode: 'index', intersect: false }, 
-            scales, 
-            plugins: { 
-                datalabels: { display: false }, 
-                legend: { labels: { boxWidth: 10, font: { size: 11 } } }, 
+    techChartInstances[symbol] = new Chart(ctx, {
+        type: 'line',
+        data: { labels: displayLabels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales,
+            plugins: {
+                datalabels: { display: false },
+                legend: { labels: { boxWidth: 10, font: { size: 11 } } },
                 zoom: { pan: { enabled: true, mode: 'x' }, zoom: {wheel: { enabled: true },pinch: { enabled: true }, mode: 'x', overScaleMode: 'y'}} }} });}
 document.getElementById('techOptions').addEventListener('change', (e) => {
     if (e.target.name === 'tech') {
@@ -869,11 +901,11 @@ document.querySelectorAll('.mini-btn').forEach(btn => {
         const group = this.parentElement;
         const targetId = group.getAttribute('data-target');
         const val = this.getAttribute('data-value');
-        
+       
         // 切換視覺狀態
         group.querySelectorAll('.mini-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
-        
+       
         // 同步數值到原本的隱藏 Select
         const select = document.getElementById(targetId);
         if (select) {
@@ -883,22 +915,22 @@ document.querySelectorAll('.mini-btn').forEach(btn => {
         }
     });
 });
-
+ 
 const apiKeyInput = document.getElementById('apiKey');
-
+ 
 apiKeyInput.addEventListener('copy', (e) => {
     e.preventDefault();
     alert('為了安全起見，API Key 不允許複製。');
 });
-
+ 
 apiKeyInput.addEventListener('cut', (e) => {
     e.preventDefault();
 });
-
+ 
 apiKeyInput.addEventListener('paste', (e) => {
     console.log("API Key 已更新");
 });
-
+ 
 // 新增：處理 KI 欄位連動反灰邏輯
 function updateKIFieldStatus(val) {
     const kiInput = document.getElementById('kiPct');
@@ -914,83 +946,86 @@ function updateKIFieldStatus(val) {
         kiInput.style.opacity = "1";
     }
 }
-
+ 
 // 初始化與監聽按鈕點擊
 document.querySelectorAll('.mini-btn[data-value]').forEach(btn => {
     btn.addEventListener('click', function() {
         const group = this.parentElement;
         const targetId = group.getAttribute('data-target');
         const val = this.getAttribute('data-value');
-        
+       
         // 如果點擊的是 kiType 的切換按鈕，執行連動邏輯
         if (targetId === "kiType") {
             updateKIFieldStatus(val);
         }
     });
 });
-
+ 
 // 頁面載入時先執行一次檢查（預防預設值就是 NA）
 window.addEventListener('load', () => {
     const currentKiType = document.getElementById('kiType').value;
     updateKIFieldStatus(currentKiType);
 });
-
-// 確保這是檔案中唯一一個 runBtn 監聽器
+ 
 document.getElementById('runBtn').addEventListener('click', async () => {
     const btn = document.getElementById('runBtn');
     const loader = document.getElementById('loading');
     const resSec = document.getElementById('result-section');
-    
-    // 1. 初始化介面與銷毀舊圖表
+  
+    // 1. 初始化介面
     btn.disabled = true;
     loader.style.display = 'block';
     resSec.style.display = 'none';
-
-    // 銷毀蒙地卡羅與技術分析圖表實例
     if (window.mcScenarioChart) { window.mcScenarioChart.destroy(); window.mcScenarioChart = null; }
     if (window.mcWorstChart) { window.mcWorstChart.destroy(); window.mcWorstChart = null; }
     if (window.techChartInstances) {
         Object.values(window.techChartInstances).forEach(chart => { if (chart) chart.destroy(); });
         window.techChartInstances = {};
     }
-document.getElementById('loading').style.display = 'flex';
-
+    document.getElementById('loading').style.display = 'flex';
     try {
+        // 讀取手動輸入
+        const manualVols = {};
+        const existingInputs = document.querySelectorAll('.vol-input');
+        existingInputs.forEach(input => {
+            const sym = input.getAttribute('data-symbol');
+            const val = parseFloat(input.value);
+            if (sym && !isNaN(val)) {
+                manualVols[sym] = val / 100;
+            }
+        });
+ 
         // 2. 讀取 UI 參數
         const symbols = document.getElementById('symbols').value.split(',').map(s => s.trim().toUpperCase()).filter(s => s);
         const apiKey = document.getElementById('apiKey').value;
         const months = parseInt(document.getElementById('months').value);
         const gMonths = parseInt(document.getElementById('guaranteedMonths').value) || 0;
         const years = parseInt(document.getElementById('chartYears').value);
-        
-        // 取得 KO 與 KI 的關鍵設定
-        const koFreq = document.getElementById('koFreq').value; 
+      
+        const koFreq = document.getElementById('koFreq').value;
         const koMode = document.getElementById('koMode').value;
         const kiType = document.getElementById('kiType').value;
         const koStep = parseFloat(document.getElementById('koStep').value) || 0;
-
-        const outputSize = Math.max(1000, years * 265 + (months * 21)); 
+        const outputSize = Math.max(1000, years * 265 + (months * 21));
         const currentVolDays = months * 21;
-
         // 3. 抓取股票數據
         await Promise.all(symbols.map(async (s) => {
             const res = await fetch(`https://api.twelvedata.com/time_series?symbol=${s}&interval=1day&outputsize=${outputSize}&apikey=${apiKey}`).then(r => r.json());
             if(!res.values) throw new Error(`API 錯誤 (${s}): ${res.message || '請檢查 Key'}`);
             const vals = res.values.reverse();
-            globalStockData[s] = { 
-                labels: vals.map(v => v.datetime), 
-                prices: vals.map(v => parseFloat(v.close)), 
-                volumes: vals.map(v => parseFloat(v.volume)), 
-                name: s 
+            globalStockData[s] = {
+                labels: vals.map(v => v.datetime),
+                prices: vals.map(v => parseFloat(v.close)),
+                volumes: vals.map(v => parseFloat(v.volume)),
+                name: s
             };
         }));
-
-        // 4. 計算波動度與相關係數 (簡化計算過程以確保邏輯清晰)
+        // 4. 計算波動度
         const dim = symbols.length;
         const volSkewRaw = parseFloat(document.getElementById('volSkew').value) || 0;
         const volMultiplier = 1 + (volSkewRaw / 100);
-        
-        const vols = symbols.map(s => {
+      
+        const calculatedVols = symbols.map(s => {
             const p = globalStockData[s].prices;
             const actualVolDays = Math.min(p.length - 1, currentVolDays);
             const sample = p.slice(-(actualVolDays + 1));
@@ -998,8 +1033,27 @@ document.getElementById('loading').style.display = 'flex';
             for(let i = 1; i < sample.length; i++) { rets.push(Math.log(sample[i] / sample[i-1])); }
             return (math.std(rets) * Math.sqrt(252)) * volMultiplier;
         });
-
-
+ 
+        // 【新增邏輯】：判斷哪些股票被手動修改過
+        const modifiedFlags = [];
+        const finalVols = symbols.map((s, i) => {
+            if (manualVols[s] !== undefined) {
+                // 比對：將兩者都轉為顯示用的字串 (小數點後兩位) 進行比較
+                // 這樣可以避免因為浮點數誤差導致系統以為被修改了
+                const manualStr = (manualVols[s] * 100).toFixed(2);
+                const calcStr = (calculatedVols[i] * 100).toFixed(2);
+               
+                if (manualStr !== calcStr) {
+                    modifiedFlags[i] = true; // 數值不同，標記為已修改
+                } else {
+                    modifiedFlags[i] = false; // 數值相同，視為未修改
+                }
+                return manualVols[s];
+            }
+            modifiedFlags[i] = false;
+            return calculatedVols[i];
+        });
+        // 相關係數
         const retsMatrix = [];
         for (let i = 0; i < currentVolDays; i++) {
             let row = []; let isValid = true;
@@ -1010,22 +1064,22 @@ document.getElementById('loading').style.display = 'flex';
             }
             if (isValid) retsMatrix.push(row);
         }
-        const corMat = Array.from({length: dim}, (_, i) => 
+        const corMat = Array.from({length: dim}, (_, i) =>
             Array.from({length: dim}, (_, j) => i === j ? 1 : getCorrelation(retsMatrix.map(r => r[i]), retsMatrix.map(r => r[j])))
         );
-
-        // 5. 封裝所有模擬需要的參數 (最關鍵一步)
+        // 5. 封裝參數
         const params = {
             symbols,
             S0: symbols.map(s => globalStockData[s].prices.slice(-1)[0]),
             KO: symbols.map(s => globalStockData[s].prices.slice(-1)[0] * (parseFloat(document.getElementById('koPct').value)/100)),
             AKI: symbols.map(s => globalStockData[s].prices.slice(-1)[0] * (parseFloat(document.getElementById('kiPct').value)/100)),
             K: symbols.map(s => globalStockData[s].prices.slice(-1)[0] * (parseFloat(document.getElementById('strikePct').value)/100)),
-            V: vols,
+            V: finalVols,
+            modifiedFlags: modifiedFlags, // 傳遞修改狀態
             COR: corMat,
             N: parseInt(document.getElementById('simN').value) || 5000,
             D: months * 21,
-            R: (parseFloat(document.getElementById('coupon').value) / 100), // 年化配息率
+            R: (parseFloat(document.getElementById('coupon').value) / 100),
             r: (parseFloat(document.getElementById('riskFreeRate').value) / 100) || 0.05,
             totalMonths: months,
             gMonths: gMonths,
@@ -1034,13 +1088,14 @@ document.getElementById('loading').style.display = 'flex';
             kiType: kiType,
             koStep: koStep / 100
         };
-document.getElementById('volPeriodLabel').innerText = `(${params.D}天)`;
+       
+        document.getElementById('volPeriodLabel').innerText = `(${params.D}天)`;
+       
         const mcResult = runSimulation(params);
         renderMCResults(mcResult, params);
         renderCorrelationHeatmap(params.symbols, params.COR);
         runBacktest(params);
         initTechCharts(symbols);
-
         resSec.style.display = 'block';
     } catch (e) {
         console.error(e);
@@ -1050,14 +1105,17 @@ document.getElementById('volPeriodLabel').innerText = `(${params.D}天)`;
         loader.style.display = 'none';
     }
 });
-
-
+ 
+ 
+ 
+ 
+ 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js');
   });
 }
-
+ 
 </script>
-</body>
-</html>
+ 
+</body></html>
