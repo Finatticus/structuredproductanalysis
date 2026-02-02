@@ -1,21 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0063)https://finatticus.github.io/structuredproductanalysis/fcn.html -->
-<html lang="zh-TW"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-   
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SN Quant Analytics</title>
-<meta name="theme-color" content="#1a4da1">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="https://finatticus.github.io/structuredproductanalysis/app-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://finatticus.github.io/structuredproductanalysis/app-icon.png">
-<link rel="icon" type="image/png" href="https://finatticus.github.io/structuredproductanalysis/app-icon.png"><link rel="manifest" href="https://finatticus.github.io/structuredproductanalysis/manifest.json">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
-
-    <script src="./SN Quant Analytics_files/chart.js.下載"></script>
-    <script src="./SN Quant Analytics_files/chartjs-plugin-zoom.min.js.下載"></script>
-<script src="./SN Quant Analytics_files/chartjs-plugin-datalabels@2.2.0"></script>
-    <style>
+<html lang="zh-TW"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>SN Quant Analytics</title><meta name="theme-color" content="#1a4da1"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="apple-touch-icon" href="https://finatticus.github.io/structuredproductanalysis/app-icon.png"><link rel="icon" type="image/png" sizes="192x192" href="https://finatticus.github.io/structuredproductanalysis/app-icon.png"><link rel="icon" type="image/png" href="https://finatticus.github.io/structuredproductanalysis/app-icon.png"><link rel="manifest" href="https://finatticus.github.io/structuredproductanalysis/manifest.json"><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script><script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script><style>
 :root{--bg-color:#f4f7fa;--card-bg:#ffffff;--primary:#1a4da1;--text-main:#2c3e50;--text-sub:#5f6368;--border:#dadce0;--accent:#e8f0fe;--danger:#d93025;--success:#188038;--warning:#f29900;--shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -1px rgba(0,0,0,0.06)}body{font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:var(--bg-color);color:var(--text-main);padding:20px;margin:0}.container{max-width:1650px;margin:0 auto}h1{color:var(--primary);text-align:left;font-size:1.8rem;margin-bottom:25px;font-weight:500;border-bottom:2px solid var(--primary);padding-bottom:10px}h3{color:var(--text-main);font-weight:500;margin-top:0}.config-panel{background:var(--card-bg);padding:25px;border-radius:8px;margin-bottom:25px;box-shadow:0 1px 3px rgba(60,64,67,.3);border:1px solid var(--border)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}.input-group{display:flex;flex-direction:column}label{display:flex;align-items:center;height:32px;margin-bottom:4px;font-size:0.9rem;font-weight:700}input,select{background:#fff;border:1px solid var(--border);color:var(--text-main);padding:10px;border-radius:4px;font-size:0.9rem;transition:border 0.2s}button{background:var(--primary);color:white;padding:12px;border:none;border-radius:4px;cursor:pointer;width:100%;font-size:1rem;font-weight:600;margin-top:20px;transition:background 0.2s}button:hover{background:#1557b0}#loading{display:none;text-align:center;margin:20px 0;color:var(--primary);font-weight:bold}.result-section{display:none;margin-top:20px}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-bottom:30px}.metric-card{background:var(--card-bg);padding:20px;border-radius:12px;border:1px solid var(--border);box-shadow:0 4px 6px rgba(0,0,0,0.04);transition:transform 0.2s;position:relative;overflow:hidden;text-align:center;display:flex;flex-direction:column;align-items:center}.metric-card:hover{transform:translateY(-2px)}.metric-card::before{content:"";position:absolute;top:0;left:0;width:4px;height:100%;background:var(--primary)}.metric-card.orange::before{background:var(--warning)}.metric-card.green::before{background:var(--success)}.metric-header{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;width:100%}.metric-title{font-size:1rem;color:var(--text-sub);font-weight:700;letter-spacing:0.5px}.metric-icon{font-size:1.2rem;opacity:0.7}.metric-value{display:block;font-size:2rem;font-weight:800;color:var(--text-main);margin:5px 0}.metric-subtext{font-size:0.75rem;color:var(--text-sub);margin-top:5px;font-weight:400}.metric-card:has(#avgReturn){display:none}.metric-card[style*="grid-column: 1 / -1"]{text-align:left !important;align-items:flex-start !important}.metric-card[style*="grid-column: 1 / -1"] .metric-header{justify-content:flex-start !important}.metric-card[style*="grid-column: 1 / -1"] table th,.metric-card[style*="grid-column: 1 / -1"] table td{text-align:left;padding-left:0}.vol-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:15px;padding-top:15px;border-top:1px dashed var(--border);width:100%}.vol-item{text-align:center}.vol-symbol{font-size:0.7rem;font-weight:700;color:var(--text-sub);display:block}.vol-num{font-size:0.9rem;font-weight:700;color:var(--primary)}.mc-main-charts{display:grid;grid-template-columns:1.5fr 1fr;gap:20px;margin-bottom:20px}.double-column-area{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:40px}.card-wrapper{background:var(--card-bg);padding:20px;border-radius:8px;border:1px solid var(--border);box-shadow:0 1px 2px rgba(60,64,67,.1);position:relative}.chart-h350{height:350px}.chart-auto{min-height:250px}#techOptions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;margin-bottom:25px;padding:10px;background:#eee;border-radius:8px}.tech-option{background:#fff;padding:8px 16px;border-radius:4px;cursor:pointer;font-size:13px;color:var(--text-sub);border:1px solid var(--border);font-weight:500;transition:all 0.2s}.tech-option.active{background:var(--primary);color:#fff;border-color:var(--primary)}.tech-option.level-toggle{border-color:var(--warning);color:var(--warning)}.tech-option.level-toggle.active{background:var(--warning);color:#fff;border-color:var(--warning)}.tech-option input{display:none}.stock-charts-area{display:grid;grid-template-columns:1fr;gap:30px}.stock-card{background:var(--card-bg);padding:25px;border-radius:8px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(60,64,67,.1)}.canvas-container{height:420px;width:100%;margin-top:15px;cursor:crosshair}.stats-panel{margin-top:15px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px}.stat-box{background:var(--accent);padding:12px;border-radius:6px;text-align:center;border:1px solid rgba(26,115,232,0.1)}.stat-label{font-size:0.7rem;color:var(--text-sub);display:block;margin-bottom:5px;font-weight:600}.stat-num{font-size:1.1rem;font-weight:bold;color:var(--text-main)}.heatmap-container{display:flex;justify-content:center;padding:10px 0;width:100%}.heatmap-grid{display:grid;gap:8px}.heatmap-cell{width:65px;height:65px;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:bold;color:white;border-radius:6px}.heatmap-label{font-size:0.8rem;font-weight:600;color:var(--text-sub);text-align:center;padding:5px}.backtest-list{list-style:none;padding:0;margin:15px 0}.backtest-item{display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border);font-size:0.9rem}.backtest-item:last-child{border-bottom:none}.bt-label{color:var(--text-sub);font-weight:500}.bt-value{font-weight:bold}.analysis-grid-row{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:15px}.long-term-panel{background:#fff;border:1px solid var(--primary);border-radius:8px;padding:15px;margin-top:20px}.safety-analysis-panel{background:#fff;border:1px solid var(--danger);border-radius:8px;padding:15px}.recovery-analysis-panel{background:#fff;border:1px solid #673ab7;border-radius:8px;padding:15px}@media print{#hiddenReturn{color:white !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;opacity:0}body,.container,.card,h1,h1 span{visibility:visible !important;display:block !important}h3[style*="margin-top:40px"]{break-before:page;page-break-before:always}.stock-card{break-after:page;page-break-after:always}}.label-action-group{display:flex;justify-content:space-between;align-items:center;height:32px;margin-bottom:4px}.label-action-group label{margin-bottom:0;white-space:nowrap}.mini-btn-group{display:flex;gap:2px;background:#eee;padding:3px;border-radius:4px;align-self:center}.mini-btn{padding:4px 5px;font-size:11px;cursor:pointer;border-radius:3px;background:transparent;color:var(--text-sub);border:none;font-weight:bold;transition:all 0.2s;width:auto;margin-top:0}.mini-btn.active{background:var(--primary);color:white}.mini-btn.active.warning{background:var(--warning)}.hidden-select{display:none}.input-group>label{margin-bottom:4px}@media (max-width:768px){body{padding:10px}.grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.mc-main-charts,.double-column-area{grid-template-columns:1fr}h1{font-size:1.4rem}.canvas-container{height:300px}.label-action-group{flex-direction:column;align-items:flex-start;height:auto;gap:5px}}@keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}.result-section.active{display:block !important;animation:fadeInUp 0.6s cubic-bezier(0.22,1,0.36,1) forwards}#loading{display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:15px}.loader-spinner{width:40px;height:40px;border:4px solid var(--accent);border-top:4px solid var(--primary);border-radius:50%;animation:spin 1s linear infinite}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}#runBtn:active{transform:scale(0.98)}
 </style></head><body>
  
@@ -370,7 +354,7 @@ function runSimulation(p) {
  
                 let isObservationDay = (koFreq === "Daily") ? true : (d % 21 === 0);
                 if (isObservationDay) {
-                    let isKoTriggered = (koMode === "Memory") ?
+                   let isKoTriggered = (koMode === "Memory") ?
                         koReachedEver.every(v => v === true) :
                         St.every((s, i) => s >= currentKO[i]);
  
@@ -392,7 +376,7 @@ function runSimulation(p) {
                 if (kiType === "EKI" && St.some((s, i) => s < AKI[i])) kiTouched = true;
                 let disc = Math.exp(-r * (D / 252));
                 let totalCoupon = (accruedCouponDays / 252) * R;
-               
+                
                 if (!kiTouched || St.every((s, i) => s >= K[i])) {
                     payoffs.push(100 * (1 + totalCoupon) * disc);
                     scCounts[totalMonths]++;
@@ -536,10 +520,10 @@ function dynamicCholesky(A) {
 function renderMCResults(res, params) {
     if (window.mcScenarioChart instanceof Chart) window.mcScenarioChart.destroy();
     if (window.mcWorstChart instanceof Chart) window.mcWorstChart.destroy();
-  
+   
     if (typeof ChartDataLabels !== 'undefined') {
         Chart.register(ChartDataLabels);
-   }
+    }
     const avgRet = res.avgReturn || 0;
     const avgReturnElem = document.getElementById('avgReturn');
     const hiddenReturnElem = document.getElementById('hiddenReturn');
@@ -688,7 +672,7 @@ function renderCorrelationHeatmap(symbols, corMat) {
     grid.appendChild(document.createElement('div'));
     symbols.forEach(s => { const label = document.createElement('div'); label.className = 'heatmap-label'; label.innerText = s; grid.appendChild(label); });
     for (let i = 0; i < size; i++) {
-        const label = document.createElement('div'); label.className = 'heatmap-label'; label.style.display = 'flex'; label.style.alignItems = 'center'; label.innerText = symbols[i]; grid.appendChild(label);
+       const label = document.createElement('div'); label.className = 'heatmap-label'; label.style.display = 'flex'; label.style.alignItems = 'center'; label.innerText = symbols[i]; grid.appendChild(label);
         for (let j = 0; j < size; j++) {
             const val = corMat[i][j]; const cell = document.createElement('div'); cell.className = 'heatmap-cell'; cell.innerText = val.toFixed(2);
             let r, g, b; if (val >= 0) { r = 234; g = Math.round(67 + (185 * (1 - val))); b = Math.round(53 + (200 * (1 - val))); } else { r = Math.round(26 + (200 * (1 + val))); g = Math.round(115 + (100 * (1 + val))); b = 232; }
@@ -804,7 +788,7 @@ function updateSingleStockChart(symbol) {
             const expiryGlobalIdx = (allPrices.length - totalAvailableDays) + i + holdDays;
             const futurePrices = allPrices.slice(expiryGlobalIdx);
             const recoverIdx = futurePrices.findIndex(p => p >= strikeVal);
-          
+           
             if (recoverIdx !== -1) {
                 postExpiryRecoveryDaysList.push(recoverIdx);
             } else {
@@ -1018,7 +1002,7 @@ document.getElementById('runBtn').addEventListener('click', async () => {
                 labels: vals.map(v => v.datetime),
                 prices: vals.map(v => parseFloat(v.close)),
                 volumes: vals.map(v => parseFloat(v.volume)),
-                name: s
+               name: s
             };
         }));
         // 4. 計算波動度
