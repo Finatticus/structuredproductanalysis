@@ -1,0 +1,974 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多因子模型 (僅美股用)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a; --bg-panel: #1e293b; --text-main: #f8fafc; --text-sub: #94a3b8;
+            --accent-blue: #3b82f6; --accent-green: #10b981; --accent-red: #ef4444; --accent-yellow: #f59e0b;
+            --border: #334155; --risk-bg: #450a0a;
+        }
+
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; padding: 20px; }
+        .container { max-width: 1600px; margin: 0 auto; }
+
+        /* 頂部控制列 */
+        .header {
+            background: var(--bg-panel); padding: 20px; border-radius: 12px;
+            display: flex; gap: 15px; align-items: flex-end; border: 1px solid var(--border);
+            margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.85rem; color: var(--text-sub); }
+        input { background: #0b1120; border: 1px solid #475569; color: white; padding: 10px; border-radius: 6px; }
+        /* API Key 專用樣式 */
+        #inpApiKey { width: 280px; letter-spacing: 2px; color: #facc15; font-family: monospace; }
+
+        button {
+            background: var(--accent-blue); color: white; border: none; padding: 11px 25px;
+            border-radius: 6px; cursor: pointer; font-weight: 600; height: 42px; width: 220px;
+        }
+        button:disabled { background: #475569; cursor: not-allowed; }
+
+        /* ★ V9.0 總經矩陣 (保留樣式) */
+        .macro-container {
+            display: none; grid-template-columns: 2fr 1fr; gap: 20px;
+            background: rgba(15, 23, 42, 0.8); border: 1px solid var(--accent-blue); border-radius: 12px;
+            padding: 20px; margin-bottom: 20px; display: none; height: auto; overflow: visible;
+        }
+        .matrix-box { background: var(--bg-panel); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
+        .matrix-header { background: #334155; padding: 10px 15px; font-weight: bold; color: var(--accent-yellow); display: flex; justify-content: space-between; align-items: center; }
+        .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .matrix-table th { text-align: left; padding: 8px 15px; color: var(--text-sub); border-bottom: 1px solid var(--border); }
+        .matrix-table td { padding: 8px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .score-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: bold; }
+        .tag-pos { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .tag-neg { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .tag-neu { background: rgba(148, 163, 184, 0.2); color: var(--text-sub); }
+
+        .macro-summary { display: flex; flex-direction: column; justify-content: space-between; }
+        .impact-box { background: rgba(59, 130, 246, 0.1); border: 1px solid var(--accent-blue); padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 10px; }
+        .impact-score { font-size: 2.5rem; font-weight: 800; line-height: 1; margin: 5px 0; }
+        .formula-text { font-size: 0.8rem; color: var(--text-sub); line-height: 1.4; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; }
+
+        /* 主佈局 */
+        .grid-container { display: grid; grid-template-columns: 450px 1fr; gap: 20px; opacity: 0; transition: opacity 0.5s; }
+        .report-card {
+            background: var(--bg-panel); 
+            border-radius: 12px; 
+            border: 1px solid var(--border); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            height: auto; 
+        }
+
+        .total-score-box { text-align: center; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+        .score-display {
+            font-size: 5rem; 
+            font-weight: 800; 
+            line-height: 1.2; 
+            margin: 10px 0;
+            color: #f8fafc; /* 預設白色，JS 會根據分數改色 */
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.5); /* 增加一點發光質感 */
+        }
+
+        .verdict { font-size: 1.2rem; font-weight: bold; padding: 5px 15px; border-radius: 20px; display: inline-block; }
+
+        /* 策略卡 */
+        .strategy-card { background: rgba(59, 130, 246, 0.08); border: 1px solid var(--accent-blue); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        .strategy-header { font-weight: bold; color: var(--accent-blue); font-size: 1.1rem; margin-bottom: 15px; border-bottom: 1px solid rgba(59,130,246,0.3); padding-bottom: 10px; }
+        .st-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .st-box { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; }
+        .st-label { font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 4px; }
+        .st-val { font-size: 1.1rem; font-family: monospace; font-weight: bold; color: white; }
+        .st-formula { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+
+        .metric-card { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px; }
+        .metric-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .metric-title { font-size: 1rem; font-weight: bold; color: #e2e8f0; }
+        
+        .metric-score-box { 
+            background: #0f172a; border: 1px solid #475569; padding: 2px 10px; border-radius: 6px; 
+            font-family: monospace; font-weight: bold; font-size: 1.1rem; color: #facc15; 
+            cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .metric-score-box:hover { background: #334155; border-color: var(--accent-yellow); transform: scale(1.05); }
+        .metric-score-box::after { content: 'ℹ️'; font-size: 0.7rem; opacity: 0.7; }
+
+        .bar-bg { height: 6px; background: #334155; border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+        .bar-fill { height: 100%; width: 0%; transition: width 0.8s ease-out; }
+        .metric-status { font-size: 0.9rem; font-weight: bold; margin-bottom: 4px; color: #f8fafc; }
+        .metric-logic { font-size: 0.8rem; color: #94a3b8; line-height: 1.4; }
+
+        .charts-area { display: flex; flex-direction: column; gap: 15px; }
+        .chart-box { background: var(--bg-panel); padding: 15px; border-radius: 12px; border: 1px solid var(--border); position: relative; }
+        #chartMainBox { height: 500px; } .sub-chart { height: 300px; }
+        .loading { color: var(--accent-blue); display: none; margin-left: 10px; }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content {
+            background: #1e293b; border: 1px solid var(--accent-blue); width: 500px; border-radius: 12px; padding: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); position: relative;
+        }
+        .modal-close { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #94a3b8; }
+        .modal-title { font-size: 1.4rem; font-weight: bold; color: white; margin-bottom: 5px; }
+        .modal-weight { display: inline-block; background: var(--accent-blue); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 15px; }
+        .formula-list { list-style: none; padding: 0; margin: 0; font-size: 0.95rem; color: #cbd5e1; }
+        .formula-list li { margin-bottom: 10px; padding-left: 15px; border-left: 3px solid #475569; }
+    </style>
+</head>
+<body>
+
+<div class="modal-overlay" id="scoreModal" onclick="closeModal(event)">
+    <div class="modal-content">
+        <span class="modal-close" onclick="document.getElementById('scoreModal').style.display='none'">&times;</span>
+        <div class="modal-title" id="mTitle">指標名稱</div>
+        <div class="modal-weight" id="mWeight">權重: 20%</div>
+        <ul class="formula-list" id="mFormula">
+            </ul>
+    </div>
+</div>
+
+<div class="container">
+    <div class="header">
+        <div class="input-group">
+            <label>股票代號</label>
+            <input type="text" id="inpSymbol" value="TSLA" style="width: 100px;">
+        </div>
+        <div class="input-group">
+            <label>年限</label>
+            <input type="number" id="inpYears" value="2" min="1" max="5" style="width: 80px;">
+        </div>
+        <div class="input-group">
+            <label>API Key</label>
+            <input type="password" id="inpApiKey" value="e9e9c1790b11411abfb50f990984fbf1" oncopy="return false" oncut="return false">
+        </div>
+        <button onclick="startSystem()" id="btnStart">RUN MODEL</button>
+        <div class="loading" id="loadingMsg">跑一下.. 很快</div>
+    </div>
+
+    <div class="grid-container" id="mainLayout" style="margin-bottom: 40px;">
+        <div class="report-card">
+            <div class="total-score-box">
+                <div style="color:var(--text-sub); font-size:0.9rem; letter-spacing:1px; text-transform:uppercase;">Alpha Strategy Score</div>
+                <div class="score-display" id="finalScore">--</div>
+                <div class="verdict" id="finalVerdict">--</div>
+            </div>
+
+            <div class="strategy-card">
+                <div class="strategy-header"><span>風險控管 (ATR Volatility Model)</span></div>
+                <div class="st-grid">
+                    <div class="st-box"><span class="st-label">當前股價 (Price)</span><span class="st-val" id="stPrice">--</span></div>
+                    <div class="st-box"><span class="st-label">真實波動 (ATR)</span><span class="st-val" id="stATR">--</span><div class="st-formula">Period: 14 Days</div></div>
+                </div>
+                <div class="st-grid">
+                    <div class="st-box" style="border: 1px solid rgba(239, 68, 68, 0.3);">
+                        <span class="st-label" style="color:#fca5a5">建議止損 (Stop Loss)</span><span class="st-val" style="color:#ef4444" id="stSL">--</span>
+                        <div class="st-formula">公式: Price - (3 × ATR)</div>
+                        <div class="st-formula" style="color:#ef4444">容忍 3σ 波動 (長線抗震)</div>
+                    </div>
+                    <div class="st-box" style="border: 1px solid rgba(16, 185, 129, 0.3);">
+                        <span class="st-label" style="color:#86efac">目標止盈 (Take Profit)</span><span class="st-val" style="color:#10b981" id="stTP">--</span>
+                        <div class="st-formula">公式: Price + (6 × ATR)</div>
+                        <div class="st-formula" style="color:#10b981">設定 1:2 損益比 (波段)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="metricsContainer"></div>
+        </div>
+
+        <div class="charts-area">
+            <div class="chart-box" id="chartMainBox"><canvas id="cMain"></canvas></div>
+            <div class="chart-box sub-chart"><canvas id="cKD"></canvas></div>
+            <div class="chart-box sub-chart"><canvas id="cRSI"></canvas></div>
+            <div class="chart-box sub-chart"><canvas id="cMACD"></canvas></div>
+        </div>
+    </div>
+
+    <div class="macro-container" id="macroPanel" style="display:none; grid-template-columns: 1fr; gap: 30px; margin-top:50px; border-top:1px solid #334155; padding-top:30px;">
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+            <div class="matrix-box">
+                <div class="matrix-header">
+                    <span>宏觀多空矩陣 (Macro Matrix)</span>
+                    <span style="font-size:0.8rem; opacity:0.8">Data Source: SPY & VIX</span>
+                </div>
+                <table class="matrix-table">
+                    <thead><tr><th width="35%">量化檢測因子 (Factors)</th><th width="20%">目前數值</th><th width="30%">模型判定</th><th width="15%">權重修正</th></tr></thead>
+                    <tbody id="macroTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="macro-summary">
+                <div class="impact-box">
+                    <div style="font-size:1rem; color:var(--accent-blue); font-weight:bold;">總體經濟風險係數 (Macro Risk Alpha)</div>
+                    <div class="impact-score" id="impactVal">0</div>
+                    <div style="font-size:0.85rem; opacity:0.8">此係數代表系統性風險對個股期望值的修正幅度</div>
+                </div>
+                <div class="formula-box" style="flex-grow:1; display:flex; flex-direction:column;">
+                    <div style="font-weight:bold; margin-bottom:10px; color:#cbd5e1; border-bottom:1px solid #475569; padding-bottom:5px;">📝 量化模型評分機制詳解 (Quantitative Scoring Methodology)：</div>
+                    <div class="formula-text" style="font-size:0.85rem; line-height:1.7; color:#94a3b8; overflow-y:auto; max-height:300px;">
+                        <p style="margin:0 0 8px 0;">本系統採用<b>多因子量化模型 (Multi-Factor Model)</b>，針對市場趨勢、波動率與動能進行加權評估。基準分為 0 分，正值代表順風（Tailwind），負值代表逆風（Headwind）。</p>
+                        
+                        <strong style="color:#e2e8f0;">1. 長期趨勢因子 (Long-term Trend Factor)：</strong>
+                        <ul style="margin:5px 0 10px 0; padding-left:20px;">
+                            <li><b>年線乖離率 (BIAS 200MA)：</b>衡量 SPY 與年線的距離。若跌破年線視為熊市訊號，給予 <b>-20分</b> 的極端懲罰，以規避長期下行風險。</li>
+                            <li><b>均線架構 (MA Structure)：</b>檢測 60MA 與 200MA 的相對位置，確認黃金交叉（+3分）或死亡交叉（-5分）的中期趨勢。</li>
+                        </ul>
+
+                        <strong style="color:#e2e8f0;">2. 波動率風險因子 (Volatility Risk Factor)：</strong>
+                        <ul style="margin:5px 0 10px 0; padding-left:20px;">
+                            <li><b>VIX 絕對水位 (Absolute Level)：</b>採用級距式扣分模型。VIX>20 開始扣分，>30 視為高度恐慌 (-8分)，>35 視為崩盤前兆 (-12分)。</li>
+                            <li><b>布林通道壓力測試 (Bollinger Stress Test)：</b>當 VIX 突破布林上軌 (Upper Band)，代表發生 2個標準差 (2σ) 以上的極端恐慌事件，觸發 <b>-15分</b> 的熔斷機制。</li>
+                            <li><b>歷史波動率異常 (HV Z-Score)：</b>計算過去 200日波動率的標準分數。若 Z-Score > 2.5，代表市場處於統計學上的極端不穩定狀態。</li>
+                        </ul>
+
+                        <strong style="color:#e2e8f0;">3. 動能因子 (Momentum Factor)：</strong>
+                        <ul style="margin:5px 0 0 0; padding-left:20px;">
+                            <li><b>恐慌動能 (VIX Momentum)：</b>透過 VIX 5日線與 20日線的交叉關係，判斷恐慌情緒是在「加速升溫」還是「降溫冷卻」。</li>
+                            <li><b>短線乖離 (Short-term BIAS)：</b>檢測 SPY 與月線的乖離，過大則視為過熱 (0分)，適中則視為強勢 (+3分)。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+            <div class="chart-box" style="min-height:400px !important; padding:0; overflow:hidden; border-radius:12px; border:1px solid #334155;">
+                <div id="tv_chart_spy" style="height:100%; width:100%;"></div>
+            </div>
+            <div class="chart-box" style="min-height:400px !important; padding:0; overflow:hidden; border-radius:12px; border:1px solid #334155;">
+                <div id="tv_chart_vix" style="height:100%; width:100%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    // 數學運算
+    const calcAvg = (d, n) => { let r=[]; for(let i=0;i<d.length;i++){ if(i<n-1){r.push(null);continue;} let s=0; for(let j=0;j<n;j++)s+=d[i-j]; r.push(s/n); } return r; };
+    const calcEMA = (d, n) => { let k=2/(n+1), r=new Array(d.length).fill(null), s=0; for(let i=0;i<n;i++)s+=d[i]; r[n-1]=s/n; for(let i=n;i<d.length;i++)r[i]=d[i]*k+r[i-1]*(1-k); return r; };
+    const calcBollinger = (d, n=20) => { const sma=calcAvg(d, n), u=[], l=[]; for(let i=0;i<d.length;i++){ if(!sma[i]){u.push(null);l.push(null);continue;} let ss=0; for(let j=0;j<n;j++)ss+=Math.pow(d[i-j]-sma[i],2); let std=Math.sqrt(ss/n); u.push(sma[i]+std*2); l.push(sma[i]-std*2); } return {upper:u, lower:l}; };
+    const calcRSI = (d, n=14) => { let r=new Array(d.length).fill(null), g=[], l=[]; for(let i=1;i<d.length;i++){ let df=d[i]-d[i-1]; g.push(df>0?df:0); l.push(df<0?Math.abs(df):0); } for(let i=n;i<d.length;i++){ let ag=g.slice(i-n,i).reduce((a,b)=>a+b)/n, al=l.slice(i-n,i).reduce((a,b)=>a+b)/n; r[i]=al===0?100:100-(100/(1+ag/al)); } return r; };
+    const calcMACD = (d) => { const e12=calcEMA(d,12), e26=calcEMA(d,26), dif=d.map((v,i)=>(e12[i]&&e26[i])?e12[i]-e26[i]:null); let vd=dif.filter(x=>x!==null), vs=calcEMA(vd,9), sig=new Array(dif.length-vs.length).fill(null).concat(vs), h=dif.map((v,i)=>(v!==null&&sig[i]!==null)?v-sig[i]:null); return {dif,sig,hist:h}; };
+    const calcKD = (c, h, l, n=9) => { let K=[], D=[], k=50, d=50; for(let i=0;i<c.length;i++){ if(i<n-1){K.push(null);D.push(null);continue;} let mx=-Infinity, mn=Infinity; for(let j=0;j<n;j++){ mx=Math.max(mx,h[i-j]); mn=Math.min(mn,l[i-j]); } let rsv=mx===mn?50:((c[i]-mn)/(mx-mn))*100; k=(2/3)*k+(1/3)*rsv; d=(2/3)*d+(1/3)*k; K.push(k); D.push(d); } return {K,D}; };
+    const calcATR = (h, l, c, n=14) => { let tr=[h[0]-l[0]]; for(let i=1;i<h.length;i++) tr.push(Math.max(h[i]-l[i], Math.abs(h[i]-c[i-1]), Math.abs(l[i]-c[i-1]))); let atr=new Array(h.length).fill(null), s=0; for(let i=0;i<n;i++)s+=tr[i]; atr[n-1]=s/n; for(let i=n;i<h.length;i++)atr[i]=(atr[i-1]*(n-1)+tr[i])/n; return atr; };
+    const calcFib = (h, l) => { const mx=Math.max(...h), mn=Math.min(...l), d=mx-mn; return {f618:mx-d*0.618, f500:mx-d*0.5, f382:mx-d*0.382}; };
+
+    let charts = {};
+    let countdown = 0;
+
+     async function getYahooVIX() {
+        // Yahoo API 目標網址
+        const targetUrl = "https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=1y";
+        
+        // 定義兩個不同的 CORS Proxy 服務作為備援
+        const proxies = [
+            // 代理 1: corsproxy.io (速度快，但偶爾會擋)
+            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+            // 代理 2: allorigins.win (速度稍慢，但穩定性高)
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+        ];
+
+        // 內部解析函數 (統一處理 Yahoo 的 JSON 格式)
+        const parseYahooData = (data) => {
+            if (!data.chart || !data.chart.result || data.chart.result.length === 0) {
+                throw new Error("Yahoo API 回傳格式錯誤");
+            }
+            const result = data.chart.result[0];
+            const timestamps = result.timestamp;
+            const quotes = result.indicators.quote[0].close;
+            
+            if (!timestamps || !quotes) throw new Error("無 VIX 數據");
+
+            let formattedData = [];
+            for (let i = 0; i < timestamps.length; i++) {
+                if (quotes[i] != null) {
+                    let date = new Date(timestamps[i] * 1000);
+                    // 修正時區問題，確保日期準確
+                    let dateStr = date.toISOString().split('T')[0];
+                    formattedData.push({
+                        datetime: dateStr,
+                        close: quotes[i]
+                    });
+                }
+            }
+            return { values: formattedData.reverse() }; // 轉為由新到舊
+        };
+
+        // ★ 自動切換代理機制
+        for (let i = 0; i < proxies.length; i++) {
+            try {
+                const proxyUrl = proxies[i](targetUrl);
+                console.log(`嘗試抓取 VIX (代理 ${i+1})...`);
+                
+                const res = await fetch(proxyUrl);
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                
+                const data = await res.json();
+                const parsed = parseYahooData(data);
+                
+                console.log("VIX 抓取成功！");
+                return parsed; // 成功就回傳，跳出迴圈
+
+            } catch (e) {
+                console.warn(`代理 ${i+1} 失敗:`, e.message);
+                // 如果是最後一個代理也失敗，才拋出錯誤
+                if (i === proxies.length - 1) {
+                    throw new Error("所有 VIX 來源皆無法連線，請稍後再試。");
+                }
+                // 否則繼續嘗試下一個代理
+            }
+        }
+    }
+
+    async function startSystem() {
+        const apiKey = document.getElementById('inpApiKey').value.trim();
+        const symbol = document.getElementById('inpSymbol').value.toUpperCase();
+        let years = parseFloat(document.getElementById('inpYears').value) || 1;
+        if(years > 5) years = 5;
+        const fetchYears = years + 1;
+        const size = Math.ceil(fetchYears * 260);
+
+        const btn = document.getElementById('btnStart');
+        const loader = document.getElementById('loadingMsg');
+        
+        btn.disabled = true; 
+        loader.style.display = 'inline';
+        document.getElementById('mainLayout').style.opacity = '0.3';
+        document.getElementById('macroPanel').style.display = 'none'; // 先隱藏
+
+        try {
+            // 1. 數據抓取 (用於計算矩陣分數)
+            const pStock = fetch(`https://api.twelvedata.com/time_series?symbol=${symbol}&interval=1day&outputsize=${size}&apikey=${apiKey}`).then(r=>r.json());
+            const pSpy = fetch(`https://api.twelvedata.com/time_series?symbol=SPY&interval=1day&outputsize=400&apikey=${apiKey}`).then(r=>r.json());
+            const pVix = getYahooVIX(); 
+
+            const [stockData, spyData, vixData] = await Promise.all([pStock, pSpy, pVix]);
+
+            if(stockData.status === 'error') throw new Error("API 錯誤: " + stockData.message);
+
+            // 資料轉換
+            const raw = stockData.values.reverse();
+            const C = raw.map(x=>parseFloat(x.close)), H = raw.map(x=>parseFloat(x.high)), L = raw.map(x=>parseFloat(x.low)), V = raw.map(x=>parseFloat(x.volume)), T = raw.map(x=>x.datetime);
+            
+            // 計算個股指標
+            const sma5=calcAvg(C,5), sma20=calcAvg(C,20), sma60=calcAvg(C,60), sma200=calcAvg(C,200);
+            const bb=calcBollinger(C,20), rsi=calcRSI(C,14), macd=calcMACD(C), kd=calcKD(C,H,L,9), atr=calcATR(H,L,C,14), fib=calcFib(H,L);
+
+            // 2. 總經矩陣計算 (分數仍由 API 數據精算)
+            const macroAnalysis = analyzeMacroConditions(spyData, vixData);
+            updateMacroUI(macroAnalysis);
+
+            // ★ 關鍵步驟：顯示面板並載入 TradingView Widget
+            document.getElementById('macroPanel').style.display = 'grid';
+            loadTradingViewWidgets(); 
+
+            // 計算個股分數
+            const idx = C.length - 1, p = C[idx];
+            let scores = {};
+            
+            // 評分邏輯
+            let tS=50; if(sma200[idx]) { tS+=Math.min(20,Math.max(-20,((p-sma200[idx])/sma200[idx])*100)); if(p>sma60[idx])tS+=10; if(sma60[idx]>sma200[idx])tS+=10; } scores.trend=clamp(tS);
+            let pb=(p-bb.lower[idx])/(bb.upper[idx]-bb.lower[idx]); scores.pos=clamp(pb<0?100:(pb>1?0:100-(pb*100)));
+            let vS=50, vR=V[idx]/calcAvg(V,20)[idx]; if(C[idx]>C[idx-1])vS+=(vR>1?(vR-1)*20:-(1-vR)*20); else vS+=(vR>1?-(vR-1)*20:(1-vR)*10); scores.vol=clamp(vS);
+            let rV=rsi[idx], rS=rV<30?80+(30-rV):(rV>70?20-(rV-70):50+(50-rV)); scores.rsi=clamp(rS);
+            let kV=kd.K[idx], dV=kd.D[idx], kS=kV<20?80+(20-kV):(kV>80?20-(kV-80):50+(50-kV)); if(kV>dV && kd.K[idx-1]<=kd.D[idx-1])kS+=15; if(kV<dV && kd.K[idx-1]>=kd.D[idx-1])kS-=15; scores.kd=clamp(kS);
+            let mH=macd.hist[idx], pH=macd.hist[idx-1], mS=mH>0?(mH>pH?70:55):(mH>pH?50:30); scores.macd=clamp(mS);
+
+            // 總分與 UI 更新
+            let rawTotal = (scores.trend*0.2)+(scores.pos*0.2)+(scores.vol*0.15)+(scores.rsi*0.15)+(scores.kd*0.15)+(scores.macd*0.15);
+            let finalScore = Math.round(rawTotal + macroAnalysis.totalImpact);
+            if(finalScore < 0) finalScore = 0; if(finalScore > 100) finalScore = 100;
+
+            const elScore = document.getElementById('finalScore');
+            elScore.innerText = finalScore;
+            if(finalScore >= 80) elScore.style.color = "#10b981";
+            else if(finalScore >= 60) elScore.style.color = "#3b82f6";
+            else if(finalScore >= 40) elScore.style.color = "#f59e0b";
+            else elScore.style.color = "#ef4444";
+            if(macroAnalysis.totalImpact < -8) elScore.style.color = "#ef4444"; 
+
+            const elVerdict = document.getElementById('finalVerdict');
+            if(finalScore>=80) { elVerdict.innerText="🔥 強力買進"; elVerdict.style.color="#10b981"; }
+            else if(finalScore>=60) { elVerdict.innerText="✅ 偏多操作"; elVerdict.style.color="#3b82f6"; }
+            else if(finalScore>=40) { elVerdict.innerText="👀 觀望盤整"; elVerdict.style.color="#f59e0b"; }
+            else { elVerdict.innerText="⛔ 風險極高"; elVerdict.style.color="#ef4444"; }
+
+            const cATR = atr[idx];
+            document.getElementById('stPrice').innerText = p.toFixed(2);
+            document.getElementById('stATR').innerText = cATR.toFixed(2);
+            document.getElementById('stSL').innerText = (p - 3*cATR).toFixed(2);
+            document.getElementById('stTP').innerText = (p + 6*cATR).toFixed(2);
+
+            updateMetricsUI(scores, {trend:p>sma200[idx], vol:vR, rsi:rV, kd:{k:kV,d:dV}, macd:mH, price:p, prevPrice:C[idx-1], ma60:sma60[idx], ma200:sma200[idx]});
+            
+            // 繪製個股主圖表
+            const showCount = Math.ceil(years * 260);
+            const sliceStart = C.length - showCount;
+            drawCharts(T.slice(sliceStart), C.slice(sliceStart), V.slice(sliceStart), sma5.slice(sliceStart), sma20.slice(sliceStart), sma60.slice(sliceStart), sma200.slice(sliceStart), {upper:bb.upper.slice(sliceStart), lower:bb.lower.slice(sliceStart)}, rsi.slice(sliceStart), {dif:macd.dif.slice(sliceStart), sig:macd.sig.slice(sliceStart), hist:macd.hist.slice(sliceStart)}, {K:kd.K.slice(sliceStart), D:kd.D.slice(sliceStart)}, fib);
+            
+            document.getElementById('mainLayout').style.opacity = '1';
+            startCooldown(15);
+
+        } catch (e) { 
+            alert("錯誤: " + e.message); console.error(e); btn.disabled = false; 
+        } finally { 
+            loader.style.display = 'none'; 
+        }
+    }
+
+
+
+    function loadTradingViewWidgets() {
+        // 1. SPY Widget (大盤走勢)
+        new TradingView.widget({
+            "width": "100%", "height": "100%",
+            "symbol": "AMEX:SPY", // 明確指定交易所
+            "interval": "D",
+            "timezone": "Etc/UTC",
+            "theme": "dark",
+            "style": "1", // 蠟燭圖
+            "locale": "zh_TW",
+            "toolbar_bg": "#f1f3f6",
+            "enable_publishing": false,
+            "hide_top_toolbar": false, // 顯示工具列讓使用者可以縮放
+            "allow_symbol_change": false,
+            "container_id": "tv_chart_spy",
+            "studies": [
+                "MASimple@tv-basicstudies", 
+                "MASimple@tv-basicstudies"  
+            ] 
+        });
+
+        new TradingView.widget({
+            "width": "100%", "height": "100%",
+            "symbol": "VIXY", 
+            "interval": "D",
+            "timezone": "Etc/UTC",
+            "theme": "dark",
+            "style": "2", // 線圖
+            "locale": "zh_TW",
+            "toolbar_bg": "#f1f3f6",
+            "enable_publishing": false,
+            "hide_top_toolbar": false,
+            "allow_symbol_change": false,
+            "container_id": "tv_chart_vix",
+            "studies": ["BollingerBands@tv-basicstudies"] // 顯示布林通道
+        });
+    }
+
+
+
+
+
+     function drawMacroCharts(spyData, vixData) {
+        // 資料處理核心：統一轉為 {L: 日期, C: 收盤價} 格式
+        const process = (d, name) => {
+            if(!d || !d.values || d.values.length === 0) {
+                console.warn(`${name} 無數據可繪圖`);
+                return null;
+            }
+            // 確保數據順序正確：Chart.js 需要 [舊 -> 新]
+            // TwelveData API 預設回傳 [新 -> 舊]，Yahoo Proxy 經過我們處理也是 [新 -> 舊]
+            // 因此這裡必須 reverse()
+            const raw = [...d.values].reverse();
+            
+            // 取最近 120 天，避免圖表太擠
+            const slice = raw.slice(-120);
+            
+            return {
+                L: slice.map(x => x.datetime.substring(5)), // 只顯示 MM-DD
+                C: slice.map(x => parseFloat(x.close)),
+                Raw: slice.map(x => parseFloat(x.close)) // 用於計算 MA
+            };
+        };
+
+        const spy = process(spyData, "SPY");
+        const vix = process(vixData, "VIX");
+
+        if(!spy || !vix) return; // 若無資料則中止
+
+        // 計算技術指標
+        const spyMA50 = calcAvg(spy.Raw, 50);
+        const spyMA200 = calcAvg(spy.Raw, 200);
+        const vixMA5 = calcAvg(vix.Raw, 5);  // 用於顯示動能
+        const vixMA20 = calcAvg(vix.Raw, 20);
+
+        const opts = (title) => ({
+            responsive: true, maintainAspectRatio: false,
+            plugins: { 
+                title: { display: true, text: title, color: '#94a3b8', font:{size:12} },
+                legend: { labels: { color: '#cbd5e1', boxWidth:10, font:{size:10} } } 
+            },
+            scales: { x: { display: false }, y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font:{size:10} } } },
+            elements: { point: { radius: 0, hoverRadius: 4 } }
+        });
+
+        // 繪製 SPY
+        if(charts.spy) charts.spy.destroy();
+        charts.spy = new Chart(document.getElementById('cSPY'), {
+            type: 'line',
+            data: {
+                labels: spy.L,
+                datasets: [
+                    { label: 'SPY', data: spy.C, borderColor: '#fff', borderWidth: 2 },
+                    { label: 'MA50', data: spyMA50, borderColor: '#3b82f6', borderWidth: 1 },
+                    { label: 'MA200', data: spyMA200, borderColor: '#f59e0b', borderWidth: 1 }
+                ]
+            }, options: opts('SPY Trend (200MA / 50MA)')
+        });
+
+        // 繪製 VIX (顯示 5MA vs 20MA 動能)
+        if(charts.vix) charts.vix.destroy();
+        charts.vix = new Chart(document.getElementById('cVIX'), {
+            type: 'line',
+            data: {
+                labels: vix.L,
+                datasets: [
+                    { label: 'VIX', data: vix.C, borderColor: '#ef4444', borderWidth: 2 },
+                    { label: '5MA(動能)', data: vixMA5, borderColor: '#22d3ee', borderWidth: 1, borderDash:[2,2] },
+                    { label: '20MA(趨勢)', data: vixMA20, borderColor: '#facc15', borderWidth: 1 }
+                ]
+            }, options: opts('VIX Momentum (5MA / 20MA)')
+        });
+    }
+
+
+
+
+
+    function showFormula(type) {
+        const modal = document.getElementById('scoreModal');
+        const title = document.getElementById('mTitle');
+        const weight = document.getElementById('mWeight');
+        const list = document.getElementById('mFormula');
+        
+        list.innerHTML = '';
+        modal.style.display = 'flex';
+
+        if(type === 'Trend') {
+            title.innerText = "長期趨勢 (Trend)";
+            weight.innerText = "權重: 20%";
+            list.innerHTML = `
+                <li><b>基礎分 (50分)</b></li>
+                <li><b>乖離率修正：</b>依據 (股價 - 200MA) 差距，每 1% 增減 1 分 (上限 ±20分)</li>
+                <li><b>多頭排列：</b>若 股價 > 60MA (+10分)</li>
+                <li><b>黃金交叉：</b>若 60MA > 200MA (+10分)</li>
+            `;
+        } else if(type === 'Pos') {
+            title.innerText = "價格位階 (Position)";
+            weight.innerText = "權重: 20%";
+            list.innerHTML = `
+                <li><b>公式：</b>使用布林通道 %B 指標</li>
+                <li><b>便宜：</b>接近通道下緣分數高 (破底給 100分)</li>
+                <li><b>昂貴：</b>接近通道上緣分數低 (突破給 0分)</li>
+                <li><b>線性計算：</b>Score = 100 - (%B × 100)</li>
+            `;
+        } else if(type === 'Vol') {
+            title.innerText = "量價分析 (Volume)";
+            weight.innerText = "權重: 15%";
+            list.innerHTML = `
+                <li><b>基礎分 (50分)</b></li>
+                <li><b>價漲量增：</b>成交量 > 均量，大幅加分 (+20分)</li>
+                <li><b>價漲量縮：</b>量價背離，扣分 (-20分)</li>
+                <li><b>價跌量縮：</b>惜售整理，小加分 (+10分)</li>
+                <li><b>價跌量增：</b>恐慌拋售，重扣分 (-20分)</li>
+            `;
+        } else if(type === 'RSI') {
+            title.innerText = "RSI 動能";
+            weight.innerText = "權重: 15%";
+            list.innerHTML = `
+                <li><b>超賣區 (<30)：</b>視為反彈機會，分數提高 (最高 80+30=110)</li>
+                <li><b>超買區 (>70)：</b>視為過熱風險，分數降低 (最低 20-30=-10)</li>
+                <li><b>中性區 (30-70)：</b>線性遞減，越低分越高</li>
+            `;
+        } else if(type === 'KD') {
+            title.innerText = "KD 指標";
+            weight.innerText = "權重: 15%";
+            list.innerHTML = `
+                <li><b>基礎分：</b>類似 RSI，低檔鈍化給高分，高檔鈍化給低分</li>
+                <li><b>黃金交叉：</b>K > D 且昨日 K < D (+15分)</li>
+                <li><b>死亡交叉：</b>K < D 且昨日 K > D (-15分)</li>
+            `;
+        } else if(type === 'MACD') {
+            title.innerText = "MACD 趨勢";
+            weight.innerText = "權重: 15%";
+            list.innerHTML = `
+                <li><b>多頭增強：</b>紅柱且變長 (70分)</li>
+                <li><b>多頭減弱：</b>紅柱但變短 (55分)</li>
+                <li><b>空頭收斂：</b>綠柱但變短 (50分)</li>
+                <li><b>空頭增強：</b>綠柱且變長 (30分)</li>
+            `;
+        }
+    }
+
+    function closeModal(e) { if(e.target.id === 'scoreModal') e.target.style.display = 'none'; }
+
+     function updateMetricsUI(s, d) {
+        
+        // 1. 長期趨勢深度解析
+        const trendDist = ((d.price - d.ma200) / d.ma200 * 100).toFixed(2);
+        let trendText = "";
+        if(d.trend) {
+            // 多頭情境
+            if(d.ma60 > d.ma200) trendText = `股價位於年線(200MA)之上 ${trendDist}%，且季線(60MA)已黃金交叉年線，呈現標準「多頭排列」。長期均線向上助漲，籌碼穩定，長線保護短線效果顯著。`;
+            else trendText = `股價雖站上年線，但季線尚未跟上，處於「初升段」或「震盪築底」期。需觀察季線是否能順利翻揚提供支撐，目前多方力道尚未完全穩固。`;
+        } else {
+            // 空頭情境
+            if(d.ma60 < d.ma200) trendText = `股價位於年線之下 ${Math.abs(trendDist)}%，且均線呈現「空頭排列」。上方層層套牢賣壓沈重，任何反彈至均線附近皆易遭解套賣壓打擊，建議保守。`;
+            else trendText = `股價跌破年線，但季線仍在年線之上，呈現「趨勢破壞」修正。若無法在 3 日內快速站回，恐形成長空中繼，風險極高。`;
+        }
+
+        // 2. 價格位階深度解析
+        const pb = (100 - s.pos) / 100; // 還原 %B
+        let posText = "";
+        if(pb > 1.0) posText = `布林通道 %B 值達 ${(pb*100).toFixed(0)}%，股價突破上軌。此為極強勢的「軋空行情」，但也伴隨乖離過大風險。若無量能配合，需提防假突破真拉回。`;
+        else if(pb > 0.8) posText = `股價運行於中軌與上軌間的「強勢整理區」。操作宜沿 20MA 順勢操作，只要不破中軌，多頭動能延續，是勝率較高的位階。`;
+        else if(pb < 0) posText = `布林通道 %B 為負，股價跌破下軌。市場出現非理性「恐慌拋售」，隨時可能出現「報復性反彈」，但需注意是否為重大利空導致的崩盤。`;
+        else if(pb < 0.2) posText = `股價位於下軌附近，位階便宜但走勢疲弱。此區屬「左側交易」觀察區，需等待長紅 K 棒表態止跌，否則可能沿下軌持續盤跌。`;
+        else posText = `股價位於布林通道中性區間，方向未明。建議減少進出，等待突破上軌或回測下軌有撐後再行佈局。`;
+
+        // 3. 量價分析深度解析
+        let volText = "";
+        const vRatio = d.vol.toFixed(2);
+        if(d.price > d.prevPrice) { 
+            if(d.vol > 1.2) volText = `呈現「價漲量增」健康格局，成交量為均量 ${vRatio} 倍。主力資金積極換手，攻擊意願強，有利後續挑戰新高。`;
+            else if(d.vol < 0.8) volText = `呈現「價漲量縮」背離。追價意願不足或主力鎖碼，若後續無法補量，需提防多頭力竭的拉回風險。`;
+            else volText = `價漲且量能溫和，屬於「驚驚漲」的穩健推升格局，籌碼未失控，有利趨勢延續。`;
+        } else {
+            if(d.vol > 1.2) volText = `呈現「價跌量增」，成交量放大至 ${vRatio} 倍。顯示出現恐慌性停損或獲利了結賣壓，空方力道強，底部恐難浮現。`;
+            else volText = `呈現「價跌量縮」，賣壓逐漸衰竭，市場出現惜售心理。若後續能出現量增紅K，有機會形成短期底部。`;
+        }
+
+        // 4. RSI 解析
+        let rsiText = "";
+        const rsiVal = d.rsi.toFixed(1);
+        if(d.rsi >= 75) rsiText = `RSI(${rsiVal}) 進入「過熱區」。雖多頭氣勢強，但短線乖離過大。若股價創高但 RSI 未創高(背離)，為強烈回檔訊號。`;
+        else if(d.rsi <= 25) rsiText = `RSI(${rsiVal}) 進入「超賣區」。市場情緒極度悲觀，依鐘擺效應，隨時可能出現技術性反彈，不宜追空。`;
+        else if(d.rsi >= 50) rsiText = `RSI(${rsiVal}) 位於多方攻擊區 (50-75)。動能充沛且未過熱，是趨勢交易者最舒適的持股區間。`;
+        else rsiText = `RSI(${rsiVal}) 位於空方抵抗區 (<50)。反彈力道疲弱，任何反彈至 50 附近若無法突破，皆是減碼時機。`;
+
+        // 5. KD 解析
+        let kdText = "";
+        const kVal = d.kd.k.toFixed(1);
+        if(d.kd.k > d.kd.d) kdText = `KD 黃金交叉 (K=${kVal} > D)。短線動能轉強。若交叉發生在 20 以下低檔區，準確度高；若在 80 以上，可能為誘多或鈍化軋空。`;
+        else kdText = `KD 死亡交叉 (K=${kVal} < D)。短線轉弱修正。若交叉發生在 80 以上高檔區，應立即停利；若在 20 以下鈍化，需觀察底部背離。`;
+
+        // 6. MACD 解析
+        let macdText = "";
+        const osc = d.macd.toFixed(3);
+        if(d.macd > 0) macdText = `MACD 柱狀體正值(${osc})，多頭控盤。若紅柱持續放大，代表處於主升段攻擊；若紅柱縮短，顯示漲勢趨緩，可能轉為橫盤震盪。`;
+        else macdText = `MACD 柱狀體負值(${osc})，空頭控盤。若綠柱持續放大，代表急殺段，不可接刀；若綠柱收斂，顯示空方力道衰竭，醞釀止跌。`;
+
+        // 輔助函數
+        const createMetric = (key, title, score, status, logic) => `
+            <div class="metric-card">
+                <div class="metric-top">
+                    <span class="metric-title">${title}</span>
+                    <div class="metric-score-box" onclick="showFormula('${key}')">${score} 分</div>
+                </div>
+                <div class="bar-bg"><div class="bar-fill" style="width:${score}%; background:${score>=70?'#10b981':(score<=30?'#ef4444':'#f59e0b')}"></div></div>
+                <div class="metric-status" style="color:${score>=70?'#10b981':(score<=30?'#ef4444':'#f59e0b')}">➤ 狀態：${status}</div>
+                <div class="metric-logic" style="margin-top:5px; padding-top:5px; border-top:1px dashed #334155; font-size:0.85rem; color:#cbd5e1; line-height:1.6;">${logic}</div>
+            </div>`;
+        
+        const html = 
+            createMetric("Trend", "長期趨勢 (Trend)", s.trend, d.trend?"多頭架構":"空頭架構", trendText) +
+            createMetric("Pos", "價格位階 (Position)", s.pos, s.pos>=80?"相對便宜":s.pos<=20?"相對昂貴":"合理區間", posText) +
+            createMetric("Vol", "量價分析 (Volume)", s.vol, d.vol>1?"量能放大":"量能萎縮", volText) +
+            createMetric("RSI", "RSI 動能強弱", s.rsi, d.rsi>70?"過熱區":d.rsi<30?"超賣區":"中性區", rsiText) +
+            createMetric("KD", "KD 隨機指標", s.kd, d.kd.k>d.kd.d?"黃金交叉":"死亡交叉", kdText) +
+            createMetric("MACD", "MACD 趨勢指標", s.macd, d.macd>0?"多方控盤":"空方控盤", macdText);
+            
+        document.getElementById('metricsContainer').innerHTML = html;
+    }
+
+
+
+     function analyzeMacroConditions(spyData, vixData) {
+        let details = []; let totalImpact = 0;
+
+        // --- 統計學核心運算 ---
+        // 計算歷史波動率 (Historical Volatility)
+        const calcHV = (prices, window=20) => {
+            let logReturns = [];
+            for(let i=1; i<prices.length; i++) logReturns.push(Math.log(prices[i]/prices[i-1]));
+            let hvs = [];
+            for(let i=window; i<logReturns.length; i++) {
+                let slice = logReturns.slice(i-window, i);
+                let mean = slice.reduce((a,b)=>a+b,0)/window;
+                let sqDiff = slice.map(x => Math.pow(x-mean, 2)).reduce((a,b)=>a+b,0);
+                hvs.push(Math.sqrt(sqDiff/window) * Math.sqrt(252) * 100);
+            }
+            return hvs;
+        };
+        // 計算標準分數 (Z-Score)
+        const calcZScore = (cur, hist) => {
+            const mean = hist.reduce((a,b)=>a+b,0)/hist.length;
+            const sqDiff = hist.map(x=>Math.pow(x-mean,2)).reduce((a,b)=>a+b,0);
+            const std = Math.sqrt(sqDiff/hist.length);
+            return (cur - mean) / std;
+        };
+
+        const getRaw = (d) => [...d.values].reverse().map(x=>parseFloat(x.close));
+        const getBB = (d, n=20) => { const sma=calcAvg(d,n), idx=d.length-1; let ss=0; for(let i=0;i<n;i++)ss+=Math.pow(d[idx-i]-sma[idx],2); const std=Math.sqrt(ss/n); return {mid:sma[idx], upper:sma[idx]+2*std}; };
+
+        // 1. SPY 大盤深度分析
+        if(spyData.values) {
+            const raw = getRaw(spyData);
+            const idx = raw.length-1, p = raw[idx];
+            const ma20 = calcAvg(raw,20)[idx], ma60 = calcAvg(raw,60)[idx], ma200 = calcAvg(raw,200)[idx];
+            
+            // 波動率計算
+            const hvSeries = calcHV(raw, 20);
+            const curHV = hvSeries[hvSeries.length-1];
+            const hvZ = calcZScore(curHV, hvSeries.slice(-200));
+
+            // A1. 長期趨勢 (年線乖離)
+            const bias200 = ((p - ma200)/ma200)*100;
+            let r1 = {name:`長期趨勢 (年線乖離 ${bias200.toFixed(1)}%)`, val:p.toFixed(2)};
+            if(bias200 > 5) { r1.status="強勢多頭"; r1.score=5; r1.class="tag-pos"; }
+            else if(bias200 > 0) { r1.status="多頭支撐"; r1.score=2; r1.class="tag-pos"; }
+            else if(bias200 > -5) { r1.status="轉弱修正"; r1.score=-5; r1.class="tag-neg"; }
+            else { r1.status="深不見底"; r1.score=-15; r1.class="tag-neg"; }
+            details.push(r1); totalImpact += r1.score;
+
+            // A2. 短線乖離 (月線 20MA) - 新增
+            const bias20 = ((p - ma20)/ma20)*100;
+            let r2 = {name:`短線熱度 (月線乖離 ${bias20.toFixed(1)}%)`, val:bias20 > 0 ? "月線之上" : "月線之下"};
+            if(bias20 > 3) { r2.status="短線過熱"; r2.score=0; r2.class="tag-neu"; } // 過熱不加分
+            else if(bias20 > 0) { r2.status="短多強勢"; r2.score=3; r2.class="tag-pos"; }
+            else { r2.status="短線整理"; r2.score=-2; r2.class="tag-neu"; }
+            details.push(r2); totalImpact += r2.score;
+
+            // A3. 中期架構 (季線 vs 年線) - 新增
+            let r3 = {name:"中期架構 (60MA vs 200MA)", val: ma60>ma200 ? "多頭排列" : "空頭排列"};
+            if(ma60 > ma200) { r3.status="助漲格局"; r3.score=3; r3.class="tag-pos"; }
+            else { r3.status="助跌格局"; r3.score=-5; r3.class="tag-neg"; }
+            details.push(r3); totalImpact += r3.score;
+
+            // A4. 市場波動異常 (Z-Score)
+            let r4 = {name:`市場波動 (Z-Score ${hvZ.toFixed(1)})`, val:`HV:${curHV.toFixed(1)}%`};
+            if(hvZ > 2.5) { r4.status="極端恐慌"; r4.score=-8; r4.class="tag-neg"; }
+            else if(hvZ > 1.5) { r4.status="波動異常"; r4.score=-4; r4.class="tag-neg"; }
+            else { r4.status="波動正常"; r4.score=2; r4.class="tag-pos"; }
+            details.push(r4); totalImpact += r4.score;
+        }
+
+        // 2. VIX 恐慌指數深度分析
+        if(vixData.values) {
+            const raw = getRaw(vixData);
+            const idx = raw.length-1, v = raw[idx];
+            const ma5 = calcAvg(raw, 5)[idx], ma20 = calcAvg(raw, 20)[idx];
+            const bb = getBB(raw, 20);
+
+            // B1. 絕對水位 (級距評分)
+            let r5 = {name:"恐慌水位 (VIX Level)", val:v.toFixed(2)};
+            if(v > 35) { r5.status="崩盤恐慌 (>35)"; r5.score=-12; r5.class="tag-neg"; }
+            else if(v > 25) { r5.status="高度恐慌 (>25)"; r5.score=-8; r5.class="tag-neg"; }
+            else if(v > 20) { r5.status="避險升溫 (>20)"; r5.score=-4; r5.class="tag-neg"; }
+            else if(v < 15) { r5.status="樂觀平穩 (<15)"; r5.score=2; r5.class="tag-pos"; }
+            else { r5.status="正常波動"; r5.score=0; r5.class="tag-neu"; }
+            details.push(r5); totalImpact += r5.score;
+
+            // B2. 恐慌動能 (具體化：5MA vs 20MA)
+            // 說明：5日線代表短期情緒，20日線代表中期平均。5日線衝過20日線代表恐慌正在「加速」
+            let r6 = {name:"恐慌動能 (VIX 5MA vs 20MA)", val: ma5.toFixed(2) + (ma5>ma20?" > ":" < ") + ma20.toFixed(2)};
+            if(ma5 > ma20) {
+                // 黃金交叉：恐慌加速中
+                r6.status="⚠️ 加速升溫"; r6.score=-5; r6.class="tag-neg";
+            } else {
+                // 死亡交叉：恐慌降溫中
+                r6.status="✅ 情緒降溫"; r6.score=3; r6.class="tag-pos";
+            }
+            details.push(r6); totalImpact += r6.score;
+
+            // B3. 系統性風險 (布林突破)
+            let r7 = {name:"崩盤預警 (VIX BB Break)", val: v>bb.upper ? "突破上軌" : "區間內"};
+            if(v > bb.upper) { r7.status="系統性崩盤"; r7.score=-15; r7.class="tag-neg"; } // 重罰
+            else { r7.status="未突破"; r7.score=0; r7.class="tag-neu"; }
+            details.push(r7); totalImpact += r7.score;
+        }
+
+        return { details, totalImpact };
+    }
+
+
+
+
+
+
+    function updateMacroUI(res) {
+        const tbody = document.getElementById('macroTableBody'); 
+        tbody.innerHTML = '';
+        res.details.forEach(i => {
+            let color = i.score > 0 ? '#10b981' : (i.score < 0 ? '#ef4444' : '#cbd5e1');
+            let sign = i.score > 0 ? '+' : '';
+            tbody.innerHTML += `
+                <tr>
+                    <td style="padding:10px;">${i.name}</td>
+                    <td style="font-family:monospace; color:#e2e8f0;">${i.val}</td>
+                    <td><span class="score-tag ${i.class}" style="font-size:0.8rem;">${i.status}</span></td>
+                    <td style="font-weight:bold; color:${color}; text-align:right; padding-right:15px;">${sign}${i.score}</td>
+                </tr>`;
+        });
+        
+        const total = res.totalImpact;
+        const impBox = document.getElementById('impactVal');
+        impBox.innerText = (total > 0 ? "+" : "") + total;
+        impBox.style.color = total > 0 ? "#10b981" : (total < 0 ? "#ef4444" : "#cbd5e1");
+    }
+
+
+    function drawCharts(L, P, V, MA5, MA20, MA60, MA200, BB, RSI, MACD, KD, FIB) {
+        // 先銷毀舊圖表
+        Object.values(charts).forEach(c => c?.destroy());
+
+        // 定義同步縮放函式
+        const syncScale = (chart) => {
+            const min = chart.scales.x.min;
+            const max = chart.scales.x.max;
+            
+            // 遍歷所有圖表進行同步
+            [charts.main, charts.kd, charts.rsi, charts.macd].forEach(c => {
+                if (c && c !== chart) {
+                    c.options.scales.x.min = min;
+                    c.options.scales.x.max = max;
+                    c.update('none'); // 使用 'none' 模式避免動畫延遲，讓連動更順暢
+                }
+            });
+        };
+
+        // 通用設定 (加入 Zoom 配置)
+        const commonOpt = {
+            responsive: true, 
+            maintainAspectRatio: false, 
+            interaction: { mode: 'index', intersect: false },
+            scales: { 
+                x: { display: false }, // X軸文字隱藏，但刻度存在
+                y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } } 
+            },
+            plugins: { 
+                legend: { labels: { color: '#cbd5e1' } },
+                // ★ Zoom 插件設定
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x', // 只能左右拖曳
+                        onPan: ({chart}) => syncScale(chart) // 拖曳時同步
+                    },
+                    zoom: {
+                        wheel: { enabled: true }, // 啟用滑鼠滾輪
+                        pinch: { enabled: true }, // 啟用觸控縮放
+                        mode: 'x', // 只能縮放 X 軸 (時間軸)
+                        onZoom: ({chart}) => syncScale(chart) // 縮放時同步
+                    }
+                }
+            }
+        };
+
+        const maxV = Math.max(...V);
+        
+        // 1. 主圖表
+        charts.main = new Chart(document.getElementById('cMain'), { 
+            type: 'line', 
+            data: {
+                labels: L,
+                datasets: [
+                    {label:'Price', data:P, borderColor:'#fff', borderWidth:2, pointRadius:0, yAxisID:'y', order:1},
+                    {label:'MA5', data:MA5, borderColor:'#e879f9', borderWidth:1, pointRadius:0, yAxisID:'y', order:2},
+                    {label:'MA20', data:MA20, borderColor:'#22d3ee', borderWidth:1, pointRadius:0, yAxisID:'y', order:2},
+                    {label:'MA60', data:MA60, borderColor:'#3b82f6', borderWidth:1, pointRadius:0, yAxisID:'y', order:2},
+                    {label:'MA200', data:MA200, borderColor:'#f59e0b', borderWidth:2, pointRadius:0, yAxisID:'y', order:3},
+                    {label:'BB U', data:BB.upper, borderColor:'rgba(16,185,129,0.4)', borderWidth:1, pointRadius:0, fill:false, yAxisID:'y', order:4},
+                    {label:'BB L', data:BB.lower, borderColor:'rgba(16,185,129,0.4)', borderWidth:1, pointRadius:0, fill:false, yAxisID:'y', order:5},
+                    {type:'bar', label:'Vol', data:V, backgroundColor:'rgba(255,255,255,0.1)', yAxisID:'y1', order:6}
+                ]
+            }, 
+            options: {
+                ...commonOpt, 
+                scales: {
+                    // 主圖顯示 X 軸刻度
+                    x: { ticks: { color: '#94a3b8', maxTicksLimit: 12 }, grid: { color: '#334155' } },
+                    y: { position: 'left', grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                    y1: { position: 'right', min: 0, max: maxV*4, display: false }
+                }, 
+                plugins: {
+                    ...commonOpt.plugins,
+                    annotation: {
+                        annotations: {
+                            f6:{type:'line',yMin:FIB.f618,yMax:FIB.f618,borderColor:'rgba(16,185,129,0.6)',borderDash:[4,4],borderWidth:1,label:{display:true,content:'Fib .618',position:'end',color:'#10b981',font:{size:10}}},
+                            f5:{type:'line',yMin:FIB.f500,yMax:FIB.f500,borderColor:'rgba(245,158,11,0.6)',borderDash:[4,4],borderWidth:1,label:{display:true,content:'Fib .5',position:'end',color:'#f59e0b',font:{size:10}}}
+                        }
+                    }
+                }
+            } 
+        });
+        
+        // 2. KD 圖表
+        charts.kd = new Chart(document.getElementById('cKD'), { 
+            type: 'line', 
+            data: { labels:L, datasets:[{label:'K',data:KD.K,borderColor:'#facc15',pointRadius:0},{label:'D',data:KD.D,borderColor:'#a855f7',pointRadius:0}] }, 
+            options: {
+                ...commonOpt, 
+                plugins: {
+                    ...commonOpt.plugins,
+                    annotation: {annotations:{l1:{type:'line',yMin:80,yMax:80,borderColor:'red',borderDash:[2,2]},l2:{type:'line',yMin:20,yMax:20,borderColor:'green',borderDash:[2,2]}}}
+                }
+            }
+        });
+
+        // 3. RSI 圖表
+        charts.rsi = new Chart(document.getElementById('cRSI'), { 
+            type: 'line', 
+            data: { labels:L, datasets:[{label:'RSI',data:RSI,borderColor:'#38bdf8',pointRadius:0}] }, 
+            options: {
+                ...commonOpt, 
+                scales:{...commonOpt.scales, y:{min:0,max:100}}, 
+                plugins: {
+                    ...commonOpt.plugins,
+                    annotation: {annotations:{l1:{type:'line',yMin:70,yMax:70,borderColor:'red',borderDash:[2,2]},l2:{type:'line',yMin:30,yMax:30,borderColor:'green',borderDash:[2,2]}}}
+                }
+            }
+        });
+
+        // 4. MACD 圖表
+        charts.macd = new Chart(document.getElementById('cMACD'), { 
+            type: 'bar', 
+            data: {
+                labels:L, 
+                datasets:[
+                    {type:'line',label:'DIF',data:MACD.dif,borderColor:'#3b82f6',pointRadius:0},
+                    {type:'line',label:'Sig',data:MACD.sig,borderColor:'#f59e0b',pointRadius:0},
+                    {label:'Hist',data:MACD.hist,backgroundColor:c=>c.raw>=0?'#10b981':'#ef4444'}
+                ]
+            }, 
+            options: commonOpt 
+        });
+    }
+
+
+    function clamp(n) { return Math.min(100, Math.max(0, Math.round(n))); }
+    function startCooldown(sec) { countdown = sec; const btn = document.getElementById('btnStart'); const timer = setInterval(() => { btn.innerText = `冷卻中 (${countdown}s)`; countdown--; if(countdown < 0) { clearInterval(timer); btn.innerText="Run Model"; btn.disabled=false; } }, 1000); } </script>
+
+</body>
+</html>
+
