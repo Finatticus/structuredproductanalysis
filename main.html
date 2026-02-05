@@ -1,0 +1,197 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Michael's Analytics Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* 專業色票：更冷靜的灰階與企業藍 */
+            --bg-body: #f8f9fa;
+            --bg-card: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --accent-color: #0f4c81; /* 深海藍，穩重專業 */
+            --border-color: #e5e7eb;
+            --section-title: #374151;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding: 40px 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* 頁面標題區 */
+        header {
+            margin-bottom: 60px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        /* 分類標題樣式 */
+        .category-section {
+            margin-bottom: 50px;
+        }
+
+        .category-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-left: 2px;
+            border-left: 3px solid var(--accent-color); /* 左側藍色細條裝飾 */
+            padding-left: 10px;
+        }
+
+        /* 卡片網格 */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        /* 工具卡片本體 */
+        .tool-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 24px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%; /* 讓同列卡片等高 */
+        }
+
+        .tool-card:hover {
+            border-color: var(--accent-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .tool-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .tool-card p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* 連結狀態提示 (選用) */
+        .status-dot {
+            height: 8px;
+            width: 8px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .tool-card:hover .status-dot {
+            opacity: 1;
+        }
+
+        /* 手機版調整 */
+        @media (max-width: 600px) {
+            body { padding: 20px; }
+            header { margin-bottom: 40px; }
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Michael's Analytics Hub</h1>
+        <p class="subtitle">Internal Tools & Financial Models Dashboard</p>
+    </header>
+
+    <div class="category-section">
+        <div class="category-title">Structured Products (結構型商品)</div>
+        <div class="grid">
+            
+            <a href="SN/index.html" class="tool-card">
+                <h3>SN 商品總覽和說明平台</h3>
+                <p>所有SN商品架構說明</p>
+            </a>
+
+            <a href="fcn.html" class="tool-card">
+                <h3>SN量化分析 (SN Quant Analytics)</h3>
+                <p>SN 評價模型核心。包含蒙地卡羅模擬運算引擎、Greeks 分析與 VaR 風險值計算。</p>
+            </a>
+
+            </div>
+    </div>
+
+    <div class="category-section">
+        <div class="category-title">Equities Analysis (股票分析)</div>
+        <div class="grid">
+
+            <a href="Stock.html" class="tool-card">
+                <h3>US Equity Quant Model (美股多因子量化模型)</h3>
+                <p>整合技術分析、動能與波動率 (VIX/HV) 的綜合評分，包含考慮宏觀風險矩陣與動態部位控管。</p>
+            </a>
+
+            <a href="CointegrationAnalyzer.html" class="tool-card">
+                <h3>Statistical Arbitrage Model (統計套利模型)</h3>
+                <p>基於 Cointegration 檢定的配對交易，即時計算價差 Z-Score，捕捉均值回歸 (Mean Reversion) 的無風險套利機會。</p>
+            </a>
+
+        </div>
+    </div>
+
+    <div class="category-section">
+        <div class="category-title">Utilities & Automation (其他工具)</div>
+        <div class="grid">
+
+            <a href="outlook_vba.html" class="tool-card">
+                <h3>Outlook Automation Rules</h3>
+                <p>郵件自動分類、VBA 腳本庫存取與 Exchange 同步狀態檢查。</p>
+            </a>
+
+            <a href="settings.html" class="tool-card">
+                <h3>API Configuration</h3>
+                <p>設定 Twelve Data、Yahoo Finance 等外部資料源 API 金鑰與參數。</p>
+            </a>
+
+        </div>
+    </div>
+
+</body>
+</html>
