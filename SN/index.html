@@ -1,0 +1,291 @@
+﻿<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>境外結構型商品專區</title>
+<style>
+body {
+    font-family: "Segoe UI", sans-serif;
+    background-color: #f0f4f8;
+    padding: 40px;
+    color: #333;
+    line-height: 1.6;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 36px;
+    color: #004c91;
+}
+
+.hero-button {
+    display: inline-block;
+    background: linear-gradient(90deg, #1a4d8f, #1f72c6);
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 700;
+    padding: 18px 36px;
+    border-radius: 14px;
+    text-decoration: none;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    transition: all 0.3s ease;
+    margin: 20px auto 40px auto;
+    display: block;
+    width: max-content;
+}
+
+.hero-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.16);
+    background: linear-gradient(90deg, #1f72c6, #1a4d8f);
+}
+
+.accordion {
+    background-color: #ffffff;
+    color: #333;
+    cursor: pointer;
+    padding: 20px 25px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    font-size: 20px;
+    font-weight: bold;
+    transition: 0.4s;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin-top: 15px;
+}
+
+.active, .accordion:hover {
+    background-color: #d0e6ff;
+}
+
+.panel {
+    padding: 15px 20px;
+    background-color: #fff;
+    display: none;
+    overflow: hidden;
+    border-radius: 0 0 12px 12px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
+    margin-bottom: 15px;
+}
+
+.product {
+    background: #f9faff;
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 12px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+.product:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+.product.clickable {
+    cursor: pointer;
+}
+.product h3 {
+    margin: 0;
+    color: #0077cc;
+    font-size: 18px;
+}
+.product p {
+    color: #555;
+    margin-top: 5px;
+    font-size: 15px;
+}
+
+/* 工具區塊 */
+.tools-section {
+    margin-top: 50px;
+    background: #f5f8ff;
+    padding: 28px 32px;
+    border-radius: 18px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+.tools-section h2 {
+    margin-bottom: 22px;
+    color: #003d73;
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.tools-container-new {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+}
+
+.tool-card {
+    background: #ffffff;
+    padding: 20px 10px;
+    height: 70px;
+    border-radius: 14px;
+    text-decoration: none;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    transition: 0.25s;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.tool-card h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0055aa;
+    text-align: center;
+    width: 100%;
+}
+.tool-card.external h3 {
+    color: #0a7a42;
+}
+.tool-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+    background: #fdfefe;
+}
+
+@media (max-width: 1100px) {
+    .tools-container-new { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 700px) {
+    .tools-container-new { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+    .tools-container-new { grid-template-columns: 1fr; }
+}
+
+
+.section-divider {
+    border: none;
+    height: 1px;
+    background: linear-gradient(to right, #e0e0e0, #c0c0c0, #e0e0e0);
+    margin: 40px 0;
+}
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;   
+    position: relative;      
+    margin-bottom: 40px;
+}
+
+.header-container h1 {
+    margin: 0;
+}
+
+.intro-button {
+    position: absolute;
+    left: 0;
+    font-size: 16px;            
+    font-weight: 500;
+    padding: 6px 14px;         
+    border-radius: 8px;
+    text-decoration: none;
+    background-color: transparent;
+    color: #1f72c6;
+    border: 1.5px solid #1f72c6;
+    transition: all 0.25s ease;
+}
+
+.intro-button:hover {
+    background-color: #1f72c6;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+}
+
+
+
+</style>
+</head>
+<body>
+
+<div class="header-container">
+    <h1>境外結構型商品專區</h1>
+    <a class="intro-button" href="0_SN_intro.html">什麼是境外結構型商品？</a>
+</div>
+
+
+
+<!-- 商品 Accordion -->
+<button class="accordion">💰 Coupon 類商品</button>
+<div class="panel">
+    <div class="product clickable" onclick="window.location.href='1_fcn.html'">
+        <h3>Fixed Coupon Note (FCN)</h3>
+        <p>提供投資人比傳統定存更高的固定利息，並以連結標的（如個股或ETF）的表現作為條件。特色在於定期支付利息，但不保本，若連結標的價格在到期時跌破履約價格，投資人可能損失部分或全部本金。</p>
+    </div>
+    <div class="product clickable" onclick="window.location.href='2_stepdown.html'">
+        <h3>Stepdown FCN</h3>
+        <p>一般FCN的延伸架構，提供同樣的固定收益機制，並設有逐期遞減的提前出場價格，每期最後一日觀察是否提前出場。適合預期市場震盪偏多、希望提高中後期出場機會、追求穩定配息且能承擔一定標的下跌風險的投資人。</p>
+    </div>
+    <div class="product clickable" onclick="window.location.href='3_bullet.html'">
+        <h3>Bullet FCN</h3>
+        <p>商品利息只在第一個配息日配發，所以越早提前出場，換算的年化配息率越高，適合在多頭市場時選擇的架構。</p>
+    </div>
+    <div class="product clickable" onclick="window.location.href='4_dran.html'">
+        <h3>Daily Range Accrual Note (DRAN)</h3>
+        <p>浮動配息的結構型商品架構，提供投資人高於FCN的浮動配息收益。配息依標的股票價格表現浮動，若任一連結標的價格跌破履約價格 (Strike)，當天配息將不計，並有觸發自動提前出場機制 (KO) 即到期以履約價 (Strike) 轉換股票的風險。</p></div>
+    <div class="product clickable" onclick="window.location.href='5_bln.html'">
+        <h3>Bond Linked Note (BLN)</h3>
+        <p>連結債券的結構型商品，每個月固定配息，發行後觀察到期時債券的價格來判斷是否承接債券，適合尋求債券進場時點的投資人選擇。</p></div>
+</div>
+
+<button class="accordion">📈 紅利增強類商品</button>
+<div class="panel">
+    <div class="product clickable" onclick="window.location.href='6_ben.html'"><h3>Regular BEN</h3><p>連結至少兩檔股票，到期時觀察表現最差者，股票價格高於履約價就可領取約定紅利率(Bonus)，漲幅超過其紅利率就能100%參與漲幅。若到期跌破履約價，投資人需以履約價格承接該股票，無紅利可得。適合能承擔股票風險，在市場處於多頭行情時的投資工具。</p></div>
+    <div class="product clickable" onclick="window.location.href='7_benlb.html'"><h3>BEN with Lookback</h3><p>一般BEN的延伸架構，以表現最差股票決定收益，但會採發行日起算N日的回顧期間最低價作為期初價格，能在無法掌握進場時機或市場較為波動時取得相對有利的進場點，適合希望提高進場彈性的投資人。</p></div>
+    <div class="product clickable" onclick="window.location.href='8_dcn.html'"><h3>Digital Note (DCN)</h3><p>與BEN相似，但連結標的可以為單一股票，到時期僅依標的價格是否達履約價判定能不能收到紅利率，不會參與任何上漲幅度，結構較為單純。</p></div>
+    <div class="product clickable" onclick="window.location.href='11_booster.html'"><h3>Booster</h3><p>至少要連結兩檔股票，發行後直接觀察到期時最差股票表現。若最差股票跌破履約價格，就以履約價承接股票；若到期漲幅高於下檔觸發價(Lower Call Strike)，即可獲得漲幅乘以參與率的高額收益，適合看多市場的投資人。</p></div>
+    <div class="product clickable" onclick="window.location.href='9_superben.html'"><h3>保本Super BEN</h3><p>具備每月觀察提前出場機制，保證領息期間後達到提前出場價格條件即可領回本金+年化出場紅利；如果沒發生提前出場事件，到期可以領出出場紅利並參與表現最差標的之漲跌幅，最高無上限，最低也不會損失到本金，結構上具有收益彈性與保本的特色，適合震盪偏多的市場及尋求穩健收益的投資人。</p></div>
+    <div class="product clickable" onclick="window.location.href='10_cben.html'"><h3>保本Callable BEN</h3><p>為保本架構，發行機構擁有每月買回權，若被買回，投資人可領回100%本金+紅利率；若未被買回且到期時最差股票價格高於期初價，除領取本金+紅利外，還可以依參與率參與超過紅利率部分漲幅；若最終價格低於期初價格則僅返還投資本金，不會有額外損失。</p></div>
+</div>
+
+<button class="accordion">📊 其他股權結構型商品</button>
+<div class="panel">
+    <div class="product clickable" onclick="window.location.href='14_sharkfin.html'"><h3>保本KO Sharkfin</h3><p>為每日觀察提前出場架構，如存續期間內股價超過提前出場價格即可立即出場，並領取出場紅利；若存續期間從未達到出場條件就持有至到期，到期跌多少拿多少，上漲就沒有收益。此商品為一個保本型看空架構，適合在空頭市場時選擇。</p></div>
+    <div class="product clickable" onclick="window.location.href='12_twinwin_p.html'"><h3>保本 Twinwin</h3><p>設有上下界，存續期間內若股價從未突破到期時可以依實際漲跌參與收益，且能設定最低收益保障；如果曾經突破過上下界，則到期時不管股票表現如何，投資人收益皆是約定好的KO收益率。結構兼具保本、區間策略及彈性收益特性，適合在盤整震盪區間時選擇。</p></div>
+    <div class="product clickable" onclick="window.location.href='13_twinwin_n.html'"><h3>不保本 Twinwin</h3><p>發行後每月觀察股價是否突破提前出場價，達成即可提前出場並領取年化配息；如未出場則觀察存續期間是否曾經觸及到下限價，曾觸及下限價者到期時需漲回履約價上才不用承接股票；若從未觸及，則到期時不論漲跌皆可以依漲跌幅獲利，具有雙向收益機會，適合看區間震盪即盤整行情的投資人。</p></div>
+    <div class="product clickable" onclick="window.location.href='15_decumulator.html'"><h3>Decumulator Note</h3><p>為逐期用約定好<span style="color:red";>高於</span>市價的價格去<span style="color:red";>賣出</span>股票的結構型商品，可以在波動市場中提高平均賣出價格。適合希望分批賣出手上庫存標的，設定一個較高的價格且不想要一次性賣出的投資人。</p></div>
+    <div class="product clickable" onclick="window.location.href='16_accumulator.html'"><h3>Accumulator Note</h3><p>為逐期用約定好<span style="color:green";>低於</span>市價的價格去<span style="color:green";>買進</span>股票的結構型商品，可以在波動市場中降低股票買進成本。適合希望分批買進股票，不想要一次性買入的投資人。</p></div>
+</div>
+
+<button class="accordion">🏦 利率結構型商品</button>
+<div class="panel">
+    <div class="product clickable" onclick="window.location.href='17_steepener.html'"><h3>Steepener</h3><p>觀察2個擔保隔夜融資固定期間交換利率(SOFR CMS)之間的利差，作為收益的計算基準，並可以設有最低及最高收益條件。利差越大期收益會越高，適合較為保守的投資人選擇。</p></div>
+    <div class="product clickable" onclick="window.location.href='18_inverse.html'"><h3>Inverse Floater</h3><p>設定一個利率基準扣除擔保隔夜融資固定期間交換利率(SOFR CMS)之間的利差，作為收益的計算基準，並可以設有最低及最高收益條件。掛勾的SOFR CMS越低，收益越高，適合預期降息的市場及較為保守的投資人選擇。</p></div>
+    <div class="product clickable" onclick="window.location.href='19_drapgn.html'"><h3>DRAPGN</h3><p>設定一個利率區間作為收益的計算基準，如果掛鉤的利率價格跑出區間外，當天就不計息，適合較為保守的投資人選擇。</p></div>
+</div>
+
+<hr class="section-divider">
+
+<!-- 功能工具 -->
+<div class="tools-section">
+    <h2>🛠 功能網站</h2>
+    <div class="tools-container-new">
+        <a class="tool-card external" href="https://structurednotes.tdcc.com.tw/Snoteanc/#/SELECTOR" target="_blank"><h3>🌐 境外SN資訊觀測站</h3></a>
+        <a class="tool-card external" href="https://finance.yahoo.com/" target="_blank"><h3>🌐 Yahoo Finance</h3></a>
+        <a class="tool-card external" href="https://www.bloomberg.com/asia" target="_blank"><h3>🌐 Bloomberg</h3></a>
+    </div>
+</div>
+
+<script>
+/* Accordion 折疊功能 */
+const acc = document.getElementsByClassName("accordion");
+for (let i = 0; i < acc.length; i++) {
+    acc[i].addEventListener("click", function() {
+        this.classList.toggle("active");
+        const panel = this.nextElementSibling;
+        panel.style.display = (panel.style.display === "block") ? "none" : "block";
+    });
+}
+</script>
+
+</body>
+</html>

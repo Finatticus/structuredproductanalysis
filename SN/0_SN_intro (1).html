@@ -1,0 +1,641 @@
+﻿<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>什麼是境外結構型商品</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background-color: #f7f9fc;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        header {
+            background: #004c91;
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 32px;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        }
+
+        section {
+            margin-bottom: 60px;
+        }
+
+        section h2 {
+            font-size: 24px;
+            color: #003d73;
+            margin-bottom: 20px;
+            border-left: 4px solid #1f72c6;
+            padding-left: 12px;
+        }
+
+.text-image {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+.text-image .text {
+    flex: 0 1 55%;
+    line-height: 2;
+    font-size: 17px;
+}
+.text-image .image {
+    flex: 1;
+    min-width: 300px;
+    text-align: center;
+}
+#strike-img {
+    max-width: 70%;
+    height: auto;
+}
+#ki-img {
+    max-width: 100%;
+    height: auto;
+}
+.text-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+}
+.highlight {
+    color: #0055aa;
+    font-weight: 600;
+}
+.diagram {
+    text-align: center;
+    margin: 20px 0;
+}
+.divider {
+    height: 2px;
+    background: linear-gradient(to right, #1f72c6, #1a4d8f);
+    margin: 60px 0;
+    border-radius: 2px;
+}
+@media (max-width: 800px) {
+    .text-image {
+        flex-direction: column;
+    }
+}
+.reason-block {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-top: 20px;
+}
+.reason-item {
+    background: #ffffff;
+    border-left: 4px solid #1f72c6;
+    padding: 16px 24px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+.reason-item:hover {
+    background: #f0f6ff;
+}
+.reason-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f72c6;
+    margin-bottom: 8px;
+}
+.reason-content {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #444;
+}
+.condition-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 20px;
+}
+.condition-item {
+    flex: 1 1 150px;
+    background: linear-gradient(135deg, #e6f0ff, #ffffff);
+    border: 2px solid #1f72c6;
+    padding: 16px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    font-weight: 700;
+    color: #004c91;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.condition-item:hover {
+    background: linear-gradient(135deg, #cce0ff, #e6f7ff);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+.condition-item.active {
+    background: linear-gradient(135deg, #1f72c6, #4a9df5);
+    color: #fff;
+    border: 2px solid #004c91;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+.condition-description {
+    margin-top: 24px;
+    background: #f7f9fc;
+    padding: 20px;
+    border-radius: 10px;
+    line-height: 1.8;
+}
+.tooltip {
+    position: relative;
+    cursor: help;
+    font-weight: 600;
+    color: #004c91;
+    font-size: 16px;
+}
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 280px;
+    font-size: 16px;
+    background: linear-gradient(135deg, #ffffff, #f0f5ff);
+    color: #333;
+    text-align: left;
+    padding: 12px 16px;
+    border-radius: 12px;
+    position: absolute;
+    z-index: 10;
+    bottom: 140%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    transition: opacity 0.3s ease, bottom 0.3s ease;
+    font-size: 13px;
+    line-height: 1.6;
+    font-family: "Segoe UI", sans-serif;
+}
+.tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -6px;
+    border-width: 6px;
+    border-style: solid;
+    border-color: #f0f5ff transparent transparent transparent;
+}
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+    bottom: 150%;
+}
+.scenario-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+.scenario-card {
+  background: #f7f9fc;
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.scenario-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+}
+.scenario-card h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: #333;
+}
+.scenario-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #555;
+}
+.knockout-container {
+    background-color: #f7f9fc;
+    padding: 0;
+    border-left: 4px solid ##f7f9fc;
+    border-radius: 10px;
+    max-width: 800px;
+    margin: 0 0 16px 0;
+    font-family: "Segoe UI", sans-serif;
+    line-height: 2;
+    color: #333;
+}
+.knockout-container h3 {
+    margin-top: 0;
+    color: #004c91;
+    font-size: 22px;
+    font-weight: 700;
+}
+.memory-conditions {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+.memory-item h4 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f72c6;
+}
+.memory-item p {
+    margin: 0;
+    font-size: 16px;
+    color: #444;
+}
+.underlying-container {
+    background-color: #f7f9fc;
+    padding: 0;
+    border-left: 4px solid #f7f9fc;
+    border-radius: 10px;
+    max-width: 800px;
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;
+    line-height: 2;
+    color: #333;
+}
+.underlying-container h3 {
+    margin-top: 0;
+    color: #004c91;
+    font-size: 22px;
+    font-weight: 700;
+}
+.underlying-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+.underlying-item h4 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f72c6;
+}
+.underlying-item p {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    color: #444;
+}
+.underlying-item.low-risk {
+    border-left: 4px solid #52c41a;
+    padding-left: 12px;
+    background-color: #f0fff0;
+    border-radius: 6px;
+}
+.underlying-item.moderate-risk {
+    border-left: 4px solid #fa8c16;
+    padding-left: 12px;
+    background-color: #fff8f0;
+    border-radius: 6px;
+}
+
+.section-wrapper {
+    position: relative;
+}
+
+.back-btn {
+    position: absolute;
+    left: 40px;   
+    top: 0px;    
+
+    background: #ffffff;
+    color: #004c91;
+    border: 2px solid #1f72c6;
+    padding: 7px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: 0.3s;
+}
+
+.back-btn:hover {
+    background: #e6f0ff;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.45);
+}
+
+/* Modal 內容 */
+.modal-content {
+    background: #ffffff;
+    padding: 30px;
+    width: 60%;
+    max-width: 600px;
+    margin: 100px auto;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    line-height: 1.8;
+}
+
+/* 關閉按鈕 */
+.close {
+    float: right;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+/* 實物履約按鈕 */
+.info-btn {
+    padding: 6px 12px;
+    margin-left: 10px;
+    background: #1f72c6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.info-btn:hover {
+    background: #155a9a;
+}
+
+/* KI 的置中區塊 */
+.ki-extra {
+    margin-top: 40px;
+    text-align: left;
+    background: #f7f9fc;
+    padding: 25px;
+    border-radius: 10px;
+    line-height: 1.9;
+}
+
+    </style>
+</head>
+<body>
+<header>
+    <h1>什麼是境外結構型商品？</h1>
+</header>
+
+<div class="section-wrapper">
+<button class="back-btn" onclick="window.location.href='index.html'">←返回主頁</button>
+<main>
+<section>
+    <h2>境外結構型商品簡介</h2>
+    <div class="text-image">
+        <div class="text">
+            <p>
+                <strong>境外結構型商品係指於中華民國境外發行，將固定收益商品與連結股權、利率、匯率、指數、商品、信用事件或其他衍生金融商品相結合的複合式投資工具。</strong>
+            </p>
+            <p class="highlight">（境外結構型商品管理規則第2條）</p>
+            <p>
+                簡單理解，就是把穩定的固定收益（如債券）與多樣化標的資產或衍生工具結合，讓投資人在控制風險的同時，也能爭取額外收益。
+            </p>
+        </div>
+        <div class="image">
+            <img src="image/sn.png" alt="境外結構型商品示意圖" style="width: 60%;">
+        </div>
+    </div>
+</section>
+
+<section>
+    <h2>為何投資境外結構型商品？</h2>
+
+    <div class="reason-block">
+        <div class="reason-item">
+            <div class="reason-title">靈活配置收益與標的</div>
+            <div class="reason-content">
+                境外結構型商品同時滿足「固定收益」及「連結標的資產」的投資需求。投資人可透過賣出或買進選擇權，表達自己對標的物的市場觀點，藉此爭取更高收益。
+            </div>
+        </div>
+
+        <div class="reason-item">
+            <div class="reason-title">應對低利率環境</div>
+            <div class="reason-content">
+                當傳統債券收益微薄，而股市波動過高不宜大額加碼時，結構型商品提供折衷方案，兼顧穩定收益與資本保護，讓資金運用更靈活。
+            </div>
+        </div>
+
+        <div class="reason-item">
+            <div class="reason-title">滿足多元投資需求</div>
+            <div class="reason-content">
+                結構型商品可以量身訂做，結合不同投資組合特性，滿足各類投資人的風險偏好與報酬目標。不論是追求穩健的固定收益，或想在掌控風險的前提下爭取額外收益，都可以透過結構型商品達成。
+            </div>
+        </div>
+    </div>
+</section>
+
+<section>
+    <h2>常見商品架構條件</h2>
+    <p>在境外結構型商品中，常見的商品條件包含以下幾種，點選每個條件即可查看詳細說明：</p>
+
+    <div id="condition-tabs" class="condition-grid">
+        <div class="condition-item active" data-key="strike">Put Strike<br>履約價<br></div>
+        <div class="condition-item" data-key="knockin">Knock-In<br>下限價</div>
+        <div class="condition-item" data-key="knockout">Knock-Out / Memory<br>提前出場及記憶式</div>
+        <div class="condition-item" data-key="underlying">Underlying<br>連結標的</div>
+    </div>
+
+    <div id="condition-content" class="condition-description"></div>
+</section>
+
+<script>
+const descriptions = {
+strike: `
+<div class="text-image">
+    <div class="text">
+        <p><strong>賣出選擇權的履約價(Put Strike)是投資人可於未來約定的時間，以「約定價格」購買連結標的。</strong></p>
+
+        <p>
+            在 FCN 架構中，多數情況屬於<strong>賣出賣權（Short Put）</strong>，因此當期末價格跌破履約價時，
+            投資人需以履約價買進連結資產。
+
+            <!-- 🔵 實物履約按鈕 -->
+            <button class="info-btn" onclick="openPhysical()">什麼是實物履約？</button>
+        </p>
+
+        <p>以下範例說明不同履約價的風險與保護程度：</p>
+
+        <ul style="list-style: none; padding-left: 0; margin-top: 12px;">
+            <strong><li style="color: #ff4d4f; margin-bottom: 6px;">1. Put Strike 100% = (70% / 100%) - 1 = -30%</li></strong>
+            <strong><li style="color: #52c41a; margin-bottom: 6px;">2. Put Strike 80% = (70% / 80%) - 1 = -12.5%</li></strong>
+            <strong><li style="color: #1890ff;">3. Put Strike 60% = 未跌破60% = 保本</li></strong>
+        </ul>
+    </div>
+
+    <div class="image">
+        <img id="strike-img" src="image/strike.png" alt="履約價示意圖">
+    </div>
+</div>
+
+`,
+
+    knockin: `
+<div class="text-image">
+  <div class="text">
+    <p>
+      是透過賣出一個
+
+<span class="tooltip">
+  向下觸及生效賣權（Down-and-in Put）
+  <span class="tooltiptext">
+    今天賣出一份「向下觸及生效賣權」，假設履約價為80%，下限價（KI Barrier）為 60%。<br><br>
+    • 若股價從未跌破 60%，賣權不生效，本金安全。<br>
+    • 一旦股價跌破 60%，賣權才會生效。<br><br>
+    Down-and-in Put = 收權利金 + 等觸發才生效。
+  </span>
+</span>
+
+，在結構型商品中擔任保護的角色，當股價跌破下限價（Knock-In）時，商品才啟動特定條款。
+    </p>
+
+    <div class="scenario-container">
+      <div class="scenario-card" style="border-left: 4px solid #3bd923;">
+        <h4>A 情境：股價未跌破履約價格</h4>
+        <p>若期末股價高於履約價 80%，投資人僅收取配息，不會損失本金。</p>
+      </div>
+
+      <div class="scenario-card" style="border-left: 4px solid #d99023;">
+        <h4>B 情境：股價跌破履約價但未跌破下限價</h4>
+        <p>若下限價為 60%，股價雖跌破履約價但未跌破 KI，投資人仍可收回本金。</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="image">
+    <img id="ki-img" src="image/KI.png" alt="KI示意圖" style="max-width:100%; border-radius:10px;">
+  </div>
+</div>
+
+<!-- 🔵 新增置中且有間距的 EKI / AKI 區塊 -->
+<div class="ki-extra">
+    <h3>Knock-In 的兩種觀察方式：EKI / AKI</h3>
+
+    <p><strong class="highlight">EKI（European Knock-In）</strong>：僅在最後一天檢查一次是否觸及 KI。</p>
+    <p><strong class="highlight">AKI（American Knock-In）</strong>：每日（或每工作日）皆觀察是否觸及 KI。</p>
+
+    <p>
+        多數 FCN 也可選擇<strong class="highlight">不設定 KI（NA）</strong>，  
+        等同少了 KI 的保護機制，風險結構會以票息反映。
+    </p>
+</div>
+
+
+
+`,
+    knockout: `<div class="knockout-container">
+  <p>
+    連結標的表現觸及提前出場條件時，商品將自動提前出場，發行機構返還投資人 100% 本金及應計配息。<br>保障投資人收益的同時，降低下行風險。
+  </p>
+
+  <div class="memory-conditions">
+    <div class="memory-item">
+      <h4><strong>➣ 記憶式</strong>提前出場</h4>
+      <p>
+        每日或每月觀察商品表現，只要所有連結標的<strong>曾經</strong>達到或超過自動提前出場價格，商品就會提前出場。
+      </p>
+    </div>
+    <div class="memory-item">
+      <h4><strong>➣ 無記憶式</strong>提前出場</h4>
+      <p>
+        每日或每月觀察商品表現，只有當所有連結標的<strong>同時</strong>大於或等於自動提前出場價格時，商品才會提前出場。
+      </p>
+    </div>
+  </div>
+
+
+
+`
+
+,
+    underlying: `<div class="underlying-container">
+  <p>
+    投資人在設計結構型商品時，可以透過選擇不同特性的連結標的，達到風險與報酬的平衡。
+  </p>
+
+  <div class="underlying-options">
+    <div class="underlying-item low-risk">
+      <h4>➣ 風險厭惡配置</h4>
+      <p>
+        選擇波動率小、相關性高（通常屬於相同產業別）的標的，透過相對穩定的資產降低整體投資組合的波動性，適合追求資本保護的投資人。
+      </p>
+    </div>
+    <div class="underlying-item moderate-risk">
+      <h4>➣ 風險偏好配置</h4>
+      <p>
+        選擇波動率高、相關性低（通常屬於不同產業別）的標的，可以承擔適中風險，爭取更高報酬率，適合希望在控制風險下追求額外收益的投資人。
+      </p>
+    </div>
+  </div>
+
+
+`};
+
+const items = document.querySelectorAll("#condition-tabs .condition-item");
+const textBox = document.getElementById('condition-content');
+
+items.forEach(item => {
+    item.addEventListener('click', () => {
+        items.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        const key = item.getAttribute('data-key');
+        textBox.innerHTML = descriptions[key];
+    });
+});
+
+textBox.innerHTML = descriptions['strike'];
+
+function openPhysical() {
+    document.getElementById("physical-modal").style.display = "block"; }
+
+function closePhysical() {
+    document.getElementById("physical-modal").style.display = "none"; }
+
+// 點背景關閉
+window.onclick = function(e) {
+    const modal = document.getElementById("physical-modal");
+    if (e.target === modal) modal.style.display = "none"; };
+
+</script>
+
+
+<div id="physical-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closePhysical()">&times;</span>
+
+        <h2>什麼是實物履約（Physical Delivery）？</h2>
+        <p>
+            實物履約指的是當標的價格跌破 Put Strike 時，
+            投資人需依照約定價格買進連結的股票以履行合約。
+        </p>
+
+        <p>
+            在 FCN 結構中，由於本質為賣出賣權（Short Put），
+            投資人透過收取較高的票息（相當於權利金），
+            換取在下跌時承擔買入股票的義務。
+        </p>
+    </div>
+</div>
+
+
+</main>
+</body>
+</html>

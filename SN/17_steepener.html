@@ -1,0 +1,933 @@
+﻿<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+    <title>Steepener</title>
+
+    <!-- 引入 Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<title>Fixed Coupon Note (FCN)</title>
+<!-- Google Font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"> <style>
+/* ===================== Body ===================== */ body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg,#f0f2f8,#e8f0ff);
+    padding: 40px;
+    color: #333;
+    margin: 0;
+}
+.section-wrapper {
+    position: relative; 
+}
+
+.back-btn {
+    position: absolute;
+    left: 20px;  
+    top: 0px;   
+
+    background: #ffffff;
+    color: #004c91;
+    border: 2px solid #1f72c6;
+    padding: 7px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: 0.3s;
+}
+
+.back-btn:hover {
+    background: #e6f0ff;
+}
+
+
+/* ===================== Container ===================== */ .container {
+    background: #fff;
+    border-radius: 16px;
+    padding: 40px 50px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    max-width: 950px;
+    margin: auto;
+    transition: box-shadow 0.3s, transform 0.3s; } .container:hover {
+    box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+    /*transform: translateY(-3px);*/
+}
+h2 {
+    color: #0f4aa3;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 38px;
+}
+h3 {
+    color: #333;
+    margin-top: 50px;
+    font-size: 28px;
+    border-bottom: 2px solid #0077cc;
+    padding-bottom: 6px;
+}
+h4 { color: #333; margin-top: 25px; font-size: 20px; } p { line-height: 1.8; font-size: 16px; }
+
+/* ===================== Divider ===================== */ .divider { 
+    height: 1px; 
+    background: #e1e4e8; 
+    margin: 40px 0; 
+    border-radius: 1px;
+}
+
+/* ===================== Table ===================== */ table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 15px;
+    margin-bottom: 25px;
+    font-size: 16px;
+}
+table th, table td {
+    padding: 12px 15px;
+    text-align: left;
+}
+table th {
+    background: linear-gradient(135deg,#c7ddff,#e3f0ff);
+    color: #003e6b;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+table td {
+    background-color: #fafafa;
+    border-bottom: 1px solid #e1e4e8;
+}
+table tr:hover td {
+    background-color: #eaf1ff;
+}
+
+/* ===================== Tooltip ===================== */ .tooltip {
+    position: relative;
+    cursor: help;
+    font-weight: 600;
+    color: #0077cc;
+}
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 160px;
+    background: linear-gradient(135deg, #ffffff, #e6f0ff);
+    color: #333;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 12px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -80px;
+    opacity: 0;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    transition: opacity 0.3s;
+    font-size: 13px;
+}
+.tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #e6f0ff transparent transparent transparent; } .tooltip:hover .tooltiptext { 
+    visibility: visible; 
+    opacity: 1;
+}
+
+/* ===================== Features ===================== */ .features {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    flex-wrap: nowrap;         /* 強制單行排列 */
+    gap: 12px;
+}
+
+
+.feature-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 0 0 30%;          /* 三等分 */
+    max-width: 33.33%;
+    box-sizing: border-box;
+    padding: 25px 15px;
+    border-radius: 16px;
+    background: linear-gradient(145deg,#f9fafc,#e6f0ff);
+    transition: transform 0.3s, box-shadow 0.3s; } .features.faq .feature-item:hover {
+    transform: none; /* 取消 hover 移動，避免動畫干擾 */
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15); /* 保留陰影美感 */ } .feature-circle {
+    width: 70px;
+    height: 70px;
+    color: white;
+    font-weight: bold;
+    font-size: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1); } .feature-text { font-size: 16px; line-height: 1.5; }
+.feature1 { background: linear-gradient(135deg,#0077cc,#005999); }
+.feature2 { background: linear-gradient(135deg,#00a99d,#007a6e); }
+.feature3 { background: linear-gradient(135deg,#ff8c42,#d65a00); }
+
+/* ===================== Scenario Cards ===================== */ .scenario-cards { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 25px; } .scenario {
+    flex: 1 1 45%;
+    border-radius: 16px;
+    padding: 25px 20px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    transition: transform 0.3s, box-shadow 0.3s; } .scenario:hover { 
+    transform: translateY(-5px); 
+    box-shadow: 0 10px 28px rgba(0,0,0,0.15); } .scenario-title { font-weight: 600; font-size: 18px; margin-bottom: 12px; } .scenario-desc { margin-bottom: 8px; font-size: 15px; }
+
+/* Scenario gradient colors */
+.scenarioA { background: linear-gradient(135deg,#fffefa,#fff3cc); color: #403200; } .scenarioB { background: linear-gradient(135deg,#faf5ff,#e7dcff); color: #310278; } .scenarioC { background: linear-gradient(135deg,#f2fcf7,#deffef); color: #007352; } .scenarioD { background: linear-gradient(135deg,#fff2f2,#ffdede); color: #690000; }
+
+/* ===================== Images ===================== */ .scenario-image { text-align: center; margin-top: 30px; } .payoff-img { display: inline-block; max-width: 100%; height: auto; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.1); transition: transform 0.3s; } .payoff-img:hover { transform: scale(1.03); }
+
+/* FAQ modal 背景保持覆蓋整個畫面 */
+.faq-modal {
+    display: none;
+    position: fixed; /* 固定於 viewport */
+    z-index: 9999;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.6); /* 整個畫面反黑 */ }
+
+
+/* FAQ modal 內容可靠點擊位置出現 */
+.faq-modal-content {
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 600px;
+    max-height: 80vh;      /* 高度限制，視窗的80% */
+    overflow-y: auto;      /* 超過高度出現垂直滾動條 */
+    margin: auto;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    position: fixed;  
+    text-align: left;
+    color: #333;
+    font-size: 16px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+
+
+.faq-modal .modal-close {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    color: #333;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+
+/* ===================== FAQ Buttons ===================== */ .faq-features {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.faq-features .feature-item {
+    flex: 1 1 28%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px 10px;
+    border-radius: 16px;
+    background: linear-gradient(145deg,#f9fafc,#e6f0ff);
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s, background 0.3s; } .faq-features .feature-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+    background: linear-gradient(135deg,#dce6ff,#aac6ff);
+}
+
+.faq-features .feature-circle {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 12px;
+    transition: transform 0.3s, box-shadow 0.3s; } 
+
+    /* FAQ hover 不取消動畫，只控制陰影 */
+    .faq-features .feature-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18); }
+
+
+.faq1-circle { background: linear-gradient(135deg,#0077cc,#005999);}  /* 藍色系 */
+.faq2-circle { background: linear-gradient(135deg,#00a99d,#007a6e);}  /* 青綠色系 */
+.faq3-circle { background: linear-gradient(135deg,#ff8c42,#d65a00);}  /* 橘色系 */
+.faq4-circle { background: linear-gradient(135deg,#8e44ad,#6c3483);}  /* 紫色系 */
+.faq5-circle { background: linear-gradient(135deg,#f39c12,#d68910);}  /* 金黃系 */
+.faq6-circle { background: linear-gradient(135deg,#2ecc71,#27ae60);}  /* 綠色系 */
+
+
+.feature-text {
+    font-size: 16px;
+    line-height: 1.5;
+    font-weight: 500;
+    color: #333;
+}
+
+
+
+
+/* ===================== Modal ===================== */ .modal {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    padding-top: 60px;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.75);
+}
+.modal-content { margin: auto; display: block; max-width: 90%; border-radius: 12px; } .modal-close { position: absolute; top: 30px; right: 50px; color: #fff; font-size: 36px; font-weight: bold; cursor: pointer; }
+
+</style>
+</head>
+<body>
+
+<div class="section-wrapper">
+<button class="back-btn" onclick="window.location.href='index.html'">←返回主頁</button>
+
+
+
+<div class="container">
+<h2>🔹 Steepener</h2>
+<p>Steepener是連結利差型保本結構，觀察2個擔保隔夜融資固定期間交換利率(SOFR CMS)之間的利差，作為收益的計算基準，並可以設有最低及最高收益條件。利差越大期收益會越高，適合較為保守的投資人選擇。</p>
+
+
+<h3>🚩 產品特色</h3>
+<div class="features">
+<div class="feature-item"><div class="feature-circle feature1">💰</div><div class="feature-text">利差越大，投資人收益越大</div></div>
+<div class="feature-item"><div class="feature-circle feature2">🕒</div><div class="feature-text">可以設定最低收益</div></div>
+<div class="feature-item"><div class="feature-circle feature3">🛡️</div><div class="feature-text">連結利差的100%保本結構型商品架構</div></div>
+</div>
+
+<div class="divider"></div>
+
+
+<h3>📘 範例商品條件</h3>
+<table>
+<tr><th>計價幣別</th><td>美元</td></tr>
+<tr><th>連結標的</th><td>美元30年期擔保隔夜融資固定期限交換利率 (USD SOFR CMS 30Y) -<br>美元5年期擔保隔夜融資固定期限交換利率 (USD SOFR CMS 5Y)</td></tr>
+<tr><th>天期</th><td>5年</td></tr>
+<tr><th>配息頻率</th><td>每季配息</td></tr>
+<tr><th>固定配息區間</th><td>1年</td></tr>
+<tr><th>固定配息區間配息率</th><td>10%<span class="tooltip">(p.a.)<span class="tooltiptext">年化報酬率，固定配息計算方式</span></span></td></tr>
+<tr><th>浮動配息期間計息方式</th><td>連結標的30Y-5Y利差 x 6倍</td></tr>
+<tr><th>浮動配息計算方式</th><td>分為兩種:<br>1) In-Advance 採各配息期首日往前第5個美國政府證券營業日定價計算當期配息率<br>2) In-Arrears 採各配息期結束日往前第5個美國政府證券營業日定價計算當期配息</td></tr>
+<tr><th>最高收益 (Cap)</th><td>6.00%</td></tr>
+<tr><th>最低收益 (Floor)</th><td>2.00%</td></tr>
+<tr><th>發行機構提前買回權</th><td>保證領息期間1年後，每季配息日有買回權</td></tr>
+</table>
+
+
+<div class="product-info">
+
+  <div class="info-line">
+    <strong>💵 第1年固定配息：</strong> 第一年固定配息10%，不用觀察SOFR CMS 30Y - 5Y利差
+  </div>
+
+  <div class="info-line">
+    <strong>⚖️ 第2年起：</strong> <br>觀察SOFR CMS 30Y - 5Y利差，以利差乘上6倍作為每季配息基準，每季只判斷一天(In-Advance/In-Arrears)<br>第2年起如果利差為倒掛或是計算後收益小於2% (Floor)，至少也可以拿到2%的利息；如果利差擴大，最大收益(Cap)為6%
+  </div>
+
+
+  <div class="info-line">
+    <strong>⏹️ 上手買回權：</strong> 保證領息期間(1年)過後，每個配息日上手皆有強制買回權。
+  </div>
+
+  <div class="info-line attention">
+    <strong>⚠️ 注意事項：</strong>
+    <ul>
+      <li>浮動配息於每季約定好的觀察日(In-Advance/In-Arrears)之美國政府證券營業日紐約時間約上午11時00分，由洲際交易所定價基準管理機構（ICE Benchmark Administration Limited）(「定價基準管理機構」)所公佈的利率為主</li>
+      <li>上手買回決定權在於發行機構</li>
+      <li>投資人進行提前贖回，仍有可能損失到本金</li>
+    </ul>
+  </div>
+
+</div>
+
+<style>
+.product-info {
+  margin-top: 25px;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #333;
+}
+
+.info-line {
+  border-left: 4px solid #0077cc;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+}
+
+.attention {
+  border-left-color: #d35400;
+}
+
+.attention ul {
+  margin: 6px 0 0 20px;
+  padding: 0;
+  list-style-type: disc;
+}
+</style>
+
+
+
+
+<div class="divider"></div>
+
+
+
+<h3>📈 情境分析</h3>
+
+<!-- 圖表獨立區塊 -->
+
+
+<div class="scenario-cards">
+
+<div class="scenario scenarioA" onclick="showScenarioChart('A')">
+<div class="scenario-title">A情境</div><div class="scenario-desc">SOFR CMS 30Y-5Y利差x6倍，在保證領息期間過後皆大於6%(Cap)</div><div class="scenario-desc">第一年每季收到10%年化配息率，第二年起每季收到6%年化配息率</div></div>
+
+<div class="scenario scenarioB" onclick="showScenarioChart('B')">
+<div class="scenario-title">B情境</div><div class="scenario-desc">SOFR CMS 30Y-5Y利差x6倍，在保證領息期間過後在0%到6%區間不等(Cap)</div><div class="scenario-desc">第一年每季收到10%年化配息率，第二年起每季收到<span style="color:red;">應計</span>年化配息率，最小為2% (Floor)</div></div>
+
+<div class="scenario scenarioC" onclick="showScenarioChart('C')">
+<div class="scenario-title">C情境</div><div class="scenario-desc">SOFR CMS 30Y-5Y利差x6倍，在保證領息期間過後皆為倒掛(小於0%)</div><div class="scenario-desc">第一年每季收到10%年化配息率，第二年起僅收到最小收益2%</div></div>
+
+<div class="scenario scenarioD" onclick="showScenarioChart('D')">
+<div class="scenario-title">D情境</div><div class="scenario-desc">在保證領息期間過後，上手第四年執行買回權</div><div class="scenario-desc">第一年每季收到10%年化配息率，買回後收到100%本金 + 應計利息</div></div>
+</div>
+
+
+<div style="position:relative; max-width:800px; margin:auto; margin-top:20px;">
+    <canvas id="scenarioChart" style="width:100%;"></canvas>
+    
+    <!-- 左側金流標籤 -->
+    <div style="position:absolute; bottom:-60px; left:-60px; width:60px; height:60px; display:flex; align-items:center; justify-content:center; font-weight:bold; color:#0077cc; font-size:19px;">金流</div>
+
+    <!-- 金流顯示容器 -->
+    <div id="cashFlowOverlay" style="position:absolute; bottom:-60px; left:0; width:100%; height:60px; display:flex; justify-content:space-between; pointer-events:none;">
+        <div style="flex:1; margin-left:2px; display:flex; align-items:center; justify-content:center; border:1px solid #0077cc; border-radius:6px; background:#e6f0ff; font-size:14px;">固定配息</div>
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; border:1px solid #0077cc; border-radius:6px; background:#e6f0ff; font-size:14px;">固定配息</div>
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; border:1px solid #0077cc; border-radius:6px; background:#e6f0ff; font-size:14px;">固定配息</div>
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; border:1px solid #0077cc; border-radius:6px; background:#e6f0ff; font-size:14px;">應計配息</div>
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; border:1px solid #0077cc; border-radius:6px; background:#e6f0ff; font-size:14px;"> </div>
+        <div style="flex:3; display:flex; align-items:center; justify-content:center; border:1px solid #0077cc; border-radius:6px; background:#e6f0ff; font-size:12px;">本金+配息 / 股票+配息</div>
+    </div>
+</div>
+
+
+
+
+<div class="divider"></div>
+
+<h3>❓ 常見問題</h3>
+<div class="faq-features">
+    <div class="feature-item" onclick="openFAQ('faq1', event)">
+        <div class="feature-circle faq1-circle">Q1</div>
+        <div class="feature-text">什麼是美國有擔保隔夜融資利率(SOFR)？
+        </div>
+    </div>
+    <div class="feature-item" onclick="openFAQ('faq2', event)">
+        <div class="feature-circle faq2-circle">Q2</div>
+        <div class="feature-text">
+            什麼是CMS (Constant Maturity Swap)？
+        </div>
+    </div>
+    <div class="feature-item" onclick="openFAQ('faq3', event)">
+        <div class="feature-circle faq3-circle">Q3</div>
+        <div class="feature-text">結構型商品不可交易標的及幣別？</div>
+    </div>
+    <div class="feature-item" onclick="openFAQ('faq4', event)">
+        <div class="feature-circle faq4-circle">Q4</div>
+        <div class="feature-text">境外結構型商品的成本如何認列？</div>
+    </div>
+</div>
+
+
+<!-- FAQ Modal -->
+<div id="faqModal" class="faq-modal">
+    <div class="faq-modal-content" id="faqContent"></div>
+    <span class="modal-close" onclick="closeFAQ()">&times;</span>
+</div>
+
+<script>
+// FAQ內容可自行修改
+
+const faqData = {
+
+
+faq1: `
+<div style="
+    border-left:none;
+    padding:18px 20px;
+    margin:10px 0 20px 0;
+">
+
+    <div style="display:flex; align-items:center; margin-bottom:10px;">
+        <h2 style="margin:0; font-size:22px; font-weight:700; color:#333;">
+            Q1｜什麼是 SOFR？
+        </h2>
+    </div>
+
+    <p style="font-size:15px; line-height:1.7;">
+        <b style="color:#4A90E2;">SOFR（Secured Overnight Financing Rate）= 美國有擔保隔夜融資利率</b>，
+        是目前全球金融市場最重要的<b style="color:#c00;">美元基準利率</b>，是一個由美國聯邦儲備系統所提供的利率指標，用於衡量金融機構之間的隔夜融資成本，也被廣泛用在結構型商品、浮動利率債券、衍生性商品等。
+    </p>
+
+    <h3 style="margin:20px 0 8px 0; font-size:18px; color:#4A90E2;">📌 SOFR 的概念</h3>
+
+    <table style="width:100%; border-collapse:collapse; margin:10px 0; font-size:15px;">
+        <tr>
+            <th style="padding:10px; background:#e9f2ff; text-align:left; width:40%;">發布機構</th>
+            <td style="padding:10px; background:#fafafa;">紐約聯邦準備銀行（New York Fed）</td>
+        </tr>
+        <tr>
+            <th style="padding:10px; background:#e9f2ff; text-align:left;">是否有抵押品</th>
+            <td style="padding:10px; background:#fafafa;">✔ 有，以美國公債做抵押</td>
+        </tr>
+        <tr>
+            <th style="padding:10px; background:#e9f2ff; text-align:left;">波動性</th>
+            <td style="padding:10px; background:#fafafa;">低於 LIBOR，較接近 Fed 利率走勢</td>
+        </tr>
+    </table>
+
+    <p style="font-size:15px; line-height:1.7;">
+        因為 SOFR 以美國國債為抵押、風險極低，被視為<b style="color:#4A90E2;">最乾淨、最透明的美元利率</b>，
+        也是各類金融商品最普遍的參考利率。
+    </p>
+
+    <div style="
+        background:#fff3cd;
+        padding:15px;
+        border-radius:8px;
+        border:1px solid #ffe8a1;
+        margin:18px 0;
+    ">
+        <h3 style="margin:0 0 10px 0; font-size:17px; color:#b8860b;">📌 SOFR 如何計算？</h3>
+        SOFR係採用來自三大來源的大量多元數據，這些數據完全以交易為基礎：<br><br>
+
+        ✔ 由紐約梅隆銀行（BNYM）清算和結算的三方美國國債回購交易，不包括一般抵押品融資（GCF）回購交易，也不包括以美國聯儲局為交易對手的交易。<br>
+        ✔ 透過「美國存託和清算公司」（Depository Trust & Clearing Corporation，DTCC）一般抵押品融資服務進行的美國國債回購交易，並以「固定收益清算公司」（Fixed Income Clearing Corporation，FICC）作為中央交易對手。<br>
+        ✔ 透過固定收益清算公司的款券同步交割（DVP）服務清算的雙邊美國國債回購交易。<br><br>
+
+        由於以美國國債作抵押，因此<b style="color:#d35400;">信用風險極低</b>，是非常穩定可靠的利率。
+    </div>
+
+
+</div>
+
+`,
+
+
+
+faq2: `
+<div style="
+    border-left:none;
+    padding:18px 20px;
+    margin:10px 0 20px 0;
+">
+
+<div style="
+    border-left:none;
+    padding:18px 20px;
+    margin:10px 0 20px 0;
+">
+
+    <div style="display:flex; align-items:center; margin-bottom:10px;">
+        <h2 style="margin:0; font-size:22px; font-weight:700; color:#333;">
+            Q2｜什麼是 CMS（Constant Maturity Swap）？
+        </h2>
+    </div>
+
+    <p style="font-size:15px; line-height:1.7;">
+        <b style="color:#4A90E2;">CMS（Constant Maturity Swap）= 固定期限利率互換利率</b>，
+        是一種「<b style="color:#c00;">特定期限的利率交換</b>」所形成的市場利率，也完全反映市場對未來N期的預期 SOFR 折現後的固定利率，例如：
+        <b>1 年期 CMS</b>、<b>2 年期 CMS</b>、<b>5 年期 CMS</b>、<b>10 年期 CMS</b>、<b>30 年期 CMS</b>。
+    </p>
+
+    <h3 style="margin:20px 0 8px 0; font-size:18px; color:#4A90E2;">📌 CMS 的概念</h3>
+
+    <table style="width:100%; border-collapse:collapse; margin:10px 0; font-size:15px;">
+        <tr>
+            <th style="padding:10px; background:#e9f2ff; text-align:left; width:40%;">CMS 是什麼？</th>
+            <td style="padding:10px; background:#fafafa;">市場上「固定利率 vs 浮動利率互換」所形成的固定利率</td>
+        </tr>
+        <tr>
+            <th style="padding:10px; background:#e9f2ff; text-align:left;">浮動利率來源</th>
+            <td style="padding:10px; background:#fafafa;">以 SOFR 為基礎的短期利率</td>
+        </tr>
+        <tr>
+            <th style="padding:10px; background:#e9f2ff; text-align:left;">固定利率的期限</th>
+            <td style="padding:10px; background:#fafafa;">1Y / 2Y / 5Y / 10Y…（商品最常用）</td>
+        </tr>
+        <tr>
+            <th style="padding:10px; background:#e9f2ff; text-align:left;">本質是什麼？</th>
+            <td style="padding:10px; background:#fafafa;">市場對「未來利率」的預期</td>
+        </tr>
+    </table>
+
+    <div style="
+        background:#fff3cd;
+        padding:15px;
+        border-radius:8px;
+        border:1px solid #ffe8a1;
+        margin:18px 0;
+    ">
+        <h3 style="margin:0 0 10px 0; font-size:17px; color:#b8860b;">📌 為什麼結構型商品不直接連結 SOFR？</h3>
+
+        可能原因是<b style="color:#d35400;">SOFR 是隔夜利率</b>：<br><br>
+
+        ✔ 波動小，不易設計出有吸引力的報酬<br>
+        ✔ 連結SOFR CMS的商品，在天期上能有更多選擇<br>
+        ✔ OTC市場沒辦法直接避險，發行機構較不偏好<br><br>
+
+        因此，金融市場比較少使用「隔夜 SOFR」當作連結標的。
+    </div>
+
+</div>
+
+`,
+
+
+
+
+    faq3: `
+
+<div style="
+    margin:25px 0;
+    padding:20px 24px;
+    border-radius:10px;
+    border:1px solid #d3d7df;
+    background:#fafbfc;
+    box-shadow:0 2px 6px rgba(0,0,0,0.06);
+">
+
+    <!-- 標題 -->
+    <div style="
+        font-size:18px;
+        font-weight:700;
+        color:#003f7d;
+        margin-bottom:12px;
+        letter-spacing:0.5px;
+    ">
+        Q3｜結構型商品不可交易標的及幣別？
+    </div>
+
+    <!-- 內容 -->
+    <div style="font-size:15px; line-height:1.7; color:#333;">
+        
+        <div style="margin-bottom:12px;">
+            <span style="font-weight:600; color:#c00000;">1. 不得以新臺幣計價</span>
+        </div>
+
+        <div style="font-weight:600; margin-bottom:6px;">
+            2. 不得連結至下列標的：
+        </div>
+
+        <ul style="margin:0 0 14px 20px; padding:0; color:#444; font-size:15px;">
+            <li style="margin:6px 0;">新臺幣利率及匯率指標。</li>
+            <li style="margin:6px 0;">國內有價證券。</li>
+            <li style="margin:6px 0;">國內外機構編製之台股指數及其相關金融商品。</li>
+            <li style="margin:6px 0;">
+                未經本會核准或申報生效得募集及銷售之境外基金，  
+                及未依境外基金管理辦法規定於國內私募之境外基金。
+            </li>
+        </ul>
+
+        <div style="font-size:13px; color:#777; border-top:1px solid #e5e7eb; padding-top:10px;">
+            依《境外結構型商品管理規則》第 17 條規範
+        </div>
+    </div>
+</div>
+
+`,
+
+
+
+    faq4: `
+
+<div style="
+    border-left:none;
+    padding:18px 20px;
+    margin:10px 0 20px 0;
+">
+
+    <div style="display:flex; align-items:center; margin-bottom:10px;">
+        <h2 style="margin:0; font-size:22px; font-weight:700; color:#333;">
+            Q4｜境外結構型商品的成本如何認列？
+        </h2>
+    </div>
+
+    <p style="font-size:15px; line-height:1.7;">
+        境外結構型商品到期若需接股，股票成本與損益認列方式與一般股票投資不同，
+        必須依正確的會計與稅務分類處理。
+    </p>
+
+    <!-- 股票成本 -->
+    <h3 style="margin:18px 0 6px 0; font-size:18px; color:#4A90E2;">
+        📌 ① 股票成本怎麼認列？
+    </h3>
+
+    <p style="font-size:15px; line-height:1.7;">
+        雖然投資人是以 <b>履約價（Strike）</b> 取得股票，但成本認列方式為：
+        <br><b>✔ 股票成本 = 最後評價日的收盤價（Fair Market Value）</b><br>
+        因此 Strike 與收盤價的差額會直接反映為商品損益。
+    </p>
+
+    <!-- 損失 -->
+    <h3 style="margin:20px 0 6px 0; font-size:18px; color:#4A90E2;">
+        📌 ② 商品損失如何認列？
+    </h3>
+
+    <p style="font-size:15px; line-height:1.7;">
+        若 Strike 高於最後收盤價，產生的損失會列為：
+        <br><b>✔ 境外結構型商品的資本利得損失 →「76-財產交易所得」</b>
+    </p>
+
+    <!-- 互抵 -->
+    <h3 style="margin:20px 0 6px 0; font-size:18px; color:#4A90E2;">
+        📌 ③ FCN 的利息能不能與損失互抵？
+    </h3>
+
+    <p style="font-size:15px; line-height:1.7;">
+        <b>不能。</b>  
+        利息屬於「海外利息所得」，與上述「財產交易所得」屬於不同類別，稅務上不得互相抵減。
+    </p>
+
+    <div style="
+        margin-top:20px;
+        padding:12px 15px;
+        background:#f3f8ff;
+        border-radius:8px;
+        font-size:15px;
+        line-height:1.7;
+        color:#0d47a1;
+    ">
+        <b>📌 小結：</b><br>
+        • 股票成本以「最後評價日收盤價」認列。<br>
+        • 損失屬於海外財產交易損失。<br>
+        • FCN 利息屬「海外利息所得」，不可互抵。
+    </div>
+
+</div>
+
+
+`,
+};
+
+function openFAQ(id, event) {
+    event.stopPropagation();
+    const modal = document.getElementById('faqModal');
+    const content = document.getElementById('faqContent');
+    content.innerHTML = faqData[id];
+    modal.style.display = 'block';
+
+    // 鎖住背景滾動
+    document.body.style.overflow = 'hidden'; }
+
+function closeFAQ() {
+    document.getElementById('faqModal').style.display = 'none';
+    document.body.style.overflow = 'auto'; }
+
+
+// 點擊 modal 外層關閉
+document.getElementById('faqModal').addEventListener('click', function(event) {
+    if (event.target === this) {
+        this.style.display = 'none';
+    }
+});
+
+
+// 點擊空白區域關閉 modal
+window.addEventListener('click', function(event){
+    const modal = document.getElementById('faqModal');
+    if(event.target === modal) modal.style.display = 'none'; });
+
+
+
+</script>
+
+
+<!-- Modal -->
+<div id="imgModal" class="modal">
+<span class="modal-close" onclick="closeModal()">&times;</span>
+<img class="modal-content" id="modalImg"> </div>
+
+<script>
+function openModal(src){
+    document.getElementById('imgModal').style.display="block";
+    document.getElementById('modalImg').src=src;
+}
+function closeModal(){
+    document.getElementById('imgModal').style.display="none";
+}
+
+// 點擊 modal 外層關閉
+document.getElementById('faqModal').addEventListener('click', function(event) {
+    if (event.target === this) {
+        closeFAQ(); // 呼叫 closeFAQ() 解鎖滾動
+    }
+});
+
+
+
+</script>
+
+
+<script>
+
+// -----------------------------
+// 參數設定
+// -----------------------------
+const totalDays = 150; // 六個月 150 天
+
+const strikeLine = 75;
+const kiLine = 60;
+const koLine = 100;
+
+// -----------------------------
+// 生成資料
+// -----------------------------
+const dataA = [8, 7.2, 7.8, 7.5, 7.8, 6.8];
+const dataB = [4, 2.4, 3.2, 1.8, 1.2, 2.8];
+const dataC = [0.5, -0.5, -1.2, -0.7, -1.5, -1];
+const dataD = [4, 5.5, 4.8, 6.2];
+
+
+
+
+// -----------------------------
+// Chart.js 初始化
+// -----------------------------
+const ctx = document.getElementById('scenarioChart').getContext('2d');
+let scenarioChart = null;
+
+function showScenarioChart(type){
+    if(scenarioChart) scenarioChart.destroy();
+    const months = ['期初','1年','2年','3年','4年','5年'];
+    let selectedData;
+    let cashFlowData;
+
+    switch(type){
+        case 'A': 
+            selectedData = dataA; 
+            cashFlowData = ['10%','6%','6%','6%','6%','本金+6%']; 
+            break;
+        case 'B': 
+            selectedData = dataB; 
+            cashFlowData = ['10%','應計利息','應計利息','應計利息','應計利息','本金+應計利息']; 
+            break;
+        case 'C': 
+            selectedData = dataC; 
+            cashFlowData = ['10%','2%','2%','2%','2%','本金+2%']; 
+            break;
+        case 'D': 
+            selectedData = dataD; 
+            cashFlowData = ['10%','應計利息','應計利息','本金+應計利息']; 
+            break;
+        default: return;
+    }
+
+    const scenarioLabelPlugin = {
+        id: 'scenarioLabel',
+        afterDraw: (chart) => {
+            const ctx = chart.ctx;
+            ctx.save();
+            ctx.font = 'bold 60px Arial';
+            ctx.fillStyle = 'rgba(0, 119, 204, 0.2)';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            const x = chart.chartArea.right - 10; 
+            const y = (chart.chartArea.top + chart.chartArea.bottom)/2;
+            ctx.fillText(type + ' 情境', x, y);
+            ctx.restore();
+        }
+    };
+
+    scenarioChart = new Chart(ctx, {
+        type:'line',
+        data:{
+            labels: months,
+            datasets:[
+                { label: '股價', data: selectedData, borderColor:'#0077cc', borderWidth:5, fill:false, tension:0.5 },
+                { label: '6% 最高收益(Cap)', data:Array(6).fill(6), borderColor:'#ff0000', borderWidth:2, borderDash:[10,5], fill:false },
+                { label: '2% 最低受益(Floor)', data:Array(6).fill(2), borderColor:'#00aa00', borderWidth:2, borderDash:[10,5], fill:false }
+            ]
+        },
+        options:{
+            responsive:true,
+            scales:{ y:{ min:-2,max:10, title:{ display:true, text:'利差 (％)', font:{size:20} } }, x:{ ticks:{ font:{ size:15 } } } },
+            plugins:{ legend:{ labels:{ font:{ size:18 } } }, scenarioLabel:{ label:type+' 情境' } }
+        },
+        plugins:[scenarioLabelPlugin]
+    });
+
+    // -------------------------
+    // 精準對齊金流
+    // -------------------------
+    const cashFlowOverlay = document.getElementById('cashFlowOverlay');
+    cashFlowOverlay.innerHTML = ''; // 清空
+
+    const xScale = scenarioChart.scales.x;
+    cashFlowData.forEach((cf, i) => {
+    if (cf === '') return; 
+        const div = document.createElement('div');
+        div.style.position = 'absolute';
+        div.style.bottom = '0';
+        div.style.left = (xScale.getPixelForTick(i) - 40/2 -30) + 'px'; // 偏移半寬
+        div.style.width = '110px';
+        div.style.height = '40px';
+        div.style.backgroundColor = '#f9fafc';
+        div.style.border = '1px solid #d1d5db';
+        div.style.borderRadius = '8px';
+        div.style.textAlign = 'center';
+        div.style.lineHeight = '40px';
+        div.style.fontSize = '14px';
+        div.style.color = '#333';
+        div.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
+        if (cf.includes("股票") || cf.includes("應計配息")) {
+    div.innerHTML = `<span style="color:red; font-weight:700;">${cf}</span>`;
+} else {
+    div.innerHTML = cf;
+}
+        cashFlowOverlay.appendChild(div);
+    });
+}
+
+
+
+
+// -----------------------------
+// 初始顯示 A 情境
+// -----------------------------
+showScenarioChart('A');
+</script>
+
+
+
+</body>
+</html>
