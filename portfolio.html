@@ -1,0 +1,802 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Quant Analytics Hub v2.5</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-body: #f8f9fa;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --brand-color: #0f4c81;
+            --brand-light: #e0f2fe;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-orange: #f59e0b;
+            --border-color: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --sidebar-width: 320px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 側邊欄 */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+        }
+
+        /* 主內容區 */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 40px;
+            width: calc(100% - var(--sidebar-width));
+            overflow-x: hidden;
+        }
+
+        h1 { font-size: 26px; font-weight: 800; color: var(--brand-color); margin: 0 0 5px 0; }
+        h2 { font-size: 20px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
+        h3 { font-size: 16px; font-weight: 600; color: var(--brand-color); margin-top: 20px; margin-bottom: 10px; border-left: 4px solid var(--brand-color); padding-left: 10px; }
+        
+        .subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 25px; line-height: 1.5; }
+
+        /* 輸入控件 */
+        .control-group { margin-bottom: 20px; }
+        label { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; display: block; }
+        input, select {
+            width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px;
+            font-family: 'Inter', sans-serif; font-size: 14px; transition: all 0.2s; background: #fff;
+        }
+        input:focus { outline: none; border-color: var(--brand-color); box-shadow: 0 0 0 3px var(--brand-light); }
+
+        .btn {
+            background-color: var(--brand-color); color: white; border: none; padding: 14px; border-radius: 8px;
+            font-weight: 600; cursor: pointer; width: 100%; transition: background 0.2s; font-size: 15px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn:hover { background-color: #0a355c; transform: translateY(-1px); }
+
+        /* 卡片與佈局 */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 30px; margin-bottom: 40px; }
+        .col-span-6 { grid-column: span 6; }
+        .col-span-12 { grid-column: span 12; }
+
+        .card {
+            background: var(--bg-card); border-radius: 16px; padding: 30px;
+            box-shadow: var(--shadow); border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .chart-container { width: 100%; height: 400px; position: relative; }
+        
+        /* 權重結果表格樣式 */
+        .weights-table-container {
+            margin-top: 20px;
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .weights-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .weights-table th { text-align: left; padding: 8px; color: var(--text-secondary); border-bottom: 1px solid #cbd5e1; }
+        .weights-table td { padding: 8px; font-weight: 500; color: var(--text-primary); }
+        .tag-max { color: #ef4444; font-weight: bold; }
+        .tag-min { color: #2563eb; font-weight: bold; }
+
+        /* 模型詳解區塊 */
+        .explanation-box {
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 25px;
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-primary);
+        }
+        
+        .explanation-box p { margin-bottom: 12px; }
+        .math-block { 
+            background: white; padding: 15px; border-radius: 8px; 
+            border: 1px solid #edf2f7; margin: 15px 0; overflow-x: auto; text-align: center;
+        }
+
+        /* Loading */
+        #loading { display: none; margin-top: 15px; }
+        .loader {
+            border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid var(--brand-color);
+            width: 20px; height: 20px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite;
+            display: inline-block; vertical-align: middle; margin-right: 10px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 響應式調整 */
+        @media (max-width: 1200px) {
+            .sidebar { position: relative; width: 100%; height: auto; border-right: none; z-index: 10; }
+            .main-content { margin-left: 0; padding: 20px; width: 100%; }
+            .col-span-6 { grid-column: span 12; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div>
+            <h1>Portfolio Analytics</h1>
+            <p class="subtitle">Michael</p>
+        </div>
+
+        <div class="control-group">
+            <label for="apiKey">Twelve Data API Key</label>
+            <input type="password" id="apiKey" value="e9e9c1790b11411abfb50f990984fbf1" placeholder="請輸入 API Key">
+            <div style="font-size: 12px; color: #999; margin-top: 5px;">*必需欄位</div>
+        </div>
+
+        <div class="control-group">
+            <label for="tickers">資產代碼 (Tickers)</label>
+            <input type="text" id="tickers" value="AAPL, NVDA, AMD, TSLA, TSM" placeholder="例如: AAPL, TSLA, SPY">
+        </div>
+
+        <div class="control-group">
+            <label for="lookback">回測期間</label>
+            <select id="lookback">
+                <option value="252">1 年 (252 交易日)</option>
+                <option value="504">2 年 (504 交易日)</option>
+                <option value="756" selected>3 年 (756 交易日)</option>
+                <option value="1008">4 年 (1008 交易日)</option>
+                <option value="1260">5 年 (1260 交易日)</option>
+            </select>
+        </div>
+
+<div class="control-group">
+    <label for="rfRate">無風險利率 (Risk-Free Rate %)</label>
+    <input type="number" id="rfRate" value="4.0" step="0.1" placeholder="例如: 4.0">
+    <div style="font-size: 12px; color: #999; margin-top: 5px;">*用於計算夏普值與 CAL</div>
+</div>
+
+        <div class="control-group">
+            <label for="simCount">蒙地卡羅模擬次數</label>
+            <input type="number" id="simCount" value="5000" min="1000" max="50000" step="1000">
+            <div style="font-size: 12px; color: #999; margin-top: 5px;">*次數越多，前緣曲線越平滑</div>
+        </div>
+
+        <button class="btn" onclick="startAnalysis()">
+            <span id="btn-text">分析 (Run Analysis)</span>
+        </button>
+
+        <div id="loading">
+            <div class="loader"></div> 計算中...
+        </div>
+
+        <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+            <label>模型清單 (Features)</label>
+            <ul style="font-size: 13px; color: var(--text-secondary); padding-left: 20px; line-height: 1.8;">
+                <li>MPT & Efficient Frontier</li>
+                <li>Risk Contribution (Risk Parity)</li>
+                <li>Correlation Matrix</li>
+                <li>Monte Carlo (Fixed Seed)</li>
+                <li>CVaR (Expected Shortfall)</li>
+                <li>Maximum Drawdown</li>
+                <li>Kelly Criterion</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-content">
+        
+        <div class="dashboard-grid">
+            <div class="card col-span-12">
+                <h2>效率前緣 (Efficient Frontier)</h2>
+                <div id="portfolio-weights-display" class="weights-table-container" style="display:none;"></div>
+                <div id="chart-frontier" class="chart-container" style="height: 500px; margin-top: 20px;"></div>
+                <div class="explanation-box">
+                    <h3>模型詳解與權重邏輯</h3>
+                    <p><strong>核心概念：</strong>效率前緣圖表上的每一個點，背後都代表一組特定的「資產配置權重」。程式透過蒙地卡羅方法隨機模擬了多組不同的配置比例，並找出以下兩個關鍵組合：</p>
+                    <ul>
+                        <li><span class="tag-max">Max Sharpe (紅星)</span>：承擔每一單位風險能換取最多報酬的組合。這是理論上的「最佳性價比」配置。</li>
+                        <li><span class="tag-min">Min Volatility (藍星)</span>：不論報酬如何，波動風險最低的組合。適合極度保守的策略。</li>
+                    </ul>
+                    
+                    <h3>數學公式</h3>
+                    <p>我們的目標是求解一組權重向量 \( W = [w_1, w_2, ..., w_n] \)，使得夏普值最大化：</p>
+                    <div class="math-block">
+                        $$ \text{Maximize } \frac{E(R_p) - R_f}{\sigma_p} $$
+                        $$ \text{subject to } \sum w_i = 1, \quad 0 \le w_i \le 1 $$
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card col-span-12">
+                <h2>風險貢獻分析 (Risk Contribution Analysis)</h2>
+                <div id="chart-risk-contrib" class="chart-container"></div>
+                
+                <div class="explanation-box">
+                    <h3>為什麼這個模型很重要？</h3>
+                    <p><strong>盲點揭露：</strong>傳統的「資金配置 (Capital Allocation)」往往會誤導投資人。假設你持有 50% 的公債 (低波動) 和 50% 的加密貨幣 (高波動)，雖然資金各半，但<strong>投資組合 95% 以上的風險其實都來自加密貨幣</strong>。</p>
+                    <p><strong>風險平價 (Risk Parity) 精神：</strong>真正的分散投資，應該是追求「風險貢獻」的均衡，而不僅僅是資金的均衡。上圖展示了在等權重 (Equal Weight) 的情況下，各資產對總風險的貢獻比例。</p>
+                    
+                    <h3>數學公式：邊際風險貢獻 (MRC)</h3>
+                    <p>資產 \( i \) 的風險貢獻 \( RC_i \) 計算如下：</p>
+                    <div class="math-block">
+                        $$ RC_i = w_i \times \frac{\partial \sigma_p}{\partial w_i} = w_i \times \frac{(\Sigma w)_i}{\sigma_p} $$
+                    </div>
+                    <p>其中 \( w_i \) 是權重，\( \Sigma \) 是共變異數矩陣。總風險 \( \sigma_p = \sum RC_i \)。</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card col-span-6">
+                <h2>資產相關性熱圖 (Correlation Matrix)</h2>
+                <div id="chart-correlation" class="chart-container"></div>
+                
+                <div class="explanation-box">
+                    <h3>模型詳解</h3>
+                    <p><strong>核心概念：</strong>此矩陣展示資產間的連動程度。顏色越紅代表正相關越高。熱圖中的數字代表<strong>相關係數 (Correlation Coefficient)</strong>。</p>
+                    <ul>
+                        <li><strong>1.00</strong>：完全正相關 (同漲同跌)。</li>
+                        <li><strong>0.00</strong>：無相關 (走勢獨立)。</li>
+                        <li><strong>-1.00</strong>：完全負相關 (你漲我跌，避險效果最佳)。</li>
+                    </ul>
+                    <div class="math-block">
+                        $$ \rho_{X,Y} = \frac{Cov(X,Y)}{\sigma_X \sigma_Y} $$
+                    </div>
+                </div>
+            </div>
+
+            <div class="card col-span-6">
+                <h2>蒙地卡羅模擬 (Monte Carlo Simulation)</h2>
+                <div id="chart-montecarlo" class="chart-container"></div>
+                
+                <div class="explanation-box">
+                    <h3>模型詳解</h3>
+                    <p><strong>核心概念：</strong>利用幾何布朗運動 (GBM) 模擬未來股價的隨機路徑。這不是預測股價「會」怎麼走，而是展示在當前的波動率下，未來股價「可能」的分佈範圍。</p>
+                    <div class="math-block">
+                        $$ dS_t = \mu S_t dt + \sigma S_t dW_t $$
+                    </div>
+                    <p>註：此模擬已採用固定種子亂數 (Seeded RNG)，因此相同輸入條件下，模擬出的未來路徑將保持一致，方便重複檢視。</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+<div class="card col-span-6">
+                <h2>風險價值與極端風險 (VaR & CVaR)</h2>
+                <div id="chart-var" class="chart-container"></div>
+                
+                <div class="explanation-box">
+                    <h3>模型詳解</h3>
+                    <p><strong>VaR (風險價值)：</strong>回答「在 95% 的信心水準下，我最多會賠多少？」。它是左側極端損失區間的<strong>臨界點</strong>。</p>
+                    <p><strong>CVaR (條件風險價值)：</strong>又稱預期缺口 (ES)，回答「如果真的發生了那 5% 的極端慘劇，<strong>平均會賠多少？</strong>」。它衡量的是長尾風險的嚴重性。</p>
+                    
+                    <div class="math-block">
+                        $$ VaR_{\alpha} = \inf \{ l : P(L > l) \leq 1-\alpha \} $$
+                        $$ CVaR_{\alpha} = E[L | L \geq VaR_{\alpha}] $$
+                    </div>
+                    
+                    <p>若 VaR 為 -3.5% 而 CVaR 為 -5.2%，代表你有 5% 的機率虧損超過 3.5 萬；而一旦進入這 5% 的情況，平均虧損會高達 5.2 萬元。</p>
+                </div>
+            </div>
+
+            <div class="card col-span-6">
+                <h2>歷史最大回撤 (Maximum Drawdown)</h2>
+                <div id="chart-drawdown" class="chart-container"></div>
+                
+                <div class="explanation-box">
+                    <h3>模型詳解</h3>
+                    <p><strong>核心概念：</strong>衡量資產從歷史最高點滑落到最低點的幅度。這是評估投資人「心理痛苦程度」的最佳指標。高回撤通常意味著需要更長的時間才能回本 (Recovery Time)。</p>
+                    <div class="math-block">
+                        $$ MDD = \min_{t \in (0, T)} \left( \frac{P_t - \max_{0 \le \tau \le t} P_\tau}{\max_{0 \le \tau \le t} P_\tau} \right) $$
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card col-span-12">
+                <h2>資金控管模型：凱利公式 (Kelly Criterion)</h2>
+                <div id="chart-kelly" class="chart-container"></div>
+                
+                <div class="explanation-box">
+                    <h3>白話文詳解：為什麼要用凱利公式？</h3>
+                    <p><strong>1. 賭局的比喻：</strong><br>
+                    想像你有一個勝率 60% 的硬幣賭局，賠率是 1 賠 1。
+                    如果你每次都「梭哈 (100%)」，雖然勝率高，但只要連輸幾次你就破產了。
+                    如果你每次只敢下「0.1%」，雖然安全，但你的資產成長速度會慢得像烏龜。
+                    <strong>凱利公式就是幫你算出一個「黃金比例」，讓你的資產在長期複利下成長速度最快，同時避免破產。</strong></p>
+
+                    <p><strong>2. 應用在投資：</strong><br>
+                    在公式 \( f^* = \frac{\mu}{\sigma^2} \) 中，分子 \( \mu \) 代表你的<strong>優勢 (預期超額報酬)</strong>，分母 \( \sigma^2 \) 代表<strong>風險 (波動率的平方)</strong>。
+                    簡單來說：<br>
+                    (1) 你的優勢越大 (看得很準)，可以下注越多。<br>
+                    (2) 資產波動越劇烈 (風險高)，你就必須下注越少。</p>
+
+                    <p><strong>3. 實務上的「半凱利 (Half-Kelly)」：</strong><br>
+                    雖然凱利公式給出了理論上的最佳值，但因為現實世界的參數會變動，<strong>專業機構通常只會投入凱利建議值的一半 (Fractional Kelly)</strong>。這就像是開車時留下的安全距離。</p>
+
+                    <div class="math-block">
+                        $$ f^* = \frac{\text{預期報酬 (Edge)}}{\text{風險 (Odds)}} $$
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. Seeded Random Generator ---
+        let seededRandom;
+        function initSeed(seed) {
+            return function() {
+              var t = seed += 0x6D2B79F5;
+              t = Math.imul(t ^ t >>> 15, t | 1);
+              t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+              return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+
+        // --- 2. State Management ---
+        const state = {
+            tickers: [],
+            apiKey: "",
+            rawPrices: {},
+            returns: {},
+            dates: [],
+            stats: {}
+        };
+
+        // --- 3. Main Execution ---
+        async function startAnalysis() {
+            seededRandom = initSeed(12345); // Fixed Seed
+
+            state.apiKey = document.getElementById('apiKey').value.trim();
+            const tickersRaw = document.getElementById('tickers').value;
+            state.tickers = tickersRaw.split(',').map(t => t.trim().toUpperCase()).filter(t => t.length > 0);
+            
+            if (!state.apiKey) {
+                alert("錯誤：請輸入 API Key 以執行真實數據分析。");
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                state.rawPrices = {};
+                state.dates = [];
+                state.returns = {};
+
+                for (const ticker of state.tickers) {
+                    await fetchTickerData(ticker, state.apiKey);
+                    await new Promise(r => setTimeout(r, 1500)); 
+                }
+
+                alignData();
+                calculateStats();
+                renderCharts();
+
+            } catch (err) {
+                alert("發生錯誤: " + err.message);
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function setLoading(isLoading) {
+            const loader = document.getElementById('loading');
+            const btnText = document.getElementById('btn-text');
+            if (isLoading) {
+                loader.style.display = 'block';
+                btnText.innerText = "運算中...";
+            } else {
+                loader.style.display = 'none';
+                btnText.innerText = "執行分析 (Run Analysis)";
+            }
+        }
+
+        // --- 4. Data Layer ---
+        async function fetchTickerData(ticker, apiKey) {
+            const url = `https://api.twelvedata.com/time_series?symbol=${ticker}&interval=1day&outputsize=756&apikey=${apiKey}`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.status === "error") throw new Error(`API Error for ${ticker}: ${data.message}`);
+            if (!data.values || data.values.length === 0) throw new Error(`No data found for ${ticker}`);
+
+            const sortedData = data.values.reverse();
+            state.rawPrices[ticker] = sortedData.map(d => parseFloat(d.close));
+            if (state.dates.length === 0) state.dates = sortedData.map(d => d.datetime);
+        }
+
+        function alignData() {
+            let minLen = Infinity;
+            state.tickers.forEach(t => {
+                if (state.rawPrices[t].length < minLen) minLen = state.rawPrices[t].length;
+            });
+            state.returns = {};
+            state.tickers.forEach(t => {
+                state.rawPrices[t] = state.rawPrices[t].slice(state.rawPrices[t].length - minLen);
+                state.returns[t] = [];
+                for(let i = 1; i < state.rawPrices[t].length; i++) {
+                    const ret = Math.log(state.rawPrices[t][i] / state.rawPrices[t][i-1]);
+                    state.returns[t].push(ret);
+                }
+            });
+            state.dates = state.dates.slice(state.dates.length - minLen + 1);
+        }
+
+        // --- 5. Math Core ---
+        function calculateStats() {
+            state.stats.means = [];
+            state.stats.stdDevs = [];
+            state.stats.covMatrix = [];
+            state.stats.corrMatrix = [];
+            
+            const n = state.tickers.length;
+            const len = state.returns[state.tickers[0]].length;
+
+            state.tickers.forEach(t => {
+                const arr = state.returns[t];
+                const sum = arr.reduce((a,b)=>a+b, 0);
+                const mean = sum / len;
+                const variance = arr.reduce((a,b)=>a + Math.pow(b-mean, 2), 0) / (len-1);
+                state.stats.means.push(mean);
+                state.stats.stdDevs.push(Math.sqrt(variance));
+            });
+
+            for(let i=0; i<n; i++) {
+                state.stats.covMatrix[i] = [];
+                state.stats.corrMatrix[i] = [];
+                for(let j=0; j<n; j++) {
+                    let sumProd = 0;
+                    const meanI = state.stats.means[i];
+                    const meanJ = state.stats.means[j];
+                    const arrI = state.returns[state.tickers[i]];
+                    const arrJ = state.returns[state.tickers[j]];
+                    for(let k=0; k<len; k++) {
+                        sumProd += (arrI[k] - meanI) * (arrJ[k] - meanJ);
+                    }
+                    const cov = sumProd / (len-1);
+                    state.stats.covMatrix[i][j] = cov;
+                    const corr = cov / (state.stats.stdDevs[i] * state.stats.stdDevs[j]);
+                    state.stats.corrMatrix[i][j] = corr;
+                }
+            }
+        }
+
+        // --- 6. Rendering ---
+        function renderCharts() {
+            renderEfficientFrontier();
+            renderRiskContribution(); // New Function
+            renderCorrelation();
+            renderMonteCarlo();
+            renderVaRAndCVaR(); // Updated Function
+            renderDrawdown();
+            renderKelly();
+            MathJax.typesetPromise();
+        }
+
+function renderEfficientFrontier() {
+            const simsInput = document.getElementById('simCount').value;
+            const sims = parseInt(simsInput) || 5000;
+            
+            // 1. 獲取無風險利率 (轉換為小數，例如 4.0 -> 0.04)
+            const rfInput = document.getElementById('rfRate');
+            const rf = (rfInput ? parseFloat(rfInput.value) : 4.0) / 100;
+
+            const x = [], y = [], c = [], allWeights = [];
+            let maxSharpe = -Infinity, bestPt = {}, bestWeights = [];
+            let minVar = Infinity, minVarPt = {}, minVarWeights = [];
+
+            // 2. 執行蒙地卡羅模擬
+            for(let i=0; i<sims; i++) {
+                let w = state.tickers.map(() => seededRandom());
+                let sumW = w.reduce((a,b)=>a+b,0);
+                w = w.map(v => v/sumW);
+
+                let ret = 0;
+                for(let j=0; j<w.length; j++) ret += w[j] * state.stats.means[j];
+                ret *= 252; // 年化報酬
+
+                let vari = 0;
+                for(let r=0; r<w.length; r++) {
+                    for(let k=0; k<w.length; k++) {
+                        vari += w[r] * w[k] * state.stats.covMatrix[r][k];
+                    }
+                }
+                let vol = Math.sqrt(vari * 252); // 年化波動
+                let sharpe = (ret - rf) / vol;
+
+                x.push(vol); y.push(ret); c.push(sharpe);
+                allWeights.push(w); // 儲存權重供點擊使用
+
+                if(sharpe > maxSharpe) { maxSharpe = sharpe; bestPt = {x:vol, y:ret}; bestWeights = w; }
+                if(vol < minVar) { minVar = vol; minVarPt = {x:vol, y:ret}; minVarWeights = w; }
+            }
+
+            // 3. 計算 CAL 資本配置線 (從 Rf 到最佳點的延伸)
+            const calX = [0, bestPt.x * 2.5];
+            const calY = [rf, rf + maxSharpe * calX[1]];
+
+            // 4. 更新表格 (Max Sharpe & Min Vol)
+            const weightContainer = document.getElementById('portfolio-weights-display');
+            let tableHTML = `
+                <table class="weights-table">
+                    <thead>
+                        <tr><th>Asset</th><th class="tag-max">Max Sharpe Weights</th><th class="tag-min">Min Volatility Weights</th></tr>
+                    </thead>
+                    <tbody>
+            `;
+            state.tickers.forEach((ticker, idx) => {
+                tableHTML += `<tr><td>${ticker}</td><td class="tag-max">${(bestWeights[idx] * 100).toFixed(1)}%</td><td class="tag-min">${(minVarWeights[idx] * 100).toFixed(1)}%</td></tr>`;
+            });
+            tableHTML += `<tr style="border-top: 1px solid #ccc; background:#fff;"><td><strong>Metrics</strong></td><td>Return: ${(bestPt.y*100).toFixed(1)}% / Vol: ${(bestPt.x*100).toFixed(1)}%</td><td>Return: ${(minVarPt.y*100).toFixed(1)}% / Vol: ${(minVarPt.x*100).toFixed(1)}%</td></tr></tbody></table>`;
+            weightContainer.innerHTML = tableHTML;
+            weightContainer.style.display = 'block';
+
+            // 5. 繪圖設定 (含微幅調整：預防截斷與標題間距)
+            const trace1 = { 
+                x: x, y: y, mode: 'markers', 
+                marker: { color: c, colorscale: 'Viridis', size: 4, showscale: true, colorbar:{title:'Sharpe'} }, 
+                type: 'scatter', name: 'Portfolios',
+                customdata: allWeights, 
+                hovertemplate: 'Return: %{y:.2%}<br>Risk: %{x:.2%}<br>Sharpe: %{marker.color:.2f}<extra></extra>'
+            };
+            
+            const traceCAL = {
+                x: calX, y: calY, mode: 'lines',
+                line: { color: 'rgba(239, 68, 68, 0.4)', width: 2, dash: 'dash' },
+                name: 'CAL (資本配置線)'
+            };
+
+            const traceMax = { x: [bestPt.x], y: [bestPt.y], mode: 'markers', marker: { color: '#ef4444', size: 16, symbol: 'star' }, name: 'Max Sharpe' };
+            const traceMin = { x: [minVarPt.x], y: [minVarPt.y], mode: 'markers', marker: { color: '#2563eb', size: 16, symbol: 'star' }, name: 'Min Volatility' };
+
+            // 微調縮放邊距：marginX 留 8%，marginY 下方留 8%，上方特別留 15% 確保星星完整
+            const marginX = (Math.max(...x) - Math.min(...x)) * 0.08;
+            const marginY = (Math.max(...y) - Math.min(...y)) * 0.08;
+
+            const layout = {
+                title: 'Efficient Frontier & CAL (點擊點位查看配置詳情)',
+                xaxis: { 
+                    title: { text: 'Annualized Risk', standoff: 15 }, 
+                    tickformat: '.1%',
+                    range: [Math.min(...x) - marginX, Math.max(...x) + marginX]
+                },
+                yaxis: { 
+                    title: { text: 'Annualized Return', standoff: 25 }, // 增加標題與 Y 軸的距離
+                    tickformat: '.1%',
+                    // range 上限增加更多空間 (marginY * 3.5) 防止頂部星星被切到
+                    range: [Math.min(...y) - marginY, Math.max(...y) + marginY * 3.5]
+                },
+                hovermode: 'closest', 
+                margin: { t: 50, l: 90, r: 30, b: 60 }, // 增加左邊距 (l:90) 給標題足夠空間
+                legend: { orientation: 'h', y: 1.02, x: 1, xanchor: 'right' }
+            };
+
+            const chartDiv = document.getElementById('chart-frontier');
+            Plotly.newPlot(chartDiv, [trace1, traceCAL, traceMax, traceMin], layout);
+
+            // 6. 點擊事件處理
+            chartDiv.on('plotly_click', function(data) {
+                const pt = data.points[0];
+                const targetRet = pt.y;
+                
+                const w_s = (targetRet - rf) / (bestPt.y - rf);
+                const w_rf = 1 - w_s;
+
+                let msg = `【 配置詳解 】\n`;
+                msg += `Return: ${(targetRet*100).toFixed(2)}%\n`;
+                msg += `Volitility: ${(pt.x*100).toFixed(2)}%\n\n`;
+                
+                msg += `>> CAL資本配置線 (結合Risk-Free Asset)\n`;
+                msg += `   無風險資產 (Risk-Free Asset): ${(w_rf*100).toFixed(1)}%\n`;
+                msg += `   風險資產組合 (Risky Portfolio): ${(w_s*100).toFixed(1)}%\n`;
+                state.tickers.forEach((ticker, idx) => {
+                    const stockWeight = bestWeights[idx] * w_s;
+                    msg += `     └ ${ticker}: ${(stockWeight * 100).toFixed(2)}%\n`;
+                });
+
+                if (pt.customdata) {
+                    msg += `\n>> 100% Risky Portfolio\n`;
+                    state.tickers.forEach((ticker, idx) => {
+                        msg += `   ${ticker}: ${(pt.customdata[idx] * 100).toFixed(2)}%\n`;
+                    });
+                }
+                alert(msg);
+            });
+        }
+
+
+        // --- NEW: Risk Contribution Logic ---
+        function renderRiskContribution() {
+            // Assume Equal Weights for standard comparison
+            const n = state.tickers.length;
+            const w = Array(n).fill(1/n);
+            const cov = state.stats.covMatrix;
+            
+            // Calculate Portfolio Variance: w' * Cov * w
+            let portVar = 0;
+            for(let i=0; i<n; i++) {
+                for(let j=0; j<n; j++) {
+                    portVar += w[i] * w[j] * cov[i][j];
+                }
+            }
+            const portVol = Math.sqrt(portVar);
+
+            // Calculate Marginal Risk Contribution (MRC) and Total Risk Contribution (RC)
+            // RC_i = w_i * (Cov * w)_i / portVol
+            const riskContrib = [];
+            const riskContribPct = [];
+
+            for(let i=0; i<n; i++) {
+                let cov_w = 0;
+                for(let j=0; j<n; j++) {
+                    cov_w += cov[i][j] * w[j];
+                }
+                let rc = w[i] * cov_w / portVol;
+                riskContrib.push(rc);
+                riskContribPct.push(rc / portVol);
+            }
+
+            const traceW = {
+                x: state.tickers,
+                y: w.map(v=>v),
+                name: 'Capital Weight (Money)',
+                type: 'bar',
+                marker: {color: '#94a3b8'}
+            };
+
+            const traceR = {
+                x: state.tickers,
+                y: riskContribPct,
+                name: 'Risk Contribution (Volatility)',
+                type: 'bar',
+                marker: {color: '#ef4444'}
+            };
+
+            Plotly.newPlot('chart-risk-contrib', [traceW, traceR], {
+                title: 'Capital vs. Risk Contribution (Equal Weight Scenario)',
+                barmode: 'group',
+                yaxis: {tickformat: '.1%', title: 'Contribution %'},
+                margin: {t:30}
+            });
+        }
+
+        function renderCorrelation() {
+            const data = [{
+                z: state.stats.corrMatrix, x: state.tickers, y: state.tickers, type: 'heatmap', colorscale: 'RdBu', zmin: -1, zmax: 1, textauto: true, texttemplate: '%{z:.2f}'
+            }];
+            Plotly.newPlot('chart-correlation', data, { margin: {t:30, l:50} });
+        }
+
+        function renderMonteCarlo() {
+            const days = 252;
+            const paths = 50; 
+            const traces = [];
+            let avgMu = state.stats.means.reduce((a,b)=>a+b,0)/state.tickers.length;
+            let avgVol = state.stats.stdDevs.reduce((a,b)=>a+b,0)/state.tickers.length;
+            
+            for(let i=0; i<paths; i++) {
+                let p = [100];
+                for(let d=1; d<days; d++) {
+                    let u1=seededRandom(), u2=seededRandom(), u3=seededRandom(), u4=seededRandom();
+                    let shock = (u1+u2+u3+u4 - 2); 
+                    let change = avgMu + avgVol * shock;
+                    p.push(p[d-1] * (1+change));
+                }
+                traces.push({ y: p, type: 'scatter', mode: 'lines', line: {width:1, color:'#0f4c81', opacity:0.15}, showlegend: false });
+            }
+            let mp = [100];
+            for(let d=1; d<days; d++) mp.push(mp[d-1] * (1+avgMu));
+            traces.push({ y: mp, type: 'scatter', mode: 'lines', line: {width:3, color:'#ef4444'}, name:'Mean Path' });
+
+            Plotly.newPlot('chart-montecarlo', traces, { title: 'Future Wealth Projection', xaxis: { title: 'Days Forward' }, margin: {t:30, l:40} });
+        }
+
+        // --- Updated VaR & CVaR ---
+        function renderVaRAndCVaR() {
+            let portRets = [];
+            const len = state.returns[state.tickers[0]].length;
+            const w = 1 / state.tickers.length;
+            for(let i=0; i<len; i++) {
+                let r = 0;
+                state.tickers.forEach(t => r += state.returns[t][i] * w);
+                portRets.push(r);
+            }
+            portRets.sort((a,b)=>a-b);
+            
+            // VaR 95%
+            const cutoffIndex = Math.floor(len*0.05);
+            const var95 = portRets[cutoffIndex];
+
+            // CVaR 95% (Average of returns <= VaR)
+            let tailSum = 0;
+            for(let i=0; i<=cutoffIndex; i++) {
+                tailSum += portRets[i];
+            }
+            const cvar95 = tailSum / (cutoffIndex + 1);
+            
+            const trace = { x: portRets, type: 'histogram', marker: {color: '#94a3b8'}, name: 'Distribution' };
+            
+            const layout = {
+                title: 'Risk Distribution (VaR vs CVaR)',
+                shapes: [
+                    { type: 'line', x0: var95, x1: var95, y0:0, y1:1, yref:'paper', line: {color:'#ef4444', dash:'dot', width:2} },
+                    { type: 'line', x0: cvar95, x1: cvar95, y0:0, y1:1, yref:'paper', line: {color:'#f59e0b', dash:'dash', width:2} }
+                ],
+                annotations: [
+                    { x: var95, y: 0.9, yref:'paper', text: `VaR 95%: ${(var95*100).toFixed(2)}%`, showarrow: true, arrowhead: 2, ax: 40, ay: -20, font: {color: '#ef4444'} },
+                    { x: cvar95, y: 0.7, yref:'paper', text: `CVaR 95%: ${(cvar95*100).toFixed(2)}%`, showarrow: true, arrowhead: 2, ax: -40, ay: -20, font: {color: '#f59e0b'} }
+                ],
+                xaxis: { tickformat: '.1%' },
+                margin: {t:30},
+                showlegend: false
+            };
+            Plotly.newPlot('chart-var', [trace], layout);
+        }
+
+        function renderDrawdown() {
+            let index = [100];
+            const len = state.returns[state.tickers[0]].length;
+            const w = 1 / state.tickers.length;
+            for(let i=0; i<len; i++) {
+                let r = 0;
+                state.tickers.forEach(t => r += state.returns[t][i] * w);
+                index.push(index[i] * (1+r));
+            }
+            let dd = [];
+            let peak = -Infinity;
+            for(let v of index) {
+                if(v > peak) peak = v;
+                dd.push((v - peak)/peak);
+            }
+            Plotly.newPlot('chart-drawdown', [{ x: state.dates, y: dd, fill: 'tozeroy', type: 'scatter', line: {color: '#ef4444'} }], { title: 'Historical Drawdown %', yaxis: { tickformat: '.1%' }, margin: {t:30} });
+        }
+
+        function renderKelly() {
+            const kellys = [], labels = [];
+            state.tickers.forEach((t, i) => {
+                let k = state.stats.means[i] / (Math.pow(state.stats.stdDevs[i], 2));
+                if(k > 4) k = 4; if(k < 0) k = 0; 
+                kellys.push(k); labels.push(t);
+            });
+            Plotly.newPlot('chart-kelly', [{ x: labels, y: kellys, type: 'bar', marker: {color: '#10b981'} }], { title: 'Optimal Leverage (Kelly)', margin: {t:30} });
+        }
+    </script>
+</body>
+</html>
