@@ -1,0 +1,619 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Institutional Cointegration Trader Pro</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.2.1/math.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --border-color: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #238636;
+            --accent-red: #da3633;
+            --signal-buy: #2ea043;
+            --signal-sell: #f85149;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+        }
+
+        /* 左側欄 */
+        .sidebar {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 20px;
+            height: fit-content;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo span { color: var(--accent-blue); margin-right: 5px; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; color: var(--text-secondary); margin-bottom: 6px; font-size: 12px; font-weight: 600; }
+        .form-group input, .form-group select {
+            width: 100%;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: monospace; 
+        }
+        .form-group input:focus { border-color: var(--accent-blue); outline: none; }
+
+        .btn-primary {
+            width: 100%;
+            background-color: #1f6feb;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-primary:hover { background-color: #388bfd; }
+        .btn-primary:disabled { background-color: #30363d; cursor: not-allowed; }
+
+        /* 右側主控台 */
+        .main-panel { display: flex; flex-direction: column; gap: 20px; }
+
+        /* 頂部 KPI 卡片 */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+        }
+
+        .kpi-card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            position: relative;
+        }
+
+        .kpi-title { color: var(--text-secondary); font-size: 12px; font-weight: 600; margin-bottom: 5px; }
+        .kpi-value { font-size: 22px; font-weight: 700; font-family: 'SF Mono', 'Courier New', monospace; }
+        .kpi-sub { font-size: 11px; margin-top: 5px; opacity: 0.8; }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* 圖表區 */
+        .chart-box {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            min-height: 400px;
+        }
+
+        /* 說明文檔區 */
+        .doc-section {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 30px;
+        }
+        
+        .doc-title {
+            font-size: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            color: var(--accent-blue);
+        }
+
+        .model-block {
+            margin-bottom: 30px;
+        }
+        
+        .model-block h3 { color: var(--text-primary); margin-bottom: 10px; }
+        .model-block p { color: var(--text-secondary); margin-bottom: 10px; text-align: justify; }
+        
+        /* 變數高亮 */
+        .var-y { color: #58a6ff; font-weight: bold; } /* 藍色 */
+        .var-x { color: #d2a8ff; font-weight: bold; } /* 紫色 */
+
+        .formula-box {
+            background: #0d1117;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            border: 3px solid #30363d;
+            border-top: 3px solid var(--accent-blue);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 10px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="sidebar">
+        <div class="logo"><span>Quant</span>Cointegration Analyzer</div>
+        
+        <div class="form-group">
+            <label>API Key</label>
+            <input type="password" id="apiKey" value="e9e9c1790b11411abfb50f990984fbf1" placeholder="輸入 API Key">
+            <div style="font-size:10px; color:#666; margin-top:4px;">Demo Key 僅限 AAPL, TSLA, MSFT 等大票</div>
+        </div>
+
+        <div class="form-group">
+            <label>資產 Y (被解釋變數 / Long)</label>
+            <input type="text" id="symbolY" value="AAPL" style="color:#58a6ff; font-weight:bold;">
+        </div>
+
+        <div class="form-group">
+            <label>資產 X (解釋變數 / Hedge)</label>
+            <input type="text" id="symbolX" value="MSFT" style="color:#d2a8ff; font-weight:bold;">
+        </div>
+
+        <div class="form-group">
+            <label>K棒週期</label>
+            <select id="interval">
+                <option value="1day">Daily (日線)</option>
+                <option value="1h">1 Hour (小時線)</option>
+                <option value="5min">5 Min (極短線)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>回測樣本數 (N)</label>
+            <input type="number" id="outputsize" value="200">
+        </div>
+
+        <button class="btn-primary" id="runBtn" onclick="runAnalysis()">執行量化分析</button>
+        <div class="loader" id="loader"></div>
+
+        <div style="margin-top:20px; font-size:11px; color:#666;">
+            <strong>Surce：Michael</strong><br>
+            
+        </div>
+    </div>
+
+    <div class="main-panel">
+        
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-title">Z-Score</div>
+                <div class="kpi-value" id="val-zscore">--</div>
+                <div id="badge-signal" class="status-badge" style="background:#30363d; color:#8b949e;">等待分析</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-title">避險比率 (Hedge Ratio, Beta)</div>
+                <div class="kpi-value" id="val-beta">--</div>
+                <div class="kpi-sub">持有 1 單位 <span class="dy-y">Y</span>，需做空 <span id="txt-beta-amt">--</span> 單位 <span class="dy-x">X</span></div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-title">相關係數 (Correlation)</div>
+                <div class="kpi-value" id="val-corr">--</div>
+                <div class="kpi-sub" id="txt-corr-desc">強度評估</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-title">均值回歸半衰期 (Half-Life)</div>
+                <div class="kpi-value" id="val-halflife">--</div>
+                <div class="kpi-sub">預期 <span id="txt-hl-bars">--</span> 根 K 棒收斂</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-title">Hurst 指數 (平穩性)</div>
+                <div class="kpi-value" id="val-hurst">--</div>
+                <div class="kpi-sub" id="txt-hurst-desc">檢測序列性質</div>
+            </div>
+        </div>
+
+        <div class="chart-box" id="chart-main"></div>
+        <div class="chart-box" id="chart-spread" style="height: 350px;"></div>
+
+        <div class="doc-section">
+            <h2 class="doc-title">量化模型說明</h2>
+
+            <div class="model-block">
+                <h3>1. Cointegration Model</h3>
+                <p>
+                    我們假設 <span class="var-y dy-y">Y</span> 與 <span class="var-x dy-x">X</span> 之間存在長期的線性均衡關係。即便兩者股價隨機波動（Random Walk），它們的線性組合（價差）應該是平穩的（Stationary）。
+                </p>
+                <div class="formula-box">
+                    $$ \ln(\text{Price}_{\color{#58a6ff}Y}) = \alpha + \beta \cdot \ln(\text{Price}_{\color{#d2a8ff}X}) + \epsilon_t $$
+                </div>
+                <p>
+                    其中 $\beta$ 是避險比率（Hedge Ratio），$\epsilon_t$ 是殘差（Residuals），也就是我們交易的對象「價差（Spread）」。
+                    <br>如果我們買進 <span class="var-y dy-y">Y</span> 並放空 $\beta$ 倍金額的 <span class="var-x dy-x">X</span>，我們就消除了市場風險（Market Neutral），剩下的損益僅取決於 $\epsilon_t$ 的波動。
+                </p>
+            </div>
+
+            <div class="model-block">
+                <h3>2. 標準化訊號 (Z-Score)</h3>
+                <p>
+                    為了標準化進出場點，我們將殘差epsilon_t轉換為標準差倍數。
+                </p>
+                <div class="formula-box">
+                    $$ Z_t = \frac{\epsilon_t - \mu_{\epsilon}}{\sigma_{\epsilon}} $$
+                </div>
+                <p>
+                    <ul>
+                        <li><strong>$Z > 2.0$</strong>: 代表 <span class="var-y dy-y">Y</span> 相對於 <span class="var-x dy-x">X</span> 過貴。策略：<strong>做空 <span class="var-y dy-y">Y</span> + 做多 <span class="var-x dy-x">X</span></strong> (Short Spread)。</li>
+                        <li><strong>$Z < -2.0$</strong>: 代表 <span class="var-y dy-y">Y</span> 相對於 <span class="var-x dy-x">X</span> 過便宜。策略：<strong>做多 <span class="var-y dy-y">Y</span> + 做空 <span class="var-x dy-x">X</span></strong> (Long Spread)。</li>
+                        <li><strong>$Z = 0</strong>: 價格回歸均衡，平倉獲利。</li>
+                    </ul>
+                </p>
+            </div>
+
+            <div class="model-block">
+                <h3>3. 奧恩斯坦-烏倫貝克過程與半衰期 (OU Process & Half-Life)</h3>
+                <p>
+                    這是判斷「這筆交易值不值得做」的時間維度指標。將價差建模為一個均值回歸的隨機過程：
+                </p>
+                <div class="formula-box">
+                    $$ d\epsilon_t = \theta (\mu - \epsilon_t)dt + \sigma dW_t $$
+                </div>
+                <p>
+                    其中 theta 是回歸速度。半衰期 (Half-Life) 定義為價差回歸到平均值一半距離所需的預期時間：
+                </p>
+                <div class="formula-box">
+                    $$ \text{Half-Life} = \frac{\ln(2)}{\theta} $$
+                </div>
+                <p>
+                    <strong>解讀：</strong> 如果半衰期顯示為 5，代表當出現交易訊號時，平均需要持有 5 根 K 棒的時間才能吃到一半的利潤。
+                    <br><strong>過濾規則：</strong> 如果半衰期太長（例如 > 50），建議放棄交易，因為資金成本過高。
+                </p>
+            </div>
+
+            <div class="model-block">
+                <h3>4. 赫斯特指數 (Hurst Exponent)</h3>
+                <p>
+                    這是用來檢驗時間序列「記憶性」的指標，範圍在 0 到 1 之間。
+                </p>
+                <div class="formula-box">
+                    $$ H = \frac{\log(R/S)}{\log(T)} $$
+                </div>
+                <p>
+                    <ul>
+                        <li><strong>$0 < H < 0.5$ (均值回歸)</strong>: <span style="color:#2ea043">適合配對交易</span>。數值越低，拉回力量越強。</li>
+                        <li><strong>$H = 0.5$ (隨機漫步)</strong>: 價格完全隨機，不應進行統計套利。</li>
+                        <li><strong>$0.5 < H < 1$ (趨勢)</strong>: 價格具有動能（強者恆強），<span style="color:#da3633">嚴禁</span>使用逆勢的配對交易策略。</li>
+                    </ul>
+                </p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 輔助函數: 動態名稱替換 ---
+    function updateSymbolNames(symY, symX) {
+        document.querySelectorAll('.dy-y').forEach(el => el.innerText = symY);
+        document.querySelectorAll('.dy-x').forEach(el => el.innerText = symX);
+    }
+
+    async function runAnalysis() {
+        const apiKey = document.getElementById('apiKey').value;
+        const symY = document.getElementById('symbolY').value.toUpperCase();
+        const symX = document.getElementById('symbolX').value.toUpperCase();
+        const interval = document.getElementById('interval').value;
+        const size = document.getElementById('outputsize').value;
+        const loader = document.getElementById('loader');
+        const btn = document.getElementById('runBtn');
+
+        if(!apiKey) { alert("請輸入 API Key"); return; }
+
+        try {
+            // UI 狀態更新
+            btn.disabled = true;
+            loader.style.display = 'block';
+            updateSymbolNames(symY, symX); // 更新說明文檔中的代號
+
+            // 1. 獲取數據
+            const dataY = await fetchStockData(symY, interval, size, apiKey);
+            const dataX = await fetchStockData(symX, interval, size, apiKey);
+
+            // 2. 數據對齊
+            const aligned = alignData(dataY, dataX);
+            if (aligned.dates.length < 30) throw new Error("重疊數據不足 30 筆，無法分析");
+
+            // 3. 核心量化計算
+            const results = performQuantAnalysis(aligned.pricesY, aligned.pricesX);
+
+            // 4. 更新儀表板
+            updateDashboard(results, symY, symX);
+
+            // 5. 繪圖
+            plotCharts(aligned.dates, aligned.pricesY, aligned.pricesX, results.zScores, symY, symX, results.upperBand, results.lowerBand);
+
+            // 6. 重新渲染 MathJax (如果有的話)
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert("錯誤: " + err.message);
+        } finally {
+            btn.disabled = false;
+            loader.style.display = 'none';
+        }
+    }
+
+    // --- API 請求 ---
+    async function fetchStockData(symbol, interval, size, apiKey) {
+        const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&outputsize=${size}&apikey=${apiKey}&format=json`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if(data.status === 'error') throw new Error(data.message);
+        // 回傳反轉後的陣列 (舊 -> 新)
+        return data.values.reverse().map(d => ({ date: d.datetime, close: parseFloat(d.close) }));
+    }
+
+    // --- 數據處理 ---
+    function alignData(dY, dX) {
+        const mapX = new Map(dX.map(i => [i.date, i.close]));
+        const dates = [], pY = [], pX = [];
+        
+        dY.forEach(item => {
+            if(mapX.has(item.date)) {
+                dates.push(item.date);
+                pY.push(item.close);
+                pX.push(mapX.get(item.date));
+            }
+        });
+        return { dates, pricesY: pY, pricesX: pX };
+    }
+
+    // --- Quant Core ---
+    function performQuantAnalysis(pricesY, pricesX) {
+        const logY = pricesY.map(Math.log);
+        const logX = pricesX.map(Math.log);
+        const n = logY.length;
+
+        // OLS Regression: logY = alpha + beta * logX + epsilon
+        const meanY = math.mean(logY);
+        const meanX = math.mean(logX);
+        
+        let num = 0, den = 0;
+        let numCorr = 0, denCorrY = 0, denCorrX = 0;
+
+        for(let i=0; i<n; i++) {
+            const dy = logY[i] - meanY;
+            const dx = logX[i] - meanX;
+            num += dy * dx;
+            den += dx * dx;
+            
+            // Correlation parts
+            numCorr += dy * dx;
+            denCorrY += dy * dy;
+            denCorrX += dx * dx;
+        }
+        
+        const beta = num / den;
+        const alpha = meanY - beta * meanX;
+        const correlation = numCorr / Math.sqrt(denCorrY * denCorrX);
+
+        // Spread (Residuals)
+        const spread = logY.map((y, i) => y - (alpha + beta * logX[i]));
+        
+        // Z-Score (Rolling Window would be better, but simplified full period for now)
+        const spreadMean = math.mean(spread);
+        const spreadStd = math.std(spread);
+        const zScores = spread.map(s => (s - spreadMean) / spreadStd);
+
+        // Half-Life (Ornstein-Uhlenbeck)
+        // Regress: (Spread[t] - Spread[t-1]) = Theta * (Spread[t-1] - Mean)
+        let sumXY_hl = 0, sumXX_hl = 0;
+        for(let i=1; i<n; i++) {
+            const dy = spread[i] - spread[i-1];
+            const x = spread[i-1] - spreadMean;
+            sumXY_hl += dy * x;
+            sumXX_hl += x * x;
+        }
+        const theta = -(sumXY_hl / sumXX_hl); // Mean reversion speed
+        const halfLife = (theta > 0) ? (Math.log(2) / theta) : 999;
+
+        // Hurst Exponent (Simplified Variance Method)
+        // H = 0.5 * log(Var(2*lag) / Var(lag)) / log(2) approximately
+        // We use a more robust logic: log(R/S) vs log(n) slope
+        const hurst = calculateHurst(spread);
+
+        return {
+            beta, alpha, correlation, 
+            zScores, currentZ: zScores[n-1],
+            halfLife, hurst,
+            spreadMean, spreadStd
+        };
+    }
+
+    // Hurst Exponent Calculation (Rescaled Range Analysis simplified)
+    function calculateHurst(series) {
+        const n = series.length;
+        if (n < 100) return 0.5; // Not enough data
+        
+        // Calculate simplified H based on variance scaling
+        // Var(tau) ~ tau^(2H)
+        // We compare variance of full series vs variance of differences
+        // Ideally we need log-log regression of R/S over multiple scales. 
+        // Here is a simplified approximation for JS performance:
+        
+        const chunks = [Math.floor(n/2), Math.floor(n/4), Math.floor(n/8)];
+        let validChunks = 0;
+        let weightedH = 0;
+
+        // Using simple simplified approach: Volatility of Lag 2 vs Lag 1
+        // H approx = 0.5 * log2( Vol(2n) / Vol(n) ) ? No, strict definition.
+        
+        // Let's use the simplest robust proxy: 
+        // If series is mean reverting, Variance of (Price_t - Price_t-lag) grows slower than lag.
+        
+        // Implementing a quick R/S calculation for the whole series
+        const mean = math.mean(series);
+        const y = series.map(x => x - mean);
+        const cumsum = [];
+        let sum = 0;
+        for(let v of y) { sum += v; cumsum.push(sum); }
+        
+        const R = Math.max(...cumsum) - Math.min(...cumsum);
+        const S = math.std(series);
+        const RS = R/S;
+        
+        // H = log(RS) / log(n) (This is the empirical Hurst for full length)
+        const H = Math.log(RS) / Math.log(n);
+        return H;
+    }
+
+    // --- UI Updates ---
+    function updateDashboard(res, symY, symX) {
+        // Z-Score
+        const z = res.currentZ;
+        const zEl = document.getElementById('val-zscore');
+        const badge = document.getElementById('badge-signal');
+        
+        zEl.innerText = z.toFixed(2);
+        if (z > 2.0) {
+            zEl.style.color = '#f85149'; // Red
+            badge.style.background = 'rgba(248, 81, 73, 0.2)';
+            badge.style.color = '#f85149';
+            badge.innerText = `SHORT ${symY} / LONG ${symX}`;
+        } else if (z < -2.0) {
+            zEl.style.color = '#2ea043'; // Green
+            badge.style.background = 'rgba(46, 160, 67, 0.2)';
+            badge.style.color = '#2ea043';
+            badge.innerText = `LONG ${symY} / SHORT ${symX}`;
+        } else {
+            zEl.style.color = '#c9d1d9';
+            badge.style.background = '#30363d';
+            badge.style.color = '#8b949e';
+            badge.innerText = 'NEUTRAL (觀望)';
+        }
+
+        // Beta
+        document.getElementById('val-beta').innerText = res.beta.toFixed(3);
+        document.getElementById('txt-beta-amt').innerText = res.beta.toFixed(3);
+
+        // Correlation
+        document.getElementById('val-corr').innerText = res.correlation.toFixed(3);
+        const corrDesc = document.getElementById('txt-corr-desc');
+        if(res.correlation > 0.8) { corrDesc.innerText = "高相關 (Excellent)"; corrDesc.style.color = "#2ea043"; }
+        else if(res.correlation > 0.5) { corrDesc.innerText = "中度相關 (Moderate)"; corrDesc.style.color = "#d29922"; }
+        else { corrDesc.innerText = "低相關 (Weak) - 風險高"; corrDesc.style.color = "#f85149"; }
+
+        // Half Life
+        document.getElementById('val-halflife').innerText = res.halfLife.toFixed(1);
+        document.getElementById('txt-hl-bars').innerText = res.halfLife.toFixed(1);
+
+        // Hurst
+        const h = res.hurst;
+        const hEl = document.getElementById('val-hurst');
+        const hDesc = document.getElementById('txt-hurst-desc');
+        hEl.innerText = h.toFixed(3);
+        
+        if(h < 0.5) {
+            hDesc.innerText = "均值回歸 (適合交易)";
+            hDesc.style.color = "#2ea043";
+        } else if (h > 0.55) {
+            hDesc.innerText = "趨勢型 (不適合)";
+            hDesc.style.color = "#f85149";
+        } else {
+            hDesc.innerText = "隨機漫步 (Random)";
+            hDesc.style.color = "#8b949e";
+        }
+    }
+
+    // --- Plotting ---
+    function plotCharts(dates, pY, pX, zScores, symY, symX) {
+        // Chart 1: Normalized Price
+        const normY = pY.map(p => (p / pY[0]) * 100);
+        const normX = pX.map(p => (p / pX[0]) * 100);
+        
+        const traceY = { x: dates, y: normY, name: symY, type: 'scatter', line: { color: '#58a6ff' } };
+        const traceX = { x: dates, y: normX, name: symX, type: 'scatter', line: { color: '#d2a8ff' } };
+
+        const layout1 = {
+            title: '標準化價格走勢 (Normalized Prices)',
+            paper_bgcolor: '#161b22', plot_bgcolor: '#161b22',
+            font: { color: '#c9d1d9' },
+            margin: { t: 40, b: 40, l: 40, r: 20 },
+            xaxis: { gridcolor: '#30363d' }, yaxis: { gridcolor: '#30363d' },
+            legend: { orientation: 'h', y: 1.1 }
+        };
+        Plotly.newPlot('chart-main', [traceY, traceX], layout1);
+
+        // Chart 2: Z-Score with Bands
+        const traceZ = { x: dates, y: zScores, name: 'Z-Score', type: 'scatter', line: { color: '#fff', width: 1.5 } };
+        
+        // Color bands
+        const layout2 = {
+            title: '價差 Z-Score',
+            paper_bgcolor: '#161b22', plot_bgcolor: '#161b22',
+            font: { color: '#c9d1d9' },
+            margin: { t: 40, b: 40, l: 40, r: 20 },
+            xaxis: { gridcolor: '#30363d' }, yaxis: { title: 'Sigma (σ)', gridcolor: '#30363d' },
+            shapes: [
+                { type: 'line', x0: 0, x1: 1, xref: 'paper', y0: 2, y1: 2, line: { color: '#f85149', width: 1, dash: 'dot' } },
+                { type: 'line', x0: 0, x1: 1, xref: 'paper', y0: -2, y1: -2, line: { color: '#2ea043', width: 1, dash: 'dot' } },
+                { type: 'line', x0: 0, x1: 1, xref: 'paper', y0: 0, y1: 0, line: { color: '#8b949e', width: 2 } }
+            ]
+        };
+        Plotly.newPlot('chart-spread', [traceZ], layout2);
+    }
+</script>
+
+</body>
+</html>
