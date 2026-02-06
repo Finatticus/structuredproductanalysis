@@ -1,0 +1,674 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corporate Bond Valuation</title>
+    
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+      };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        :root {
+            --primary: #2c3e50;   
+            --secondary: #34495e;   
+            --accent: #2980b9;    
+            --bg: #f5f7fa;       
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --border: #e2e8f0;
+            --success: #27ae60;
+            --danger: #c0392b;
+        }
+
+        body {
+            font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-weight: 300;
+            color: var(--primary);
+            margin-bottom: 40px;
+            letter-spacing: 1px;
+        }
+
+        /* 網格佈局 */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 25px;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .grid-layout { grid-template-columns: 1fr; }
+        }
+
+        /* 卡片設計 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+            border: 1px solid var(--border);
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--secondary);
+            border-bottom: 2px solid var(--bg);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 表單元素 */
+        .input-group { margin-bottom: 15px; }
+        .input-group label {
+            display: block;
+            font-size: 0.9em;
+            font-weight: 500;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 1em;
+            transition: border 0.3s;
+            box-sizing: border-box;
+        }
+        .input-group input:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .section-title {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        button.btn-calc {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+        button.btn-calc:hover {
+            background-color: var(--secondary);
+            transform: translateY(-1px);
+        }
+
+        /* 結果展示 */
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .metric-box {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid var(--accent);
+        }
+        .metric-label { font-size: 0.85em; color: #64748b; }
+        .metric-value { font-size: 1.4em; font-weight: bold; color: var(--primary); margin-top: 5px; }
+        .metric-sub { font-size: 0.8em; color: #94a3b8; }
+
+        /* 教育區塊 */
+        .edu-section { margin-top: 40px; }
+        .edu-item {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-bottom: 15px;
+            background: #fff;
+            overflow: hidden;
+        }
+        .edu-title {
+            padding: 15px 20px;
+            background: #f1f5f9;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+        }
+        .edu-body {
+            padding: 20px;
+            display: none;
+            border-top: 1px solid var(--border);
+        }
+        .math-box {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .tag-struct { background: #e0f2fe; color: #0284c7; }
+        .tag-reduced { background: #dcfce7; color: #16a34a; }
+        .tag-num { background: #fae8ff; color: #a855f7; }
+
+        /* 風險條 */
+        .risk-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .risk-bar-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>US Corporate Bond Valuation</h1>
+    
+    <div class="grid-layout">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-sliders-h"></i> 參數設定 (Inputs)
+            </div>
+
+            <div class="section-title">債券條款 (Bond Terms)</div>
+            <div class="input-group">
+                <label>債券面額 (Face Value)</label>
+                <input type="number" id="F" value="100">
+            </div>
+            <div class="input-group">
+                <label>票面利率 (Coupon Rate, %)</label>
+                <input type="number" id="C_rate" value="5.5" step="0.1">
+            </div>
+            <div class="input-group">
+                <label>到期年限 (Maturity, Years)</label>
+                <input type="number" id="T" value="5" step="0.5">
+            </div>
+            <div class="input-group">
+                <label>贖回價格 (Call Price, if Callable)</label>
+                <input type="number" id="Call_P" value="102" step="0.1" placeholder="Optional">
+            </div>
+
+            <div class="section-title">市場數據 (Market Data)</div>
+            <div class="input-group">
+                <label>無風險利率 (Risk-Free Rate, %)</label>
+                <input type="number" id="r" value="4.0" step="0.1">
+            </div>
+            <div class="input-group">
+                <label>利率波動率 (Rate Volatility, %)</label>
+                <input type="number" id="vol_r" value="15" step="1">
+            </div>
+
+            <div class="section-title">公司基本面 (Structural Inputs)</div>
+            <div class="input-group">
+                <label>公司資產價值 (Asset Value)</label>
+                <input type="number" id="V" value="200">
+            </div>
+            <div class="input-group">
+                <label>資產波動率 (Asset Vol, %)</label>
+                <input type="number" id="sigma_V" value="25" step="1">
+            </div>
+            <div class="input-group">
+                <label>總負債帳面價值 (Debt Book Value)</label>
+                <input type="number" id="D_book" value="100">
+            </div>
+
+            <div class="section-title">信用參數 (Reduced Form Inputs)</div>
+            <div class="input-group">
+                <label>違約強度/機率 (Hazard Rate, %)</label>
+                <input type="number" id="lambda" value="2.0" step="0.1">
+            </div>
+            <div class="input-group">
+                <label>回收率 (Recovery Rate, %)</label>
+                <input type="number" id="R" value="40" step="5">
+            </div>
+
+            <button class="btn-calc" onclick="calculateAll()">執行全模型評估</button>
+        </div>
+
+        <div>
+            <div class="card">
+                <div class="card-header">
+                    Merton Model (KMV Approach)
+                    <span class="tag tag-struct">Structural</span>
+                </div>
+                <div class="result-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">理論債券價值</div>
+                        <div class="metric-value" id="merton_price">--</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">違約距離 (Distance to Default)</div>
+                        <div class="metric-value" id="merton_dd">--</div>
+                        <div class="metric-sub">標準差單位 (Sigma)</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">隱含違約機率 (EDF)</div>
+                        <div class="metric-value" id="merton_pd">--</div>
+                        <div class="risk-bar-container">
+                            <div class="risk-bar-fill" id="risk_bar_merton" style="width: 0%; background: #27ae60;"></div>
+                        </div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">信用利差 (Credit Spread)</div>
+                        <div class="metric-value" id="merton_spread">--</div>
+                        <div class="metric-sub">Basis Points (bps)</div>
+                    </div>
+                </div>
+                <div style="font-size: 0.9em; color: #666;">
+                    <i class="fas fa-info-circle"></i> 這是基於公司資產負債表結構計算出的理論價值。若市場價格遠低於此，可能代表被低估，或市場隱含了更高的資產波動率。
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    Jarrow-Turnbull (Hazard Rate)
+                    <span class="tag tag-reduced">Reduced-Form</span>
+                </div>
+                <div class="result-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">債券現值 (Risky PV)</div>
+                        <div class="metric-value" id="jt_price">--</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">存續期間 (Duration)</div>
+                        <div class="metric-value" id="jt_dur">--</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">生存機率 (Survival Prob)</div>
+                        <div class="metric-value" id="jt_surv">--</div>
+                        <div class="metric-sub">至到期日</div>
+                    </div>
+                </div>
+                <div style="font-size: 0.9em; color: #666;">
+                    <i class="fas fa-info-circle"></i> 此模型將違約視為隨機事件 (Poisson Process)，適用於高收益債或信用風險敏感的債券定價。
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    Callable Bond Valuation (Binomial Tree)
+                    <span class="tag tag-num">Numerical</span>
+                </div>
+                <div class="result-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">可贖回債券價值</div>
+                        <div class="metric-value" id="callable_price">--</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">普通債券價值 (Non-Callable)</div>
+                        <div class="metric-value" id="straight_price">--</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">贖回權利價值 (Call Option)</div>
+                        <div class="metric-value" id="call_opt_val" style="color: #c0392b;">--</div>
+                        <div class="metric-sub">對投資人的負價值</div>
+                    </div>
+                </div>
+                <div style="font-size: 0.9em; color: #666;">
+                    <i class="fas fa-info-circle"></i> 若債券包含 "Callable" 條款，公司可在利率下降時贖回。這會限制債券的價格上限，導致其價值低於普通債券。
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="edu-section">
+        <h2 style="text-align: center; color: var(--primary); margin-bottom: 30px;">模型原理詳解與數學推導</h2>
+
+        <div class="edu-item">
+            <div class="edu-title" onclick="toggleEdu('edu-merton')">
+                <span>1. Merton Model (Structural) - 將股權視為買權</span>
+                <span>▼</span>
+            </div>
+            <div id="edu-merton" class="edu-body">
+                <h4>核心邏輯：資產負債表的選擇權觀點</h4>
+                <p>Robert Merton (1974) 提出了一個革命性的觀點：<b>公司的股權 (Equity) 其實是一個買權 (Call Option)，標的物是公司總資產 (Asset)，履約價是負債面額 (Debt)。</b></p>
+                <ul>
+                    <li>如果到期時，公司資產 $V >$ 負債 $D$，股東會還錢給債權人，拿走剩餘的 $V-D$。</li>
+                    <li>如果到期時，公司資產 $V <$ 負債 $D$，股東基於有限責任，會選擇違約（不履約），把公司直接丟給債權人，股權價值歸零。</li>
+                </ul>
+                <p>因此，債權人持有的其實是：<b>無風險債券 - 賣權 (Put Option)</b>。這個賣權代表了違約風險。</p>
+
+                <h4>數學模型</h4>
+                <p>假設公司資產價值 $V_t$ 服從幾何布朗運動 (GBM)：$dV_t = \mu V_t dt + \sigma_V V_t dW_t$。</p>
+                <p>債券（有風險負債）的價值 $B_t$ 為：</p>
+                <div class="math-box">
+                    $$ B_t = D e^{-rT} - P_{BS}(V, D, T, \sigma_V, r) $$
+                    展開後：
+                    $$ B_t = V_t N(-d_1) + D e^{-rT} N(d_2) $$
+                </div>
+                <p>其中 $d_1, d_2$ 為標準 Black-Scholes 參數：</p>
+                <div class="math-box">
+                    $$ d_1 = \frac{\ln(V_t/D) + (r + 0.5\sigma_V^2)T}{\sigma_V \sqrt{T}}, \quad d_2 = d_1 - \sigma_V \sqrt{T} $$
+                </div>
+
+                <h4>關鍵指標解釋</h4>
+                <ul>
+                    <li><b>違約距離 (Distance to Default, DD)：</b> $DD = d_2$。這代表資產價值距離違約點（負債）還有幾個標準差。DD 越小，違約機率越高。</li>
+                    <li><b>違約機率 (Probability of Default)：</b> $PD = N(-d_2)$。</li>
+                    <li><b>信用利差 (Credit Spread)：</b> $y - r = -\frac{1}{T} \ln(B_t/D) - r$。</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="edu-item">
+            <div class="edu-title" onclick="toggleEdu('edu-jt')">
+                <span>2. Jarrow-Turnbull (Reduced-Form) - 強度模型</span>
+                <span>▼</span>
+            </div>
+            <div id="edu-jt" class="edu-body">
+                <h4>核心邏輯：違約是隨機的意外</h4>
+                <p>不同於 Merton 模型關注公司內部資產，Jarrow-Turnbull 等簡約型模型認為外部投資人無法看清公司內部，違約更像是一個隨機發生的「意外事件」（如火災）。</p>
+                <p>我們定義一個<b>違約強度 (Hazard Rate, $\lambda$)</b>。在極短時間 $\Delta t$ 內，違約的機率約為 $\lambda \Delta t$。</p>
+
+                <h4>數學模型</h4>
+                <p>一個在時間 $T$ 到期，支付 $CF$ 的風險現金流，其現值為：</p>
+                <div class="math-box">
+                    $$ PV = CF \cdot \underbrace{e^{-rT}}_{\text{無風險折現}} \cdot \underbrace{e^{-\lambda T}}_{\text{生存機率}} + \underbrace{CF \cdot R}_{\text{回收殘值}} \cdot (1 - e^{-\lambda T}) \cdot e^{-rT} $$
+                </div>
+                <p>簡化後（若假設違約發生時立即回收），風險調整後的折現率約為 $r + \lambda(1-R)$。</p>
+                <ul>
+                    <li>$\lambda$：違約強度（每年違約的機率密度）。</li>
+                    <li>$R$：回收率 (Recovery Rate)，即違約後債券還能拿回多少本金（美債通常約 40%）。</li>
+                    <li>$\lambda(1-R)$：這就是理論上的<b>信用利差 (Credit Spread)</b>。</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="edu-item">
+            <div class="edu-title" onclick="toggleEdu('edu-oas')">
+                <span>3. Callable Bond Valuation - 二項式利率樹</span>
+                <span>▼</span>
+            </div>
+            <div id="edu-oas" class="edu-body">
+                <h4>核心邏輯：利率會變，公司會贖回</h4>
+                <p>對於<b>可贖回債券 (Callable Bond)</b>，當市場利率大幅下跌，債券價格上漲超過「贖回價 (Call Price)」時，公司會選擇贖回債券以進行再融資。這切斷了債券價格的上漲空間。</p>
+                <p>為了評價這種「路徑依賴」的特性，我們必須建立一個利率樹狀圖。</p>
+
+                <h4>演算法步驟 (Binomial Tree)</h4>
+                <ol>
+                    <li><b>建立利率樹：</b>從當前利率 $r_0$ 開始，假設下一期利率可能上升 ($r_u$) 或下降 ($r_d$ )。
+                        $$ r_u = r \cdot e^{\sigma \sqrt{dt}}, \quad r_d = r \cdot e^{-\sigma \sqrt{dt}} $$
+                    </li>
+                    <li><b>反向歸納 (Backward Induction)：</b>從到期日開始往回推算。
+                        <br>在每一個節點，債券的「持有價值」為：
+                        $$ H = e^{-r \Delta t} [0.5 \cdot V_{up} + 0.5 \cdot V_{down}] + Coupon $$
+                    </li>
+                    <li><b>贖回檢查：</b>
+                        如果是 Callable Bond，公司會選擇對自己最有利的（即支付最少的）：
+                        $$ V_{node} = \min(H, \text{Call Price}) $$
+                        如果是 Non-Callable，則 $V_{node} = H$。
+                    </li>
+                    <li><b>OAS (Option-Adjusted Spread)：</b>
+                        我們通常會在利率樹的每個節點加上一個常數利差 $s$，直到模型算出的價格等於市場價格。這個 $s$ 就是 OAS。
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- 基礎數學函數 ---
+    function N(x) {
+        // 標準常態分佈累計函數 (CDF)
+        var a1 =  0.254829592, a2 = -0.284496736, a3 =  1.421413741;
+        var a4 = -1.453152027, a5 =  1.061405429, p  =  0.3275911;
+        var sign = 1;
+        if (x < 0) sign = -1;
+        x = Math.abs(x)/Math.sqrt(2.0);
+        var t = 1.0/(1.0 + p*x);
+        var y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*Math.exp(-x*x);
+        return 0.5*(1.0 + sign*y);
+    }
+
+    function N_prime(x) {
+        // PDF
+        return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+    }
+
+    // --- UI 控制 ---
+    function toggleEdu(id) {
+        var el = document.getElementById(id);
+        if (el.style.display === 'block') {
+            el.style.display = 'none';
+        } else {
+            el.style.display = 'block';
+        }
+    }
+
+    // --- 模型計算核心 ---
+
+    function calculateAll() {
+        // 1. 獲取輸入
+        const F = parseFloat(document.getElementById('F').value);
+        const C_rate = parseFloat(document.getElementById('C_rate').value) / 100;
+        const T = parseFloat(document.getElementById('T').value);
+        const Call_P = document.getElementById('Call_P').value ? parseFloat(document.getElementById('Call_P').value) : 10000; // Default high if null
+        
+        const r = parseFloat(document.getElementById('r').value) / 100;
+        const vol_r = parseFloat(document.getElementById('vol_r').value) / 100;
+        
+        const V = parseFloat(document.getElementById('V').value);
+        const sigma_V = parseFloat(document.getElementById('sigma_V').value) / 100;
+        const D_book = parseFloat(document.getElementById('D_book').value);
+        
+        const lambda = parseFloat(document.getElementById('lambda').value) / 100;
+        const R = parseFloat(document.getElementById('R').value) / 100;
+
+        // --- Model 1: Merton Model ---
+        // Equity = Call(V, D), Debt = V - Equity
+        // Merton Bond Price = D * exp(-rT) - Put(V, D) = V * N(-d1) + D * exp(-rT) * N(d2)
+        
+        const d1 = (Math.log(V / D_book) + (r + 0.5 * sigma_V * sigma_V) * T) / (sigma_V * Math.sqrt(T));
+        const d2 = d1 - sigma_V * Math.sqrt(T);
+        
+        // 債券理論價值
+        // B = V - E = V - (V*N(d1) - D*e^-rT*N(d2))
+        //   = V(1-N(d1)) + D*e^-rT*N(d2)
+        //   = V*N(-d1) + D*e^-rT*N(d2)
+        const merton_bond_val = V * N(-d1) + D_book * Math.exp(-r * T) * N(d2);
+        
+        // 違約機率 PD (Risk Neutral) = N(-d2)
+        const pd = N(-d2);
+        
+        // 信用利差 Spread
+        // Yield = - (1/T) * ln(Price / Face)
+        const merton_yield = - (1/T) * Math.log(merton_bond_val / D_book);
+        const spread_bps = (merton_yield - r) * 10000;
+
+        // 更新 Merton UI
+        document.getElementById('merton_price').innerText = merton_bond_val.toFixed(2);
+        document.getElementById('merton_dd').innerText = d2.toFixed(2);
+        document.getElementById('merton_pd').innerText = (pd * 100).toFixed(2) + "%";
+        
+        // Risk Bar Logic
+        let barColor = "#27ae60"; // Green
+        if(pd > 0.05) barColor = "#f1c40f"; // Yellow
+        if(pd > 0.20) barColor = "#c0392b"; // Red
+        const barWidth = Math.min(pd * 200, 100); // Scale up for visibility
+        const bar = document.getElementById('risk_bar_merton');
+        bar.style.width = barWidth + "%";
+        bar.style.background = barColor;
+
+        document.getElementById('merton_spread').innerText = Math.max(0, spread_bps).toFixed(0);
+
+
+        // --- Model 2: Jarrow-Turnbull (Reduced Form) ---
+        // 假設半年配息一次
+        const periods = T * 2;
+        const dt = 0.5;
+        const coupon_amt = F * C_rate * dt;
+        let jt_pv = 0;
+        let jt_weighted_time = 0; // For Duration
+
+        // Discount Factor adjusted for default: exp(-(r + lambda*(1-R)) * t)
+        const spread_jt = lambda * (1 - R);
+        const y_risky = r + spread_jt;
+
+        for (let i = 1; i <= periods; i++) {
+            let t = i * dt;
+            let cf = coupon_amt;
+            if (i === periods) cf += F;
+
+            // Survival Probability to time t: exp(-lambda * t)
+            // But simplify using risky yield directly:
+            let df = Math.exp(-y_risky * t);
+            let pv_cf = cf * df;
+            
+            jt_pv += pv_cf;
+            jt_weighted_time += t * pv_cf;
+        }
+
+        const duration = jt_weighted_time / jt_pv;
+        const surv_prob = Math.exp(-lambda * T);
+
+        // 更新 JT UI
+        document.getElementById('jt_price').innerText = jt_pv.toFixed(2);
+        document.getElementById('jt_dur').innerText = duration.toFixed(2);
+        document.getElementById('jt_surv').innerText = (surv_prob * 100).toFixed(1) + "%";
+
+
+        // --- Model 3: Binomial Tree for Callable Bond ---
+        // 建立簡單的利率樹 (Ho-Lee style simplified)
+        // 假設利率波動
+        const steps = 30; // 步數
+        const tree_dt = T / steps;
+        const drift = 0; // 簡化：假設無趨勢，只是擴散
+        
+        // 建樹 r[i][j]
+        // i: time step, j: up moves
+        // r(i, j) = r0 * exp(vol * sqrt(dt) * (2j - i))  <-- Black-Derman-Toy style simplification
+        // 為了簡單演示，使用正態模型： r(i, j) = r0 + vol * sqrt(dt) * (2j - i)
+        // 使用對數常態保證利率為正：
+        
+        let tree_r = [];
+        for(let i=0; i<=steps; i++) {
+            let row = [];
+            for(let j=0; j<=i; j++) {
+                // j is number of "ups"
+                // (2*j - i) gives range from -i to +i
+                // e.g. step 2: j=0 (-2), j=1 (0), j=2 (+2)
+                let z = (2*j - i); 
+                let r_node = r * Math.exp(vol_r * Math.sqrt(tree_dt) * z);
+                row.push(r_node);
+            }
+            tree_r.push(row);
+        }
+
+        // Backward Induction
+        // 需要算兩個：一個是 Straight Bond (Non-Callable)，一個是 Callable
+        // 初始化最後一期 (Maturity)
+        let values_straight = [];
+        let values_callable = [];
+        
+        const coupon_step = F * C_rate * tree_dt; // 每步支付利息 (近似)
+
+        for(let j=0; j<=steps; j++) {
+            values_straight.push(F + coupon_step); // 本金+最後一期利息
+            values_callable.push(F + coupon_step);
+        }
+
+        // 往回推
+        for(let i=steps-1; i>=0; i--) {
+            let next_straight = [];
+            let next_callable = [];
+            for(let j=0; j<=i; j++) {
+                let r_curr = tree_r[i][j];
+                let df = Math.exp(-r_curr * tree_dt);
+                
+                // Straight Bond Value
+                // Expected future value discounted + coupon
+                let val_s = df * 0.5 * (values_straight[j] + values_straight[j+1]) + coupon_step;
+                // Last step adjustments usually exclude coupon at t=0 but included here for simplicity stream
+                if(i===0) val_s -= coupon_step; // Remove coupon at t=0
+
+                // Callable Bond Value
+                let val_c_hold = df * 0.5 * (values_callable[j] + values_callable[j+1]) + coupon_step;
+                // Check Call
+                // Ex-coupon price is roughly val_c_hold - coupon_step
+                // Compare Ex-coupon vs Call Price
+                // Simplified: compare full package vs Call Price + Coupon (assuming Call pays accrued)
+                // Standard convention: min(Hold, Call Price)
+                
+                // Callable Logic:
+                // Is the value > Call Price?
+                // Note: The Call Price is usually "Clean Price". Our tree tracks "Dirty Price".
+                // We simplify by comparing Total Value vs Call Price + Accrued (approx coupon_step)
+                let value_if_called = Call_P + coupon_step; 
+                let val_c = Math.min(val_c_hold, value_if_called);
+
+                if(i===0) {
+                     val_s = df * 0.5 * (values_straight[0] + values_straight[1]);
+                     val_c = Math.min(df * 0.5 * (values_callable[0] + values_callable[1]), Call_P);
+                }
+
+                next_straight.push(val_s);
+                next_callable.push(val_c);
+            }
+            values_straight = next_straight;
+            values_callable = next_callable;
+        }
+
+        const p_straight = values_straight[0];
+        const p_callable = values_callable[0];
+        const opt_val = p_straight - p_callable;
+
+        // 更新 Tree UI
+        document.getElementById('straight_price').innerText = p_straight.toFixed(2);
+        document.getElementById('callable_price').innerText = p_callable.toFixed(2);
+        document.getElementById('call_opt_val').innerText = opt_val.toFixed(2);
+    }
+</script>
+
+</body>
+</html>
+

@@ -1,0 +1,711 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometric Brownian Motion, GBM</title>
+    
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+      };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #e74c3c;
+            --secondary: #3498db;
+            --neuron: #8e44ad;
+            --ai: #16a085;
+            --bg-light: #f4f6f7;
+            --text-dark: #2c3e50;
+        }
+
+        body {
+            font-family: "Helvetica Neue", Helvetica, "PingFang TC", "Microsoft JhengHei", Arial, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.8;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: linear-gradient(120deg, #1f4037, #99f2c8);
+            color: white;
+            padding: 100px 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header h1 {
+            font-size: 3.5em;
+            margin: 0;
+            font-weight: 200;
+            letter-spacing: 4px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: -60px auto 50px;
+            position: relative;
+            padding: 0 20px;
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 16px;
+            padding: 50px;
+            margin-bottom: 50px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+
+        .section-card:hover {
+            transform: translateY(-5px);
+        }
+
+        h2 {
+            color: var(--primary);
+            border-left: 6px solid var(--secondary);
+            padding-left: 20px;
+            margin-top: 0;
+            font-size: 2em;
+            margin-bottom: 30px;
+        }
+
+        h3 {
+            color: #555;
+            margin-top: 40px;
+            font-weight: 700;
+            font-size: 1.4em;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .tag {
+            display: inline-block;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-right: 8px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        .tag.history { background: #f39c12; }
+        .tag.math { background: #34495e; }
+        .tag.finance { background: #2980b9; }
+        .tag.bio { background: #27ae60; }
+        .tag.neuro { background: var(--neuron); }
+        .tag.ai { background: var(--ai); }
+        .tag.hydro { background: #3498db; }
+        .tag.mgmt { background: #d35400; }
+
+        .formula-box {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #e1e4e8;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        /* 模擬區塊通用樣式 */
+        .sim-container {
+            background: #2c3e50;
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            margin-top: 20px;
+        }
+        
+        .sim-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .sim-controls label {
+            display: block;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            color: #ecf0f1;
+        }
+
+        .sim-controls input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: none;
+            background: white;
+            color: #333;
+        }
+
+        button.btn-run {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            transition: background 0.3s;
+        }
+
+        button.btn-run:hover {
+            background: #c0392b;
+        }
+
+        canvas {
+            background: white;
+            border-radius: 4px;
+            width: 100%;
+        }
+
+        /* AI Image Noise Sim */
+        .image-noise-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .img-box {
+            text-align: center;
+            color: #aaa;
+        }
+        .img-box canvas {
+            max-width: 250px;
+            height: auto;
+            border: 2px solid #444;
+        }
+
+        footer {
+            text-align: center;
+            padding: 50px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Geometric Brownian Motion, GBM</h1>
+    <p>幾何布朗運動</p>
+</header>
+
+<div class="container">
+
+    <div class="section-card">
+        <h2>1. 起源從花粉到愛因斯坦</h2>
+        <span class="tag history">歷史</span> <span class="tag math">數學基礎</span>
+
+        <h3>1827年：羅伯特·布朗的花粉困惑</h3>
+        <p>故事始於一位蘇格蘭植物學家，<b>羅伯特·布朗 (Robert Brown)</b>。1827 年，他正在透過顯微鏡觀察懸浮在水中的花粉粒。讓他驚訝的是，這些微小的顆粒似乎在進行一種永無止境、混亂且不規則的跳動。</p>
+        <p>起初，布朗以為這些花粉是「活的」，這可能是生命的某種原始形式。但他後來用死掉的植物、甚至是岩石粉末重複實驗，發現這種跳動依然存在。這證明了這不是生命現象，而是一種物理現象。這種運動後來被命名為<b>「布朗運動 (Brownian Motion)」</b>。</p>
+
+        <h3>1905年：愛因斯坦的分子撞擊說</h3>
+        <p>這個謎題困擾了科學界近 80 年，直到 1905 年（愛因斯坦的奇蹟年）。<b>阿爾伯特·愛因斯坦</b>發表了一篇論文，從數學上解釋了這個現象：</p>
+        <div class="highlight-box">
+            <b>核心理論：</b> 我們肉眼（或顯微鏡下）看到的大顆粒（花粉），正被無數個我們看不見的微小粒子（水分子）從四面八方不斷撞擊。雖然撞擊是隨機的，但在極短時間內，某個方向的撞擊力道可能大於另一個方向，導致花粉產生位移。
+        </div>
+
+        
+        <h3>隨機微分方程 (SDE)</h3>
+        <p>我們如何描述一個「每一步都是隨機」的路徑？數學家引入了兩個核心：</p>
+        <div class="formula-box">
+            <b>標準布朗運動 (Wiener Process, $W_t$)：</b><br>
+            $dW_t \sim N(0, dt)$ <br>
+            <small>(每一步的變化量服從常態分佈，且與過去無關)</small>
+        </div>
+        <div class="formula-box">
+            <b>幾何布朗運動 (GBM)：</b><br>
+            $$ \frac{dS_t}{S_t} = \mu dt + \sigma dW_t $$
+            <small>(變化是「百分比」的，解決算術布朗運動可能為負值的問題，並引入了複利效應)</small>
+        </div>
+        
+        <div class="sim-container">
+            <h4>互動實驗：花粉微觀模擬</h4>
+            <p style="font-size:0.9em; opacity:0.8;">黃球(花粉)被藍點(水分子)撞擊。注意即使沒有外力，花粉也會隨機漂移。</p>
+            <canvas id="pollenCanvas" height="300"></canvas>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <h2>金融學：華爾街的基石</h2>
+        <span class="tag finance">金融工程</span> <span class="tag math">Black-Scholes</span>
+
+        <h3>標準布朗運動 (Arithmetic Brownian Motion)</h3>
+        <p>數學家諾伯特·維納 (Norbert Wiener) 將這種運動嚴格定義為<b>維納過程 (Wiener Process, $W_t$)</b>。其數學表達式為：</p>
+        <div class="formula-display">
+            $$ dX_t = \mu dt + \sigma dW_t $$
+        </div>
+        <p>這代表位置的變化 $dX$ 由兩部分組成：確定的漂移 $\mu dt$ 和隨機的震盪 $\sigma dW_t$。這被稱為<b>算術布朗運動 (ABM)</b>。但它有一個致命缺點：<b>它可能變成負數</b>。對於股價或人口數量來說，這是不可接受的。</p>
+
+        <h3>幾何布朗運動 (Geometric Brownian Motion)</h3>
+        <p>為了解決負值的問題，並處理「複利」效應（即變化量與當前數值成正比），我們引入了<b>幾何布朗運動 (GBM)</b>。它的微分方程如下：</p>
+        <div class="highlight-box">
+            $$ \frac{dS_t}{S_t} = \mu dt + \sigma dW_t $$
+        </div>
+        <p>這條公式說的是：<b>「回報率」($dS/S$) 是隨機的，而不是「價格變化」($dS$) 是隨機的。</b></p>
+        
+        <h4>GBM 的重要特性：</h4>
+        <ul>
+            <li><b>正值性：</b> 由於是對數常態分佈，變數 $S_t$ 永遠大於 0。</li>
+            <li><b>獨立增量：</b> 未來的變化與過去的歷史無關（馬可夫性質）。</li>
+            <li><b>封閉解：</b> 透過伊藤引理 (Itô's Lemma)，我們可以解出 $S_t$ 的公式：</li>
+        </ul>
+        <div class="formula-display">
+            $$ S_t = S_0 \exp\left( (\mu - \frac{1}{2}\sigma^2)t + \sigma W_t \right) $$
+<p></p>
+        </div>
+        
+<div class="sim-container">
+    <h4>股價蒙地卡羅模擬</h4>
+    <div class="sim-controls">
+        <div><label>初始股價 ($S_0$)</label><input type="number" id="fin_s0" value="100"></div>
+        <div><label>預期年化報酬 ($\mu$ %)</label><input type="number" id="fin_mu" value="8"></div>
+        <div><label>波動率 ($\sigma$ %)</label><input type="number" id="fin_sigma" value="30"></div>
+        <div><label>年數 ($T$)</label><input type="number" id="fin_time" value="3"></div>
+        <button class="btn-run" onclick="runFinanceSim()">生成隨機路徑</button>
+    </div>
+    
+    <div style="position: relative; height: 300px; width: 100%;">
+        <canvas id="financeChart"></canvas>
+    </div>
+</div>
+
+    </div>
+
+    <div class="section-card">
+        <h2>3. 神經科學：大腦中的雜訊</h2>
+        <span class="tag neuro">神經科學</span> <span class="tag math">Ornstein-Uhlenbeck</span>
+
+        <p>你的大腦並不是一台精確的電腦。神經元內部的膜電位 (Membrane Potential) 受到離子通道隨機開關的影響，充滿了雜訊。</p>
+
+        <h3>應用模型：整合放電模型 (Stochastic Integrate-and-Fire)</h3>
+        <p>神經元的電壓 $V(t)$ 被建模為「有回歸力」的布朗運動（Ornstein-Uhlenbeck Process）。電壓會隨機波動，當積累到一個<b>閾值 (Threshold)</b> 時，神經元就會「開火 (Spike)」，發出訊號。</p>
+        
+        <div class="formula-box">
+            $$ dV_t = -\frac{V_t - V_{rest}}{\tau} dt + \sigma dW_t $$
+            <small>(第一項是漏電電流，讓電壓想回到休息狀態；第二項是隨機突觸雜訊)</small>
+        </div>
+
+<div class="sim-container">
+    <h4>互動實驗：神經元放電模擬</h4>
+    <div class="sim-controls">
+        <div><label>雜訊強度 ($\sigma$)</label><input type="number" id="neuro_sigma" value="2" step="0.5"></div>
+        <div><label>激發閾值 (Threshold)</label><input type="number" id="neuro_thresh" value="20"></div>
+        <button class="btn-run" onclick="runNeuroSim()">觀察電位波動</button>
+    </div>
+    
+    <div style="position: relative; height: 250px; width: 100%;">
+        <canvas id="neuroChart"></canvas>
+    </div>
+    <p style="font-size:0.9em; margin-top:10px;">圖中紅線代表放電閾值。注意電壓如何隨機遊走，直到觸碰紅線後瞬間重置(Spike)。</p>
+</div>
+
+    </div>
+
+    <div class="section-card">
+        <h2>4. 人工智慧：擴散模型 (Stable Diffusion)</h2>
+        <span class="tag ai">Generative AI</span> <span class="tag math">Langevin Dynamics</span>
+
+        <p>目前最強大的 AI 繪圖技術（如 Stable Diffusion, Midjourney）的核心數學原理，竟然就是布朗運動！</p>
+
+        <h3>原理：前向擴散過程 (Forward Diffusion)</h3>
+        <p>訓練 AI 的方式是：拿一張清晰的照片，不斷地對它加入「高斯雜訊」（即布朗運動 $dW_t$）。經過一段時間 $T$，這張圖會變成純粹的雜訊。
+        <br><b>AI 的任務就是學習這個過程的「逆過程」：如何從一團純雜訊中，一步步減去雜訊，還原出圖片。</b></p>
+        
+        <div class="formula-box">
+            $$ X_{t+1} = \sqrt{1-\beta_t} X_t + \sqrt{\beta_t} \epsilon, \quad \epsilon \sim N(0,I) $$
+            <small>(每一步都混入一點隨機雜訊 $\epsilon$)</small>
+        </div>
+
+        <div class="sim-container">
+            <h4>互動實驗：前向擴散過程 (圖片加噪)</h4>
+            <p>拖動滑桿，模擬布朗運動如何「摧毀」資訊。AI 的工作就是把這過程逆轉。</p>
+            <div class="sim-controls" style="grid-template-columns: 1fr;">
+                <label>擴散時間 / 雜訊強度 ($t$)</label>
+                <input type="range" id="ai_noise_slider" min="0" max="100" value="0" oninput="updateAIImage()">
+            </div>
+            <div class="image-noise-container">
+                <div class="img-box">
+                    <canvas id="ai_canvas_orig"></canvas>
+                    <div>原始訊號 ($X_0$)</div>
+                </div>
+                <div class="img-box">
+                    <canvas id="ai_canvas_noise"></canvas>
+                    <div>當前狀態 ($X_t$)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <h2>5. 水文學與環境工程：污染擴散</h2>
+        <span class="tag hydro">流體力學</span> <span class="tag math">Fokker-Planck</span>
+
+        <p>當工廠排放污染物到河流或地下水中，污染物並不會像一條直線一樣移動。水流的湍流 (Turbulence) 和地下介質的不均勻性，讓污染物的擴散呈現隨機性。</p>
+
+        <h3>應用模型：對流擴散方程式 (Advection-Diffusion Equation)</h3>
+        <p>這是布朗運動在宏觀尺度的體現。污染物粒子的位置 $X_t$ 遵循：</p>
+        <div class="formula-box">
+            $$ dX_t = \underbrace{v dt}_{\text{水流速度(對流)}} + \underbrace{\sqrt{2D} dW_t}_{\text{湍流擴散}} $$
+        </div>
+        <p>工程師利用此模型來預測污染範圍，計算需要多長時間污染物濃度才會降低到安全標準。</p>
+    </div>
+
+</div>
+
+<footer>
+    <p>Michael.</p> </footer>
+
+<script>
+    // --- 1. 花粉模擬 (Physics) ---
+    const pollenCanvas = document.getElementById('pollenCanvas');
+    const pCtx = pollenCanvas.getContext('2d');
+    
+    // Resize canvas
+    function resizePollen() {
+        // 確保寬度正確抓取父容器
+        if(pollenCanvas.parentElement) {
+            pollenCanvas.width = pollenCanvas.parentElement.offsetWidth - 40;
+        } else {
+            pollenCanvas.width = 800; // Fallback
+        }
+        pollenCanvas.height = 300;
+    }
+    window.addEventListener('resize', resizePollen);
+    resizePollen();
+
+    const MOLECULES = [];
+    const NUM_MOL = 200; // 增加分子數量
+    let pollen = { x: 0, y: 0, vx: 0, vy: 0, path: [] };
+
+    function initPollen() {
+        pollen.x = pollenCanvas.width / 2;
+        pollen.y = pollenCanvas.height / 2;
+        pollen.vx = 0; pollen.vy = 0; pollen.path = [];
+        MOLECULES.length = 0;
+        for(let i=0; i<NUM_MOL; i++) {
+            MOLECULES.push({
+                x: Math.random()*pollenCanvas.width,
+                y: Math.random()*pollenCanvas.height,
+                // 提高分子速度，讓撞擊更有感
+                vx: (Math.random()-0.5)*6, 
+                vy: (Math.random()-0.5)*6
+            });
+        }
+    }
+
+    function updatePollen() {
+        // Molecules
+        MOLECULES.forEach(m => {
+            m.x += m.vx; m.y += m.vy;
+            
+            // 分子邊界反彈
+            if(m.x < 0 || m.x > pollenCanvas.width) m.vx *= -1;
+            if(m.y < 0 || m.y > pollenCanvas.height) m.vy *= -1;
+            
+            // 碰撞檢測
+            let dx = pollen.x - m.x; 
+            let dy = pollen.y - m.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            let minDist = 15 + 3; // 花粉半徑15 + 分子半徑3
+
+            if(dist < minDist) { 
+                // 計算碰撞角度
+                let angle = Math.atan2(dy, dx);
+                
+                // 1. 分子反彈 (簡化物理：直接反向)
+                m.vx *= -1; 
+                m.vy *= -1;
+                
+                // 2. 花粉獲得推力 (關鍵修正：增加推力係數 0.15)
+                // 使用 cos/sin 確保推力方向是沿著撞擊點連線
+                let force = 0.15; 
+                pollen.vx += Math.cos(angle) * force;
+                pollen.vy += Math.sin(angle) * force;
+            }
+        });
+
+        // Pollen 更新
+        pollen.x += pollen.vx; 
+        pollen.y += pollen.vy;
+        
+        // 摩擦力 (調低摩擦力，讓它滑行久一點，0.98 -> 0.99)
+        pollen.vx *= 0.99; 
+        pollen.vy *= 0.99; 
+        
+        // 花粉邊界反彈
+        if(pollen.x < 15) { pollen.x = 15; pollen.vx *= -1; }
+        if(pollen.x > pollenCanvas.width-15) { pollen.x = pollenCanvas.width-15; pollen.vx *= -1; }
+        if(pollen.y < 15) { pollen.y = 15; pollen.vy *= -1; }
+        if(pollen.y > pollenCanvas.height-15) { pollen.y = pollenCanvas.height-15; pollen.vy *= -1; }
+
+        // 繪製路徑 (每 3 幀記一次，避免太密集)
+        if(Math.random() > 0.3) {
+            pollen.path.push({x:pollen.x, y:pollen.y});
+            if(pollen.path.length > 150) pollen.path.shift(); // 增加路徑長度顯示
+        }
+
+        // --- 繪圖區 ---
+        pCtx.fillStyle = '#2c3e50';
+        pCtx.fillRect(0,0,pollenCanvas.width, pollenCanvas.height);
+        
+        // 畫水分子
+        pCtx.fillStyle = 'rgba(52, 152, 219, 0.6)';
+        MOLECULES.forEach(m => {
+            pCtx.beginPath(); pCtx.arc(m.x, m.y, 2.5, 0, Math.PI*2); pCtx.fill();
+        });
+
+        // 畫軌跡
+        pCtx.strokeStyle = 'rgba(255,255,255,0.4)';
+        pCtx.lineWidth = 2;
+        pCtx.beginPath();
+        if(pollen.path.length > 0) {
+            pCtx.moveTo(pollen.path[0].x, pollen.path[0].y);
+            for(let p of pollen.path) pCtx.lineTo(p.x, p.y);
+            pCtx.stroke();
+        }
+
+        // 畫花粉 (黃色大球)
+        pCtx.fillStyle = '#f1c40f';
+        pCtx.shadowBlur = 15;
+        pCtx.shadowColor = '#f39c12';
+        pCtx.beginPath(); pCtx.arc(pollen.x, pollen.y, 15, 0, Math.PI*2); pCtx.fill();
+        pCtx.shadowBlur = 0;
+
+        requestAnimationFrame(updatePollen);
+    }
+    
+    // 啟動
+    initPollen();
+    updatePollen();
+
+
+    // --- 2. 金融模擬 (Finance) ---
+    let finChartInstance = null;
+    function runFinanceSim() {
+        const S0 = parseFloat(document.getElementById('fin_s0').value);
+        const mu = parseFloat(document.getElementById('fin_mu').value)/100;
+        const sigma = parseFloat(document.getElementById('fin_sigma').value)/100;
+        const T = parseFloat(document.getElementById('fin_time').value);
+        const steps = 100;
+        const dt = T/steps;
+
+        const datasets = [];
+        for(let j=0; j<20; j++) {
+            let data = [S0];
+            let current = S0;
+            for(let i=0; i<steps; i++) {
+                // GBM formula
+                let z = Math.sqrt(-2*Math.log(Math.random())) * Math.cos(2*Math.PI*Math.random());
+                current = current * Math.exp( (mu - 0.5*sigma*sigma)*dt + sigma*Math.sqrt(dt)*z );
+                data.push(current);
+            }
+            datasets.push({
+                data: data,
+                borderColor: 'rgba(52, 152, 219, 0.4)',
+                borderWidth: 1,
+                pointRadius: 0
+            });
+        }
+        
+        // Expected Value Line
+        let expData = [];
+        for(let i=0; i<=steps; i++) {
+            expData.push(S0 * Math.exp(mu * (i/steps)*T));
+        }
+        datasets.push({
+            data: expData,
+            borderColor: '#e74c3c',
+            borderWidth: 2,
+            borderDash: [5,5],
+            label: 'Expected Value',
+            pointRadius: 0
+        });
+
+        const ctx = document.getElementById('financeChart').getContext('2d');
+        if(finChartInstance) finChartInstance.destroy();
+        finChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: { labels: Array(steps+1).fill(''), datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // ★★★ 關鍵修正：不維持長寬比，直接填滿高度 ★★★
+                plugins: { legend: { display: false } },
+                scales: { x: {display: false}, y: {title:{display:true, text:'Price'}} },
+                animation: false
+            }
+        });
+    }
+    window.addEventListener('load', runFinanceSim);
+
+
+    // --- 3. 神經科學模擬 (Neuro) - 修正高度版 ---
+    let neuroChartInstance = null;
+    function runNeuroSim() {
+        const sigma = parseFloat(document.getElementById('neuro_sigma').value);
+        const thresh = parseFloat(document.getElementById('neuro_thresh').value);
+        const tau = 20; // Time constant
+        const dt = 0.5;
+        const V_rest = 0;
+        const steps = 400;
+
+        let V = [V_rest];
+        let spikes = [];
+
+        let currentV = V_rest;
+        for(let i=1; i<steps; i++) {
+            // Ornstein-Uhlenbeck Process
+            let z = Math.sqrt(-2*Math.log(Math.random())) * Math.cos(2*Math.PI*Math.random());
+            let dV = -((currentV - V_rest)/tau)*dt + sigma*Math.sqrt(dt)*z;
+            currentV += dV;
+
+            // Integrate and Fire
+            if(currentV >= thresh) {
+                currentV = 40; // Spike visualization height
+                V.push(currentV);
+                currentV = V_rest; // Reset
+                // Add a few reset points to make spike look nice
+                i++; if(i<steps) V.push(-10); // Hyperpolarization
+            } else {
+                V.push(currentV);
+            }
+        }
+
+        const ctx = document.getElementById('neuroChart').getContext('2d');
+        if(neuroChartInstance) neuroChartInstance.destroy();
+        
+        // Threshold Line
+        let threshLine = Array(steps).fill(thresh);
+
+        neuroChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: { 
+                labels: Array(steps).fill(''), 
+                datasets: [
+                    {
+                        data: V,
+                        borderColor: '#8e44ad',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        label: 'Membrane Potential'
+                    },
+                    {
+                        data: threshLine,
+                        borderColor: '#e74c3c',
+                        borderWidth: 1,
+                        borderDash: [5,5],
+                        pointRadius: 0,
+                        label: 'Threshold'
+                    }
+                ] 
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // ★★★ 關鍵修正：不維持長寬比 ★★★
+                animation: false,
+                scales: { x: {display: false}, y: {title: {display:true, text: 'Voltage (mV)'}} }
+            }
+        });
+    }
+    window.addEventListener('load', runNeuroSim);
+
+
+
+    // --- 4. AI Image Noise Sim ---
+    const aiCanvasOrig = document.getElementById('ai_canvas_orig');
+    const aiCanvasNoise = document.getElementById('ai_canvas_noise');
+    const aiCtxOrig = aiCanvasOrig.getContext('2d');
+    const aiCtxNoise = aiCanvasNoise.getContext('2d');
+
+    // Draw a simple shape on Orig
+    aiCanvasOrig.width = 200; aiCanvasOrig.height = 200;
+    aiCanvasNoise.width = 200; aiCanvasNoise.height = 200;
+
+    function drawBaseImage() {
+        aiCtxOrig.fillStyle = '#111';
+        aiCtxOrig.fillRect(0,0,200,200);
+        
+        // Draw a "Robot" face
+        aiCtxOrig.fillStyle = '#16a085';
+        aiCtxOrig.fillRect(50, 50, 100, 100); // Face
+        aiCtxOrig.fillStyle = '#fff';
+        aiCtxOrig.fillRect(70, 70, 20, 20); // Eye L
+        aiCtxOrig.fillRect(110, 70, 20, 20); // Eye R
+        aiCtxOrig.fillStyle = '#e74c3c';
+        aiCtxOrig.fillRect(80, 120, 40, 10); // Mouth
+    }
+
+    function updateAIImage() {
+        const t = parseInt(document.getElementById('ai_noise_slider').value);
+        // t goes from 0 to 100
+        // Alpha controls how much original image remains
+        // Noise level increases with t
+        
+        // Get original image data
+        const imgData = aiCtxOrig.getImageData(0,0,200,200);
+        const pixels = imgData.data;
+        
+        const noiseData = aiCtxNoise.createImageData(200,200);
+        const noisePixels = noiseData.data;
+
+        // Diffusion math simulation: X_t = sqrt(1-beta)*X_0 + sqrt(beta)*Noise
+        // Simplified: mix = (1 - t/100) * pixel + (t/100) * random
+        
+        const noiseFactor = t / 100;
+        const signalFactor = 1 - noiseFactor; 
+
+        for(let i=0; i<pixels.length; i+=4) {
+            // Generate Gaussian Noise approx
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random(); 
+            while(v === 0) v = Math.random();
+            let z = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+            let noiseVal = z * 128 + 128; // Map to 0-255 range approx
+
+            // Apply forward diffusion formula
+            // We use linear interpolation for visual simplicity, 
+            // though actual Stable Diffusion uses sqrt schedule.
+            
+            // R
+            noisePixels[i] = pixels[i] * (1-noiseFactor) + (Math.random()*255) * noiseFactor;
+            // G
+            noisePixels[i+1] = pixels[i+1] * (1-noiseFactor) + (Math.random()*255) * noiseFactor;
+            // B
+            noisePixels[i+2] = pixels[i+2] * (1-noiseFactor) + (Math.random()*255) * noiseFactor;
+            // A
+            noisePixels[i+3] = 255;
+        }
+
+        aiCtxNoise.putImageData(noiseData, 0, 0);
+    }
+
+    drawBaseImage();
+    updateAIImage(); // Init
+
+</script>
+
+</body>
+</html>
+

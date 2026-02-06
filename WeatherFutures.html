@@ -1,0 +1,683 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Derivatives Valuation</title>
+    
+    <script>window.MathJax = { tex: { inlineMath: [['$', '$']] } };</script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #e67e22; /* Hermès Orange */
+            --bg: #f5f7fa;
+            --card: #ffffff;
+            --border: #e1e4e8;
+        }
+
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1600px; margin: 0 auto; }
+
+        /* Header */
+        header { 
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); 
+            color: white; padding: 30px; border-radius: 12px; margin-bottom: 25px; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15); text-align: center;
+        }
+        header h1 { margin: 0; font-weight: 300; letter-spacing: 2px; }
+
+        /* Layout */
+        .grid { display: grid; grid-template-columns: 380px 1fr; gap: 25px; }
+        @media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } }
+
+        /* Cards */
+        .card { background: var(--card); padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card h3 { border-left: 5px solid var(--accent); padding-left: 15px; margin-top: 0; color: var(--primary); }
+
+        /* Form */
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; color: #555; }
+        input, select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        .row { display: flex; gap: 10px; } .col { flex: 1; }
+
+        /* Button */
+        button.btn-run {
+            width: 100%; padding: 16px; background: var(--primary); color: white; 
+            border: none; border-radius: 6px; font-size: 1.1em; font-weight: bold; 
+            cursor: pointer; transition: 0.2s; box-shadow: 0 4px 0 #1a252f;
+        }
+        button.btn-run:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #1a252f; }
+        button.btn-run:active { transform: translateY(2px); box-shadow: 0 0 0; }
+        button:disabled { background: #95a5a6; cursor: wait; box-shadow: none; }
+
+        /* Result Styles */
+        .price-tag { 
+            font-size: 2.8em; font-weight: 800; color: var(--accent); 
+            text-align: center; margin: 10px 0; text-shadow: 1px 1px 0px rgba(0,0,0,0.1);
+        }
+        .price-label { text-align: center; font-size: 0.9em; color: #7f8c8d; letter-spacing: 1px; }
+        
+        /* Explanation Box */
+        .explainer {
+            background: #fdfefe; border-left: 4px solid var(--accent); padding: 15px;
+            margin-top: 15px; font-size: 0.95em; line-height: 1.7; color: #444;
+        }
+        .explainer b { color: var(--primary); }
+
+        /* Chart Container */
+        .chart-wrapper { position: relative; height: 300px; width: 100%; }
+        .chart-hint { 
+            position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.8); 
+            padding: 5px 10px; border-radius: 4px; font-size: 0.8em; color: #666; pointer-events: none;
+        }
+
+        /* --- 底部教育區塊專用樣式 --- */
+        .tabs { overflow: hidden; border-bottom: 2px solid #ddd; margin-bottom: 20px; margin-top: 40px; }
+        .tab-btn {
+            background-color: inherit; float: left; border: none; outline: none; cursor: pointer;
+            padding: 14px 16px; transition: 0.3s; font-size: 1.1em; color: #555;
+        }
+        .tab-btn:hover { background-color: #e2e6ea; }
+        .tab-btn.active { border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: bold; }
+        
+        .tab-content { display: none; padding: 20px; background: #fff; border-radius: 8px; animation: fadeEffect 0.5s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        @keyframes fadeEffect { from {opacity: 0;} to {opacity: 1;} }
+
+        .tag { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.85em; margin-right: 5px; color: #fff; font-weight: bold; }
+        .tag-hdd { background: #c0392b; }
+        .tag-cdd { background: #2980b9; }
+
+        .math-block {
+            background: #f8f9fa; border-left: 4px solid var(--primary); padding: 15px; margin: 15px 0; overflow-x: auto;
+            font-family: "Times New Roman", serif; font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Weather Derivatives Valuation</h1>
+    <p>Burn Analysis Pricing • By Michael</p> </header>
+
+<div class="container">
+    
+    <div class="grid">
+        <div>
+            <div class="card">
+                <h3>1. 歷史數據區間 (Data Range)</h3>
+                <div class="row">
+                    <div class="col">
+                        <label>開始年份</label>
+                        <input type="number" id="startYear" value="1995" min="1950">
+                    </div>
+                    <div class="col">
+                        <label>結束年份</label>
+                        <input type="number" id="endYear" value="2025" min="1950">
+                    </div>
+                </div>
+                <label>地點 (City)</label>
+                <select id="location">
+                    <option value="25.03,121.56">台北 (Taipei)</option>
+                    <option value="40.71,-74.01">紐約 (New York)</option>
+                    <option value="51.51,-0.13">倫敦 (London)</option>
+                    <option value="35.69,139.69">東京 (Tokyo)</option>
+                    <option value="41.85,-87.65">芝加哥 (Chicago)</option>
+                </select>
+                <div class="explainer" style="margin-bottom:15px; background:#eef2f3; border-color:#95a5a6;">
+                    <Small>• <b>Burn 10</b>：能源交易主流，反映近期暖化趨勢。<br></Small>
+                    <Small>• <b>Burn 30</b>：WMO 氣候常態，包含更多極端值。<br></Small>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>2. 合約條件 (Specifications)</h3>
+                <label>類型 & 指標</label>
+                <div class="row">
+                    <div class="col">
+                        <select id="contractType">
+                            <option value="Call">Call (買權)</option>
+                            <option value="Put">Put (賣權)</option>
+                            <option value="Swap">Swap (互換)</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <select id="indexType">
+                            <option value="HDD">HDD (暖度日)</option>
+                            <option value="CDD">CDD (冷度日)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <label>計算月份 (可跨年)</label>
+                <div class="row">
+                    <div class="col">
+                        <label style="font-size:0.8em; font-weight:normal;">Start Month</label>
+                        <select id="sm">
+                            <option value="11" selected>11月</option>
+                            <option value="12">12月</option>
+                            <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+                            <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+                            <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label style="font-size:0.8em; font-weight:normal;">End Month</label>
+                        <select id="em">
+                            <option value="2" selected>2月</option>
+                            <option value="3">3月</option><option value="4">4月</option><option value="5">5月</option>
+                            <option value="6">6月</option><option value="7">7月</option><option value="8">8月</option>
+                            <option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option><option value="1">1月</option>
+                        </select>
+                    </div>
+                </div>
+
+                <label>進階氣候參數</label>
+                <div class="row">
+                    <div class="col">
+                        <label style="font-size:0.8em; font-weight:normal;">基準溫 (°C)</label>
+                        <input type="number" id="baseTemp" value="18" step="0.5">
+                    </div>
+                    <div class="col">
+                        <label style="font-size:0.8em; font-weight:normal;">暖化調整/年 (°C)</label>
+                        <input type="number" id="trend" value="0.02" step="0.01">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="border-left: 5px solid #fafafa;">
+                <h3>3. 財務參數 (Valuation)</h3>
+                <label>履約點 (Strike)</label>
+                <input type="number" id="strike" value="180">
+                
+                <div class="row">
+                    <div class="col">
+                        <label>每點價值 ($)</label>
+                        <input type="number" id="tick" value="20">
+                    </div>
+                    <div class="col">
+                        <label>上限 Cap ($)</label>
+                        <input type="number" id="cap" value="50000">
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col">
+                        <label>無風險利率 (%)</label>
+                        <input type="number" id="r" value="4.5" step="0.1">
+                    </div>
+                    <div class="col">
+                        <label>風險貼水 (%)</label>
+                        <input type="number" id="prem" value="5.0" step="0.1">
+                    </div>
+                </div>
+
+                <button class="btn-run" onclick="runModel()" id="btnRun">
+                    RUN MODEL <span id="loading" style="display:none;">⏳</span>
+                </button>
+            </div>
+        </div>
+
+        <div>
+            <div class="card" style="text-align: center;">
+                <div class="price-label">ESTIMATED FAIR VALUE</div>
+                <div class="price-tag" id="resPrice">--</div>
+                
+                <div class="explainer" id="priceExplain" style="text-align: left;">
+                    <p></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3><i class="fas fa-search"></i> 每日氣溫走勢與基準線 (Zoomable)</h3>
+                    <button onclick="resetZoom()" style="font-size:0.8em; padding:5px 10px; cursor:pointer;">重置縮放</button>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="tempChart"></canvas>
+                    <div class="chart-hint">💡 滾輪：縮放 | 拖曳：移動區間</div>
+                </div>
+                <p style="font-size:0.8em; color:#777; text-align:center;">
+                    紅線為基準溫。藍線為實際氣溫（已做暖化調整）。區域內即為累積 HDD/CDD 的來源。
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>歷史指數分佈 (Historical Index Distribution)</h3>
+                <div class="chart-wrapper" style="height: 250px;">
+                    <canvas id="indexChart"></canvas>
+                </div>
+                <p style="font-size:0.8em; color:#777; text-align:center; margin-top:5px;">
+                    顯示過去每一年的 HDD/CDD 累計數值。
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>歷史回測賠付分佈 (Historical Payoffs)</h3>
+                <div class="chart-wrapper" style="height: 250px;">
+                    <canvas id="barChart"></canvas>
+                </div>
+                <div style="margin-top:15px; font-size:0.9em;">
+                    <ul id="statsList" style="column-count: 2; color:#555;"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'Intro')">商品介紹與類型</button>
+        <button class="tab-btn" onclick="openTab(event, 'Model')">數學模型與評價方法</button>
+    </div>
+
+    <div id="Intro" class="tab-content" style="display: block;">
+        <h3>天氣衍生性商品基礎</h3>
+        <p>這類商品主要用於對沖「非災難性」的氣候風險（如暖冬導致天然氣滯銷、涼夏導致電力需求下降）。</p>
+        
+        <h4>1. 核心指標 (Underlying Indices)</h4>
+        <ul>
+            <li><span class="tag tag-hdd">HDD</span> <b>Heating Degree Days (取暖度日)</b>：衡量寒冷程度。
+                $$ HDD = \sum_{t=1}^{N} \max(\text{Base} - T_t, 0) $$
+                <small>當氣溫低於基準溫（通常 18°C），數值累積。數值越大代表冬天越冷，能源需求越高。</small>
+            </li>
+            <li><span class="tag tag-cdd">CDD</span> <b>Cooling Degree Days (製冷度日)</b>：衡量炎熱程度。
+                $$ CDD = \sum_{t=1}^{N} \max(T_t - \text{Base}, 0) $$
+                <small>當氣溫高於基準溫（通常 18°C），數值累積。數值越大代表夏天越熱，電力需求越高。</small>
+            </li>
+        </ul>
+
+        <div style="background:#eef7fb; border-left:4px solid #2980b9; padding:10px; margin:10px 0; font-size:0.95em; color:#444;">
+            <b>💡 為什麼基準溫 (Base Temp) 通常是 18°C？</b><br>
+            這來自於能源物理學的「能量平衡點」。統計顯示，當氣溫在 <b>18°C (65°F)</b> 時，人類既不開暖氣也不開冷氣，能源消耗最低。這已成為國際（如 CME 芝加哥交易所）的黃金標準。
+        </div>
+
+        <h4>2. 商品類型與資金流向 (Types & Cash Flow)</h4>
+                <ul>
+            <li><b>Swap (天氣互換)：</b> 雙方約定一個固定指數值 $K$。線性賠付。
+                <br>Payoff = $(Index - K) \times \text{Tick Size}$ (對買方而言)
+            </li>
+            <li><b>Call Option (天氣買權)：</b> 擔心指數過高（例如：擔心夏天太熱 CDD 飆升導致電力成本過高，或是作為投機）。
+                <br>Payoff = $\max(Index - K, 0) \times \text{Tick Size}$
+            </li>
+            <li><b>Put Option (天氣賣權)：</b> 擔心指數過低（例如：擔心冬天太暖 HDD 過低導致天然氣賣不掉）。
+                <br>Payoff = $\max(K - Index, 0) \times \text{Tick Size}$
+            </li>
+        </ul>
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <div style="flex: 1; background:#f9fbe7; border: 1px solid #cddc39; padding: 10px; border-radius: 4px;">
+                <div style="color:#827717; font-weight:bold; margin-bottom:5px;">現在付的錢：公允價值 (Fair Value)</div>
+                <small>這就像<b>「保費」</b>。根據歷史發生機率算出您現在<b>必須支付</b>給賣方的成本 (Premium)。付出去就不會回來。</small>
+            </div>
+            <div style="flex: 1; background:#e8f5e9; border: 1px solid #4caf50; padding: 10px; border-radius: 4px;">
+                <div style="color:#2e7d32; font-weight:bold; margin-bottom:5px;">未來拿的錢：實際賠付 (Payout)</div>
+                <small>這就像<b>「理賠金」</b>。合約結束時，若實際指數超過履約條件，賣方<b>賠償</b>給您的錢。公式：差距點數 × 每點價值。</small>
+            </div>
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; font-size:0.9em; margin-bottom:15px; border:1px solid #eee;">
+            <tr style="background:#f4f4f4;">
+                <th style="padding:8px; border:1px solid #ddd; text-align:left;">類型</th>
+                <th style="padding:8px; border:1px solid #ddd; text-align:left;">獲利(賠付)條件</th>
+                <th style="padding:8px; border:1px solid #ddd; text-align:left;">適用情境 (以 HDD 為例)</th>
+            </tr>
+            <tr>
+                <td style="padding:8px; border:1px solid #ddd;"><b>Call Option (買權)</b></td>
+                <td style="padding:8px; border:1px solid #ddd; color:#c0392b; font-weight:bold;">實際指數 > 履約點</td>
+                <td style="padding:8px; border:1px solid #ddd;">
+                    擔心<b>「太冷」</b> (指數飆高)<br>
+                    <small>例：消費者怕瓦斯費暴漲、建築業怕結凍無法施工。</small>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding:8px; border:1px solid #ddd;"><b>Put Option (賣權)</b></td>
+                <td style="padding:8px; border:1px solid #ddd; color:#27ae60; font-weight:bold;">實際指數 < 履約點</td>
+                <td style="padding:8px; border:1px solid #ddd;">
+                    擔心<b>「太暖」</b> (指數過低)<br>
+                    <small>例：天然氣公司怕暖氣滯銷、羽絨衣廠商怕沒人買。</small>
+                </td>
+            </tr>
+        </table>
+
+        <h4>3. 關鍵觀念辨析：履約點 (Strike)</h4>
+        <div style="background:#fff8e1; border-left:4px solid #f1c40f; padding:10px; margin:10px 0; font-size:0.95em; color:#444;">
+            <b>⚠️ Strike 500 代表什麼？</b><br>
+            履約點指的是<b>「累積點數」</b>，請想像成一張<b>「集點卡」</b>：
+            <ul>
+                <li>假設 12/1 冷了 5 度 (得5分)，12/2 冷了 10 度 (得10分)，兩天累積就是 15 分。</li>
+                <li>若合約長達 120 天，<b>Strike 500</b> 代表您預期這 120 天的總分加起來會超過 500 分。</li>
+                <li>這是一個<b>「起賠門檻」</b>，只有當累積總分穿過這個門檻，選擇權才會開始賺錢。</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="Model" class="tab-content">
+        <h3>評價模型詳解</h3>
+        <p>由於天氣不可交易（Non-tradable），我們無法使用 Black-Scholes。業界主要採用精算與統計模擬方法。</p>
+
+        <h4>1. 歷史燃燒法 (Burn Analysis) - 用於 Swaps</h4>
+        <p>這是最直觀的方法，假設過去的氣候分佈代表未來。我們計算過去 20 年每年對應合約月份的 HDD/CDD，並取平均。</p>
+        <div class="math-block">
+            $$ \text{Fair Value} = e^{-rT} \cdot \left( \frac{1}{N} \sum_{i=1}^{N} \text{Payoff}(Index_{year\_i}) \right) $$
+        </div>
+        <p><b>關鍵調整 (Detrending)：</b> 由於全球暖化，過去 20 年的冬天數據可能比現在冷。我們在模型中引入了線性趨勢調整：$T_{adj} = T_{hist} + \beta \times (\text{Year}_{curr} - \text{Year}_{hist})$。</p>
+
+        <h4>2. 蒙地卡羅模擬 (Monte Carlo with OU Process) - 用於 Options</h4>
+        <p>選擇權對「波動率」敏感，因此我們模擬 10,000 條氣溫路徑。氣溫遵循<b>均值回歸過程 (Ornstein-Uhlenbeck)</b>：</p>
+        <div class="math-block">
+            $$ dT_t = \kappa (\bar{T}_t - T_t) dt + \sigma_t dW_t $$
+        </div>
+        <ul>
+            <li>$\bar{T}_t$：季節性平均氣溫（用正弦波擬合歷史均溫）。</li>
+            <li>$\kappa$：回歸速度（氣溫偏離後回到正常的快慢）。</li>
+            <li>$\sigma_t$：氣溫波動率（通常冬季波動率大於夏季）。</li>
+        </ul>
+        <p>本系統為了在瀏覽器端快速運行，採用<b>「歷史模擬法 (Historical Simulation)」</b>作為核心引擎，這在實務上比未經校準的 OU 模型更穩健。</p>
+    </div>
+
+
+
+</div>
+
+<script>
+    // --- Utils for Bottom Tabs ---
+    function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tab-btn");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+
+    // --- Global Chart Instances ---
+    let tempChart = null;
+    let barChart = null;
+    let indexChart = null; // New chart for Index History
+    let cachedData = {};
+
+    async function runModel() {
+        const btn = document.getElementById('btnRun');
+        const load = document.getElementById('loading');
+        btn.disabled = true; load.style.display = 'inline';
+
+        try {
+            // 1. Gather Inputs
+            const [lat, lon] = document.getElementById('location').value.split(',');
+            const sYear = parseInt(document.getElementById('startYear').value);
+            const eYear = parseInt(document.getElementById('endYear').value);
+            const sm = parseInt(document.getElementById('sm').value);
+            const em = parseInt(document.getElementById('em').value);
+            
+            const type = document.getElementById('contractType').value; // Call, Put, Swap
+            const idxType = document.getElementById('indexType').value; // HDD, CDD
+            const baseT = parseFloat(document.getElementById('baseTemp').value);
+            const trend = parseFloat(document.getElementById('trend').value);
+
+            const strike = parseFloat(document.getElementById('strike').value);
+            const tick = parseFloat(document.getElementById('tick').value);
+            const cap = parseFloat(document.getElementById('cap').value);
+            const rate = parseFloat(document.getElementById('r').value) / 100;
+            const riskPrem = parseFloat(document.getElementById('prem').value) / 100;
+
+            // 2. Fetch Data (Optimized)
+            const cacheKey = `${lat},${lon},${sYear},${eYear}`;
+            let daily;
+
+            if(cachedData[cacheKey]) {
+                daily = cachedData[cacheKey];
+            } else {
+                const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${sYear}-01-01&end_date=${eYear}-12-31&daily=temperature_2m_mean&timezone=auto`;
+                const res = await fetch(url);
+                const json = await res.json();
+                if(!json.daily) throw new Error("API Error");
+                daily = json.daily;
+                cachedData[cacheKey] = daily;
+            }
+
+            // 3. Process Data: Daily Temp Array (Detrended) & Yearly Indices
+            const processedDates = [];
+            const processedTemps = [];
+            const yearlyResults = [];
+
+            // Determine loop range for "Seasons"
+            const isCross = sm > em;
+            const seasonStartYear = sYear;
+            const seasonEndYear = isCross ? eYear - 1 : eYear;
+
+            // Prepare Chart Data (Full timeline)
+            const todayYear = new Date().getFullYear();
+            for(let i=0; i<daily.time.length; i++) {
+                const d = new Date(daily.time[i]);
+                const rawTemp = daily.temperature_2m_mean[i];
+                // Detrending: Adjust past temps to "Current Year" equivalent
+                // Formula: T_adj = T_raw + (Trend * (CurrentYear - DataYear))
+                const yearDiff = todayYear - d.getFullYear();
+                const adjTemp = rawTemp + (yearDiff * trend);
+                
+                processedDates.push(daily.time[i]);
+                processedTemps.push(adjTemp);
+            }
+
+            // Calculate Indices per Season
+            for(let y=seasonStartYear; y<=seasonEndYear; y++) {
+                let d1, d2;
+                if(isCross) {
+                    d1 = new Date(y, sm-1, 1);
+                    d2 = new Date(y+1, em, 0); // Last day of EM next year
+                } else {
+                    d1 = new Date(y, sm-1, 1);
+                    d2 = new Date(y, em, 0);
+                }
+
+                let accIndex = 0;
+                let count = 0;
+
+                for(let i=0; i<processedDates.length; i++) {
+                    const d = new Date(processedDates[i]);
+                    d.setHours(0,0,0,0); d1.setHours(0,0,0,0); d2.setHours(0,0,0,0);
+                    
+                    if(d >= d1 && d <= d2) {
+                        const t = processedTemps[i];
+                        let val = 0;
+                        if(idxType === 'HDD') val = Math.max(baseT - t, 0);
+                        else val = Math.max(t - baseT, 0);
+                        accIndex += val;
+                        count++;
+                    }
+                }
+
+                if(count > 0) {
+                    // Calc Payoff
+                    let pay = 0;
+                    if(type === 'Call') pay = Math.max(accIndex - strike, 0) * tick;
+                    else if(type === 'Put') pay = Math.max(strike - accIndex, 0) * tick;
+                    else pay = (accIndex - strike) * tick; // Swap
+
+                    if(type !== 'Swap') pay = Math.min(pay, cap);
+                    yearlyResults.push({ year: y, index: accIndex, payoff: pay });
+                }
+            }
+
+            // 4. Valuation
+            if(yearlyResults.length === 0) throw new Error("無有效區間數據");
+            const avgPayoff = yearlyResults.reduce((a,b)=>a+b.payoff, 0) / yearlyResults.length;
+            const fairVal = avgPayoff * Math.exp(-rate * 1); // T=1
+            const finalPrice = fairVal * (1 + riskPrem);
+
+            // 5. Update UI
+            document.getElementById('resPrice').innerText = finalPrice.toLocaleString('en-US', {style:'currency', currency:'USD'});
+            
+            updateExplanation(type, idxType, strike, finalPrice, yearlyResults);
+
+            // 6. Draw Charts
+            drawTempChart(processedDates, processedTemps, baseT);
+            drawBarChart(yearlyResults, strike, type); // Draw Payoffs
+            drawIndexChart(yearlyResults, idxType); // Draw Index Distribution (New)
+
+        } catch(e) {
+            alert("Error: " + e.message);
+            console.error(e);
+        } finally {
+            btn.disabled = false; load.style.display = 'none';
+        }
+    }
+
+    function updateExplanation(type, idxType, strike, price, history) {
+        const box = document.getElementById('priceExplain');
+        const profitYears = history.filter(h => h.payoff > 0).length;
+        const prob = ((profitYears / history.length) * 100).toFixed(1);
+        
+        let msg = "";
+        if(type === 'Call') {
+            msg = `<b>這筆錢代表「保費」：</b><br>
+            您正在購買一份保障：當未來 ${idxType} 指數<b>高於 ${strike}</b> 時，您將獲得賠償。<br>
+            • 根據歷史區間，發生機率約 <b>${prob}%</b>。<br>
+            • 支付 $${price.toFixed(0)}，將氣候風險轉嫁給賣方。`;
+        } else if(type === 'Put') {
+            msg = `<b>這筆錢代表「保費」：</b><br>
+            您正在購買一份保障：當未來 ${idxType} 指數<b>低於 ${strike}</b> 時，您將獲得賠償。<br>
+            • 根據歷史區間，發生機率約 <b>${prob}%</b>。<br>
+            • 適合對沖銷售量因天氣不好下滑的風險。`;
+        } else {
+            msg = `<b>這代表合約的「公允價值」：</b><br>
+            Swap 是一種交換合約。若數值為正，代表根據歷史經驗，您<b>平均會收到</b>這筆金額。<br>
+            • 用來鎖定成本，讓財務報表不受天氣波動影響。`;
+        }
+        box.innerHTML = msg;
+        
+        const indices = history.map(h=>h.index);
+        const maxI = Math.max(...indices).toFixed(0);
+        const minI = Math.min(...indices).toFixed(0);
+        const std = calculateStd(indices).toFixed(1);
+        
+        document.getElementById('statsList').innerHTML = `
+            <li>樣本年份：${history.length} 年</li>
+            <li>指數波動率：${std}</li>
+            <li>最高指數：${maxI}</li>
+            <li>最低指數：${minI}</li>
+        `;
+    }
+
+    function drawTempChart(dates, temps, baseT) {
+        const ctx = document.getElementById('tempChart').getContext('2d');
+        if(tempChart) tempChart.destroy();
+        const baseLine = new Array(dates.length).fill(baseT);
+
+        tempChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [
+                    {
+                        label: '每日氣溫 (暖化調整後)',
+                        data: temps,
+                        borderColor: '#3498db',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        tension: 0.1
+                    },
+                    {
+                        label: `基準溫 (${baseT}°C)`,
+                        data: baseLine,
+                        borderColor: '#e74c3c',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        borderDash: [5, 5]
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    zoom: {
+                        zoom: {
+                            wheel: { enabled: true },
+                            pinch: { enabled: true },
+                            mode: 'x',
+                        },
+                        pan: { enabled: true, mode: 'x' }
+                    }
+                },
+                scales: {
+                    x: { ticks: { maxTicksLimit: 10 } },
+                    y: { title: {display:true, text:'Temperature (°C)'} }
+                }
+            }
+        });
+    }
+
+    function drawBarChart(history, strike, type) {
+        const ctx = document.getElementById('barChart').getContext('2d');
+        if(barChart) barChart.destroy();
+
+        const colors = history.map(h => {
+            if(h.payoff > 0) return '#2ecc71'; 
+            return '#ecf0f1';
+        });
+
+        barChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: history.map(h => h.year),
+                datasets: [{
+                    label: '模擬賠償金額 (Payoff)',
+                    data: history.map(h => h.payoff),
+                    backgroundColor: colors,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, title: {display:true, text:'Payoff (USD)'} } }
+            }
+        });
+    }
+
+    // New Function: Draw Historical Index Distribution
+    function drawIndexChart(history, idxType) {
+        const ctx = document.getElementById('indexChart').getContext('2d');
+        if(indexChart) indexChart.destroy();
+
+        indexChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: history.map(h => h.year),
+                datasets: [{
+                    label: `${idxType} Index Value`,
+                    data: history.map(h => h.index),
+                    backgroundColor: idxType === 'HDD' ? 'rgba(192, 57, 43, 0.7)' : 'rgba(41, 128, 185, 0.7)',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: { y: { beginAtZero: false, title: {display:true, text:`${idxType} Value`} } }
+            }
+        });
+    }
+
+    function resetZoom() { if(tempChart) tempChart.resetZoom(); }
+    function calculateStd(array) {
+        const n = array.length;
+        const mean = array.reduce((a, b) => a + b) / n;
+        return Math.sqrt(array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
+    }
+</script>
+
+</body>
+</html>
+

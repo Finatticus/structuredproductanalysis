@@ -1,0 +1,917 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美式選擇權定價模型</title>
+    
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']]
+        }
+      };
+    </script>
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --border-color: #e9ecef;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-color);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 300;
+        }
+
+        /* Layout Grid */
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card Styling */
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box; 
+            font-size: 1em;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #1a252f;
+        }
+
+        /* Results Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f1f3f5;
+            color: var(--primary-color);
+        }
+
+        .highlight-price {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        /* Educational Section */
+        .edu-section {
+            margin-top: 30px;
+        }
+
+        .edu-card {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .edu-header {
+            background: #f1f3f5;
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .edu-content {
+            padding: 20px;
+            display: none; 
+            border-top: 1px solid #ddd;
+        }
+
+        .edu-content.active {
+            display: block;
+        }
+
+        .toggle-icon {
+            font-size: 0.8em;
+            color: #777;
+        }
+
+        .math-block {
+            overflow-x: auto;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .note {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>美式選擇權評價模型</h1>
+
+    <div class="grid-container">
+        <div class="card">
+            <h3><i class="fas fa-sliders-h"></i> 參數設定</h3>
+            <div class="form-group">
+                <label>UL Price (S)</label>
+                <input type="number" id="spot" value="100" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>Strike (K)</label>
+                <input type="number" id="strike" value="100" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>Risk-Free Rate (r, %)</label>
+                <input type="number" id="rate" value="5" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>Dividend (q, %)</label>
+                <input type="number" id="div" value="0" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>Volitility (σ, %)</label>
+                <input type="number" id="vol" value="20" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>Time to Maturity (T, 年)</label>
+                <input type="number" id="time" value="1" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Option Type</label>
+                <select id="type">
+                    <option value="call">Call (買權)</option>
+                    <option value="put" selected>Put (賣權)</option>
+                </select>
+            </div>
+            <hr>
+            <div class="form-group">
+                <label>數值方法精度設定</label>
+                <div class="note">Binomial Tree (N): <span id="step-display">100</span></div>
+                <input type="range" id="steps" min="50" max="500" value="100" style="width:100%">
+                
+                <div class="note" style="margin-top:10px;">LSM Simulation: <span id="path-display">10000</span></div>
+                <input type="range" id="paths" min="1000" max="50000" step="1000" value="10000" style="width:100%">
+            </div>
+            <button onclick="calculateAll()">Run Model</button>
+        </div>
+
+        <div>
+            <div class="card">
+                <h3><i class="fas fa-chart-line"></i> 評價結果比較</h3>
+                <p class="note">不同模型對同一參數的定價結果與耗時</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>模型名稱</th>
+                            <th>選擇權價格</th>
+                            <th>耗時 (ms)</th>
+                            <th>備註</th>
+                        </tr>
+                    </thead>
+                    <tbody id="result-body">
+                        <tr><td colspan="4" style="text-align:center;">請點擊「Run Model」</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h3>結果分析</h3>
+                <div id="analysis-text">
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="edu-section">
+        <h2>模型原理與數學公式詳解</h2>
+        
+        <div class="edu-card">
+            <div class="edu-header" onclick="toggleEdu('edu-bs')">
+                1. Bjerksund-Stensland Model (1993/2002) - 解析近似解
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div id="edu-bs" class="edu-content">
+                <h4>核心概念：將「何時履約」簡化為數學邊界</h4>
+                <p>美式選擇權的難點在於「最佳履約時刻」是不確定的。Bjerksund & Stensland (1993) 提出了一個天才般的假設：<b>假設提前履約的邊界價格 $I$ 是一個平坦的常數（或隨時間呈現特定的指數衰減）</b>。</p>
+                <p>這將一個複雜的「隨機停止問題」轉化為兩個簡單部分的總和：</p>
+                <ol>
+                    <li><b>歐式選擇權價值</b>：假設不能提前履約的價值。</li>
+                    <li><b>提前履約權利金 (Early Exercise Premium)</b>：一旦股價 $S$ 觸碰到邊界 $I$，立即履約所帶來的額外收益。</li>
+                </ol>
+
+                <h4>詳細數學推導與公式結構</h4>
+                <p>對於美式買權，我們先定義持有成本 $b = r - q$。</p>
+                <ul>
+                    <li>若 $b \geq r$ (即 $q \le 0$)：提前履約永遠不明智，模型直接退化為 Black-Scholes 公式。</li>
+                    <li>若 $b < r$：存在一個臨界股價 $I$，當 $S_t > I$ 時應立即履約。</li>
+                </ul>
+
+                <p><b>1. 決定履約邊界 $I$：</b></p>
+                <div class="math-block">
+                    $$ I = B_0 + (B_\infty - B_0)(1 - e^{h(T)}) $$
+                </div>
+                <p style="font-size: 0.9em; color: #555;">
+                    這裡 $B_\infty$ 是剩餘時間無限長時的履約邊界，$B_0$ 是到期時的邊界（即 $K$）。這條公式畫出了一條隨時間逼近 $K$ 的曲線。
+                </p>
+
+                <p><b>2. 評價主公式：</b></p>
+                <div class="math-block">
+                    $$ C = \underbrace{\alpha S^\beta}_{\text{吸收項}} - \underbrace{\alpha \phi(S, T, \beta, I, I)}_{\text{扣除未觸碰邊界}} + \underbrace{\phi(S, T, 1, I, I) - \phi(S, T, 1, K, I)}_{\text{歐式區間價值}} - \dots $$
+                </div>
+                
+                <h4>符號詳細對照表</h4>
+                <table style="width:100%; font-size:0.9em; margin-top:10px;">
+                    <tr><td width="15%"><b>$S, K$</b></td><td>標的資產價格、履約價格。</td></tr>
+                    <tr><td><b>$I$</b></td><td><b>提前履約邊界 (Trigger Price)</b>。若股價高於此值，程式假設你會立即履約。</td></tr>
+                    <tr><td><b>$\beta$</b></td><td><b>彈性係數 (Elasticity)</b>。來自微分方程 $\frac{1}{2}\sigma^2 S^2 V_{SS} + bS V_S - rV = 0$ 的解，代表選擇權對股價變動的敏感度結構。</td></tr>
+                    <tr><td><b>$\alpha$</b></td><td><b>權重係數</b>，定義為 $(I-K)I^{-\beta}$，確保在邊界 $I$ 處，選擇權價值剛好等於內含價值 $I-K$ (Value Matching Condition)。</td></tr>
+                    <tr><td><b>$\phi(\cdot)$</b></td><td><b>輔助函數</b>，包含累計常態分佈 $\Phi(d)$。它計算的是「在特定條件下（如股價大於 $K$ 且小於 $I$）的折現機率」。</td></tr>
+                </table>
+                <p class="note"><b>總結：</b>BS 模型就像是在 Black-Scholes 的基礎上，加上了一個「如果股價漲太高就強迫結算」的修正項。這就是為什麼它計算極快且精確度極高。</p>
+            </div>
+        </div>
+
+        <div class="edu-card">
+            <div class="edu-header" onclick="toggleEdu('edu-tree')">
+                2. Binomial Tree (CRR) - 二項式樹狀圖
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div id="edu-tree" class="edu-content">
+                <h4>核心概念：模擬平行宇宙</h4>
+                <p>想像時間不是連續流動的，而是一跳一跳的。在每一個時間點，股價只有兩條路可走：<b>向上 ($u$)</b> 或 <b>向下 ($d$)</b>。這樣就形成了一棵隨時間擴展的樹。</p>
+
+                <div style="text-align:center; margin: 20px 0;">
+                    <svg width="300" height="220" viewBox="0 0 300 220" style="background:#fcfcfc; border:1px solid #eee; border-radius:8px;">
+                        <line x1="50" y1="110" x2="130" y2="50" stroke="#333" stroke-width="2"/>
+                        <line x1="50" y1="110" x2="130" y2="170" stroke="#333" stroke-width="2"/>
+                        <line x1="130" y1="50" x2="230" y2="20" stroke="#aaa" stroke-width="1.5" stroke-dasharray="4"/>
+                        <line x1="130" y1="50" x2="230" y2="80" stroke="#aaa" stroke-width="1.5" stroke-dasharray="4"/>
+                        <line x1="130" y1="170" x2="230" y2="140" stroke="#aaa" stroke-width="1.5" stroke-dasharray="4"/>
+                        <line x1="130" y1="170" x2="230" y2="200" stroke="#aaa" stroke-width="1.5" stroke-dasharray="4"/>
+                        
+                        <circle cx="50" cy="110" r="20" fill="#3498db" />
+                        <text x="50" y="115" font-size="12" fill="white" text-anchor="middle" font-weight="bold">S₀</text>
+
+                        <circle cx="130" cy="50" r="18" fill="#ecf0f1" stroke="#2c3e50" stroke-width="2"/>
+                        <text x="130" y="55" font-size="11" fill="#333" text-anchor="middle">Su</text>
+
+                        <circle cx="130" cy="170" r="18" fill="#ecf0f1" stroke="#2c3e50" stroke-width="2"/>
+                        <text x="130" y="175" font-size="11" fill="#333" text-anchor="middle">Sd</text>
+
+                        <text x="240" y="25" font-size="10" fill="#7f8c8d">Suu (大漲)</text>
+                        <text x="240" y="85" font-size="10" fill="#7f8c8d">Sud (先漲後跌)</text>
+                        <text x="240" y="145" font-size="10" fill="#7f8c8d">Sdu (先跌後漲)</text>
+                        <text x="240" y="205" font-size="10" fill="#7f8c8d">Sdd (大跌)</text>
+
+                        <text x="80" y="70" font-size="12" fill="#27ae60">p (上漲機率)</text>
+                        <text x="80" y="160" font-size="12" fill="#c0392b">1-p (下跌)</text>
+                        
+                        <text x="50" y="210" font-size="10" fill="#333" text-anchor="middle">現在 (t=0)</text>
+                        <text x="130" y="210" font-size="10" fill="#333" text-anchor="middle">一步後 (t=1)</text>
+                    </svg>
+                </div>
+
+                <h4>詳細計算步驟</h4>
+                <ol>
+                    <li>
+                        <b>建立股價樹 (Forward Induction)：</b><br>
+                        從 $S_0$ 開始，計算每個節點的股價。
+                        <br>上漲倍數 $u = e^{\sigma\sqrt{\Delta t}}$，下跌倍數 $d = 1/u$。
+                    </li>
+                    <li>
+                        <b>風險中立機率 (Risk Neutral Probability)：</b><br>
+                        這是樹狀圖的靈魂。我們不猜測真實的上漲機率，而是計算一個「讓期望回報等於無風險利率」的機率 $p$。
+                        $$ p = \frac{e^{(r-q)\Delta t} - d}{u - d} $$
+                    </li>
+                    <li>
+                        <b>回推價值 (Backward Induction)：</b><br>
+                        我們從最右邊（到期日）開始，計算該點的價值（即 $max(S-K, 0)$）。接著往左回推，對於每個節點，我們面臨一個<b>美式選擇權的關鍵決策</b>：
+                        <div class="math-block">
+                            $$ V_{當下} = \max \left( \underbrace{S_{當下} - K}_{\text{立即履約價值}}, \quad \underbrace{e^{-r\Delta t} [p V_{上} + (1-p) V_{下}]}_{\text{繼續持有價值}} \right) $$
+                        </div>
+                        如果「立即履約」拿到的錢比「繼續持有（未來的期望折現值）」還多，我們就選擇履約。這就是樹狀圖能解決美式問題的關鍵。
+                    </li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="edu-card">
+            <div class="edu-header" onclick="toggleEdu('edu-fdm')">
+                3. Finite Difference Method (Implicit) - 有限差分法
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div id="edu-fdm" class="edu-content">
+                <h4>核心概念：將時間與價格織成一張網</h4>
+                <p>如果說樹狀圖是讓股價跳動，<b>有限差分法 (FDM)</b> 就是把整個股價與時間的平面切成無數個小方格（網格）。我們試圖解出每一個網格點上的選擇權價格 $V(S, t)$。</p>
+                <p>這就好比熱傳導：如果你知道邊界的溫度（到期日價值），熱量（價格）會如何隨著時間在網格中擴散回現在？</p>
+
+                <h4>數學模型與求解過程</h4>
+                <p><b>1. 離散化 PDE：</b><br>
+                Black-Scholes 偏微分方程包含三個部分：時間變化、價格的一階變動（Delta）、價格的二階變動（Gamma）。我們用差分來近似微分：</p>
+                <ul>
+                    <li>$\frac{\partial V}{\partial t} \approx \frac{V_{i,j} - V_{i-1,j}}{\Delta t}$ （時間的推進）</li>
+                    <li>$\frac{\partial V}{\partial S} \approx \frac{V_{i,j+1} - V_{i,j-1}}{2\Delta S}$ （價格的斜率）</li>
+                    <li>$\frac{\partial^2 V}{\partial S^2} \approx \frac{V_{i,j+1} - 2V_{i,j} + V_{i,j-1}}{\Delta S^2}$ （價格的曲率）</li>
+                </ul>
+
+                <p><b>2. 建立方程組 (Matrix System)：</b><br>
+                我們使用<b>隱式法 (Implicit Method)</b>，這意味著我們利用「未來的狀態」來反推「現在的狀態」。這會產生一個聯立方程式，對於每一個時間點 $i$，我們都要解這組方程：
+                </p>
+                <div class="math-block">
+                    $$ a_j V_{i, j-1} + b_j V_{i, j} + c_j V_{i, j+1} = V_{i+1, j} $$
+                </div>
+                <p>這表示：中間這個點的價值，與它上方、下方、以及它在上一刻的價值都有關聯。</p>
+
+                <p><b>3. 求解與美式檢查：</b><br>
+                這會形成一個<b>三對角矩陣 (Tridiagonal Matrix)</b>。我們從到期日（已知價值）開始，一步步往回解矩陣（使用 Thomas Algorithm 快速求解）。
+                <br><b>關鍵步驟：</b>每解出一天的價格後，我們必須逐格檢查：
+                $$ V_{calculated} = \max(\text{矩陣解出的價值}, \text{立即履約價值}) $$
+                如果不做這步，算出來的就是歐式選擇權；做了這步，就是美式選擇權。</p>
+            </div>
+        </div>
+
+        <div class="edu-card">
+            <div class="edu-header" onclick="toggleEdu('edu-lsm')">
+                4. Longstaff-Schwartz (LSM) - 最小平方法蒙地卡羅
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div id="edu-lsm" class="edu-content">
+                <h4>核心概念：在混沌中尋找規律</h4>
+                <p>一般的蒙地卡羅模擬只能「向前看」，它產生一萬條路徑直到到期，然後取平均。但美式選擇權需要「向後看」：在第 $t$ 天，我怎麼知道明天股價會跌還是漲？我該現在賣出還是繼續等？</p>
+                <p>Longstaff & Schwartz (2001) 的突破在於：<b>利用「所有路徑」的資訊來預測「這一條路徑」的未來。</b></p>
+
+                <h4>詳細演算法流程 (Step-by-Step)</h4>
+                
+                <p><b>第一步：模擬大量路徑</b><br>
+                生成 $N$ 條股價走勢圖（例如 10,000 條）。這構成了我們的數據庫。</p>
+
+                <p><b>第二步：從最後一天往回走</b><br>
+                假設我們現在站在到期前一天 $t = T-1$。我們只關注那些<b>「價內 (In the Money)」</b>的路徑（因為只有價內才需要考慮履約）。</p>
+
+                <p><b>第三步：最小平方法回歸 (Regression) - 最關鍵的一步</b><br>
+                對於每一條價內的路徑，我們面臨兩個選擇：
+                <ol>
+                    <li><b>立即履約：</b>拿走 $K - S_t$。這數值是確定的。</li>
+                    <li><b>繼續持有：</b>價值等於「未來的折現現金流」。但未來是不確定的。</li>
+                </ol>
+                <br>
+                LSM 的魔法在於，它建立一個公式來預測繼續持有的價值：
+                $$ E[\text{Future Value} | S_t] \approx \alpha + \beta_1 S_t + \beta_2 S_t^2 $$
+                我們把「當前的股價 $S_t$」當作 $X$，把「這條路徑隨後實際產生的折現現金流」當作 $Y$，進行回歸分析。算出 $\alpha, \beta$ 後，我們就有了一個<b>「預測水晶球」</b>。</p>
+
+                <p><b>第四步：決策與更新</b><br>
+                將當前股價代入剛剛算出的回歸公式，得到「預測的繼續持有價值」。
+                <ul>
+                    <li>如果 <b>立即履約 > 預測持有價值</b> $\rightarrow$ 修改這條路徑的現金流為立即履約的金額，並把之後的現金流歸零。</li>
+                    <li>否則 $\rightarrow$ 保留原本未來的現金流。</li>
+                </ul>
+                </p>
+
+                <p><b>第五步：折現</b><br>
+                重複上述步驟直到 $t=0$。最後將所有路徑的現金流折現並取平均，就是美式選擇權的價格。</p>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+<script>
+    // --- Utility Functions ---
+    function cdf(x) {
+        var a1 =  0.254829592;
+        var a2 = -0.284496736;
+        var a3 =  1.421413741;
+        var a4 = -1.453152027;
+        var a5 =  1.061405429;
+        var p  =  0.3275911;
+
+        var sign = 1;
+        if (x < 0) sign = -1;
+        x = Math.abs(x)/Math.sqrt(2.0);
+
+        var t = 1.0/(1.0 + p*x);
+        var y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*Math.exp(-x*x);
+
+        return 0.5*(1.0 + sign*y);
+    }
+
+    function pdf(x) {
+        return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+    }
+
+    // --- 1. Bjerksund-Stensland (1993) Model (CORRECTED) ---
+    function BjerksundStensland1993(S, K, T, r, q, sigma, type) {
+         if (type === 'put') {
+            // Put-Call Transformation
+            return BjerksundStensland1993(K, S, T, q, r, sigma, 'call');
+        }
+
+        var b = r - q;
+        if (b >= r) { 
+             return BlackScholesCall(S, K, T, r, b, sigma);
+        }
+
+        var beta = (0.5 - b/(sigma*sigma)) + Math.sqrt( Math.pow( (b/(sigma*sigma) - 0.5), 2) + 2*r/(sigma*sigma) );
+        var B_inf = (beta / (beta - 1)) * K;
+        var B_0 = Math.max(K, (r / (r - b)) * K);
+        
+        var h = -(b * T + 2 * sigma * Math.sqrt(T)) * ( (K*K) / ((B_inf - B_0)*B_0) );
+        var I = B_0 + (B_inf - B_0) * (1 - Math.exp(h));
+
+        if (S >= I) {
+            return S - K;
+        } else {
+            // 公式修正：term2 與 term3 的減法順序修正
+            // 標準公式中的區間是 phi(I) - phi(K)，代表在 K 到 I 之間
+            var alpha = (I - K) * Math.pow(I, -beta);
+            
+            // Term 1: 提前履約的權利金貢獻
+            var term1 = alpha * Math.pow(S, beta) - alpha * phi_func(S, T, beta, I, I, r, b, sigma);
+            
+            // Term 2: 歐式部分 (Asset Terms)
+            // 修正：應為 phi(I) - phi(K)，之前反了導致負值
+            var term2 = phi_func(S, T, 1, I, I, r, b, sigma) - phi_func(S, T, 1, K, I, r, b, sigma);
+            
+            // Term 3: 履約價支付 (Strike Terms)
+            // 修正：應為 phi(I) - phi(K)
+            var term3 = K * (phi_func(S, T, 0, I, I, r, b, sigma) - phi_func(S, T, 0, K, I, r, b, sigma));
+            
+            return term1 + term2 - term3;
+        }
+    }
+
+    function phi_func(S, T, gamma, H, I, r, b, sigma) {
+        var lambda = -r + gamma * b + 0.5 * gamma * (gamma - 1) * sigma * sigma;
+        var d = -(Math.log(S/H) + (b + (gamma - 0.5) * sigma * sigma) * T) / (sigma * Math.sqrt(T));
+        var kappa = (2 * b) / (sigma * sigma) + (2 * gamma - 1);
+        return Math.exp(lambda * T) * Math.pow(S, gamma) * (cdf(d) - Math.pow(I/S, kappa) * cdf(d - (2 * Math.log(I/S)) / (sigma * Math.sqrt(T))));
+    }
+
+    function BlackScholesCall(S, K, T, r, b, sigma) {
+        var d1 = (Math.log(S/K) + (b + 0.5*sigma*sigma)*T) / (sigma*Math.sqrt(T));
+        var d2 = d1 - sigma*Math.sqrt(T);
+        return S * Math.exp((b-r)*T) * cdf(d1) - K * Math.exp(-r*T) * cdf(d2);
+    }
+
+    // --- 2. Binomial Tree (CRR) ---
+    function BinomialTree(S, K, T, r, q, sigma, type, steps) {
+        var dt = T / steps;
+        var u = Math.exp(sigma * Math.sqrt(dt));
+        var d = 1 / u;
+        var p = (Math.exp((r - q) * dt) - d) / (u - d);
+        var df = Math.exp(-r * dt); // Discount factor
+
+        // Initialize asset prices at maturity
+        var values = [];
+        for (var i = 0; i <= steps; i++) {
+            var St = S * Math.pow(u, steps - i) * Math.pow(d, i);
+            if (type === 'call') values[i] = Math.max(0, St - K);
+            else values[i] = Math.max(0, K - St);
+        }
+
+        // Backward induction
+        for (var j = steps - 1; j >= 0; j--) {
+            for (var i = 0; i <= j; i++) {
+                // Continuation value
+                var cont = df * (p * values[i] + (1 - p) * values[i+1]);
+                
+                // Asset price at this node
+                var St = S * Math.pow(u, j - i) * Math.pow(d, i);
+                
+                // Exercise value
+                var exercise = 0;
+                if (type === 'call') exercise = St - K;
+                else exercise = K - St;
+
+                // American Option check
+                values[i] = Math.max(cont, exercise);
+            }
+        }
+        return values[0];
+    }
+
+    // --- 3. Finite Difference (Implicit) ---
+    function FiniteDifference(S, K, T, r, q, sigma, type, M, N_price) {
+        // M: time steps, N_price: price steps
+        // Grid setup
+        var S_max = 3 * Math.max(S, K); // Sufficiently high boundary
+        var dS = S_max / N_price;
+        var dt = T / M;
+
+        // Initialize grid values (at Maturity)
+        var V_old = new Float64Array(N_price + 1);
+        var V_new = new Float64Array(N_price + 1);
+        var S_grid = new Float64Array(N_price + 1);
+
+        for (var j = 0; j <= N_price; j++) {
+            S_grid[j] = j * dS;
+            if (type === 'call') V_old[j] = Math.max(0, S_grid[j] - K);
+            else V_old[j] = Math.max(0, K - S_grid[j]);
+        }
+
+        // Coefficients for tridiagonal matrix
+        var alpha = new Float64Array(N_price + 1);
+        var beta = new Float64Array(N_price + 1);
+        var gamma = new Float64Array(N_price + 1);
+
+        // Time stepping
+        for (var i = 0; i < M; i++) {
+            // Build Matrix coefficients
+            var A = [], B = [], C = [], D = [];
+            
+            // Boundary j=0
+            A[0] = 0; B[0] = 1; C[0] = 0; 
+            D[0] = (type === 'put') ? K : 0; 
+
+            // Boundary j=N
+            A[N_price] = 0; B[N_price] = 1; C[N_price] = 0;
+            if(type === 'call') D[N_price] = S_max - K * Math.exp(-r * (i+1)*dt); 
+            else D[N_price] = 0;
+
+            for (var j = 1; j < N_price; j++) {
+                var j2 = j*j;
+                var sigma2 = sigma*sigma;
+                var nu = r - q;
+                
+                var aj = 0.5 * dt * (nu * j - sigma2 * j2);
+                var bj = 1 + dt * (sigma2 * j2 + r);
+                var cj = 0.5 * dt * (-nu * j - sigma2 * j2);
+                
+                A[j] = aj; 
+                B[j] = bj; 
+                C[j] = cj;
+                D[j] = V_old[j];
+            }
+
+            // Thomas Algorithm (Tridiagonal Solve)
+            var cp = new Float64Array(N_price + 1);
+            var dp = new Float64Array(N_price + 1);
+            
+            cp[0] = C[0] / B[0];
+            dp[0] = D[0] / B[0];
+
+            for(var j=1; j < N_price; j++){
+                var temp = B[j] - A[j] * cp[j-1];
+                cp[j] = C[j] / temp;
+                dp[j] = (D[j] - A[j] * dp[j-1]) / temp;
+            }
+            // Last one
+            var tempLast = B[N_price] - A[N_price] * cp[N_price-1];
+            dp[N_price] = (D[N_price] - A[N_price] * dp[N_price-1]) / tempLast;
+
+            // Back substitution
+            V_new[N_price] = dp[N_price];
+            for(var j = N_price - 1; j >= 0; j--){
+                V_new[j] = dp[j] - cp[j] * V_new[j+1];
+            }
+
+            // American Option Early Exercise Check
+            for(var j = 0; j <= N_price; j++){
+                var exercise = (type === 'call') ? (S_grid[j] - K) : (K - S_grid[j]);
+                V_old[j] = Math.max(V_new[j], exercise);
+            }
+        }
+
+        // Interpolate result for exact S
+        var index = Math.floor(S / dS);
+        var w = (S - S_grid[index]) / dS;
+        return (1-w)*V_old[index] + w*V_old[index+1];
+    }
+
+    // --- 4. Longstaff-Schwartz (LSM) Monte Carlo ---
+    function LSM(S0, K, T, r, q, sigma, type, paths, steps) {
+        var dt = T / steps;
+        var df = Math.exp(-r * dt);
+        
+        // 修正：使用固定種子的隨機數生成器，確保結果一致 (Deterministic)
+        var seed = 12345; // 固定種子
+        function seededRandom() {
+            var x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        }
+        
+        // 1. Generate Paths (Geometric Brownian Motion)
+        var S = []; 
+        var drift = (r - q - 0.5 * sigma * sigma) * dt;
+        var volSqDt = sigma * Math.sqrt(dt);
+
+        for (var i = 0; i < paths; i++) {
+            var path = new Float32Array(steps + 1);
+            path[0] = S0;
+            for (var t = 1; t <= steps; t++) {
+                // Box-Muller transform using Seeded Random
+                var u1 = seededRandom();
+                var u2 = seededRandom();
+                var z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+                path[t] = path[t-1] * Math.exp(drift + volSqDt * z);
+            }
+            S.push(path);
+        }
+
+        // 2. Initialize Cashflows at maturity
+        var CashFlow = new Float64Array(paths);
+        for (var i = 0; i < paths; i++) {
+            var ST = S[i][steps];
+            var payoff = (type === 'call') ? Math.max(0, ST - K) : Math.max(0, K - ST);
+            CashFlow[i] = payoff;
+        }
+
+        // 3. Backward Loop
+        for (var t = steps - 1; t > 0; t--) {
+            var x = []; // Stock prices for ITM paths
+            var y = []; // Discounted Cashflows for ITM paths
+            var indices = [];
+
+            for (var i = 0; i < paths; i++) {
+                var St = S[i][t];
+                var intrinsic = (type === 'call') ? (St - K) : (K - St);
+                if (intrinsic > 0) {
+                    x.push(St);
+                    y.push(CashFlow[i] * df); 
+                    indices.push(i);
+                }
+            }
+
+            if (x.length < 3) continue; 
+
+            // Polynomial Regression (Basis: 1, S, S^2)
+            var sum_1 = 0, sum_x = 0, sum_x2 = 0, sum_x3 = 0, sum_x4 = 0;
+            var sum_y = 0, sum_xy = 0, sum_x2y = 0;
+
+            for(var k=0; k<x.length; k++){
+                var val = x[k];
+                var val2 = val*val;
+                sum_1 += 1;
+                sum_x += val;
+                sum_x2 += val2;
+                sum_x3 += val2*val;
+                sum_x4 += val2*val2;
+                
+                sum_y += y[k];
+                sum_xy += val * y[k];
+                sum_x2y += val2 * y[k];
+            }
+
+            var M = [
+                [sum_1, sum_x, sum_x2],
+                [sum_x, sum_x2, sum_x3],
+                [sum_x2, sum_x3, sum_x4]
+            ];
+            var RHS = [sum_y, sum_xy, sum_x2y];
+
+            var beta = solveLinearSystem3x3(M, RHS);
+
+            // Discount ALL cashflows first
+            for(var i=0; i<paths; i++) {
+                CashFlow[i] *= df;
+            }
+
+            // Update Cashflows for ITM paths if exercise is optimal
+            for (var k = 0; k < indices.length; k++) {
+                var idx = indices[k];
+                var St = x[k];
+                var continuation = beta[0] + beta[1]*St + beta[2]*St*St;
+                var exercise = (type === 'call') ? (St - K) : (K - St);
+
+                if (exercise > continuation) {
+                    CashFlow[idx] = exercise;
+                }
+            }
+        }
+        
+        var total = 0;
+        for (var i = 0; i < paths; i++) {
+            total += CashFlow[i];
+        }
+        return (total / paths) * df; 
+    }
+
+    function solveLinearSystem3x3(A, B) {
+        var n = 3;
+        for (var i = 0; i < n; i++) {
+            var maxEl = Math.abs(A[i][i]);
+            var maxRow = i;
+            for (var k = i + 1; k < n; k++) {
+                if (Math.abs(A[k][i]) > maxEl) {
+                    maxEl = Math.abs(A[k][i]);
+                    maxRow = k;
+                }
+            }
+
+            for (var k = i; k < n; k++) {
+                var tmp = A[maxRow][k]; A[maxRow][k] = A[i][k]; A[i][k] = tmp;
+            }
+            var tmp = B[maxRow]; B[maxRow] = B[i]; B[i] = tmp;
+
+            for (var k = i + 1; k < n; k++) {
+                var c = -A[k][i] / A[i][i];
+                for (var j = i; j < n; j++) {
+                    if (i == j) {
+                        A[k][j] = 0;
+                    } else {
+                        A[k][j] += c * A[i][j];
+                    }
+                }
+                B[k] += c * B[i];
+            }
+        }
+
+        var x = new Array(n);
+        for (var i = n - 1; i > -1; i--) {
+            x[i] = B[i] / A[i][i];
+            for (var k = i - 1; k > -1; k--) {
+                B[k] -= A[k][i] * x[i];
+            }
+        }
+        return x;
+    }
+
+    // --- Main Controller ---
+    
+    document.getElementById('steps').oninput = function() {
+        document.getElementById('step-display').innerText = this.value;
+    }
+    document.getElementById('paths').oninput = function() {
+        document.getElementById('path-display').innerText = this.value;
+    }
+
+    function toggleEdu(id) {
+        var el = document.getElementById(id);
+        if (el.style.display === 'block') {
+            el.style.display = 'none';
+        } else {
+            el.style.display = 'block';
+        }
+    }
+
+    function formatNumber(num) {
+        return num.toFixed(4);
+    }
+
+    function calculateAll() {
+        var S = parseFloat(document.getElementById('spot').value);
+        var K = parseFloat(document.getElementById('strike').value);
+        var r = parseFloat(document.getElementById('rate').value) / 100;
+        var q = parseFloat(document.getElementById('div').value) / 100;
+        var sigma = parseFloat(document.getElementById('vol').value) / 100;
+        var T = parseFloat(document.getElementById('time').value);
+        var type = document.getElementById('type').value;
+        
+        var N_tree = parseInt(document.getElementById('steps').value);
+        var N_lsm_paths = parseInt(document.getElementById('paths').value);
+        var N_fdm_steps = N_tree; 
+
+        var tbody = document.getElementById('result-body');
+        tbody.innerHTML = '';
+
+        var models = [
+            {
+                name: "Bjerksund-Stensland (2002)",
+                func: () => BjerksundStensland1993(S, K, T, r, q, sigma, type),
+                desc: "解析近似解，速度極快，誤差通常 < 0.1%"
+            },
+            {
+                name: "Binomial Tree (CRR)",
+                func: () => BinomialTree(S, K, T, r, q, sigma, type, N_tree),
+                desc: `二項式樹狀圖 (N=${N_tree})，隨步數增加收斂`
+            },
+            {
+                name: "Finite Difference (Implicit)",
+                func: () => FiniteDifference(S, K, T, r, q, sigma, type, N_fdm_steps, N_fdm_steps),
+                desc: "隱式有限差分法，數值解最穩定基準"
+            },
+            {
+                name: "Longstaff-Schwartz (LSM)",
+                func: () => LSM(S, K, T, r, q, sigma, type, N_lsm_paths, 50),
+                desc: `蒙地卡羅迴歸 (Paths=${N_lsm_paths})，固定種子`
+            }
+        ];
+
+        var results = [];
+
+        models.forEach(model => {
+            var t0 = performance.now();
+            var price = model.func();
+            var t1 = performance.now();
+            var time = (t1 - t0).toFixed(2);
+            
+            results.push({
+                name: model.name,
+                price: price,
+                time: time,
+                desc: model.desc
+            });
+        });
+
+        results.forEach(res => {
+            var row = `<tr>
+                <td><b>${res.name}</b></td>
+                <td class="highlight-price">${formatNumber(res.price)}</td>
+                <td>${res.time}</td>
+                <td style="font-size:0.9em; color:#666;">${res.desc}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+
+        var prices = results.map(r => r.price);
+        var maxP = Math.max(...prices);
+        var minP = Math.min(...prices);
+        var spread = maxP - minP;
+        
+        var analysis = `在此參數設定下，各模型價格差異約為 <b>${spread.toFixed(4)}</b> (${((spread/maxP)*100).toFixed(2)}%)。<br>`;
+        if (spread < 0.05) {
+            analysis += "各模型結果高度一致，顯示參數處於穩定區間。";
+        } else {
+            analysis += "模型間存在些許差異，通常是因為美式履約邊界的處理方式不同（樹狀圖與LSM的步數設定會影響收斂）。";
+        }
+        document.getElementById('analysis-text').innerHTML = analysis;
+    }
+</script>
+
+</body>
+</html>
+
