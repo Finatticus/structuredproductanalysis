@@ -227,7 +227,7 @@ Monthly:每月觀察">
         <canvas id="worstPathsChart"></canvas>
     </div>
     <p style="font-size: 0.9rem; color: var(--text-sub); text-align: center; margin-top: 10px;">
-        💡 顯示模擬中前500條路徑中表現最差股票的模擬股票價格路徑
+        💡 顯示模擬中前1000條路徑中表現最差股票的模擬股票價格路徑
     </p>
 </div>
 
@@ -417,7 +417,7 @@ function runSimulation(p) {
         }
         
         // 只紀錄前 220 次模擬
-        if (n < 500) {
+        if (n < 1000) {
             allWorstPaths.push(pathWorstOf);
         }
     }
@@ -1288,3 +1288,4 @@ function renderWorstPathsChart(paths, params) {
  
 
 </body></html>
+
