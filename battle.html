@@ -2,12 +2,13 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Tetris Battle Clone - Final Polish</title>
+    <title>Tetris Battle</title>
     <style>
         :root {
             --neon-blue: #00f3ff;
             --dark-bg: #0b0c10;
             --panel-bg: rgba(31, 40, 51, 0.85);
+            --border-color: rgba(69, 162, 158, 0.5);
         }
         body {
             background: radial-gradient(circle at center, #1a222a 0%, var(--dark-bg) 100%);
@@ -20,6 +21,88 @@
             margin: 0;
             overflow: hidden;
         }
+
+        /* --- 開始與倒數介面 --- */
+        #start-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11, 12, 16, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            transition: opacity 0.5s ease;
+        }
+
+        /* --- 暫停介面 --- */
+        #pause-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11, 12, 16, 0.85);
+            display: none; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 900;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .mode-selection {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+        .mode-title {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--neon-blue);
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+        }
+        .start-btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            letter-spacing: 2px;
+            background: transparent;
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 900;
+            transition: all 0.3s;
+            min-width: 250px;
+        }
+        .start-btn:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.6);
+            transform: translateY(-3px);
+        }
+        #countdown-display {
+            position: absolute;
+            font-size: 150px;
+            font-weight: 900;
+            color: var(--neon-blue);
+            text-shadow: 0 0 40px var(--neon-blue);
+            display: none;
+            pointer-events: none;
+            z-index: 1001;
+        }
+        .countdown-anim {
+            animation: count-zoom 1s ease-out forwards;
+        }
+        @keyframes count-zoom {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+
         #game-wrapper {
             position: relative; 
             display: flex;
@@ -74,29 +157,30 @@
             border: none;
             background: transparent;
         }
-        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-        button {
-            padding: 10px;
-            background: linear-gradient(45deg, #45a29e, #66fcf1);
-            color: #0b0c10;
-            border: none;
+        .exit-btn {
+            background: rgba(255, 51, 51, 0.1);
+            border: 1px solid #ff3333;
+            color: #ff3333;
+            padding: 8px;
             border-radius: 8px;
             cursor: pointer;
-            font-weight: 900;
-            font-size: 14px;
+            font-weight: bold;
+            font-size: 12px;
+            margin-bottom: 10px;
             transition: all 0.2s;
-            box-shadow: 0 4px 15px rgba(102, 252, 241, 0.2);
         }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 252, 241, 0.5);
+        .exit-btn:hover {
+            background: #ff3333;
+            color: #000;
         }
+
         .controls-hint { 
             font-size: 12px; color: #888; margin-top: auto; line-height: 1.8; 
             background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px;
             border: 1px dashed rgba(69, 162, 158, 0.3);
         }
         .controls-hint b { color: #c5c6c7; font-size: 13px;}
+        
         #gameOverScreen {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(11, 12, 16, 0.95); flex-direction: column;
@@ -116,6 +200,7 @@
             transition: opacity 0.2s, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .msg-show { opacity: 1 !important; transform: translate(-50%, -50%) scale(1) !important; }
+        
         .msg-tspin {
             color: #fff !important;
             text-shadow: 0 4px 0 #990099, 0 0 20px #cc33cc, 0 0 40px #00ffff !important;
@@ -128,34 +213,61 @@
             80% { transform: translate(-50%, -50%) scale(1.3) rotate(-5deg); opacity: 1; }
             100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
         }
+        .msg-allclear {
+            color: #fff !important;
+            text-shadow: 0 0 10px #fff, 0 0 20px var(--neon-blue), 0 0 40px var(--neon-blue) !important;
+            font-size: 48px !important;
+        }
     </style>
 </head>
 <body>
 
 <div id="game-wrapper">
+    <div id="start-overlay">
+        <div class="mode-selection" id="modeButtons">
+            <div class="mode-title">SELECT MODE</div>
+            <button class="start-btn" onclick="initiateCountdown('TIME')">2 分鐘計分模式</button>
+            <button class="start-btn" onclick="initiateCountdown('LINES')">40 行競速模式</button>
+        </div>
+        <div id="countdown-display">3</div>
+    </div>
+
+    <div id="pause-overlay">
+        <div class="mode-selection">
+            <div class="mode-title">PAUSED</div>
+            <button class="start-btn" onclick="resumeGame()">繼續冒險</button>
+            <button class="start-btn" style="border-color: #ff3333; color: #ff3333;" onclick="showStartOverlay()">退出冒險</button>
+        </div>
+    </div>
+
     <div id="gameOverScreen">
         <h1 id="gameOverTitle">挑戰失敗！</h1>
         <p id="gameOverSub" style="margin-bottom: 30px; font-size: 18px;">方塊已經觸頂了，請重新選擇模式</p>
         <div style="display: flex; gap: 15px;">
-            <button onclick="startGame('TIME')">重新選擇：2分鐘模式</button>
-            <button onclick="startGame('LINES')">重新選擇：40行模式</button>
+            <button class="start-btn" style="min-width: 200px; font-size: 16px;" onclick="showStartOverlay()">回到主選單</button>
         </div>
     </div>
 
     <div class="panel">
-        <div class="btn-group">
-            <button onclick="startGame('TIME')">2分鐘計分模式</button>
-            <button onclick="startGame('LINES')">40行競速模式</button>
-        </div>
-        
         <div class="info-box preview-box">
-            HOLD (Shift)
+            HOLD (鍵盤 0)
             <canvas id="holdCanvas" class="mini-canvas" width="120" height="120"></canvas>
         </div>
-        
         <div class="info-box">TIME<span id="timeDisplay">0:00</span></div>
         <div class="info-box">SCORE<span id="scoreDisplay">0</span></div>
         <div class="info-box">LINES<span id="linesDisplay">0</span></div>
+        
+        <button class="exit-btn" id="pauseBtn" onclick="togglePause()">暫停 / 退出冒險</button>
+        
+        <div class="controls-hint">
+            <b>操作說明：</b><br>
+            ← → : 左右移動<br>
+            ↑ : 順時針旋轉<br>
+            Z : 逆時針旋轉<br>
+            數字 0 : 儲存 (Hold)<br>
+            ↓ (按住) : 加速下落<br>
+            空白 : 瞬間下落<br>
+        </div>
     </div>
     
     <div class="board-container">
@@ -168,15 +280,9 @@
             NEXT
             <canvas id="nextCanvas" class="mini-canvas" width="120" height="420"></canvas>
         </div>
-        
         <div class="controls-hint">
-            <b>操作說明：</b><br>
-            ← → : 左右移動<br>
-            ↑ : 順時針旋轉<br>
-            Z : 逆時針旋轉<br>
-            Shift : 儲存 (Hold)<br>
-            ↓ (按住) : 加速下落<br>
-            空白 : 瞬間下落<br>
+            <b>Made by</b><br>
+            Michael<br>
         </div>
     </div>
 </div>
@@ -199,59 +305,197 @@
     const DAS = 130; 
     const ARR = 25;  
     const keysState = { left: false, right: false };
-    let leftTimer = 0;
-    let rightTimer = 0;
+    let leftTimer = 0, rightTimer = 0;
     
     const NORMAL_DROP_SPEED = 1000;
     const FAST_DROP_SPEED = 30; 
-    
     const LOCK_DELAY = 500; 
-    let lockTimer = 0; 
-    let dropCounter = 0;
-    let dropInterval = NORMAL_DROP_SPEED;
+    let lockTimer = 0, dropCounter = 0, dropInterval = NORMAL_DROP_SPEED;
 
-    let lastTime = 0;
-    let animationId = null;
-    let gameMode = null; 
-    let timer = 0;
-    let timerInterval = null;
-    let isGameOver = false;
+    let lastTime = 0, animationId = null, gameMode = null; 
+    let timer = 0, timerInterval = null;
+    let isGameOver = true; 
+    let isPaused = false; 
     let lastActionWasRotation = false;
 
-    let isAnimating = false;
-    let clearAnimTimer = 0;
-    const CLEAR_ANIM_DURATION = 120; 
-    let clearLinesList = [];
-    let tSpinClear = false;
+    let isAnimating = false, clearAnimTimer = 0;
+    const CLEAR_ANIM_DURATION = 200; // 漸隱動畫時長
+    let clearLinesList = [], tSpinClear = false;
 
-    let nextQueue = [];
-    let heldPieceType = null;
-    let canHold = true;
+    let nextQueue = [], heldPieceType = null, canHold = true;
+    let arena = createMatrix(10, 20);
 
-    const player = { pos: {x: 0, y: 0}, matrix: null, pieceType: null, score: 0, lines: 0 };
+    const player = { 
+        pos: {x: 0, y: 0}, 
+        matrix: null, 
+        pieceType: null, 
+        score: 0, 
+        lines: 0,
+        rotation: 0 
+    };
 
     const pieces = 'ILJOTSZ';
-    // 顏色對調：5 (S) 變為綠色 #33cc33，7 (Z) 變為紅色 #ff3333
-    const colors = [
-        null, '#00ffff', '#3366ff', '#ff9900', '#ffcc00', '#33cc33', '#cc33cc', '#ff3333'
-    ];
+    const colors = [ null, '#00ffff', '#3366ff', '#ff9900', '#ffcc00', '#33cc33', '#cc33cc', '#ff3333' ];
+
+    const kickData = {
+        'default': {
+            '0-1': [[0,0], [-1,0], [-1,1], [0,-2], [-1,-2]], '1-0': [[0,0], [1,0], [1,-1], [0,2], [1,2]],
+            '1-2': [[0,0], [1,0], [1,-1], [0,2], [1,2]], '2-1': [[0,0], [-1,0], [-1,1], [0,-2], [-1,-2]],
+            '2-3': [[0,0], [1,0], [1,1], [0,-2], [1,-2]], '3-2': [[0,0], [-1,0], [-1,-1], [0,2], [-1,2]],
+            '3-0': [[0,0], [-1,0], [-1,-1], [0,2], [-1,2]], '0-3': [[0,0], [1,0], [1,1], [0,-2], [1,-2]]
+        },
+        'I': {
+            '0-1': [[0,0], [-2,0], [1,0], [-2,-1], [1,2]], '1-0': [[0,0], [2,0], [-1,0], [2,1], [-1,-2]],
+            '1-2': [[0,0], [-1,0], [2,0], [-1,2], [2,-1]], '2-1': [[0,0], [1,0], [-2,0], [1,-2], [-2,1]],
+            '2-3': [[0,0], [2,0], [-1,0], [2,1], [-1,-2]], '3-2': [[0,0], [-2,0], [1,0], [-2,-1], [1,2]],
+            '3-0': [[0,0], [1,0], [-2,0], [1,-2], [-2,1]], '0-3': [[0,0], [-1,0], [2,0], [-1,2], [2,-1]]
+        }
+    };
+
+    function togglePause() {
+        if (isGameOver || isAnimating) return;
+        isPaused = true;
+        isGameOver = true; 
+        clearInterval(timerInterval);
+        document.getElementById('pause-overlay').style.display = 'flex';
+    }
+
+    function resumeGame() {
+        document.getElementById('pause-overlay').style.display = 'none';
+        initiateCountdown(null, true);
+    }
+
+    function showStartOverlay() {
+        document.getElementById('gameOverScreen').style.display = 'none';
+        document.getElementById('pause-overlay').style.display = 'none';
+        document.getElementById('start-overlay').style.display = 'flex';
+        document.getElementById('start-overlay').style.opacity = '1';
+        document.getElementById('modeButtons').style.display = 'flex';
+        document.getElementById('countdown-display').style.display = 'none';
+        isGameOver = true;
+        isPaused = false;
+        if (timerInterval) clearInterval(timerInterval);
+        cancelAnimationFrame(animationId);
+    }
+
+    function initiateCountdown(mode, isResuming = false) {
+        if (!isResuming) {
+            gameMode = mode;
+            document.getElementById('modeButtons').style.display = 'none';
+        }
+        
+        const countdownEl = document.getElementById('countdown-display');
+        countdownEl.style.display = 'block';
+        document.getElementById('start-overlay').style.display = 'flex';
+        document.getElementById('start-overlay').style.opacity = '1';
+
+        let count = 3;
+        countdownEl.innerText = count;
+        countdownEl.classList.remove('countdown-anim');
+        void countdownEl.offsetWidth;
+        countdownEl.classList.add('countdown-anim');
+
+        const cdTimer = setInterval(() => {
+            count--;
+            if (count > 0) {
+                countdownEl.innerText = count;
+                countdownEl.classList.remove('countdown-anim');
+                void countdownEl.offsetWidth;
+                countdownEl.classList.add('countdown-anim');
+            } else {
+                clearInterval(cdTimer);
+                countdownEl.style.display = 'none';
+                document.getElementById('start-overlay').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('start-overlay').style.display = 'none';
+                    if (isResuming) {
+                        isPaused = false;
+                        isGameOver = false;
+                        lastTime = performance.now();
+                        timerInterval = setInterval(updateTimer, 1000);
+                        update();
+                    } else {
+                        startGame(gameMode);
+                    }
+                }, 500);
+            }
+        }, 1000);
+    }
 
     function createMatrix(w, h) {
-        const matrix = [];
-        while (h--) matrix.push(new Array(w).fill(0));
-        return matrix;
+        return Array.from({length: h}, () => new Array(w).fill(0));
     }
 
     function createPiece(type) {
-        switch(type) {
-            case 'I': return [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]];
-            case 'J': return [[2,0,0], [2,2,2], [0,0,0]]; 
-            case 'L': return [[0,0,3], [3,3,3], [0,0,0]]; 
-            case 'O': return [[4,4], [4,4]];
-            case 'S': return [[0,5,5], [5,5,0], [0,0,0]]; // 現在對應顏色 5: 綠色
-            case 'T': return [[0,6,0], [6,6,6], [0,0,0]]; 
-            case 'Z': return [[7,7,0], [0,7,7], [0,0,0]]; // 現在對應顏色 7: 紅色
+        if (type === 'I') return [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]];
+        if (type === 'J') return [[2,0,0], [2,2,2], [0,0,0]];
+        if (type === 'L') return [[0,0,3], [3,3,3], [0,0,0]];
+        if (type === 'O') return [[4,4], [4,4]];
+        if (type === 'S') return [[0,5,5], [5,5,0], [0,0,0]];
+        if (type === 'T') return [[0,6,0], [6,6,6], [0,0,0]];
+        if (type === 'Z') return [[7,7,0], [0,7,7], [0,0,0]];
+    }
+
+    function playerRotate(dir) {
+        if (isAnimating || isPaused) return;
+        const startRot = player.rotation;
+        const targetRot = (player.rotation + dir + 4) % 4;
+        const matrix = JSON.parse(JSON.stringify(player.matrix));
+        rotateMatrix(matrix, dir);
+        const typeKey = (player.pieceType === 'I') ? 'I' : 'default';
+        const tests = kickData[typeKey][`${startRot}-${targetRot}`];
+        for (let i = 0; i < tests.length; i++) {
+            const [x, y] = tests[i];
+            const testPos = { x: player.pos.x + x, y: player.pos.y - y };
+            if (!collide(arena, { matrix, pos: testPos })) {
+                player.matrix = matrix; player.pos = testPos; player.rotation = targetRot;
+                lastActionWasRotation = true; lockTimer = 0; return;
+            }
         }
+    }
+
+    function rotateMatrix(matrix, dir) {
+        for (let y = 0; y < matrix.length; ++y) {
+            for (let x = 0; x < y; ++x) { [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]]; }
+        }
+        if (dir > 0) matrix.forEach(row => row.reverse()); else matrix.reverse();
+    }
+
+    function checkAllClear() {
+        return arena.every(row => row.every(value => value === 0));
+    }
+
+    function executeClearLines() {
+        let rowCount = clearLinesList.length;
+        let newArena = arena.filter((row, y) => !clearLinesList.includes(y));
+        while (newArena.length < 20) newArena.unshift(new Array(10).fill(0));
+        arena = newArena;
+        player.lines += rowCount;
+        let msg = "";
+        if (tSpinClear) {
+            if (rowCount === 1) { player.score += 800; msg = "T-SPIN SINGLE"; }
+            else if (rowCount === 2) { player.score += 1200; msg = "T-SPIN DOUBLE"; }
+            else if (rowCount === 3) { player.score += 1600; msg = "T-SPIN TRIPLE"; }
+        } else {
+            const rowScores = [0, 100, 300, 500, 800];
+            player.score += rowScores[rowCount] || 0;
+            if (rowCount === 4) msg = "TETRIS!";
+            else if (rowCount === 2) msg = "DOUBLE";
+            else if (rowCount === 3) msg = "TRIPLE";
+        }
+        if (checkAllClear()) { player.score += 3000; showMessage("ALL CLEAR!", false, true); } 
+        else if (msg !== "") { showMessage(msg, tSpinClear); }
+        updateDisplay();
+        if (gameMode === 'LINES' && player.lines >= 40) { endGame("挑戰成功！", `耗時: ${document.getElementById('timeDisplay').innerText}`); return; }
+        isAnimating = false; playerReset();
+    }
+
+    function showMessage(text, isTspin = false, isAllClear = false) {
+        const msgDiv = document.getElementById('messageDisplay');
+        msgDiv.innerText = text; msgDiv.className = "msg-show";
+        if (isTspin) msgDiv.classList.add("msg-tspin");
+        if (isAllClear) msgDiv.classList.add("msg-allclear");
+        setTimeout(() => msgDiv.className = "", 1200);
     }
 
     function fillQueue() {
@@ -269,72 +513,15 @@
         if (value === 0) return;
         ctx.fillStyle = colors[value];
         if (isGhost) {
-            ctx.globalAlpha = 0.25;
-            ctx.fillRect(x, y, 1, 1);
-            ctx.globalAlpha = 1;
-            ctx.strokeStyle = colors[value];
-            ctx.lineWidth = 0.05;
-            ctx.strokeRect(x + 0.05, y + 0.05, 0.9, 0.9);
+            ctx.globalAlpha = 0.25; ctx.fillRect(x, y, 1, 1); ctx.globalAlpha = 1;
+            ctx.strokeStyle = colors[value]; ctx.lineWidth = 0.05; ctx.strokeRect(x + 0.05, y + 0.05, 0.9, 0.9);
         } else {
             ctx.fillRect(x, y, 1, 1);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.beginPath();
-            ctx.moveTo(x, y); ctx.lineTo(x + 1, y); ctx.lineTo(x + 0.8, y + 0.2); ctx.lineTo(x + 0.2, y + 0.2); ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(x, y); ctx.lineTo(x, y + 1); ctx.lineTo(x + 0.2, y + 0.8); ctx.lineTo(x + 0.2, y + 0.2); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 1, y); ctx.lineTo(x + 0.8, y + 0.2); ctx.lineTo(x + 0.2, y + 0.2); ctx.fill();
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.beginPath();
-            ctx.moveTo(x + 1, y); ctx.lineTo(x + 1, y + 1); ctx.lineTo(x + 0.8, y + 0.8); ctx.lineTo(x + 0.8, y + 0.2); ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(x, y + 1); ctx.lineTo(x + 1, y + 1); ctx.lineTo(x + 0.8, y + 0.8); ctx.lineTo(x + 0.2, y + 0.8); ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 0.05;
-            ctx.strokeRect(x, y, 1, 1);
-        }
-    }
-
-    function drawGrid(ctx, width, height) {
-        ctx.strokeStyle = '#222';
-        ctx.lineWidth = 0.02;
-        for (let i = 0; i <= width; i++) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke(); }
-        for (let i = 0; i <= height; i++) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(width, i); ctx.stroke(); }
-    }
-
-    function drawMatrix(ctx, matrix, offset, isGhost = false) {
-        matrix.forEach((row, y) => {
-            row.forEach((value, x) => {
-                if (value !== 0) drawBlock(ctx, x + offset.x, y + offset.y, value, isGhost);
-            });
-        });
-    }
-
-    function drawGhost() {
-        if (isAnimating) return;
-        const ghost = { matrix: player.matrix, pos: { x: player.pos.x, y: player.pos.y } };
-        while (!collide(arena, ghost)) { ghost.pos.y++; }
-        ghost.pos.y--;
-        drawMatrix(context, ghost.matrix, ghost.pos, true);
-    }
-
-    function drawHold() {
-        holdCtx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
-        if (heldPieceType) {
-            const matrix = createPiece(heldPieceType);
-            const offsetX = (5 - matrix[0].length) / 2;
-            const offsetY = (5 - matrix.length) / 2;
-            drawMatrix(holdCtx, matrix, {x: offsetX, y: offsetY});
-        }
-    }
-
-    function drawNext() {
-        nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-        for (let i = 0; i < 4; i++) {
-            const type = nextQueue[i];
-            if (!type) continue;
-            const matrix = createPiece(type);
-            const offsetX = (5 - matrix[0].length) / 2;
-            const offsetY = i * 4 + 1; 
-            drawMatrix(nextCtx, matrix, {x: offsetX, y: offsetY});
+            ctx.beginPath(); ctx.moveTo(x + 1, y); ctx.lineTo(x + 1, y + 1); ctx.lineTo(x + 0.8, y + 0.8); ctx.lineTo(x + 0.8, y + 0.2); ctx.fill();
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 0.05; ctx.strokeRect(x, y, 1, 1);
         }
     }
 
@@ -343,11 +530,38 @@
         context.fillRect(0, 0, canvas.width, canvas.height);
         drawGrid(context, 10, 20);
         
-        drawMatrix(context, arena, {x: 0, y: 0});
+        // --- 修改消行動畫：漸隱 (Fade Out) ---
+        arena.forEach((row, y) => {
+            row.forEach((value, x) => {
+                if (value !== 0) {
+                    if (isAnimating && clearLinesList.includes(y)) {
+                        context.globalAlpha = clearAnimTimer / CLEAR_ANIM_DURATION;
+                    } else {
+                        context.globalAlpha = 1;
+                    }
+                    drawBlock(context, x, y, value);
+                    context.globalAlpha = 1;
+                }
+            });
+        });
+
         if (!isAnimating && player.matrix) {
-            drawGhost(); 
-            drawMatrix(context, player.matrix, player.pos); 
+            const ghost = { matrix: player.matrix, pos: { x: player.pos.x, y: player.pos.y } };
+            while (!collide(arena, ghost)) { ghost.pos.y++; }
+            ghost.pos.y--;
+            drawMatrix(context, ghost.matrix, ghost.pos, true);
+            drawMatrix(context, player.matrix, player.pos);
         }
+    }
+
+    function drawGrid(ctx, width, height) {
+        ctx.strokeStyle = '#222'; ctx.lineWidth = 0.02;
+        for (let i = 0; i <= width; i++) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke(); }
+        for (let i = 0; i <= height; i++) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(width, i); ctx.stroke(); }
+    }
+
+    function drawMatrix(ctx, matrix, offset, isGhost = false) {
+        matrix.forEach((row, y) => { row.forEach((value, x) => { if (value !== 0) drawBlock(ctx, x + offset.x, y + offset.y, value, isGhost); }); });
     }
 
     function collide(arena, player) {
@@ -360,11 +574,50 @@
         return false;
     }
 
+    function playerReset() {
+        fillQueue();
+        player.pieceType = nextQueue.shift();
+        player.matrix = createPiece(player.pieceType);
+        player.pos.y = 0;
+        player.pos.x = Math.floor(arena[0].length / 2) - Math.floor(player.matrix[0].length / 2);
+        player.rotation = 0;
+        lastActionWasRotation = false;
+        canHold = true; lockTimer = 0; dropCounter = 0;
+        drawNext(); drawHold();
+        if (collide(arena, player)) endGame("挑戰失敗！", "加油好嗎");
+    }
+
+    function isTSpin() {
+        if (!lastActionWasRotation || player.pieceType !== 'T') return false;
+        let corners = 0; const {x, y} = player.pos;
+        const cornerCoords = [[0,0],[2,0],[0,2],[2,2]];
+        cornerCoords.forEach(c => {
+            if (arena[y + c[1]] === undefined || arena[y + c[1]][x + c[0]] !== 0) corners++;
+        });
+        return corners >= 3;
+    }
+
+    function checkAndStartClearAnimation() {
+        clearLinesList = []; tSpinClear = isTSpin();
+        for (let y = arena.length - 1; y >= 0; --y) { if (arena[y].every(v => v !== 0)) clearLinesList.push(y); }
+        if (clearLinesList.length > 0) { 
+            isAnimating = true; clearAnimTimer = CLEAR_ANIM_DURATION; return true; 
+        }
+        if (tSpinClear) showMessage("T-SPIN!", true);
+        return false;
+    }
+
+    function playerMove(dir) {
+        if (isAnimating || isPaused) return;
+        player.pos.x += dir;
+        if (collide(arena, player)) player.pos.x -= dir;
+        else { lastActionWasRotation = false; lockTimer = 0; }
+    }
+
     function holdPiece() {
-        if (!canHold || isAnimating) return;
+        if (!canHold || isAnimating || isPaused) return;
         if (heldPieceType === null) {
-            heldPieceType = player.pieceType;
-            playerReset(); 
+            heldPieceType = player.pieceType; playerReset();
         } else {
             const temp = player.pieceType;
             player.pieceType = heldPieceType;
@@ -372,239 +625,49 @@
             heldPieceType = temp;
             player.pos.y = 0;
             player.pos.x = Math.floor(arena[0].length / 2) - Math.floor(player.matrix[0].length / 2);
+            player.rotation = 0;
         }
-        canHold = false;
-        lastActionWasRotation = false;
-        lockTimer = 0; 
-        drawHold();
+        canHold = false; drawHold();
     }
 
     function merge(arena, player) {
         player.matrix.forEach((row, y) => {
-            row.forEach((value, x) => {
-                if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value;
-            });
+            row.forEach((value, x) => { if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value; });
         });
     }
 
-    function rotate(matrix, dir) {
-        for (let y = 0; y < matrix.length; ++y) {
-            for (let x = 0; x < y; ++x) {
-                [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
-            }
-        }
-        if (dir > 0) matrix.forEach(row => row.reverse());
-        else matrix.reverse();
-    }
-
-    function playerRotate(dir) {
-        if (isAnimating) return;
-        const pos = player.pos.x;
-        let offset = 1;
-        rotate(player.matrix, dir);
-        while (collide(arena, player)) {
-            player.pos.x += offset;
-            offset = -(offset + (offset > 0 ? 1 : -1));
-            if (offset > player.matrix[0].length) {
-                rotate(player.matrix, -dir); 
-                player.pos.x = pos;
-                return;
-            }
-        }
-        lastActionWasRotation = true;
-        lockTimer = 0; 
-    }
-
-    function playerMove(dir) {
-        if (isAnimating) return;
-        player.pos.x += dir;
-        if (collide(arena, player)) {
-            player.pos.x -= dir;
-        } else {
-            lastActionWasRotation = false;
-            lockTimer = 0; 
-        }
-    }
-
     function playerHardDrop() {
-        if (isAnimating) return;
+        if (isAnimating || isPaused) return;
         while (!collide(arena, player)) { player.pos.y++; }
-        player.pos.y--;
-        merge(arena, player);
+        player.pos.y--; merge(arena, player);
         if (!checkAndStartClearAnimation()) playerReset();
-        
-        dropCounter = 0;
-        lockTimer = 0;
-        keysState.left = false;
-        keysState.right = false;
-    }
-
-    function isTSpin() {
-        if (!lastActionWasRotation || player.pieceType !== 'T') return false;
-        let corners = 0;
-        const x = player.pos.x;
-        const y = player.pos.y;
-        if (arena[y]?.[x] !== 0) corners++;
-        if (arena[y]?.[x+2] !== 0) corners++;
-        if (arena[y+2]?.[x] !== 0) corners++;
-        if (arena[y+2]?.[x+2] !== 0) corners++;
-        return corners >= 3;
-    }
-
-    function checkAndStartClearAnimation() {
-        clearLinesList = [];
-        tSpinClear = isTSpin();
-
-        for (let y = arena.length - 1; y >= 0; --y) {
-            let isFull = true;
-            for (let x = 0; x < arena[y].length; ++x) {
-                if (arena[y][x] === 0) { isFull = false; break; }
-            }
-            if (isFull) clearLinesList.push(y);
-        }
-
-        if (clearLinesList.length > 0) {
-            isAnimating = true;
-            clearAnimTimer = CLEAR_ANIM_DURATION;
-            return true; 
-        }
-
-        if (tSpinClear && lastActionWasRotation) {
-             showMessage("T-SPIN!", true);
-             player.score += 100;
-             updateDisplay();
-        }
-        return false;
-    }
-
-    function executeClearLines() {
-        let rowCount = clearLinesList.length;
-
-        let newArena = [];
-        for (let y = 0; y < arena.length; ++y) {
-            if (!clearLinesList.includes(y)) newArena.push(arena[y]);
-        }
-        for (let i = 0; i < rowCount; i++) {
-            newArena.unshift(new Array(10).fill(0));
-        }
-        arena = newArena;
-
-        player.lines += rowCount;
-        let msg = "";
-        
-        if (tSpinClear) {
-            if (rowCount === 1) { player.score += 800; msg = "T-SPIN SINGLE"; }
-            if (rowCount === 2) { player.score += 1200; msg = "T-SPIN DOUBLE"; }
-            if (rowCount === 3) { player.score += 1600; msg = "T-SPIN TRIPLE"; }
-        } else {
-            if (rowCount === 2) { player.score += 300; msg = "DOUBLE"; }
-            else if (rowCount === 3) { player.score += 500; msg = "TRIPLE"; }
-            else if (rowCount === 4) { player.score += 800; msg = "TETRIS!"; }
-        }
-        
-        if (msg !== "") showMessage(msg, tSpinClear);
-        updateDisplay();
-        
-        if (gameMode === 'LINES' && player.lines >= 40) {
-            endGame("挑戰成功！", `耗時: ${document.getElementById('timeDisplay').innerText}`);
-            return;
-        }
-
-        isAnimating = false;
-        playerReset();
-    }
-
-    function playerReset() {
-        fillQueue(); 
-        player.pieceType = nextQueue.shift(); 
-        player.matrix = createPiece(player.pieceType);
-        player.pos.y = 0;
-        player.pos.x = Math.floor(arena[0].length / 2) - Math.floor(player.matrix[0].length / 2);
-        
-        lastActionWasRotation = false;
-        canHold = true;
-        lockTimer = 0;
-        dropCounter = 0;
-        
-        drawNext(); 
-
-        if (collide(arena, player)) endGame("挑戰失敗！", "方塊已經觸頂了，請重新選擇模式");
-    }
-
-    function handleContinuousInput(deltaTime) {
-        if (isAnimating) return;
-        if (keysState.left) {
-            leftTimer += deltaTime;
-            if (leftTimer >= DAS) { playerMove(-1); leftTimer -= ARR; }
-        }
-        if (keysState.right) {
-            rightTimer += deltaTime;
-            if (rightTimer >= DAS) { playerMove(1); rightTimer -= ARR; }
-        }
+        dropCounter = 0; lockTimer = 0; keysState.left = false; keysState.right = false;
     }
 
     function update(time = 0) {
-        if (isGameOver) return;
-        const deltaTime = time - lastTime;
-        lastTime = time;
-
+        if (isGameOver || isPaused) return;
+        const deltaTime = time - lastTime; lastTime = time;
         if (isAnimating) {
-            clearAnimTimer -= deltaTime;
-            draw(); 
-            const progress = 1 - (Math.max(0, clearAnimTimer) / CLEAR_ANIM_DURATION);
-            
-            if (tSpinClear) {
-                context.fillStyle = `rgba(255, 215, 0, ${1 - progress})`;
-                clearLinesList.forEach(y => { context.fillRect(0, y + (0.5 * progress), 10, 1 - progress); });
-                context.fillStyle = `rgba(204, 51, 204, ${(1 - progress) * 0.4})`;
-                context.fillRect(0, 0, 10, 20);
-            } else {
-                context.fillStyle = `rgba(255, 255, 255, ${1 - progress})`;
-                clearLinesList.forEach(y => { context.fillRect(5 * progress, y, 10 * (1 - progress), 1); });
-            }
-
+            clearAnimTimer -= deltaTime; draw();
             if (clearAnimTimer <= 0) executeClearLines();
-            animationId = requestAnimationFrame(update);
-            return; 
+            animationId = requestAnimationFrame(update); return;
         }
+        if (keysState.left) { leftTimer += deltaTime; if (leftTimer >= DAS) { playerMove(-1); leftTimer -= ARR; } }
+        if (keysState.right) { rightTimer += deltaTime; if (rightTimer >= DAS) { playerMove(1); rightTimer -= ARR; } }
         
-        handleContinuousInput(deltaTime);
-
         player.pos.y++;
-        const isTouchingGround = collide(arena, player);
-        player.pos.y--;
-
-        if (isTouchingGround) {
-            lockTimer += deltaTime;
+        if (collide(arena, player)) {
+            player.pos.y--; lockTimer += deltaTime;
             if (lockTimer >= LOCK_DELAY) {
                 merge(arena, player);
                 if (!checkAndStartClearAnimation()) playerReset();
             }
         } else {
-            lockTimer = 0;
-            dropCounter += deltaTime;
-            if (dropCounter > dropInterval) {
-                player.pos.y++;
-                dropCounter = 0;
-                lastActionWasRotation = false; 
-            }
+            lockTimer = 0; dropCounter += deltaTime;
+            if (dropCounter > dropInterval) { player.pos.y++; dropCounter = 0; }
+            player.pos.y--;
         }
-        
-        draw();
-        animationId = requestAnimationFrame(update);
-    }
-
-    function updateTimer() {
-        if (isGameOver) return;
-        if (gameMode === 'TIME') {
-            timer--;
-            if (timer <= 0) endGame("時間到！", `總分: ${player.score}`);
-        } else if (gameMode === 'LINES') {
-            timer++;
-        }
-        const m = Math.floor(Math.abs(timer) / 60);
-        const s = Math.abs(timer) % 60;
-        document.getElementById('timeDisplay').innerText = `${m}:${s.toString().padStart(2, '0')}`;
+        draw(); animationId = requestAnimationFrame(update);
     }
 
     function updateDisplay() {
@@ -612,80 +675,62 @@
         document.getElementById('linesDisplay').innerText = player.lines;
     }
 
-    function showMessage(text, isTspinMsg = false) {
-        const msgDiv = document.getElementById('messageDisplay');
-        msgDiv.innerText = text;
-        msgDiv.className = "";
-        void msgDiv.offsetWidth; 
-        msgDiv.className = isTspinMsg ? "msg-show msg-tspin" : "msg-show";
-        setTimeout(() => { if(msgDiv.innerText === text) msgDiv.className = ""; }, 1200);
+    function updateTimer() {
+        if (isGameOver || isPaused) return;
+        gameMode === 'TIME' ? timer-- : timer++;
+        if (timer <= 0 && gameMode === 'TIME') endGame("時間到！", `得分: ${player.score}`);
+        const m = Math.floor(Math.abs(timer) / 60), s = Math.abs(timer) % 60;
+        document.getElementById('timeDisplay').innerText = `${m}:${s.toString().padStart(2,'0')}`;
     }
 
     function startGame(mode) {
-        document.getElementById('gameOverScreen').style.display = 'none';
-        
-        gameMode = mode;
-        arena = createMatrix(10, 20);
-        player.score = 0;
-        player.lines = 0;
-        isGameOver = false;
-        isAnimating = false;
-        nextQueue = [];
-        keysState.left = false;
-        keysState.right = false;
-        lockTimer = 0;
-        
-        heldPieceType = null;
-        drawHold();
-
-        playerReset();
-        updateDisplay();
-        
-        if (mode === 'TIME') timer = 120;
-        else timer = 0;
-        
-        clearInterval(timerInterval);
-        timerInterval = setInterval(updateTimer, 1000);
-        document.getElementById('timeDisplay').innerText = mode === 'TIME' ? "2:00" : "0:00";
-        
-        lastTime = performance.now();
-        cancelAnimationFrame(animationId);
-        update(performance.now());
+        gameMode = mode; arena = createMatrix(10, 20); player.score = 0; player.lines = 0;
+        isGameOver = false; isPaused = false; isAnimating = false; nextQueue = []; heldPieceType = null;
+        playerReset(); updateDisplay();
+        timer = (mode === 'TIME') ? 120 : 0;
+        clearInterval(timerInterval); timerInterval = setInterval(updateTimer, 1000);
+        lastTime = performance.now(); update();
     }
 
-    function endGame(titleText, subText) {
-        isGameOver = true;
-        clearInterval(timerInterval);
-        document.getElementById('gameOverTitle').innerText = titleText;
-        document.getElementById('gameOverSub').innerText = subText;
+    function endGame(t, s) {
+        isGameOver = true; isPaused = false; clearInterval(timerInterval);
+        document.getElementById('gameOverTitle').innerText = t;
+        document.getElementById('gameOverSub').innerText = s;
         document.getElementById('gameOverScreen').style.display = 'flex';
     }
 
-    document.addEventListener('keydown', event => {
-        if (isGameOver || !gameMode || isAnimating) return;
-        if(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(event.code) > -1) {
-            event.preventDefault(); 
-        }
+    function drawHold() {
+        holdCtx.clearRect(0,0,120,120);
+        if (heldPieceType) drawMatrix(holdCtx, createPiece(heldPieceType), {x:1, y:1});
+    }
 
-        if (event.code === 'ArrowLeft') {
-            if (!keysState.left) { playerMove(-1); keysState.left = true; leftTimer = 0; }
-        }
-        else if (event.code === 'ArrowRight') {
-            if (!keysState.right) { playerMove(1); keysState.right = true; rightTimer = 0; }
-        }
-        else if (event.code === 'ArrowDown') dropInterval = FAST_DROP_SPEED;
-        else if (event.code === 'ArrowUp') playerRotate(1);
-        else if (event.key.toLowerCase() === 'z') playerRotate(-1);
-        else if (event.key === 'Shift') holdPiece();
-        else if (event.code === 'Space') playerHardDrop();
+    function drawNext() {
+        nextCtx.clearRect(0,0,120,420);
+        nextQueue.slice(0,4).forEach((t, i) => drawMatrix(nextCtx, createPiece(t), {x:1, y:i*4+1}));
+    }
+
+    document.addEventListener('keydown', e => {
+        if (isGameOver || isAnimating || isPaused) return;
+        if (e.code === 'ArrowLeft') { keysState.left = true; playerMove(-1); leftTimer = 0; }
+        if (e.code === 'ArrowRight') { keysState.right = true; playerMove(1); rightTimer = 0; }
+        if (e.code === 'ArrowUp') playerRotate(1);
+        if (e.key.toLowerCase() === 'z') playerRotate(-1);
+        if (e.code === 'ArrowDown') dropInterval = FAST_DROP_SPEED;
+        
+        // --- 修改：快捷鍵由 Shift 改為 數字鍵 0 ---
+        if (e.key === '0' || e.code === 'Digit0' || e.code === 'Numpad0') holdPiece();
+        
+        if (e.code === 'Space') playerHardDrop();
+        if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
     });
 
-    document.addEventListener('keyup', event => {
-        if (event.code === 'ArrowLeft') keysState.left = false;
-        else if (event.code === 'ArrowRight') keysState.right = false;
-        else if (event.code === 'ArrowDown') dropInterval = NORMAL_DROP_SPEED;
+    document.addEventListener('keyup', e => {
+        if (e.code === 'ArrowLeft') keysState.left = false;
+        if (e.code === 'ArrowRight') keysState.right = false;
+        if (e.code === 'ArrowDown') dropInterval = NORMAL_DROP_SPEED;
     });
 
+    showStartOverlay();
 </script>
 </body>
 </html>

@@ -35,6 +35,63 @@
             border: 1px solid var(--border-color);
         }
         
+        /* --- 開始與倒數介面 --- */
+        #start-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11, 12, 16, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            border-radius: 15px;
+            backdrop-filter: blur(12px);
+            transition: opacity 0.5s ease;
+        }
+        .start-btn {
+            padding: 20px 50px;
+            font-size: 28px;
+            letter-spacing: 5px;
+            background: transparent;
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 900;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+            transition: all 0.3s;
+            animation: pulse-border 2s infinite;
+        }
+        .start-btn:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 40px rgba(0, 243, 255, 0.6);
+        }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(0, 243, 255, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(0, 243, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 243, 255, 0); }
+        }
+        #countdown-display {
+            position: absolute;
+            font-size: 120px;
+            font-weight: 900;
+            color: var(--neon-blue);
+            text-shadow: 0 0 30px var(--neon-blue);
+            display: none;
+            pointer-events: none;
+            z-index: 1001;
+        }
+        .countdown-anim {
+            animation: count-zoom 1s ease-out forwards;
+        }
+        @keyframes count-zoom {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
         /* --- RPG 面板樣式 --- */
         .side-panel { display: flex; flex-direction: column; width: 220px; gap: 15px; }
         .rpg-box {
@@ -47,7 +104,6 @@
             display: flex; justify-content: space-between;
         }
         
-        /* 血條與經驗條 */
         .bar-container {
             width: 100%; height: 18px; background: #222; border-radius: 9px;
             overflow: hidden; margin-bottom: 5px; border: 1px solid #444; position: relative;
@@ -61,7 +117,6 @@
         }
         .stat-text { font-size: 13px; color: #aaa; margin-top: 5px; }
 
-        /* 戰鬥日誌 */
         #combat-log {
             height: 140px; overflow-y: auto; font-size: 12px; line-height: 1.6; color: #ddd;
             background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px;
@@ -74,7 +129,6 @@
         .log-crit { color: #ff2222; font-weight: 900; text-shadow: 0 0 5px #ff0000; }
         .log-heal { color: #33ff33; font-weight: bold; text-shadow: 0 0 5px #00ff00; }
 
-        /* Tetris 區域 */
         .board-container { position: relative; }
         canvas#tetris {
             background-color: #050505; border: 2px solid #45a29e; border-radius: 5px;
@@ -99,12 +153,6 @@
             justify-content: center; align-items: center; border-radius: 15px; z-index: 200; backdrop-filter: blur(8px);
         }
         #gameOverScreen h1 { color: #ff4444; font-size: 48px; margin-bottom: 10px; text-shadow: 0 0 20px rgba(255, 68, 68, 0.6); }
-        button {
-            padding: 12px 20px; background: linear-gradient(45deg, #45a29e, #66fcf1);
-            color: #0b0c10; border: none; border-radius: 8px; cursor: pointer;
-            font-weight: 900; font-size: 16px; transition: all 0.2s; box-shadow: 0 4px 15px rgba(102, 252, 241, 0.2);
-        }
-        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 252, 241, 0.5); }
         
         /* Combo 閃爍特效 */
         @keyframes comboPulse {
@@ -118,10 +166,15 @@
 <body>
 
 <div id="game-wrapper">
+    <div id="start-overlay">
+        <button class="start-btn" id="mainStartBtn" onclick="initiateCountdown()">開始冒險</button>
+        <div id="countdown-display">3</div>
+    </div>
+
     <div id="gameOverScreen">
         <h1 id="gameOverTitle">YOU DIED</h1>
         <p id="gameOverSub" style="margin-bottom: 30px; font-size: 18px;"></p>
-        <button onclick="startRPG()">重新開始冒險</button>
+        <button class="start-btn" style="font-size: 18px;" onclick="initiateCountdown()">重新開始冒險</button>
     </div>
 
     <div class="side-panel">
@@ -206,25 +259,24 @@
 
     // --- RPG 系統資料 ---
     let hero = {
-        hp: 1500, maxHp: 1500, // 依照你的神級勇者設定
+        hp: 1500, maxHp: 1500, 
         atk: 50,
         lvl: 1,
         exp: 0, nextExp: 100
     };
 
-    let comboCount = 0; // 新增連擊計數器
+    let comboCount = 0;
 
-    // 擴充怪物陣容：從5隻變成10隻，數值設計更多樣化
     const monsterDB = [
         { name: "史萊姆", hp: 300, atk: 15, speed: 4500, exp: 50 },
         { name: "毒蜘蛛", hp: 500, atk: 35, speed: 3800, exp: 80 },
         { name: "狂暴哥布林", hp: 800, atk: 50, speed: 3500, exp: 120 },
-        { name: "吸血蝙蝠", hp: 600, atk: 75, speed: 2200, exp: 180 }, // 血少但極快
+        { name: "吸血蝙蝠", hp: 600, atk: 75, speed: 2200, exp: 180 },
         { name: "骷髏劍士", hp: 1500, atk: 90, speed: 3000, exp: 300 },
         { name: "獸人戰士", hp: 2500, atk: 120, speed: 3200, exp: 500 },
         { name: "暗黑騎士", hp: 4000, atk: 180, speed: 2800, exp: 800 },
-        { name: "深淵法師", hp: 3500, atk: 250, speed: 2200, exp: 1200 }, // 玻璃大砲
-        { name: "地獄犬", hp: 5000, atk: 160, speed: 2000, exp: 1500 }, // 血多又快
+        { name: "深淵法師", hp: 3500, atk: 250, speed: 2200, exp: 1200 },
+        { name: "地獄犬", hp: 5000, atk: 160, speed: 2000, exp: 1500 },
         { name: "遠古魔龍 [BOSS]", hp: 12000, atk: 300, speed: 2500, exp: 3000 }
     ];
 
@@ -249,7 +301,7 @@
 
     let lastTime = 0;
     let animationId = null;
-    let isGameOver = false;
+    let isGameOver = true; // 預設先設為 True，等倒數完再開
     let lastActionWasRotation = false;
 
     let isAnimating = false;
@@ -266,7 +318,39 @@
     const pieces = 'ILJOTSZ';
     const colors = [ null, '#00ffff', '#3366ff', '#ff9900', '#ffcc00', '#33cc33', '#cc33cc', '#ff3333' ];
 
-    // --- 工具與方塊邏輯 ---
+    // --- [核心修改] 倒數計時與開始邏輯 ---
+    function initiateCountdown() {
+        // 重置所有 UI 狀態
+        document.getElementById('gameOverScreen').style.display = 'none';
+        document.getElementById('mainStartBtn').style.display = 'none';
+        const countdownEl = document.getElementById('countdown-display');
+        countdownEl.style.display = 'block';
+
+        let count = 3;
+        countdownEl.innerText = count;
+        countdownEl.classList.remove('countdown-anim');
+        void countdownEl.offsetWidth;
+        countdownEl.classList.add('countdown-anim');
+
+        const timer = setInterval(() => {
+            count--;
+            if (count > 0) {
+                countdownEl.innerText = count;
+                countdownEl.classList.remove('countdown-anim');
+                void countdownEl.offsetWidth;
+                countdownEl.classList.add('countdown-anim');
+            } else {
+                clearInterval(timer);
+                countdownEl.style.display = 'none';
+                document.getElementById('start-overlay').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('start-overlay').style.display = 'none';
+                    startRPG(); // 正式開始
+                }, 500);
+            }
+        }, 1000);
+    }
+
     function createMatrix(w, h) {
         const matrix = [];
         while (h--) matrix.push(new Array(w).fill(0));
@@ -296,29 +380,22 @@
         }
     }
 
-    // --- RPG 介面更新邏輯 ---
     function logCombat(msg, type = "normal") {
         const logBox = document.getElementById('combat-log');
         let span = document.createElement('span');
         span.innerHTML = msg;
-        
         if(type === 'dmg') span.className = 'log-dmg';
         else if(type === 'hurt') span.className = 'log-hurt';
         else if(type === 'sys') span.className = 'log-sys';
-        else if(type === 'crit') span.className = 'log-crit'; // 爆擊樣式
-        else if(type === 'heal') span.className = 'log-heal'; // 治療樣式
-        
+        else if(type === 'crit') span.className = 'log-crit';
+        else if(type === 'heal') span.className = 'log-heal';
         logBox.appendChild(span);
         logBox.scrollTop = logBox.scrollHeight;
     }
 
     function spawnEnemy() {
         let template = monsterDB[enemyIndex % monsterDB.length];
-        
-        if (enemyIndex > 0 && enemyIndex % monsterDB.length === 0) {
-            bossLoopScale *= 1.5; 
-        }
-
+        if (enemyIndex > 0 && enemyIndex % monsterDB.length === 0) bossLoopScale *= 1.5; 
         currentEnemy = {
             name: (bossLoopScale > 1 ? "覺醒·" : "") + template.name,
             maxHp: Math.floor(template.hp * bossLoopScale),
@@ -328,34 +405,27 @@
             exp: Math.floor(template.exp * bossLoopScale)
         };
         enemyAttackTimer = 0;
-        
         logCombat(`遭遇了 ${currentEnemy.name}!`, "sys");
         updateRPGStats();
     }
 
     function updateRPGStats() {
-        // Hero
         document.getElementById('heroLvl').innerText = `Lv.${hero.lvl}`;
         document.getElementById('heroHpText').innerText = `${Math.floor(hero.hp)} / ${hero.maxHp}`;
         document.getElementById('heroHpBar').style.width = `${Math.max(0, (hero.hp / hero.maxHp) * 100)}%`;
         document.getElementById('heroExpBar').style.width = `${(hero.exp / hero.nextExp) * 100}%`;
         document.getElementById('heroAtk').innerText = hero.atk;
-
-        // Combo Display
         const comboDisp = document.getElementById('comboDisplay');
         const comboVal = document.getElementById('comboVal');
         if (comboCount > 0) {
             comboDisp.style.display = "block";
             comboVal.innerText = comboCount;
-            // 觸發閃爍動畫
             comboDisp.classList.remove("combo-active");
             void comboDisp.offsetWidth; 
             comboDisp.classList.add("combo-active");
         } else {
             comboDisp.style.display = "none";
         }
-
-        // Enemy
         if (currentEnemy) {
             document.getElementById('enemyName').innerText = currentEnemy.name;
             document.getElementById('enemyHpText').innerText = `${Math.floor(currentEnemy.hp)} / ${currentEnemy.maxHp}`;
@@ -379,49 +449,27 @@
         updateRPGStats();
     }
 
-    // --- 進階傷害計算邏輯 ---
     function calculateDamage(lines, isTSpin) {
         if (lines === 0) return;
-        
-        comboCount++; // 成功消除，增加連擊
-        
-        let multiplier = 0;
-        let atkName = "";
-        
+        comboCount++; multiplier = 0; atkName = "";
         if (lines === 1) { multiplier = 1; atkName = "單擊"; }
         else if (lines === 2) { multiplier = 2.5; atkName = "雙重擊"; }
         else if (lines === 3) { multiplier = 4; atkName = "三重爆發"; }
         else if (lines === 4) { multiplier = 8; atkName = "TETRIS 終極斬"; }
-
-        if (isTSpin) {
-            multiplier *= 2;
-            atkName = "T-SPIN " + atkName;
-        }
-
-        // 1. 爆擊計算 (20% 機率，傷害 x2)
+        if (isTSpin) { multiplier *= 2; atkName = "T-SPIN " + atkName; }
         let isCrit = Math.random() < 0.20;
         if (isCrit) multiplier *= 2;
-
-        // 2. Combo 加成 (每個額外 Combo +20% 傷害)
         let comboBonus = 1 + ((comboCount - 1) * 0.2);
-        
-        // 3. 基礎浮動傷害
         let damage = Math.floor(hero.atk * multiplier * comboBonus * (0.9 + Math.random() * 0.2));
-        
-        // 組合戰鬥日誌文字
         let logText = `你使用了 [${atkName}]！造成 ${damage} 傷害`;
         if (isCrit) logText += " (爆擊!)";
         if (comboCount > 1) logText += ` [Combo x${comboCount}]`;
-        
         logCombat(logText, isCrit ? "crit" : "dmg");
-        
-        // 4. 治癒之光：Tetris 消除恢復 15% 最大生命
         if (lines === 4) {
             let healAmount = Math.floor(hero.maxHp * 0.15);
             hero.hp = Math.min(hero.maxHp, hero.hp + healAmount);
             logCombat(`[治癒] 完美的消除恢復了 ${healAmount} HP！`, "heal");
         }
-
         currentEnemy.hp -= damage;
         if (currentEnemy.hp <= 0) {
             currentEnemy.hp = 0;
@@ -435,46 +483,31 @@
 
     function updateEnemyAttack(deltaTime) {
         if (!currentEnemy || currentEnemy.hp <= 0 || isGameOver) return;
-        
         enemyAttackTimer += deltaTime;
         let progress = (enemyAttackTimer / currentEnemy.speed) * 100;
         document.getElementById('enemyAtkTimerBar').style.width = `${Math.min(100, progress)}%`;
-
         if (enemyAttackTimer >= currentEnemy.speed) {
             enemyAttackTimer = 0;
             hero.hp -= currentEnemy.atk;
             logCombat(`[敵襲] ${currentEnemy.name} 攻擊，你受到 ${currentEnemy.atk} 傷害！`, "hurt");
-            
             const wrap = document.getElementById('game-wrapper');
             wrap.style.transform = "translate(5px, 5px)";
             setTimeout(() => wrap.style.transform = "translate(-5px, -5px)", 50);
             setTimeout(() => wrap.style.transform = "translate(5px, -5px)", 100);
             setTimeout(() => wrap.style.transform = "translate(0, 0)", 150);
-
             updateRPGStats();
-            
-            if (hero.hp <= 0) {
-                hero.hp = 0;
-                updateRPGStats();
-                endGame("HP 歸零，你倒下了...", "勇者戰敗");
-            }
+            if (hero.hp <= 0) { hero.hp = 0; updateRPGStats(); endGame("HP 歸零，你倒下了...", "勇者戰敗"); }
         }
     }
 
-    // --- 繪圖邏輯 ---
     function drawBlock(ctx, x, y, value, isGhost = false) {
         if (value === 0) return;
         ctx.fillStyle = colors[value];
         if (isGhost) {
-            ctx.globalAlpha = 0.25;
-            ctx.fillRect(x, y, 1, 1);
-            ctx.globalAlpha = 1;
-            ctx.strokeStyle = colors[value];
-            ctx.lineWidth = 0.05;
-            ctx.strokeRect(x + 0.05, y + 0.05, 0.9, 0.9);
+            ctx.globalAlpha = 0.25; ctx.fillRect(x, y, 1, 1); ctx.globalAlpha = 1;
+            ctx.strokeStyle = colors[value]; ctx.lineWidth = 0.05; ctx.strokeRect(x + 0.05, y + 0.05, 0.9, 0.9);
         } else {
-            ctx.fillRect(x, y, 1, 1);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillRect(x, y, 1, 1); ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 1, y); ctx.lineTo(x + 0.8, y + 0.2); ctx.lineTo(x + 0.2, y + 0.2); ctx.fill();
             ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 1); ctx.lineTo(x + 0.2, y + 0.8); ctx.lineTo(x + 0.2, y + 0.2); ctx.fill();
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
@@ -498,16 +531,14 @@
         if (isAnimating) return;
         const ghost = { matrix: player.matrix, pos: { x: player.pos.x, y: player.pos.y } };
         while (!collide(arena, ghost)) { ghost.pos.y++; }
-        ghost.pos.y--;
-        drawMatrix(context, ghost.matrix, ghost.pos, true);
+        ghost.pos.y--; drawMatrix(context, ghost.matrix, ghost.pos, true);
     }
 
     function drawHold() {
         holdCtx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
         if (heldPieceType) {
             const matrix = createPiece(heldPieceType);
-            const offsetX = (5 - matrix[0].length) / 2;
-            const offsetY = (5 - matrix.length) / 2;
+            const offsetX = (5 - matrix[0].length) / 2; const offsetY = (5 - matrix.length) / 2;
             drawMatrix(holdCtx, matrix, {x: offsetX, y: offsetY});
         }
     }
@@ -515,28 +546,19 @@
     function drawNext() {
         nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
         for (let i = 0; i < 3; i++) { 
-            const type = nextQueue[i];
-            if (!type) continue;
+            const type = nextQueue[i]; if (!type) continue;
             const matrix = createPiece(type);
-            const offsetX = (5 - matrix[0].length) / 2;
-            const offsetY = i * 4 + 1; 
+            const offsetX = (5 - matrix[0].length) / 2; const offsetY = i * 4 + 1; 
             drawMatrix(nextCtx, matrix, {x: offsetX, y: offsetY});
         }
     }
 
     function draw() {
-        context.fillStyle = '#050505';
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        drawGrid(context, 10, 20);
-        
-        drawMatrix(context, arena, {x: 0, y: 0});
-        if (!isAnimating && player.matrix) {
-            drawGhost(); 
-            drawMatrix(context, player.matrix, player.pos); 
-        }
+        context.fillStyle = '#050505'; context.fillRect(0, 0, canvas.width, canvas.height);
+        drawGrid(context, 10, 20); drawMatrix(context, arena, {x: 0, y: 0});
+        if (!isAnimating && player.matrix) { drawGhost(); drawMatrix(context, player.matrix, player.pos); }
     }
 
-    // --- 核心物理與操控邏輯 ---
     function collide(arena, player) {
         const [m, o] = [player.matrix, player.pos];
         for (let y = 0; y < m.length; ++y) {
@@ -549,19 +571,13 @@
 
     function holdPiece() {
         if (!canHold || isAnimating) return;
-        if (heldPieceType === null) {
-            heldPieceType = player.pieceType;
-            playerReset(); 
-        } else {
-            const temp = player.pieceType;
-            player.pieceType = heldPieceType;
-            player.matrix = createPiece(heldPieceType);
-            heldPieceType = temp;
-            player.pos.y = 0;
-            player.pos.x = Math.floor(arena[0].length / 2) - Math.floor(player.matrix[0].length / 2);
+        if (heldPieceType === null) { heldPieceType = player.pieceType; playerReset(); } 
+        else {
+            const temp = player.pieceType; player.pieceType = heldPieceType;
+            player.matrix = createPiece(heldPieceType); heldPieceType = temp;
+            player.pos.y = 0; player.pos.x = Math.floor(arena[0].length / 2) - Math.floor(player.matrix[0].length / 2);
         }
-        canHold = false; lastActionWasRotation = false; lockTimer = 0; 
-        drawHold();
+        canHold = false; lastActionWasRotation = false; lockTimer = 0; drawHold();
     }
 
     function merge(arena, player) {
@@ -589,9 +605,7 @@
 
     function playerMove(dir) {
         if (isAnimating) return;
-        player.pos.x += dir;
-        if (collide(arena, player)) { player.pos.x -= dir; } 
-        else { lastActionWasRotation = false; lockTimer = 0; }
+        player.pos.x += dir; if (collide(arena, player)) { player.pos.x -= dir; } else { lastActionWasRotation = false; lockTimer = 0; }
     }
 
     function playerHardDrop() {
@@ -617,29 +631,17 @@
             for (let x = 0; x < arena[y].length; ++x) { if (arena[y][x] === 0) { isFull = false; break; } }
             if (isFull) clearLinesList.push(y);
         }
-        
-        if (clearLinesList.length > 0) {
-            isAnimating = true; clearAnimTimer = CLEAR_ANIM_DURATION; return true; 
-        } else {
-            // 如果沒有消除任何行，中斷 Combo 紀錄
-            comboCount = 0;
-            updateRPGStats();
-        }
-        
-        if (tSpinClear && lastActionWasRotation) {
-            showMessage("T-SPIN!", true);
-            // 空發 T-Spin 仍算一點技巧分（可以選擇不給傷害，這裡給個基礎小傷害或純展示）
-        }
+        if (clearLinesList.length > 0) { isAnimating = true; clearAnimTimer = CLEAR_ANIM_DURATION; return true; } 
+        else { comboCount = 0; updateRPGStats(); }
+        if (tSpinClear && lastActionWasRotation) showMessage("T-SPIN!", true);
         return false;
     }
 
     function executeClearLines() {
-        let rowCount = clearLinesList.length;
-        let newArena = [];
+        let rowCount = clearLinesList.length; let newArena = [];
         for (let y = 0; y < arena.length; ++y) { if (!clearLinesList.includes(y)) newArena.push(arena[y]); }
         for (let i = 0; i < rowCount; i++) { newArena.unshift(new Array(10).fill(0)); }
         arena = newArena;
-
         let msg = "";
         if (tSpinClear) {
             if (rowCount === 1) msg = "T-SPIN SINGLE"; else if (rowCount === 2) msg = "T-SPIN DOUBLE"; else if (rowCount === 3) msg = "T-SPIN TRIPLE";
@@ -647,23 +649,14 @@
             if (rowCount === 2) msg = "DOUBLE"; else if (rowCount === 3) msg = "TRIPLE"; else if (rowCount === 4) msg = "TETRIS!";
         }
         if (msg !== "") showMessage(msg, tSpinClear);
-        
         calculateDamage(rowCount, tSpinClear);
-
-        isAnimating = false;
-        playerReset();
+        isAnimating = false; playerReset();
     }
 
     function playerReset() {
-        fillQueue(); 
-        player.pieceType = nextQueue.shift(); 
-        player.matrix = createPiece(player.pieceType);
-        player.pos.y = 0;
-        player.pos.x = Math.floor(arena[0].length / 2) - Math.floor(player.matrix[0].length / 2);
-        
-        lastActionWasRotation = false; canHold = true; lockTimer = 0; dropCounter = 0;
-        drawNext(); 
-
+        fillQueue(); player.pieceType = nextQueue.shift(); player.matrix = createPiece(player.pieceType);
+        player.pos.y = 0; player.pos.x = Math.floor(arena[0].length / 2) - Math.floor(player.matrix[0].length / 2);
+        lastActionWasRotation = false; canHold = true; lockTimer = 0; dropCounter = 0; drawNext(); 
         if (collide(arena, player)) endGame("方塊觸頂了！", "物理空間不足以承受你的靈魂");
     }
 
@@ -673,14 +666,10 @@
         if (keysState.right) { rightTimer += deltaTime; if (rightTimer >= DAS) { playerMove(1); rightTimer -= ARR; } }
     }
 
-    // --- 遊戲主迴圈 ---
     function update(time = 0) {
         if (isGameOver) return;
-        const deltaTime = time - lastTime;
-        lastTime = time;
-
+        const deltaTime = time - lastTime; lastTime = time;
         if(!isAnimating) updateEnemyAttack(deltaTime);
-
         if (isAnimating) {
             clearAnimTimer -= deltaTime; draw(); 
             const progress = 1 - (Math.max(0, clearAnimTimer) / CLEAR_ANIM_DURATION);
@@ -693,32 +682,18 @@
                 clearLinesList.forEach(y => { context.fillRect(5 * progress, y, 10 * (1 - progress), 1); });
             }
             if (clearAnimTimer <= 0) executeClearLines();
-            animationId = requestAnimationFrame(update);
-            return; 
+            animationId = requestAnimationFrame(update); return; 
         }
-        
         handleContinuousInput(deltaTime);
-
-        player.pos.y++;
-        const isTouchingGround = collide(arena, player);
-        player.pos.y--;
-
+        player.pos.y++; const isTouchingGround = collide(arena, player); player.pos.y--;
         if (isTouchingGround) {
             lockTimer += deltaTime;
-            if (lockTimer >= LOCK_DELAY) {
-                merge(arena, player);
-                if (!checkAndStartClearAnimation()) playerReset();
-            }
+            if (lockTimer >= LOCK_DELAY) { merge(arena, player); if (!checkAndStartClearAnimation()) playerReset(); }
         } else {
-            lockTimer = 0;
-            dropCounter += deltaTime;
-            if (dropCounter > dropInterval) {
-                player.pos.y++; dropCounter = 0; lastActionWasRotation = false; 
-            }
+            lockTimer = 0; dropCounter += deltaTime;
+            if (dropCounter > dropInterval) { player.pos.y++; dropCounter = 0; lastActionWasRotation = false; }
         }
-        
-        draw();
-        animationId = requestAnimationFrame(update);
+        draw(); animationId = requestAnimationFrame(update);
     }
 
     function showMessage(text, isTspinMsg = false) {
@@ -736,39 +711,25 @@
     }
 
     function startRPG() {
-        document.getElementById('gameOverScreen').style.display = 'none';
         document.getElementById('combat-log').innerHTML = ''; 
-        
-        // 套用你指定的強化數值
         hero = { hp: 1500, maxHp: 1500, atk: 50, lvl: 1, exp: 0, nextExp: 100 };
-        enemyIndex = 0;
-        bossLoopScale = 1;
-        comboCount = 0;
-        spawnEnemy();
-        
-        arena = createMatrix(10, 20);
-        isGameOver = false; isAnimating = false;
+        enemyIndex = 0; bossLoopScale = 1; comboCount = 0; spawnEnemy();
+        arena = createMatrix(10, 20); isGameOver = false; isAnimating = false;
         nextQueue = []; keysState.left = false; keysState.right = false; lockTimer = 0;
-        heldPieceType = null; drawHold();
-
-        playerReset();
-        
-        lastTime = performance.now();
-        cancelAnimationFrame(animationId);
+        heldPieceType = null; drawHold(); playerReset();
+        lastTime = performance.now(); cancelAnimationFrame(animationId);
         update(performance.now());
     }
 
-    // --- 按鍵事件 (Shift 保留) ---
     document.addEventListener('keydown', event => {
         if (isGameOver || isAnimating) return;
         if(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(event.code) > -1) event.preventDefault(); 
-
         if (event.code === 'ArrowLeft') { if (!keysState.left) { playerMove(-1); keysState.left = true; leftTimer = 0; } }
         else if (event.code === 'ArrowRight') { if (!keysState.right) { playerMove(1); keysState.right = true; rightTimer = 0; } }
         else if (event.code === 'ArrowDown') dropInterval = FAST_DROP_SPEED;
         else if (event.code === 'ArrowUp') playerRotate(1);
         else if (event.key.toLowerCase() === 'z') playerRotate(-1);
-        else if (event.key === 'Shift') holdPiece(); // Shift鍵依然健在！
+        else if (event.key === 'Shift') holdPiece();
         else if (event.code === 'Space') playerHardDrop();
     });
 
@@ -777,8 +738,6 @@
         else if (event.code === 'ArrowRight') keysState.right = false;
         else if (event.code === 'ArrowDown') dropInterval = NORMAL_DROP_SPEED;
     });
-
-    startRPG();
 
 </script>
 </body>
