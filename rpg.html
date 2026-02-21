@@ -1,0 +1,785 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Tetris RPG: Block Quest - Advanced</title>
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --hp-green: #33cc33;
+            --hp-red: #ff3333;
+            --dark-bg: #0b0c10;
+            --panel-bg: rgba(20, 25, 30, 0.9);
+            --border-color: rgba(69, 162, 158, 0.5);
+        }
+        body {
+            background: radial-gradient(circle at center, #1a222a 0%, var(--dark-bg) 100%);
+            color: #c5c6c7;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        #game-wrapper {
+            position: relative; 
+            display: flex;
+            gap: 20px;
+            background: var(--panel-bg);
+            padding: 25px 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+        }
+        
+        /* --- RPG 面板樣式 --- */
+        .side-panel { display: flex; flex-direction: column; width: 220px; gap: 15px; }
+        .rpg-box {
+            background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border-color);
+            padding: 15px; border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+        .rpg-title {
+            color: var(--neon-blue); font-weight: 900; font-size: 18px; margin-bottom: 10px;
+            text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
+            display: flex; justify-content: space-between;
+        }
+        
+        /* 血條與經驗條 */
+        .bar-container {
+            width: 100%; height: 18px; background: #222; border-radius: 9px;
+            overflow: hidden; margin-bottom: 5px; border: 1px solid #444; position: relative;
+        }
+        .hp-fill { height: 100%; background: linear-gradient(90deg, #1f7a1f, var(--hp-green)); transition: width 0.2s; }
+        .hp-fill.enemy { background: linear-gradient(90deg, #990000, var(--hp-red)); }
+        .exp-fill { height: 100%; background: linear-gradient(90deg, #b38f00, #ffcc00); transition: width 0.2s; }
+        .bar-text {
+            position: absolute; top: -1px; left: 0; width: 100%; text-align: center;
+            font-size: 12px; font-weight: bold; color: #fff; text-shadow: 1px 1px 2px #000;
+        }
+        .stat-text { font-size: 13px; color: #aaa; margin-top: 5px; }
+
+        /* 戰鬥日誌 */
+        #combat-log {
+            height: 140px; overflow-y: auto; font-size: 12px; line-height: 1.6; color: #ddd;
+            background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px;
+            border: 1px inset #555; display: flex; flex-direction: column;
+        }
+        #combat-log span { margin-bottom: 3px; }
+        .log-dmg { color: #ffcc00; font-weight: bold; }
+        .log-hurt { color: #ff5555; font-weight: bold; }
+        .log-sys { color: var(--neon-blue); font-style: italic; }
+        .log-crit { color: #ff2222; font-weight: 900; text-shadow: 0 0 5px #ff0000; }
+        .log-heal { color: #33ff33; font-weight: bold; text-shadow: 0 0 5px #00ff00; }
+
+        /* Tetris 區域 */
+        .board-container { position: relative; }
+        canvas#tetris {
+            background-color: #050505; border: 2px solid #45a29e; border-radius: 5px;
+            box-shadow: 0 0 25px rgba(69, 162, 158, 0.25); display: block;
+        }
+        .preview-box { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        canvas.mini-canvas { margin-top: 5px; }
+
+        #messageDisplay {
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
+            color: #ffcc00; font-size: 32px; font-weight: 900; font-style: italic;
+            text-shadow: 0 4px 0 #b38f00, 0 0 20px rgba(255, 204, 0, 0.8);
+            white-space: nowrap; opacity: 0; pointer-events: none; z-index: 100;
+            transition: opacity 0.2s, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .msg-show { opacity: 1 !important; transform: translate(-50%, -50%) scale(1) !important; }
+        .msg-tspin { color: #fff !important; text-shadow: 0 4px 0 #990099, 0 0 20px #cc33cc, 0 0 40px #00ffff !important; }
+
+        #gameOverScreen {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11, 12, 16, 0.95); flex-direction: column;
+            justify-content: center; align-items: center; border-radius: 15px; z-index: 200; backdrop-filter: blur(8px);
+        }
+        #gameOverScreen h1 { color: #ff4444; font-size: 48px; margin-bottom: 10px; text-shadow: 0 0 20px rgba(255, 68, 68, 0.6); }
+        button {
+            padding: 12px 20px; background: linear-gradient(45deg, #45a29e, #66fcf1);
+            color: #0b0c10; border: none; border-radius: 8px; cursor: pointer;
+            font-weight: 900; font-size: 16px; transition: all 0.2s; box-shadow: 0 4px 15px rgba(102, 252, 241, 0.2);
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 252, 241, 0.5); }
+        
+        /* Combo 閃爍特效 */
+        @keyframes comboPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); color: #fff; text-shadow: 0 0 10px #ff9900; }
+            100% { transform: scale(1); }
+        }
+        .combo-active { animation: comboPulse 0.3s ease-out; color: #ffcc00; font-weight: 900; }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <div id="gameOverScreen">
+        <h1 id="gameOverTitle">YOU DIED</h1>
+        <p id="gameOverSub" style="margin-bottom: 30px; font-size: 18px;"></p>
+        <button onclick="startRPG()">重新開始冒險</button>
+    </div>
+
+    <div class="side-panel">
+        <div class="rpg-box">
+            <div class="rpg-title">HERO STATS <span id="heroLvl" style="color: #fff;">Lv.1</span></div>
+            <div class="stat-text">HP</div>
+            <div class="bar-container">
+                <div id="heroHpBar" class="hp-fill" style="width: 100%;"></div>
+                <div id="heroHpText" class="bar-text">100 / 100</div>
+            </div>
+            <div class="stat-text">EXP</div>
+            <div class="bar-container" style="height: 12px;">
+                <div id="heroExpBar" class="exp-fill" style="width: 0%;"></div>
+            </div>
+            <div class="stat-text" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <span>攻擊力: <span id="heroAtk" style="color:#fff; font-weight:bold;">10</span></span>
+                <span id="comboDisplay" style="display: none;">Combo x<span id="comboVal">0</span></span>
+            </div>
+        </div>
+
+        <div class="rpg-box preview-box" style="flex-grow: 1;">
+            <div class="rpg-title" style="font-size: 14px;">HOLD (Shift)</div>
+            <canvas id="holdCanvas" class="mini-canvas" width="120" height="120"></canvas>
+            
+            <div style="margin-top: auto; font-size: 12px; color: #888; text-align: left; line-height: 1.6;">
+                <b>[戰鬥操作]</b><br>
+                ← → : 移動<br>
+                ↑ / Z : 旋轉<br>
+                ↓ : 加速<br>
+                空白 : 瞬間下落攻擊
+            </div>
+        </div>
+    </div>
+    
+    <div class="board-container">
+        <canvas id="tetris" width="350" height="700"></canvas>
+        <div id="messageDisplay"></div>
+    </div>
+    
+    <div class="side-panel">
+        <div class="rpg-box">
+            <div class="rpg-title" style="color: #ff5555;" id="enemyName">遭遇怪物...</div>
+            <div class="stat-text">ENEMY HP</div>
+            <div class="bar-container">
+                <div id="enemyHpBar" class="hp-fill enemy" style="width: 100%;"></div>
+                <div id="enemyHpText" class="bar-text">? / ?</div>
+            </div>
+            <div class="stat-text" style="margin-top: 5px;">
+                預計攻擊: <span id="enemyAtk" style="color:#ff5555; font-weight:bold;">?</span>
+            </div>
+            <div class="bar-container" style="height: 4px; background: #000; margin-top: 5px; border-radius: 0;">
+                <div id="enemyAtkTimerBar" style="height: 100%; width: 0%; background: #ffcc00;"></div>
+            </div>
+        </div>
+
+        <div class="rpg-box preview-box">
+            <div class="rpg-title" style="font-size: 14px;">NEXT</div>
+            <canvas id="nextCanvas" class="mini-canvas" width="120" height="300"></canvas>
+        </div>
+
+        <div class="rpg-box" style="flex-grow: 1; padding: 10px;">
+            <div class="rpg-title" style="font-size: 14px;">BATTLE LOG</div>
+            <div id="combat-log"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('tetris');
+    const context = canvas.getContext('2d');
+    const BLOCK_SIZE = 35; 
+    context.scale(BLOCK_SIZE, BLOCK_SIZE);
+
+    const holdCanvas = document.getElementById('holdCanvas');
+    const holdCtx = holdCanvas.getContext('2d');
+    const MINI_SCALE = 24; 
+    holdCtx.scale(MINI_SCALE, MINI_SCALE);
+
+    const nextCanvas = document.getElementById('nextCanvas');
+    const nextCtx = nextCanvas.getContext('2d');
+    nextCtx.scale(MINI_SCALE, MINI_SCALE);
+
+    // --- RPG 系統資料 ---
+    let hero = {
+        hp: 1500, maxHp: 1500, // 依照你的神級勇者設定
+        atk: 50,
+        lvl: 1,
+        exp: 0, nextExp: 100
+    };
+
+    let comboCount = 0; // 新增連擊計數器
+
+    // 擴充怪物陣容：從5隻變成10隻，數值設計更多樣化
+    const monsterDB = [
+        { name: "史萊姆", hp: 300, atk: 15, speed: 4500, exp: 50 },
+        { name: "毒蜘蛛", hp: 500, atk: 35, speed: 3800, exp: 80 },
+        { name: "狂暴哥布林", hp: 800, atk: 50, speed: 3500, exp: 120 },
+        { name: "吸血蝙蝠", hp: 600, atk: 75, speed: 2200, exp: 180 }, // 血少但極快
+        { name: "骷髏劍士", hp: 1500, atk: 90, speed: 3000, exp: 300 },
+        { name: "獸人戰士", hp: 2500, atk: 120, speed: 3200, exp: 500 },
+        { name: "暗黑騎士", hp: 4000, atk: 180, speed: 2800, exp: 800 },
+        { name: "深淵法師", hp: 3500, atk: 250, speed: 2200, exp: 1200 }, // 玻璃大砲
+        { name: "地獄犬", hp: 5000, atk: 160, speed: 2000, exp: 1500 }, // 血多又快
+        { name: "遠古魔龍 [BOSS]", hp: 12000, atk: 300, speed: 2500, exp: 3000 }
+    ];
+
+    let currentEnemy = null;
+    let enemyIndex = 0;
+    let enemyAttackTimer = 0;
+    let bossLoopScale = 1; 
+
+    const DAS = 130; 
+    const ARR = 25;  
+    const keysState = { left: false, right: false };
+    let leftTimer = 0; rightTimer = 0;
+    
+    const NORMAL_DROP_SPEED = 1000;
+    const FAST_DROP_SPEED = 30; 
+    const LOCK_DELAY = 500; 
+    
+    let arena = createMatrix(10, 20);
+    let lockTimer = 0; 
+    let dropCounter = 0;
+    let dropInterval = NORMAL_DROP_SPEED;
+
+    let lastTime = 0;
+    let animationId = null;
+    let isGameOver = false;
+    let lastActionWasRotation = false;
+
+    let isAnimating = false;
+    let clearAnimTimer = 0;
+    const CLEAR_ANIM_DURATION = 120; 
+    let clearLinesList = [];
+    let tSpinClear = false;
+
+    let nextQueue = [];
+    let heldPieceType = null;
+    let canHold = true;
+
+    const player = { pos: {x: 0, y: 0}, matrix: null, pieceType: null };
+    const pieces = 'ILJOTSZ';
+    const colors = [ null, '#00ffff', '#3366ff', '#ff9900', '#ffcc00', '#33cc33', '#cc33cc', '#ff3333' ];
+
+    // --- 工具與方塊邏輯 ---
+    function createMatrix(w, h) {
+        const matrix = [];
+        while (h--) matrix.push(new Array(w).fill(0));
+        return matrix;
+    }
+
+    function createPiece(type) {
+        switch(type) {
+            case 'I': return [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]];
+            case 'J': return [[2,0,0], [2,2,2], [0,0,0]]; 
+            case 'L': return [[0,0,3], [3,3,3], [0,0,0]]; 
+            case 'O': return [[4,4], [4,4]];
+            case 'S': return [[0,5,5], [5,5,0], [0,0,0]]; 
+            case 'T': return [[0,6,0], [6,6,6], [0,0,0]]; 
+            case 'Z': return [[7,7,0], [0,7,7], [0,0,0]]; 
+        }
+    }
+
+    function fillQueue() {
+        while (nextQueue.length <= 4) {
+            let b = pieces.split('');
+            for (let i = b.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [b[i], b[j]] = [b[j], b[i]];
+            }
+            nextQueue.push(...b);
+        }
+    }
+
+    // --- RPG 介面更新邏輯 ---
+    function logCombat(msg, type = "normal") {
+        const logBox = document.getElementById('combat-log');
+        let span = document.createElement('span');
+        span.innerHTML = msg;
+        
+        if(type === 'dmg') span.className = 'log-dmg';
+        else if(type === 'hurt') span.className = 'log-hurt';
+        else if(type === 'sys') span.className = 'log-sys';
+        else if(type === 'crit') span.className = 'log-crit'; // 爆擊樣式
+        else if(type === 'heal') span.className = 'log-heal'; // 治療樣式
+        
+        logBox.appendChild(span);
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function spawnEnemy() {
+        let template = monsterDB[enemyIndex % monsterDB.length];
+        
+        if (enemyIndex > 0 && enemyIndex % monsterDB.length === 0) {
+            bossLoopScale *= 1.5; 
+        }
+
+        currentEnemy = {
+            name: (bossLoopScale > 1 ? "覺醒·" : "") + template.name,
+            maxHp: Math.floor(template.hp * bossLoopScale),
+            hp: Math.floor(template.hp * bossLoopScale),
+            atk: Math.floor(template.atk * bossLoopScale),
+            speed: template.speed,
+            exp: Math.floor(template.exp * bossLoopScale)
+        };
+        enemyAttackTimer = 0;
+        
+        logCombat(`遭遇了 ${currentEnemy.name}!`, "sys");
+        updateRPGStats();
+    }
+
+    function updateRPGStats() {
+        // Hero
+        document.getElementById('heroLvl').innerText = `Lv.${hero.lvl}`;
+        document.getElementById('heroHpText').innerText = `${Math.floor(hero.hp)} / ${hero.maxHp}`;
+        document.getElementById('heroHpBar').style.width = `${Math.max(0, (hero.hp / hero.maxHp) * 100)}%`;
+        document.getElementById('heroExpBar').style.width = `${(hero.exp / hero.nextExp) * 100}%`;
+        document.getElementById('heroAtk').innerText = hero.atk;
+
+        // Combo Display
+        const comboDisp = document.getElementById('comboDisplay');
+        const comboVal = document.getElementById('comboVal');
+        if (comboCount > 0) {
+            comboDisp.style.display = "block";
+            comboVal.innerText = comboCount;
+            // 觸發閃爍動畫
+            comboDisp.classList.remove("combo-active");
+            void comboDisp.offsetWidth; 
+            comboDisp.classList.add("combo-active");
+        } else {
+            comboDisp.style.display = "none";
+        }
+
+        // Enemy
+        if (currentEnemy) {
+            document.getElementById('enemyName').innerText = currentEnemy.name;
+            document.getElementById('enemyHpText').innerText = `${Math.floor(currentEnemy.hp)} / ${currentEnemy.maxHp}`;
+            document.getElementById('enemyHpBar').style.width = `${Math.max(0, (currentEnemy.hp / currentEnemy.maxHp) * 100)}%`;
+            document.getElementById('enemyAtk').innerText = currentEnemy.atk;
+        }
+    }
+
+    function gainExp(amount) {
+        hero.exp += amount;
+        logCombat(`獲得 ${amount} 點經驗值`);
+        while (hero.exp >= hero.nextExp) {
+            hero.exp -= hero.nextExp;
+            hero.lvl++;
+            hero.maxHp = Math.floor(hero.maxHp * 1.25);
+            hero.hp = hero.maxHp; 
+            hero.atk = Math.floor(hero.atk * 1.25);
+            hero.nextExp = Math.floor(hero.nextExp * 1.5);
+            logCombat(`★ 升級了！目前 Lv.${hero.lvl}，狀態回滿！`, "sys");
+        }
+        updateRPGStats();
+    }
+
+    // --- 進階傷害計算邏輯 ---
+    function calculateDamage(lines, isTSpin) {
+        if (lines === 0) return;
+        
+        comboCount++; // 成功消除，增加連擊
+        
+        let multiplier = 0;
+        let atkName = "";
+        
+        if (lines === 1) { multiplier = 1; atkName = "單擊"; }
+        else if (lines === 2) { multiplier = 2.5; atkName = "雙重擊"; }
+        else if (lines === 3) { multiplier = 4; atkName = "三重爆發"; }
+        else if (lines === 4) { multiplier = 8; atkName = "TETRIS 終極斬"; }
+
+        if (isTSpin) {
+            multiplier *= 2;
+            atkName = "T-SPIN " + atkName;
+        }
+
+        // 1. 爆擊計算 (20% 機率，傷害 x2)
+        let isCrit = Math.random() < 0.20;
+        if (isCrit) multiplier *= 2;
+
+        // 2. Combo 加成 (每個額外 Combo +20% 傷害)
+        let comboBonus = 1 + ((comboCount - 1) * 0.2);
+        
+        // 3. 基礎浮動傷害
+        let damage = Math.floor(hero.atk * multiplier * comboBonus * (0.9 + Math.random() * 0.2));
+        
+        // 組合戰鬥日誌文字
+        let logText = `你使用了 [${atkName}]！造成 ${damage} 傷害`;
+        if (isCrit) logText += " (爆擊!)";
+        if (comboCount > 1) logText += ` [Combo x${comboCount}]`;
+        
+        logCombat(logText, isCrit ? "crit" : "dmg");
+        
+        // 4. 治癒之光：Tetris 消除恢復 15% 最大生命
+        if (lines === 4) {
+            let healAmount = Math.floor(hero.maxHp * 0.15);
+            hero.hp = Math.min(hero.maxHp, hero.hp + healAmount);
+            logCombat(`[治癒] 完美的消除恢復了 ${healAmount} HP！`, "heal");
+        }
+
+        currentEnemy.hp -= damage;
+        if (currentEnemy.hp <= 0) {
+            currentEnemy.hp = 0;
+            logCombat(`擊敗了 ${currentEnemy.name}！`, "sys");
+            gainExp(currentEnemy.exp);
+            enemyIndex++;
+            setTimeout(spawnEnemy, 500); 
+        }
+        updateRPGStats();
+    }
+
+    function updateEnemyAttack(deltaTime) {
+        if (!currentEnemy || currentEnemy.hp <= 0 || isGameOver) return;
+        
+        enemyAttackTimer += deltaTime;
+        let progress = (enemyAttackTimer / currentEnemy.speed) * 100;
+        document.getElementById('enemyAtkTimerBar').style.width = `${Math.min(100, progress)}%`;
+
+        if (enemyAttackTimer >= currentEnemy.speed) {
+            enemyAttackTimer = 0;
+            hero.hp -= currentEnemy.atk;
+            logCombat(`[敵襲] ${currentEnemy.name} 攻擊，你受到 ${currentEnemy.atk} 傷害！`, "hurt");
+            
+            const wrap = document.getElementById('game-wrapper');
+            wrap.style.transform = "translate(5px, 5px)";
+            setTimeout(() => wrap.style.transform = "translate(-5px, -5px)", 50);
+            setTimeout(() => wrap.style.transform = "translate(5px, -5px)", 100);
+            setTimeout(() => wrap.style.transform = "translate(0, 0)", 150);
+
+            updateRPGStats();
+            
+            if (hero.hp <= 0) {
+                hero.hp = 0;
+                updateRPGStats();
+                endGame("HP 歸零，你倒下了...", "勇者戰敗");
+            }
+        }
+    }
+
+    // --- 繪圖邏輯 ---
+    function drawBlock(ctx, x, y, value, isGhost = false) {
+        if (value === 0) return;
+        ctx.fillStyle = colors[value];
+        if (isGhost) {
+            ctx.globalAlpha = 0.25;
+            ctx.fillRect(x, y, 1, 1);
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = colors[value];
+            ctx.lineWidth = 0.05;
+            ctx.strokeRect(x + 0.05, y + 0.05, 0.9, 0.9);
+        } else {
+            ctx.fillRect(x, y, 1, 1);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 1, y); ctx.lineTo(x + 0.8, y + 0.2); ctx.lineTo(x + 0.2, y + 0.2); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 1); ctx.lineTo(x + 0.2, y + 0.8); ctx.lineTo(x + 0.2, y + 0.2); ctx.fill();
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath(); ctx.moveTo(x + 1, y); ctx.lineTo(x + 1, y + 1); ctx.lineTo(x + 0.8, y + 0.8); ctx.lineTo(x + 0.8, y + 0.2); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(x, y + 1); ctx.lineTo(x + 1, y + 1); ctx.lineTo(x + 0.8, y + 0.8); ctx.lineTo(x + 0.2, y + 0.8); ctx.fill();
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 0.05; ctx.strokeRect(x, y, 1, 1);
+        }
+    }
+
+    function drawGrid(ctx, width, height) {
+        ctx.strokeStyle = '#222'; ctx.lineWidth = 0.02;
+        for (let i = 0; i <= width; i++) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke(); }
+        for (let i = 0; i <= height; i++) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(width, i); ctx.stroke(); }
+    }
+
+    function drawMatrix(ctx, matrix, offset, isGhost = false) {
+        matrix.forEach((row, y) => { row.forEach((value, x) => { if (value !== 0) drawBlock(ctx, x + offset.x, y + offset.y, value, isGhost); }); });
+    }
+
+    function drawGhost() {
+        if (isAnimating) return;
+        const ghost = { matrix: player.matrix, pos: { x: player.pos.x, y: player.pos.y } };
+        while (!collide(arena, ghost)) { ghost.pos.y++; }
+        ghost.pos.y--;
+        drawMatrix(context, ghost.matrix, ghost.pos, true);
+    }
+
+    function drawHold() {
+        holdCtx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
+        if (heldPieceType) {
+            const matrix = createPiece(heldPieceType);
+            const offsetX = (5 - matrix[0].length) / 2;
+            const offsetY = (5 - matrix.length) / 2;
+            drawMatrix(holdCtx, matrix, {x: offsetX, y: offsetY});
+        }
+    }
+
+    function drawNext() {
+        nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+        for (let i = 0; i < 3; i++) { 
+            const type = nextQueue[i];
+            if (!type) continue;
+            const matrix = createPiece(type);
+            const offsetX = (5 - matrix[0].length) / 2;
+            const offsetY = i * 4 + 1; 
+            drawMatrix(nextCtx, matrix, {x: offsetX, y: offsetY});
+        }
+    }
+
+    function draw() {
+        context.fillStyle = '#050505';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        drawGrid(context, 10, 20);
+        
+        drawMatrix(context, arena, {x: 0, y: 0});
+        if (!isAnimating && player.matrix) {
+            drawGhost(); 
+            drawMatrix(context, player.matrix, player.pos); 
+        }
+    }
+
+    // --- 核心物理與操控邏輯 ---
+    function collide(arena, player) {
+        const [m, o] = [player.matrix, player.pos];
+        for (let y = 0; y < m.length; ++y) {
+            for (let x = 0; x < m[y].length; ++x) {
+                if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true;
+            }
+        }
+        return false;
+    }
+
+    function holdPiece() {
+        if (!canHold || isAnimating) return;
+        if (heldPieceType === null) {
+            heldPieceType = player.pieceType;
+            playerReset(); 
+        } else {
+            const temp = player.pieceType;
+            player.pieceType = heldPieceType;
+            player.matrix = createPiece(heldPieceType);
+            heldPieceType = temp;
+            player.pos.y = 0;
+            player.pos.x = Math.floor(arena[0].length / 2) - Math.floor(player.matrix[0].length / 2);
+        }
+        canHold = false; lastActionWasRotation = false; lockTimer = 0; 
+        drawHold();
+    }
+
+    function merge(arena, player) {
+        player.matrix.forEach((row, y) => {
+            row.forEach((value, x) => { if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value; });
+        });
+    }
+
+    function rotate(matrix, dir) {
+        for (let y = 0; y < matrix.length; ++y) {
+            for (let x = 0; x < y; ++x) { [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]]; }
+        }
+        if (dir > 0) matrix.forEach(row => row.reverse()); else matrix.reverse();
+    }
+
+    function playerRotate(dir) {
+        if (isAnimating) return;
+        const pos = player.pos.x; let offset = 1; rotate(player.matrix, dir);
+        while (collide(arena, player)) {
+            player.pos.x += offset; offset = -(offset + (offset > 0 ? 1 : -1));
+            if (offset > player.matrix[0].length) { rotate(player.matrix, -dir); player.pos.x = pos; return; }
+        }
+        lastActionWasRotation = true; lockTimer = 0; 
+    }
+
+    function playerMove(dir) {
+        if (isAnimating) return;
+        player.pos.x += dir;
+        if (collide(arena, player)) { player.pos.x -= dir; } 
+        else { lastActionWasRotation = false; lockTimer = 0; }
+    }
+
+    function playerHardDrop() {
+        if (isAnimating) return;
+        while (!collide(arena, player)) { player.pos.y++; }
+        player.pos.y--; merge(arena, player);
+        if (!checkAndStartClearAnimation()) playerReset();
+        dropCounter = 0; lockTimer = 0; keysState.left = false; keysState.right = false;
+    }
+
+    function isTSpin() {
+        if (!lastActionWasRotation || player.pieceType !== 'T') return false;
+        let corners = 0; const x = player.pos.x; const y = player.pos.y;
+        if (arena[y]?.[x] !== 0) corners++; if (arena[y]?.[x+2] !== 0) corners++;
+        if (arena[y+2]?.[x] !== 0) corners++; if (arena[y+2]?.[x+2] !== 0) corners++;
+        return corners >= 3;
+    }
+
+    function checkAndStartClearAnimation() {
+        clearLinesList = []; tSpinClear = isTSpin();
+        for (let y = arena.length - 1; y >= 0; --y) {
+            let isFull = true;
+            for (let x = 0; x < arena[y].length; ++x) { if (arena[y][x] === 0) { isFull = false; break; } }
+            if (isFull) clearLinesList.push(y);
+        }
+        
+        if (clearLinesList.length > 0) {
+            isAnimating = true; clearAnimTimer = CLEAR_ANIM_DURATION; return true; 
+        } else {
+            // 如果沒有消除任何行，中斷 Combo 紀錄
+            comboCount = 0;
+            updateRPGStats();
+        }
+        
+        if (tSpinClear && lastActionWasRotation) {
+            showMessage("T-SPIN!", true);
+            // 空發 T-Spin 仍算一點技巧分（可以選擇不給傷害，這裡給個基礎小傷害或純展示）
+        }
+        return false;
+    }
+
+    function executeClearLines() {
+        let rowCount = clearLinesList.length;
+        let newArena = [];
+        for (let y = 0; y < arena.length; ++y) { if (!clearLinesList.includes(y)) newArena.push(arena[y]); }
+        for (let i = 0; i < rowCount; i++) { newArena.unshift(new Array(10).fill(0)); }
+        arena = newArena;
+
+        let msg = "";
+        if (tSpinClear) {
+            if (rowCount === 1) msg = "T-SPIN SINGLE"; else if (rowCount === 2) msg = "T-SPIN DOUBLE"; else if (rowCount === 3) msg = "T-SPIN TRIPLE";
+        } else {
+            if (rowCount === 2) msg = "DOUBLE"; else if (rowCount === 3) msg = "TRIPLE"; else if (rowCount === 4) msg = "TETRIS!";
+        }
+        if (msg !== "") showMessage(msg, tSpinClear);
+        
+        calculateDamage(rowCount, tSpinClear);
+
+        isAnimating = false;
+        playerReset();
+    }
+
+    function playerReset() {
+        fillQueue(); 
+        player.pieceType = nextQueue.shift(); 
+        player.matrix = createPiece(player.pieceType);
+        player.pos.y = 0;
+        player.pos.x = Math.floor(arena[0].length / 2) - Math.floor(player.matrix[0].length / 2);
+        
+        lastActionWasRotation = false; canHold = true; lockTimer = 0; dropCounter = 0;
+        drawNext(); 
+
+        if (collide(arena, player)) endGame("方塊觸頂了！", "物理空間不足以承受你的靈魂");
+    }
+
+    function handleContinuousInput(deltaTime) {
+        if (isAnimating) return;
+        if (keysState.left) { leftTimer += deltaTime; if (leftTimer >= DAS) { playerMove(-1); leftTimer -= ARR; } }
+        if (keysState.right) { rightTimer += deltaTime; if (rightTimer >= DAS) { playerMove(1); rightTimer -= ARR; } }
+    }
+
+    // --- 遊戲主迴圈 ---
+    function update(time = 0) {
+        if (isGameOver) return;
+        const deltaTime = time - lastTime;
+        lastTime = time;
+
+        if(!isAnimating) updateEnemyAttack(deltaTime);
+
+        if (isAnimating) {
+            clearAnimTimer -= deltaTime; draw(); 
+            const progress = 1 - (Math.max(0, clearAnimTimer) / CLEAR_ANIM_DURATION);
+            if (tSpinClear) {
+                context.fillStyle = `rgba(255, 215, 0, ${1 - progress})`;
+                clearLinesList.forEach(y => { context.fillRect(0, y + (0.5 * progress), 10, 1 - progress); });
+                context.fillStyle = `rgba(204, 51, 204, ${(1 - progress) * 0.4})`; context.fillRect(0, 0, 10, 20);
+            } else {
+                context.fillStyle = `rgba(255, 255, 255, ${1 - progress})`;
+                clearLinesList.forEach(y => { context.fillRect(5 * progress, y, 10 * (1 - progress), 1); });
+            }
+            if (clearAnimTimer <= 0) executeClearLines();
+            animationId = requestAnimationFrame(update);
+            return; 
+        }
+        
+        handleContinuousInput(deltaTime);
+
+        player.pos.y++;
+        const isTouchingGround = collide(arena, player);
+        player.pos.y--;
+
+        if (isTouchingGround) {
+            lockTimer += deltaTime;
+            if (lockTimer >= LOCK_DELAY) {
+                merge(arena, player);
+                if (!checkAndStartClearAnimation()) playerReset();
+            }
+        } else {
+            lockTimer = 0;
+            dropCounter += deltaTime;
+            if (dropCounter > dropInterval) {
+                player.pos.y++; dropCounter = 0; lastActionWasRotation = false; 
+            }
+        }
+        
+        draw();
+        animationId = requestAnimationFrame(update);
+    }
+
+    function showMessage(text, isTspinMsg = false) {
+        const msgDiv = document.getElementById('messageDisplay');
+        msgDiv.innerText = text; msgDiv.className = ""; void msgDiv.offsetWidth; 
+        msgDiv.className = isTspinMsg ? "msg-show msg-tspin" : "msg-show";
+        setTimeout(() => { if(msgDiv.innerText === text) msgDiv.className = ""; }, 1200);
+    }
+
+    function endGame(titleText, subText) {
+        isGameOver = true;
+        document.getElementById('gameOverTitle').innerText = titleText;
+        document.getElementById('gameOverSub').innerText = subText;
+        document.getElementById('gameOverScreen').style.display = 'flex';
+    }
+
+    function startRPG() {
+        document.getElementById('gameOverScreen').style.display = 'none';
+        document.getElementById('combat-log').innerHTML = ''; 
+        
+        // 套用你指定的強化數值
+        hero = { hp: 1500, maxHp: 1500, atk: 50, lvl: 1, exp: 0, nextExp: 100 };
+        enemyIndex = 0;
+        bossLoopScale = 1;
+        comboCount = 0;
+        spawnEnemy();
+        
+        arena = createMatrix(10, 20);
+        isGameOver = false; isAnimating = false;
+        nextQueue = []; keysState.left = false; keysState.right = false; lockTimer = 0;
+        heldPieceType = null; drawHold();
+
+        playerReset();
+        
+        lastTime = performance.now();
+        cancelAnimationFrame(animationId);
+        update(performance.now());
+    }
+
+    // --- 按鍵事件 (Shift 保留) ---
+    document.addEventListener('keydown', event => {
+        if (isGameOver || isAnimating) return;
+        if(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(event.code) > -1) event.preventDefault(); 
+
+        if (event.code === 'ArrowLeft') { if (!keysState.left) { playerMove(-1); keysState.left = true; leftTimer = 0; } }
+        else if (event.code === 'ArrowRight') { if (!keysState.right) { playerMove(1); keysState.right = true; rightTimer = 0; } }
+        else if (event.code === 'ArrowDown') dropInterval = FAST_DROP_SPEED;
+        else if (event.code === 'ArrowUp') playerRotate(1);
+        else if (event.key.toLowerCase() === 'z') playerRotate(-1);
+        else if (event.key === 'Shift') holdPiece(); // Shift鍵依然健在！
+        else if (event.code === 'Space') playerHardDrop();
+    });
+
+    document.addEventListener('keyup', event => {
+        if (event.code === 'ArrowLeft') keysState.left = false;
+        else if (event.code === 'ArrowRight') keysState.right = false;
+        else if (event.code === 'ArrowDown') dropInterval = NORMAL_DROP_SPEED;
+    });
+
+    startRPG();
+
+</script>
+</body>
+</html>

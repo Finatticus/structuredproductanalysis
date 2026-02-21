@@ -1,0 +1,910 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structured Product Quant Analytics (BEN / DCN)</title>
+    <meta name="theme-color" content="#1a4da1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <style>
+        :root {
+            --bg-color: #f4f7fa; --card-bg: #ffffff; --primary: #1a4da1; 
+            --text-main: #2c3e50; --text-sub: #5f6368; --border: #dadce0; 
+            --accent: #e8f0fe; --danger: #d93025; --success: #188038; 
+            --warning: #f29900;
+        }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); padding: 20px; margin: 0; }
+        .container { max-width: 1650px; margin: 0 auto; }
+        h1 { color: var(--primary); text-align: left; font-size: 1.8rem; margin-bottom: 25px; font-weight: 500; border-bottom: 2px solid var(--primary); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .config-panel { background: var(--card-bg); padding: 25px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(60,64,67,.3); border: 1px solid var(--border); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .input-group { display: flex; flex-direction: column; }
+        label { display: flex; align-items: center; height: 32px; margin-bottom: 4px; font-size: 0.9rem; font-weight: 700; }
+        input, select { background: #fff; border: 1px solid var(--border); color: var(--text-main); padding: 10px; border-radius: 4px; font-size: 0.9rem; transition: border 0.2s; }
+        input:disabled { background-color: #e0e0e0; cursor: not-allowed; }
+        button { background: var(--primary); color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 1rem; font-weight: 600; margin-top: 20px; transition: background 0.2s; }
+        button:hover { background: #1557b0; }
+        button:disabled { background: #9aa0a6; cursor: not-allowed; }
+        
+        .result-section { display: none; margin-top: 20px; }
+        
+        .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
+        @media (max-width: 768px) { .metrics { grid-template-columns: 1fr; } }
+
+        .metric-card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.04); position: relative; overflow: hidden; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .metric-card::before { content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--primary); }
+        .metric-card.orange::before { background: var(--warning); }
+        .metric-card.green::before { background: var(--success); }
+        .metric-card.purple::before { background: #8e24aa; }
+        .metric-header { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; width: 100%; }
+        .metric-title { font-size: 1rem; color: var(--text-sub); font-weight: 700; letter-spacing: 0.5px; }
+        .metric-icon { font-size: 1.2rem; opacity: 0.7; }
+        .metric-value { display: block; font-size: 2rem; font-weight: 800; color: var(--text-main); margin: 5px 0; }
+        .metric-subtext { font-size: 0.75rem; color: var(--text-sub); margin-top: 5px; font-weight: 400; }
+        
+        .vol-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 10px; width: 100%; margin-top: 10px; }
+        .vol-item { background: var(--bg-color); border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .vol-symbol { display: block; font-size: 0.8rem; font-weight: bold; color: var(--text-sub); transition: color 0.3s; }
+        .vol-input-wrapper { display: flex; align-items: center; gap: 4px; }
+        .vol-input { width: 55px; padding: 4px; border: 1px solid var(--border); border-radius: 4px; text-align: center; font-weight: bold; color: var(--primary); }
+
+        .mc-main-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .card-wrapper { background: var(--card-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(60,64,67,.1); height: 350px; display: flex; flex-direction: column; }
+        .card-wrapper h3 { margin-top: 0; font-size: 1rem; color: var(--text-main); text-align: center; margin-bottom: 10px; }
+        .chart-container { flex-grow: 1; position: relative; min-height: 0; }
+        
+        .label-action-group { display: flex; justify-content: space-between; align-items: center; height: 32px; margin-bottom: 4px; }
+        .mini-btn-group { display: flex; gap: 2px; background: #eee; padding: 3px; border-radius: 4px; align-self: center; }
+        .mini-btn { padding: 4px 8px; font-size: 12px; cursor: pointer; border-radius: 3px; background: transparent; color: var(--text-sub); border: none; font-weight: bold; transition: all 0.2s; }
+        .mini-btn.active { background: var(--primary); color: white; }
+        .hidden-select { display: none; }
+        
+        #corTable th, #corTable td { padding: 10px; border-bottom: 1px solid var(--border); }
+        #corTable th { background: var(--bg-color); color: var(--text-sub); font-weight: bold; }
+        
+        #loading { display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 15px; color: var(--primary); font-weight: bold; margin-top: 20px; }
+        .loader-spinner { width: 40px; height: 40px; border: 4px solid var(--accent); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        
+        #techOptions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .tech-option { background: #fff; border: 1px solid var(--border); padding: 8px 15px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; color: var(--text-sub); transition: all 0.2s; user-select: none; }
+        .tech-option input { display: none; } 
+        .tech-option.active { background: var(--accent); color: var(--primary); border-color: var(--primary); font-weight: bold; }
+        .level-toggle { border-color: #fad2cf; background: #fff; }
+        .level-toggle.active { background: #fce8e6; color: var(--danger); border-color: var(--danger); }
+        .stock-charts-area { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+
+        @keyframes spin { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .result-section.active { display: block !important; animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>
+        <span>BEN / DCN QUANT ANALYTICS</span>
+        <span style="color: var(--text-sub); font-size: 0.8rem; font-weight: bold;">Michael</span>
+    </h1>
+    
+    <div class="config-panel">
+        <div class="grid">
+            <div class="input-group">
+                <label>產品架構 Structure</label>
+                <select id="productType">
+                    <option value="BEN">BEN</option>
+                    <option value="DCN">DCN</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>股票代號 (用逗號分隔)</label>
+                <input type="text" id="symbols" value="NVDA,TSM">
+            </div>
+            <div class="input-group">
+                <label>天期 (月)</label>
+                <input type="number" id="months" value="3">
+            </div>
+            <div class="input-group">
+                <label>履約價 Strike (%)</label>
+                <input type="number" id="strikePct" value="100">
+            </div>
+            
+            <div class="input-group">
+                <div class="label-action-group">
+                    <label>下限價 KI (%)</label>
+                    <div class="mini-btn-group" data-target="kiType">
+                        <div class="mini-btn active" data-value="AKI">AKI</div>
+                        <div class="mini-btn" data-value="EKI">EKI</div>
+                        <div class="mini-btn" data-value="NA">NA</div>
+                    </div>
+                    <select id="kiType" class="hidden-select">
+                        <option value="AKI">AKI</option>
+                        <option value="EKI">EKI</option>
+                        <option value="NA">NA</option>
+                    </select>
+                </div>
+                <input type="number" id="kiPct" value="90">
+            </div>
+            
+            <div class="input-group">
+                <label>紅利率 Bonus Rate (%)</label>
+                <input type="number" id="bonusPct" value="20">
+            </div>
+            
+            <div class="input-group">
+                <label>無風險利率 (%)</label>
+                <input type="number" id="riskFreeRate" value="5" step="0.1">
+            </div>
+            <div class="input-group">
+                <label>模擬次數 Simulations</label>
+                <input type="number" id="simN" value="10000">
+            </div>
+            <div class="input-group">
+                <label>Twelve Data API Key</label>
+                <input type="password" id="apiKey" value="d7de0902b30e47dead805e170f78bac6">
+            </div>
+        </div>
+        <button id="runBtn">Fetch Data & Run Simulation</button>
+        
+        <div id="loading">
+            <div class="loader-spinner"></div>
+            <span id="loadingText">Fetching historical data from Twelve Data...</span>
+        </div>
+    </div>
+
+    <div id="result-section" class="result-section">
+        <div class="metrics">
+            <div class="metric-card green">
+                <div class="metric-header">
+                    <span class="metric-icon">💰</span><span class="metric-title">預期理論價值 (FAIR VALUE)</span>
+                </div>
+                <span id="fairValue" class="metric-value">-</span>
+                <div class="metric-subtext">商品預期總價值 (經無風險利率折現至今日)</div>
+            </div>
+            
+            <div class="metric-card orange">
+                <div class="metric-header">
+                    <span class="metric-icon">⚠️</span><span class="metric-title">實物履約機率 (DELIVERY PROB)</span>
+                </div>
+                <span id="deliveryProb" class="metric-value">-</span>
+                <div class="metric-subtext">在模擬路徑中觸碰 KI 且結算價跌破履約價的機率</div>
+            </div>
+
+            <div class="metric-card purple">
+                <div class="metric-header">
+                    <span class="metric-icon">⏪</span><span class="metric-title">歷史回測 (HISTORICAL BACKTEST)</span>
+                </div>
+                <span id="backtestResult" class="metric-value">-</span>
+                <div id="backtestSubtext" class="metric-subtext">一個週期前的實際歷史表現</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-icon">📜</span><span class="metric-title">歷史波動度</span>
+                </div>
+                <div id="volList" class="vol-grid">
+                    </div>
+            </div>
+        </div>
+
+        <div class="metric-card" style="grid-column: 1 / -1; height: auto; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
+            <div class="metric-header" style="width: 100%; display: flex; justify-content: center; align-items: center; text-align: center;">
+                <span class="metric-title" style="width: 100%; font-size: 16px">風險分析 RISK ANALYSIS (VaR & CVaR)</span>
+            </div>
+            <div style="width: 100%; overflow-x: auto; padding: 0 50px; box-sizing: border-box; margin-top: 15px;">
+                <table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border); color: var(--text-sub);">
+                            <th style="padding: 10px; text-align: left;">信心水準</th>
+                            <th style="padding: 10px; text-align: center;">99%</th>
+                            <th style="padding: 10px; text-align: center;">97%</th>
+                            <th style="padding: 10px; text-align: center;">95%</th>
+                            <th style="padding: 10px; text-align: center;">90%</th>
+                            <th style="padding: 10px; text-align: center;">85%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 10px; font-weight: bold; color: var(--danger); text-align: left;">VaR (預期最大損失)</td>
+                            <td id="var99" style="text-align: center;">-</td>
+                            <td id="var97" style="text-align: center;">-</td>
+                            <td id="var95" style="text-align: center;">-</td>
+                            <td id="var90" style="text-align: center;">-</td>
+                            <td id="var85" style="text-align: center;">-</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; font-weight: bold; color: var(--warning); text-align: left;">CVaR (極端平均損失)</td>
+                            <td id="cvar99" style="text-align: center;">-</td>
+                            <td id="cvar97" style="text-align: center;">-</td>
+                            <td id="cvar95" style="text-align: center;">-</td>
+                            <td id="cvar90" style="text-align: center;">-</td>
+                            <td id="cvar85" style="text-align: center;">-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mc-main-charts">
+            <div class="card-wrapper">
+                <h3>最終收益分佈 (Final Return Distribution)</h3>
+                <div class="chart-container"><canvas id="payoffChart"></canvas></div>
+            </div>
+            <div class="card-wrapper">
+                <h3>最差表現股票模擬路徑 (Worst-of Paths)</h3>
+                <div class="chart-container"><canvas id="pathChart"></canvas></div>
+            </div>
+            <div class="card-wrapper">
+                <h3>各股票實物履約佔比 (Physical Delivery)</h3>
+                <div class="chart-container"><canvas id="pieChart"></canvas></div>
+            </div>
+            <div class="card-wrapper" style="overflow-y: auto;">
+                <h3>相關係數矩陣 (Correlation Matrix)</h3>
+                <table id="corTable" style="width: 100%; text-align: center; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px;">
+                    </table>
+            </div>
+        </div>
+
+        <h3 style="margin-top:40px; margin-bottom:15px; border-left: 4px solid var(--primary); padding-left: 10px;">技術分析 Technical Analysis</h3>
+        <div id="techOptions">
+            <label class="tech-option active"><input type="radio" name="tech" value="none" checked><span>給我乾淨的線圖就好</span></label>
+            <label class="tech-option"><input type="radio" name="tech" value="ma"><span>移動平均線MA (20/60/200)</span></label>
+            <label class="tech-option"><input type="radio" name="tech" value="bias"><span>乖離率 BIAS 20</span></label>
+            <label class="tech-option"><input type="radio" name="tech" value="rsi"><span>相對強弱指標 RSI 14</span></label>
+            <label class="tech-option"><input type="radio" name="tech" value="macd"><span>平滑異同移動平均線指標 MACD</span></label>
+            <label class="tech-option"><input type="radio" name="tech" value="hv"><span>歷史波動度 Hist Vol</span></label>
+            <label class="tech-option level-toggle" id="lvlBtn"><input type="checkbox" id="showPriceLevels"><span>顯示Strike, KI線</span></label>
+        </div>
+        <div id="stockChartsArea" class="stock-charts-area"></div>
+
+        <div style="margin-top: 50px; padding: 20px 0; border-top: 1px solid #dadce0; font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; color: #5f6368; line-height: 1.7;">
+            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <span style="color: #b71c1c; font-weight: bold; font-size: 0.9rem; letter-spacing: 1px;">RISK DISCLOSURE & DISCLAIMER</span>
+                <div style="flex-grow: 1; height: 1px; background-color: #eee; margin-left: 15px;"></div>
+            </div>
+            <h4 style="margin: 0 0 12px 0; color: #3c4043; font-size: 1rem; font-weight: 600;">⚠️ 重要風險聲明與投資警語</h4>
+            <p style="font-size: 0.85rem; margin-bottom: 15px;">
+                本模型提供之分析數據（包含但不限於預期報酬、勝率及安全性分析）係基於 <span style="color: #b71c1c;"><b>蒙地卡羅模擬模型 (Monte Carlo Simulation)</b></span> 及歷史股價數據計算而成，以每月固定21天開盤日為假設運算。相關模擬結果乃建立在「假設市場未來波動規律與歷史數據一致」之前提下，僅供學術研究與投資參考，<span style="text-decoration: underline;">並不代表、亦不保證未來之市場表現或實際投資收益</span>。</p>
+            <ul style="padding-left: 18px; font-size: 0.8rem; color: #70757a; list-style-type: square;">
+                <li style="margin-bottom: 6px;"><b style="color: #5f6368;">模型限制：</b> 統計機率模型無法預測極端黑天鵝事件、政治動盪或公司結構性突發改變。</li>
+                <li style="margin-bottom: 6px;"><b style="color: #5f6368;">歷史回測：</b> 歷史績效僅供參考，過去市場走勢不必然於未來重複發生。</li>
+                <li style="margin-bottom: 6px;"><b style="color: #5f6368;">產品風險：</b> BEN / DCN 屬高風險結構型商品，涉及衍生性金融工具交易，可能導致本金重大損失或涉及實物交割。</li>
+                <li style="margin-bottom: 6px;"><b style="color: #5f6368;">審慎評估：</b> 投資人應詳閱商品說明書並確認自身風險承受能力，本平台不負擔任何投資盈虧責任。</li>
+            </ul>
+            <div style="margin-top: 20px; padding: 10px; border: 1px solid #f1f3f4; background-color: #fafafa; font-size: 0.85rem; color: #b71c1c; text-align: center; font-weight: 500;">投資一定有風險，投資工具交易有賺有賠，申購前應詳閱相關產品說明書及投資人須知，並自行負擔投資損益責任。</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // PRNG 偽亂數生成器
+    function mulberry32(a) {
+        return function() {
+            var t = a += 0x6D2B79F5;
+            t = Math.imul(t ^ t >>> 15, t | 1);
+            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        }
+    }
+
+    // 綁定 UI 的 KI 條件切換邏輯 (NA 防呆)
+    document.querySelectorAll('.mini-btn-group[data-target="kiType"] .mini-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.mini-btn-group[data-target="kiType"] .mini-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            const kiVal = e.target.getAttribute('data-value');
+            document.getElementById('kiType').value = kiVal;
+            
+            const kiInput = document.getElementById('kiPct');
+            if (kiVal === 'NA') {
+                kiInput.disabled = true;
+                kiInput.value = document.getElementById('strikePct').value; 
+            } else {
+                kiInput.disabled = false;
+            }
+        });
+    });
+
+    // ==========================================
+    // 技術指標計算函式庫 (TA Math Helpers)
+    // ==========================================
+    function calcSMA(data, period) {
+        return data.map((val, idx) => {
+            if(idx < period - 1) return null;
+            let sum = 0;
+            for(let i = 0; i < period; i++) sum += data[idx - i];
+            return sum / period;
+        });
+    }
+
+    function calcBIAS(closes, sma) {
+        return closes.map((c, i) => sma[i] ? ((c - sma[i]) / sma[i] * 100) : null);
+    }
+
+    function calcRSI(closes, period = 14) {
+        let res = Array(closes.length).fill(null);
+        if(closes.length <= period) return res;
+        let gains = 0, losses = 0;
+        for(let i=1; i<=period; i++) {
+            let diff = closes[i] - closes[i-1];
+            if(diff >= 0) gains += diff; else losses -= diff;
+        }
+        let avgGain = gains/period, avgLoss = losses/period;
+        res[period] = avgLoss === 0 ? 100 : 100 - (100 / (1 + avgGain/avgLoss));
+        for(let i=period+1; i<closes.length; i++) {
+            let diff = closes[i] - closes[i-1];
+            let g = diff>=0 ? diff : 0;
+            let l = diff<0 ? -diff : 0;
+            avgGain = (avgGain * (period-1) + g) / period;
+            avgLoss = (avgLoss * (period-1) + l) / period;
+            res[i] = avgLoss === 0 ? 100 : 100 - (100 / (1 + avgGain/avgLoss));
+        }
+        return res;
+    }
+
+    function calcEMA(data, period) {
+        let res = Array(data.length).fill(null);
+        let k = 2 / (period + 1);
+        let firstValidIdx = data.findIndex(x => x !== null);
+        if(firstValidIdx === -1 || firstValidIdx + period > data.length) return res;
+
+        let sum = 0;
+        for(let i=0; i<period; i++) sum += data[firstValidIdx + i];
+        res[firstValidIdx + period - 1] = sum / period;
+
+        for(let i=firstValidIdx + period; i<data.length; i++) {
+            if(data[i] === null) continue;
+            res[i] = data[i]*k + res[i-1]*(1-k);
+        }
+        return res;
+    }
+
+    function calcMACD(closes) {
+        let ema12 = calcEMA(closes, 12);
+        let ema26 = calcEMA(closes, 26);
+        let macdLine = closes.map((_, i) => (ema12[i]!==null && ema26[i]!==null) ? ema12[i]-ema26[i] : null);
+        let signalLine = calcEMA(macdLine, 9);
+        let hist = macdLine.map((m, i) => (m!==null && signalLine[i]!==null) ? m-signalLine[i] : null);
+        return { macd: macdLine, signal: signalLine, hist: hist };
+    }
+
+    function calcRollingHV(returns, period = 20) {
+        let alignedReturns = [null, ...returns];
+        return alignedReturns.map((r, i, arr) => {
+            if(i < period) return null;
+            let slice = arr.slice(i - period + 1, i + 1);
+            let mean = slice.reduce((a,b)=>a+b)/period;
+            let variance = slice.reduce((a,b)=>a+Math.pow(b-mean,2),0)/(period-1);
+            return Math.sqrt(variance) * Math.sqrt(252) * 100;
+        });
+    }
+
+    // ========== API 串接與數據運算 ==========
+    async function fetchTwelveData(symbols, apiKey) {
+        const dataObj = {};
+        for (let sym of symbols) {
+            document.getElementById('loadingText').innerText = `Fetching data for ${sym}...`;
+            const url = `https://api.twelvedata.com/time_series?symbol=${sym}&interval=1day&outputsize=252&apikey=${apiKey}`;
+            const response = await fetch(url);
+            const json = await response.json();
+            
+            if (json.code === 429) throw new Error("API 請求次數超過限制，請稍後再試。");
+            if (json.status === 'error') throw new Error(`獲取 ${sym} 資料失敗: ${json.message}`);
+            if (!json.values || json.values.length === 0) throw new Error(`無法獲取 ${sym} 的歷史資料`);
+            
+            // 加入 dates 用於技術線圖 X 軸
+            const dates = json.values.map(v => v.datetime).reverse();
+            const closes = json.values.map(v => parseFloat(v.close)).reverse();
+            const returns = [];
+            for (let i = 1; i < closes.length; i++) {
+                returns.push(Math.log(closes[i] / closes[i-1]));
+            }
+            dataObj[sym] = { dates, closes, returns };
+            await new Promise(r => setTimeout(r, 200));
+        }
+        return dataObj;
+    }
+
+    function calculateVolatility(returns) {
+        const n = returns.length;
+        if (n === 0) return 0;
+        const mean = returns.reduce((a, b) => a + b) / n;
+        const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (n - 1);
+        return Math.sqrt(variance) * Math.sqrt(252);
+    }
+
+    function calculateCorrelationMatrix(dataObj, symbols) {
+        const numAssets = symbols.length;
+        const mat = Array(numAssets).fill(0).map(() => Array(numAssets).fill(1));
+        
+        let minLen = Infinity;
+        for (let sym of symbols) minLen = Math.min(minLen, dataObj[sym].returns.length);
+        
+        const alignedReturns = symbols.map(sym => {
+            const rets = dataObj[sym].returns;
+            return rets.slice(rets.length - minLen);
+        });
+        
+        for (let i = 0; i < numAssets; i++) {
+            for (let j = i + 1; j < numAssets; j++) {
+                const meanI = alignedReturns[i].reduce((a, b) => a + b) / minLen;
+                const meanJ = alignedReturns[j].reduce((a, b) => a + b) / minLen;
+                
+                let cov = 0, varI = 0, varJ = 0;
+                for (let k = 0; k < minLen; k++) {
+                    const devI = alignedReturns[i][k] - meanI;
+                    const devJ = alignedReturns[j][k] - meanJ;
+                    cov += devI * devJ;
+                    varI += devI * devI;
+                    varJ += devJ * devJ;
+                }
+                const cor = cov / Math.sqrt(varI * varJ);
+                mat[i][j] = cor;
+                mat[j][i] = cor;
+            }
+        }
+        return mat;
+    }
+
+    function cholesky(matrix) {
+        const n = matrix.length;
+        let L = Array(n).fill(0).map(() => Array(n).fill(0));
+        for (let i = 0; i < n; i++) {
+            for (let j = 0; j <= i; j++) {
+                let sum = 0;
+                for (let k = 0; k < j; k++) sum += L[i][k] * L[j][k];
+                if (i === j) L[i][j] = Math.sqrt(Math.max(matrix[i][i] - sum, 0));
+                else L[i][j] = (1.0 / L[j][j] * (matrix[i][j] - sum));
+            }
+        }
+        return L;
+    }
+
+    let chart1, chart2, chart3; 
+    let cachedSymbolsStr = "";
+    let cachedCorMat = null;
+    let cachedDataObj = null;
+    let techCharts = {}; // 存放技術指標圖表的物件
+
+    // 初始化技術線圖圖表物件
+    function initTechCharts(symbols) {
+        const area = document.getElementById('stockChartsArea');
+        area.innerHTML = '';
+        techCharts = {};
+
+        symbols.forEach(sym => {
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = "background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(60,64,67,.1); height: 350px; display: flex; flex-direction: column;";
+            wrapper.innerHTML = `<h3 style="margin-top: 0; font-size: 1rem; color: var(--text-main); text-align: center; margin-bottom: 10px;">${sym} 歷史走勢與技術分析</h3>
+                                 <div style="flex-grow: 1; position: relative; min-height: 0;"><canvas id="tc_${sym}"></canvas></div>`;
+            area.appendChild(wrapper);
+
+            const ctx = document.getElementById(`tc_${sym}`).getContext('2d');
+            techCharts[sym] = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: {
+                        y: { type: 'linear', display: true, position: 'left' },
+                        y1: { type: 'linear', display: false, position: 'right', grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        });
+        updateAllTechCharts();
+    }
+
+    // 根據選擇動態更新技術分析資料
+    function updateAllTechCharts() {
+        if(!cachedDataObj) return;
+        const techType = document.querySelector('input[name="tech"]:checked').value;
+        const showLevels = document.getElementById('showPriceLevels').checked;
+        const strikePct = parseFloat(document.getElementById('strikePct').value) / 100;
+        let kiPct = parseFloat(document.getElementById('kiPct').value) / 100;
+        if(document.getElementById('kiType').value === 'NA') kiPct = strikePct;
+
+        Object.keys(techCharts).forEach(sym => {
+            const chart = techCharts[sym];
+            const data = cachedDataObj[sym];
+            const closes = data.closes;
+            const dates = data.dates;
+            const S0 = closes[closes.length - 1]; // 當前最新收盤價
+            const strikeLvl = S0 * strikePct;
+            const kiLvl = S0 * kiPct;
+
+            let datasets = [
+                { label: '收盤價', data: closes, borderColor: 'rgba(26, 77, 161, 0.8)', borderWidth: 2, yAxisID: 'y', pointRadius: 0, fill: false }
+            ];
+
+            chart.options.scales.y1.display = false;
+
+            if(techType === 'ma') {
+                datasets.push({ label: 'MA20', data: calcSMA(closes, 20), borderColor: '#f29900', borderWidth: 1.5, yAxisID: 'y', pointRadius: 0 });
+                datasets.push({ label: 'MA60', data: calcSMA(closes, 60), borderColor: '#188038', borderWidth: 1.5, yAxisID: 'y', pointRadius: 0 });
+                datasets.push({ label: 'MA200', data: calcSMA(closes, 200), borderColor: '#8e24aa', borderWidth: 1.5, yAxisID: 'y', pointRadius: 0 });
+            } else if(techType === 'bias') {
+                chart.options.scales.y1.display = true;
+                datasets.push({ label: 'BIAS 20 (%)', data: calcBIAS(closes, calcSMA(closes, 20)), borderColor: '#d93025', borderWidth: 1.5, yAxisID: 'y1', type: 'bar', backgroundColor: 'rgba(217, 48, 37, 0.3)' });
+            } else if(techType === 'rsi') {
+                chart.options.scales.y1.display = true;
+                datasets.push({ label: 'RSI 14', data: calcRSI(closes, 14), borderColor: '#8e24aa', borderWidth: 1.5, yAxisID: 'y1', pointRadius: 0 });
+            } else if(techType === 'macd') {
+                chart.options.scales.y1.display = true;
+                const macdObj = calcMACD(closes);
+                datasets.push({ label: 'MACD', data: macdObj.macd, borderColor: '#1a4da1', borderWidth: 1.5, yAxisID: 'y1', pointRadius: 0 });
+                datasets.push({ label: 'Signal', data: macdObj.signal, borderColor: '#f29900', borderWidth: 1.5, yAxisID: 'y1', pointRadius: 0 });
+                datasets.push({ label: 'Hist', data: macdObj.hist, type: 'bar', backgroundColor: macdObj.hist.map(v => v!==null && v>=0 ? 'rgba(24,128,56,0.5)' : 'rgba(217,48,37,0.5)'), yAxisID: 'y1' });
+            } else if(techType === 'hv') {
+                chart.options.scales.y1.display = true;
+                datasets.push({ label: 'Hist Vol 20D (%)', data: calcRollingHV(data.returns, 20), borderColor: '#00897b', borderWidth: 1.5, yAxisID: 'y1', pointRadius: 0 });
+            }
+
+            if(showLevels) {
+                datasets.push({ label: 'Strike (履約價)', data: Array(closes.length).fill(strikeLvl), borderColor: '#f29900', borderWidth: 2, borderDash: [5,5], pointRadius: 0, yAxisID: 'y' });
+                datasets.push({ label: 'KI (下限價)', data: Array(closes.length).fill(kiLvl), borderColor: '#d93025', borderWidth: 2, borderDash: [5,5], pointRadius: 0, yAxisID: 'y' });
+            }
+
+            chart.data.labels = dates.map(d => d.substring(0,10));
+            chart.data.datasets = datasets;
+            chart.update();
+        });
+    }
+
+    // 技術指標按鈕的切換事件監聽
+    document.querySelectorAll('input[name="tech"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            document.querySelectorAll('.tech-option:not(.level-toggle)').forEach(lbl => lbl.classList.remove('active'));
+            e.target.closest('.tech-option').classList.add('active');
+            updateAllTechCharts();
+        });
+    });
+    document.getElementById('showPriceLevels').addEventListener('change', (e) => {
+        if(e.target.checked) e.target.closest('.level-toggle').classList.add('active');
+        else e.target.closest('.level-toggle').classList.remove('active');
+        updateAllTechCharts();
+    });
+
+    function renderCorMatrixTable(symbols, corMat) {
+        let html = '<thead><tr><th></th>';
+        symbols.forEach(s => html += `<th>${s}</th>`);
+        html += '</tr></thead><tbody>';
+        for (let i = 0; i < symbols.length; i++) {
+            html += `<tr><td style="font-weight: bold; color: var(--text-main);">${symbols[i]}</td>`;
+            for (let j = 0; j < symbols.length; j++) {
+                let val = corMat[i][j].toFixed(4);
+                let color = val == 1.0000 ? 'var(--text-sub)' : (corMat[i][j] > 0.5 ? 'var(--danger)' : (corMat[i][j] < -0.5 ? 'var(--success)' : 'var(--text-main)'));
+                html += `<td style="color: ${color};">${val}</td>`;
+            }
+            html += '</tr>';
+        }
+        html += '</tbody>';
+        document.getElementById('corTable').innerHTML = html;
+    }
+
+    // ========== 主程式執行邏輯 ==========
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('runBtn');
+        const loading = document.getElementById('loading');
+        const resSec = document.getElementById('result-section');
+        
+        try {
+            btn.style.display = 'none';
+            resSec.classList.remove('active');
+            loading.style.display = 'flex';
+
+            const productType = document.getElementById('productType').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const symbolsStr = document.getElementById('symbols').value;
+            const symbols = symbolsStr.split(',').map(s => s.trim().toUpperCase());
+            const N = parseInt(document.getElementById('simN').value);
+            const months = parseFloat(document.getElementById('months').value);
+            const strike = parseFloat(document.getElementById('strikePct').value) / 100;
+            const kiType = document.getElementById('kiType').value;
+            const bonusRate = parseFloat(document.getElementById('bonusPct').value) / 100;
+            const r = parseFloat(document.getElementById('riskFreeRate').value) / 100;
+
+            let kiPct = parseFloat(document.getElementById('kiPct').value) / 100;
+            let effectiveKiType = kiType;
+            if (kiType === 'NA') {
+                kiPct = strike;
+                effectiveKiType = 'EKI'; 
+            }
+
+            const days = Math.round(months * 21);
+            const dt = 1 / 252;
+            const numAssets = symbols.length;
+
+            let vols = [];
+            let corMat = [];
+
+            if (cachedSymbolsStr !== symbolsStr) {
+                document.getElementById('loadingText').innerText = 'Initializing Market Data...';
+                const dataObj = await fetchTwelveData(symbols, apiKey);
+                
+                const apiVols = symbols.map(sym => calculateVolatility(dataObj[sym].returns));
+                corMat = calculateCorrelationMatrix(dataObj, symbols);
+                
+                cachedSymbolsStr = symbolsStr;
+                cachedCorMat = corMat;
+                cachedDataObj = dataObj;
+
+                let volHtml = '';
+                symbols.forEach((sym, i) => {
+                    const defaultVol = (apiVols[i]*100).toFixed(2);
+                    vols.push(apiVols[i]);
+                    volHtml += `
+                        <div class="vol-item">
+                            <span class="vol-symbol" id="symLabel_${sym}">${sym}</span>
+                            <div class="vol-input-wrapper">
+                                <input type="number" step="0.1" class="vol-input" id="volInput_${sym}" data-orig="${defaultVol}" value="${defaultVol}"> %
+                            </div>
+                        </div>`;
+                });
+                document.getElementById('volList').innerHTML = volHtml;
+
+                symbols.forEach(sym => {
+                    document.getElementById(`volInput_${sym}`).addEventListener('input', function() {
+                        if(this.value !== this.getAttribute('data-orig')) {
+                            document.getElementById(`symLabel_${sym}`).style.color = 'var(--danger)';
+                        } else {
+                            document.getElementById(`symLabel_${sym}`).style.color = 'var(--text-sub)';
+                        }
+                    });
+                });
+            } else {
+                document.getElementById('loadingText').innerText = 'Loading adjusted parameters...';
+                symbols.forEach(sym => {
+                    const editedVol = parseFloat(document.getElementById(`volInput_${sym}`).value) / 100;
+                    vols.push(editedVol);
+                });
+                corMat = cachedCorMat;
+            }
+
+            renderCorMatrixTable(symbols, corMat);
+            const L = cholesky(corMat);
+
+            document.getElementById('loadingText').innerText = 'Running Monte Carlo Simulation...';
+            await new Promise(resolve => setTimeout(resolve, 50)); 
+
+            let payoffs = [];
+            let physicalDeliveryCount = 0; 
+            let deliveryCountsArray = Array(numAssets).fill(0); 
+            let samplePaths = [];
+            let prng = mulberry32(123456); 
+
+            for (let i = 0; i < N; i++) {
+                let prices = Array(numAssets).fill(1.0);
+                let knockedIn = false;
+                let pathRecord = [];
+
+                for (let d = 0; d < days; d++) {
+                    let Z = [];
+                    for (let j = 0; j < numAssets; j++) {
+                        let u1 = Math.max(prng(), 1e-10), u2 = Math.max(prng(), 1e-10);
+                        Z.push(Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2));
+                    }
+                    
+                    let currentWorst = Infinity;
+                    for (let j = 0; j < numAssets; j++) {
+                        let correlatedZ = 0;
+                        for(let k = 0; k <= j; k++) correlatedZ += L[j][k] * Z[k];
+                        prices[j] = prices[j] * Math.exp((r - 0.5 * vols[j] * vols[j]) * dt + vols[j] * Math.sqrt(dt) * correlatedZ);
+                        if (prices[j] < currentWorst) currentWorst = prices[j];
+                    }
+
+                    if (i < 100) pathRecord.push(currentWorst);
+                    if (effectiveKiType === 'AKI' && currentWorst <= kiPct) knockedIn = true;
+                }
+
+                if (i < 100) samplePaths.push(pathRecord);
+
+                let finalWorst = Math.min(...prices);
+                if (effectiveKiType === 'EKI' && finalWorst <= kiPct) knockedIn = true;
+
+                let payoff = 0;
+                if (knockedIn && finalWorst < strike) {
+                    payoff = finalWorst / strike; 
+                    physicalDeliveryCount++;
+                    let worstIdx = prices.indexOf(finalWorst);
+                    deliveryCountsArray[worstIdx]++;
+                } else {
+                    if (productType === 'DCN') {
+                        payoff = 1 + bonusRate;
+                    } else { 
+                        payoff = Math.max(1 + bonusRate, finalWorst);
+                    }
+                }
+                payoffs.push(payoff);
+            }
+
+            let minHistLen = Infinity;
+            symbols.forEach(sym => {
+                if(cachedDataObj[sym].closes.length < minHistLen) minHistLen = cachedDataObj[sym].closes.length;
+            });
+
+            if(minHistLen > 0) {
+                let actualDays = Math.min(days, minHistLen);
+                let S0 = symbols.map(sym => cachedDataObj[sym].closes[cachedDataObj[sym].closes.length - actualDays]);
+                let histKnockedIn = false;
+                let histFinalWorst = 1.0;
+                
+                for(let d = 0; d < actualDays; d++) {
+                    let currentPrices = symbols.map((sym, j) => {
+                        return cachedDataObj[sym].closes[cachedDataObj[sym].closes.length - actualDays + d] / S0[j];
+                    });
+                    let currentWorst = Math.min(...currentPrices);
+                    
+                    if (effectiveKiType === 'AKI' && currentWorst <= kiPct) histKnockedIn = true;
+                    if (d === actualDays - 1) {
+                        histFinalWorst = currentWorst;
+                        if (effectiveKiType === 'EKI' && currentWorst <= kiPct) histKnockedIn = true;
+                    }
+                }
+
+                let histPayoff = 0;
+                if (histKnockedIn && histFinalWorst < strike) {
+                    histPayoff = histFinalWorst / strike;
+                } else {
+                    if (productType === 'DCN') {
+                        histPayoff = 1 + bonusRate;
+                    } else {
+                        histPayoff = Math.max(1 + bonusRate, histFinalWorst);
+                    }
+                }
+
+                let histReturn = ((histPayoff - 1) * 100).toFixed(2);
+                let histColor = histPayoff >= 1 ? 'var(--success)' : 'var(--danger)';
+                let sign = histReturn > 0 ? '+' : '';
+                
+                document.getElementById('backtestResult').innerHTML = `<span style="color:${histColor}">${sign}${histReturn}%</span>`;
+                document.getElementById('backtestSubtext').innerHTML = `若於 ${actualDays} 個交易日前進場<br>觸碰下限: ${histKnockedIn ? '<span style="color:var(--danger);font-weight:bold;">是</span>' : '<span style="color:var(--success);font-weight:bold;">否</span>'}`;
+            } else {
+                document.getElementById('backtestResult').innerText = 'N/A';
+                document.getElementById('backtestSubtext').innerText = '歷史數據不足無法回測';
+            }
+
+            let expectedPayoff = payoffs.reduce((a, b) => a + b) / N;
+            let fairValue = expectedPayoff * Math.exp(-r * (days / 252));
+            
+            document.getElementById('fairValue').innerText = (fairValue * 100).toFixed(2) + '%';
+            document.getElementById('deliveryProb').innerText = ((physicalDeliveryCount / N) * 100).toFixed(2) + '%';
+
+            let returns = payoffs.map(p => p - 1); 
+            returns.sort((a, b) => a - b);
+            
+            const getVaR = (pct) => { let idx = Math.floor(N * (1 - pct)); return returns[idx] * 100; };
+            const getCVaR = (pct) => {
+                let idx = Math.floor(N * (1 - pct));
+                let sum = 0; for(let i=0; i<=idx; i++) sum += returns[i];
+                return (sum / (idx + 1)) * 100;
+            };
+
+            const levels = [0.99, 0.97, 0.95, 0.90, 0.85];
+            levels.forEach(lv => {
+                let key = Math.round(lv * 100);
+                let varVal = getVaR(lv);
+                let cvarVal = getCVaR(lv);
+                document.getElementById('var' + key).innerText = varVal >= 0 ? '-' : varVal.toFixed(2) + '%';
+                document.getElementById('cvar' + key).innerText = cvarVal >= 0 ? '-' : cvarVal.toFixed(2) + '%';
+            });
+
+            renderCharts(payoffs, samplePaths, days, kiPct, strike, bonusRate, symbols, deliveryCountsArray, physicalDeliveryCount);
+            
+            // 初始化技術線圖
+            initTechCharts(symbols);
+
+            resSec.classList.add('active');
+
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            btn.style.display = 'block';
+            loading.style.display = 'none';
+        }
+    });
+
+    function renderCharts(payoffs, samplePaths, days, kiPct, strike, bonusRate, symbols, deliveryCountsArray, totalDeliveryCount) {
+        if(chart1) chart1.destroy();
+        if(chart2) chart2.destroy();
+        if(chart3) chart3.destroy();
+
+        const kiType = document.getElementById('kiType').value;
+
+        // 圖表 1: 最終收益分佈
+        const ctx1 = document.getElementById('payoffChart').getContext('2d');
+        let returnVals = payoffs.map(p => (p - 1) * 100);
+        let minP = Math.floor(Math.min(...returnVals));
+        let maxP = Math.ceil(Math.max(...returnVals));
+        if (minP === maxP) { minP -= 1; maxP += 1; }
+        let range = maxP - minP;
+        let step = 1; 
+        if (range > 100) step = 5;
+        else if (range > 50) step = 2;
+        minP = Math.floor(minP / step) * step;
+        maxP = Math.ceil(maxP / step) * step;
+        let bins = Math.round((maxP - minP) / step) + 1;
+        let counts = Array(bins).fill(0);
+        let labels = [];
+        for(let i=0; i<bins; i++) {
+            let labelVal = minP + i * step;
+            labels.push((labelVal > 0 ? '+' : '') + labelVal + '%');
+        }
+        returnVals.forEach(r => {
+            let idx = Math.round((r - minP) / step);
+            if(idx >= bins) idx = bins - 1;
+            if(idx < 0) idx = 0;
+            counts[idx]++;
+        });
+
+        chart1 = new Chart(ctx1, {
+            type: 'bar',
+            data: { labels: labels, datasets: [{ label: '出現頻率', data: counts, backgroundColor: 'rgba(26, 77, 161, 0.7)' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} } }
+        });
+
+        // 圖表 2: 路徑
+        const ctx2 = document.getElementById('pathChart').getContext('2d');
+        let datasets = samplePaths.map((path, i) => ({
+            label: `Path ${i}`, data: path,
+            borderColor: path[path.length-1] < strike && (kiType !== 'NA' && path.some(p => p <= kiPct)) ? 'rgba(217, 48, 37, 0.55)' : 'rgba(26, 77, 161, 0.35)',
+            borderWidth: 1.5, 
+            fill: false, 
+            pointRadius: 0
+        }));
+
+        datasets.push({ label: 'Strike (履約價)', data: Array(days).fill(strike), borderColor: '#f29900', borderWidth: 2, borderDash: [5,5], pointRadius: 0 });
+        if(kiType !== 'NA') datasets.push({ label: 'KI (下限價)', data: Array(days).fill(kiPct), borderColor: '#d93025', borderWidth: 2, borderDash: [5,5], pointRadius: 0 });
+        datasets.push({ label: 'Bonus Yield', data: Array(days).fill(1 + bonusRate), borderColor: '#188038', borderWidth: 2, borderDash: [5,5], pointRadius: 0 });
+
+        chart2 = new Chart(ctx2, {
+            type: 'line',
+            data: { labels: Array.from({length: days}, (_, i) => i), datasets: datasets },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0.3 } } }
+        });
+
+        // 圖表 3: 實物交割圓餅圖
+        const ctx3 = document.getElementById('pieChart').getContext('2d');
+        let pieData = totalDeliveryCount === 0 ? [1] : deliveryCountsArray;
+        let pieLabels = totalDeliveryCount === 0 ? ["無實物履約發生"] : symbols;
+        let bgColors = ['#1a4da1', '#d93025', '#188038', '#f29900', '#8e24aa', '#00acc1', '#00897b', '#d81b60'];
+
+        chart3 = new Chart(ctx3, {
+            type: 'pie',
+            data: {
+                labels: pieLabels,
+                datasets: [{
+                    data: pieData,
+                    backgroundColor: totalDeliveryCount === 0 ? ['#e0e0e0'] : bgColors.slice(0, symbols.length),
+                    borderWidth: 1
+                }]
+            },
+            plugins: [ChartDataLabels],
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' },
+                    datalabels: {
+                        color: '#ffffff',
+                        font: { weight: 'bold', size: 14 },
+                        formatter: (value, ctx) => {
+                            if (totalDeliveryCount === 0) return ''; 
+                            let sum = 0;
+                            let dataArr = ctx.chart.data.datasets[0].data;
+                            dataArr.forEach(data => { sum += data; });
+                            if (value === 0) return ''; 
+                            let percentage = (value * 100 / sum).toFixed(1) + "%";
+                            return percentage;
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>
