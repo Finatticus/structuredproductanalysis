@@ -693,51 +693,57 @@ function renderMCResults(res, params) {
         });
     }
 
-    // --- 繪製 Worst-of Paths 圖表功能 ---
+    // --- 繪製 Worst-of Paths 圖表功能 (彩色版) ---
     const ctxPaths = document.getElementById('worstPathsChart');
     if (ctxPaths && res.topWorstPaths) {
         const days = Array.from({ length: params.D + 1 }, (_, i) => i);
         
-        const pathDatasets = res.topWorstPaths.map((path, idx) => ({
-            label: `Path ${idx + 1}`,
-            // 關鍵修改：如果是 null 就回傳 null，不呼叫 toFixed 避免轉為字串
-            data: path.map(v => v === null ? null : v * 100),
-            borderColor: 'rgba(190, 0, 0, 0.3)', 
-            borderWidth: 1,
-            pointRadius: 0,
-            fill: false,
-            spanGaps: false, // 關鍵修改：遇到 null 數據時直接中斷線條
-            order: 2 
-        }));
+        const pathDatasets = res.topWorstPaths.map((path, idx) => {
+            // 使用 HSL 自動生成不同色調
+            // 每條線間隔約 1.6 度 (360/220)，確保顏色不重複
+            const hue = (idx * (360 / res.topWorstPaths.length)) % 360;
+            return {
+                label: `Path ${idx + 1}`,
+                data: path.map(v => v === null ? null : v * 100),
+                // 使用帶透明度的顏色，避免重疊時太亂
+                borderColor: `hsla(${hue}, 70%, 50%, 0.4)`, 
+                borderWidth: 1,
+                pointRadius: 0,
+                fill: false,
+                spanGaps: false,
+                order: 2 
+            };
+        });
 
         const koLevel = (params.KO[0] / params.S0[0]) * 100;
         const strikeLevel = (params.K[0] / params.S0[0]) * 100;
         const kiLevel = (params.AKI[0] / params.S0[0]) * 100;
 
+        // 基準線 (維持醒目顏色)
         pathDatasets.push({
             label: 'KO Level',
             data: new Array(params.D + 1).fill(koLevel),
-            borderColor: '#188038',
+            borderColor: '#188038', // 深綠
             borderDash: [5, 5],
-            borderWidth: 2,
+            borderWidth: 3, // 加粗一點以區分彩色線
             pointRadius: 0,
             fill: false,
             order: 1
         }, {
             label: 'Strike Price',
             data: new Array(params.D + 1).fill(strikeLevel),
-            borderColor: '#f29900',
+            borderColor: '#f29900', // 鮮橘
             borderDash: [5, 5],
-            borderWidth: 2,
+            borderWidth: 3,
             pointRadius: 0,
             fill: false,
             order: 1
         }, {
             label: 'KI Level',
             data: new Array(params.D + 1).fill(kiLevel),
-            borderColor: '#d93025',
+            borderColor: '#000000', // 改為黑色或深紅，確保彩色背景中清晰
             borderDash: [2, 2],
-            borderWidth: 2,
+            borderWidth: 3,
             pointRadius: 0,
             fill: false,
             order: 1
@@ -758,12 +764,11 @@ function renderMCResults(res, params) {
                             filter: (item) => ['KO Level', 'Strike Price', 'KI Level'].includes(item.text)
                         }
                     },
-                    title: { display: true, text: '最差表現股票模擬路徑', font: { size: 18 } }
+                    title: { display: true, text: '最差表現股票模擬路徑 (多色視覺化)', font: { size: 16 } }
                 },
                 scales: {
                     y: { 
                         title: { display: true, text: '價格水平 (%)' },
-                        // 設定合適的顯示範圍，避免 y 軸過低
                         suggestedMin: Math.min(kiLevel - 15, 40),
                         suggestedMax: 110
                     },
@@ -772,7 +777,7 @@ function renderMCResults(res, params) {
             }
         });
     }
-} 
+}
  
 function renderCorrelationHeatmap(symbols, corMat) {
     const container = document.getElementById('heatmapArea'); container.innerHTML = '';
@@ -1288,4 +1293,5 @@ function renderWorstPathsChart(paths, params) {
  
 
 </body></html>
+
 
