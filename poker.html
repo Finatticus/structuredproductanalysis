@@ -1,0 +1,739 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electronic Sic Bo</title>
+    <style>
+        :root {
+            --mgm-gold: #D4AF37;
+            --mgm-gold-light: #F9E596;
+            --mgm-gold-dark: #AA8222;
+            --mgm-green: #0B3A24;
+            --mgm-green-dark: #051A10;
+            --mgm-red: #8B0000;
+            --mgm-red-light: #FF4500;
+            --dice-red: #D20000; /* 傳統骰子正紅色 */
+            --neon-glow: rgba(212, 175, 55, 0.6);
+            --board-border: 2px solid var(--mgm-gold);
+        }
+
+        body {
+            background: radial-gradient(circle at center, #111 0%, #000 100%);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 縮小 90% 的整體外掛容器 */
+        .scale-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: scale(0.9);
+            transform-origin: top center;
+        }
+
+        /* 標題與骰盅顯示區 */
+        .header-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
+            margin-bottom: 20px;
+            background: linear-gradient(180deg, #222, #111);
+            border: 1px solid var(--mgm-gold);
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-sizing: border-box;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 900;
+            color: var(--mgm-gold);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px var(--mgm-gold-dark);
+        }
+
+        .dice-container {
+            display: flex;
+            gap: 20px;
+            background: rgba(0,0,0,0.5);
+            padding: 15px 30px;
+            border-radius: 8px;
+            border: 1px inset var(--mgm-gold);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+        }
+
+        /* --- [優化] 專業立體骰子設計 (移除框框，點數樣式) --- */
+        .die {
+            width: 70px; /* 放大骰子尺寸 */
+            height: 70px;
+            background: linear-gradient(135deg, #ffffff 0%, #d4d4d4 100%);
+            color: #111;
+            font-size: 60px; /* 放大點數 */
+            line-height: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px; /* 稍微增加圓角 */
+            border: 1px solid #aaa;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.6), 
+                        inset -3px -3px 8px rgba(0,0,0,0.2), 
+                        inset 3px 3px 8px rgba(255,255,255,0.9);
+            transition: color 0.1s; /* 變色過渡 */
+            position: relative;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* 使用預設字體顯示點數 */
+        }
+
+        /* 傳統骰子點數的點 (取代 Unicode) */
+        .die-dot {
+            position: absolute;
+            width: 12px; /* 點的大小 */
+            height: 12px;
+            background-color: #111;
+            border-radius: 50%;
+            box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
+        }
+
+        .die.red-face .die-dot {
+            background-color: var(--dice-red);
+        }
+        
+        /* 1點佈局 */
+        .die-1 .dot-center { top: 50%; left: 50%; transform: translate(-50%, -50%); width: 18px; height: 18px; }
+
+        /* 2點佈局 */
+        .die-2 .dot-top-left { top: 20%; left: 20%; }
+        .die-2 .dot-bottom-right { bottom: 20%; right: 20%; }
+        
+        /* 3點佈局 */
+        .die-3 .dot-top-left { top: 20%; left: 20%; }
+        .die-3 .dot-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .die-3 .dot-bottom-right { bottom: 20%; right: 20%; }
+
+        /* 4點佈局 */
+        .die-4 .dot-top-left { top: 20%; left: 20%; }
+        .die-4 .dot-top-right { top: 20%; right: 20%; }
+        .die-4 .dot-bottom-left { bottom: 20%; left: 20%; }
+        .die-4 .dot-bottom-right { bottom: 20%; right: 20%; }
+        
+        /* 5點佈局 */
+        .die-5 .dot-top-left { top: 20%; left: 20%; }
+        .die-5 .dot-top-right { top: 20%; right: 20%; }
+        .die-5 .dot-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .die-5 .dot-bottom-left { bottom: 20%; left: 20%; }
+        .die-5 .dot-bottom-right { bottom: 20%; right: 20%; }
+
+        /* 6點佈局 */
+        .die-6 .dot-top-left { top: 20%; left: 20%; }
+        .die-6 .dot-top-right { top: 20%; right: 20%; }
+        .die-6 .dot-mid-left { top: 50%; left: 20%; transform: translateY(-50%); }
+        .die-6 .dot-mid-right { top: 50%; right: 20%; transform: translateY(-50%); }
+        .die-6 .dot-bottom-left { bottom: 20%; left: 20%; }
+        .die-6 .dot-bottom-right { bottom: 20%; right: 20%; }
+
+        /* --- [優化] 真實機台底盤震動彈跳動畫 --- */
+        #d1.rolling { animation: sicBoJump 0.22s infinite ease-in-out; }
+        #d2.rolling { animation: sicBoJump 0.27s infinite ease-in-out -0.05s; }
+        #d3.rolling { animation: sicBoJump 0.24s infinite ease-in-out -0.1s; }
+
+        @keyframes sicBoJump {
+            0% { transform: translateY(0) rotate(0deg); box-shadow: 0 6px 12px rgba(0,0,0,0.6); filter: blur(0px); }
+            25% { transform: translateY(-14px) rotate(15deg); box-shadow: 0 22px 18px rgba(0,0,0,0.2); filter: blur(0.5px); }
+            50% { transform: translateY(0) rotate(-5deg); box-shadow: 0 6px 12px rgba(0,0,0,0.6); filter: blur(0px); }
+            75% { transform: translateY(-20px) rotate(-15deg) scale(1.05); box-shadow: 0 28px 24px rgba(0,0,0,0.1); filter: blur(0.8px); }
+            100% { transform: translateY(0) rotate(0deg); box-shadow: 0 6px 12px rgba(0,0,0,0.6); filter: blur(0px); }
+        }
+
+        /* 遊戲主版面 */
+        .board {
+            width: 100%;
+            max-width: 1200px;
+            background: var(--mgm-green-dark);
+            border: 3px solid var(--mgm-gold);
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 0 30px rgba(11, 58, 36, 0.8), inset 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .zone {
+            flex: 1;
+            background: var(--mgm-green);
+            border: 1px solid var(--mgm-gold-dark);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+
+        .zone:hover {
+            background: #0f4f31;
+            box-shadow: 0 0 15px var(--neon-glow);
+        }
+
+        .zone:active {
+            transform: scale(0.97);
+        }
+
+        .zone.winning {
+            animation: winFlash 0.5s infinite alternate;
+            border-color: #fff;
+        }
+
+        @keyframes winFlash {
+            from { background: var(--mgm-green); box-shadow: 0 0 10px var(--mgm-gold); }
+            to { background: var(--mgm-gold-dark); box-shadow: 0 0 30px #fff; }
+        }
+
+        /* 賠率與文字樣式 */
+        .title-large { font-size: 32px; font-weight: 900; color: var(--mgm-gold-light); }
+        .text-num { font-size: 24px; font-weight: bold; color: white; }
+        .text-odds { font-size: 11px; color: var(--mgm-gold); margin-top: 2px; }
+        .text-desc { font-size: 10px; color: #ccc; }
+
+        /* 特殊區域排版 */
+        .row-top .zone { min-height: 120px; }
+        .row-mid1 .zone { min-height: 80px; }
+        .row-mid2 .zone { min-height: 70px; }
+        .row-bot .zone { min-height: 70px; }
+        
+        .flex-2 { flex: 2; }
+        .flex-3 { flex: 3; }
+
+        /* 下注籌碼顯示 */
+        .bet-chip {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(139, 0, 0, 0.9);
+            border: 2px dashed var(--mgm-gold);
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            border-radius: 50%;
+            width: 40px; height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .bet-chip.active { opacity: 1; }
+
+        /* 控制面板 */
+        .controls-panel {
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            background: rgba(11, 58, 36, 0.4);
+            padding: 15px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--mgm-gold-dark);
+            box-sizing: border-box;
+        }
+
+        .stats {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 18px;
+        }
+        .stats span { color: var(--mgm-gold-light); font-weight: bold; font-family: monospace; font-size: 22px;}
+
+        .chips {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chip-btn {
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 3px dashed #fff;
+            background: #333;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            outline: none;
+            transition: 0.2s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .chip-btn:hover { transform: translateY(-5px); }
+        .chip-btn.selected {
+            border-color: var(--mgm-gold);
+            box-shadow: 0 0 20px var(--mgm-gold);
+            transform: scale(1.1);
+        }
+        /* 籌碼顏色 */
+        .c10 { background: #888; }
+        .c50 { background: #2E8B57; }
+        .c100 { background: #1E90FF; }
+        .c500 { background: #8B008B; }
+        .c1k { background: #B22222; }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 20px;
+            font-weight: 900;
+            color: #000;
+            background: linear-gradient(180deg, var(--mgm-gold-light), var(--mgm-gold-dark));
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+            transition: 0.2s;
+        }
+        .btn:hover { filter: brightness(1.2); }
+        .btn:active { transform: translateY(2px); }
+        .btn-clear { background: linear-gradient(180deg, #666, #333); color: white; }
+
+        /* 提示視窗 */
+        #msg-box {
+            position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); border: 2px solid var(--mgm-gold);
+            color: white; padding: 15px 30px; border-radius: 5px;
+            font-size: 20px; font-weight: bold; z-index: 1000;
+            opacity: 0; pointer-events: none; transition: 0.3s;
+            text-align: center;
+        }
+        #msg-box.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div class="scale-wrapper">
+    
+    <div class="header-panel">
+        <div class="logo">MICHAEL</div>
+        <div class="dice-container" id="dice-display">
+            <div class="die die-1 red-face" id="d1">
+                <div class="die-dot dot-center"></div>
+            </div>
+            <div class="die die-3" id="d2">
+                <div class="die-dot dot-top-left"></div>
+                <div class="die-dot dot-center"></div>
+                <div class="die-dot dot-bottom-right"></div>
+            </div>
+            <div class="die die-4 red-face" id="d3">
+                <div class="die-dot dot-top-left"></div>
+                <div class="die-dot dot-top-right"></div>
+                <div class="die-dot dot-bottom-left"></div>
+                <div class="die-dot dot-bottom-right"></div>
+            </div>
+        </div>
+        <div style="text-align:right; font-size:12px; color:#aaa;">
+            MIN BET: 10 HKD<br>MAX BET: 30,000 HKD
+        </div>
+    </div>
+
+    <div class="board">
+        <div class="row row-top">
+            <div class="zone flex-2" data-bet="small">
+                <div class="title-large">SMALL</div>
+                <div class="text-desc">ARE NUMBERS</div>
+                <div class="text-num">4 to 10</div>
+                <div class="text-odds">1 wins 1</div>
+                <div class="text-desc" style="color:var(--mgm-red-light);">LOSE IF ANY TRIPLE</div>
+                <div class="bet-chip"></div>
+            </div>
+            <div class="zone flex-2" style="flex-direction: row; gap: 5px;">
+                <div class="zone" data-bet="double-1"><div class="text-num">1 1</div><div class="text-odds">1 wins 11</div><div class="bet-chip"></div></div>
+                <div class="zone" data-bet="double-2"><div class="text-num">2 2</div><div class="text-odds">1 wins 11</div><div class="bet-chip"></div></div>
+                <div class="zone" data-bet="double-3"><div class="text-num">3 3</div><div class="text-odds">1 wins 11</div><div class="bet-chip"></div></div>
+            </div>
+            <div class="zone flex-3" style="flex-direction: row; gap: 5px;">
+                <div class="zone" style="flex:1;">
+                    <div style="font-size:10px;">Specific Triple 1 wins 180</div>
+                    <div class="zone" style="height:30px; margin:2px 0;" data-bet="triple-1">111 <div class="bet-chip"></div></div>
+                    <div class="zone" style="height:30px; margin:2px 0;" data-bet="triple-2">222 <div class="bet-chip"></div></div>
+                    <div class="zone" style="height:30px; margin:2px 0;" data-bet="triple-3">333 <div class="bet-chip"></div></div>
+                </div>
+                <div class="zone" style="flex:1;" data-bet="any-triple">
+                    <div class="text-num" style="font-size:18px;">ANY TRIPLE</div>
+                    <div class="text-odds">1 wins 30</div>
+                    <div class="bet-chip"></div>
+                </div>
+                <div class="zone" style="flex:1;">
+                    <div style="font-size:10px;">Specific Triple 1 wins 180</div>
+                    <div class="zone" style="height:30px; margin:2px 0;" data-bet="triple-4">444 <div class="bet-chip"></div></div>
+                    <div class="zone" style="height:30px; margin:2px 0;" data-bet="triple-5">555 <div class="bet-chip"></div></div>
+                    <div class="zone" style="height:30px; margin:2px 0;" data-bet="triple-6">666 <div class="bet-chip"></div></div>
+                </div>
+            </div>
+            <div class="zone flex-2" style="flex-direction: row; gap: 5px;">
+                <div class="zone" data-bet="double-4"><div class="text-num">4 4</div><div class="text-odds">1 wins 11</div><div class="bet-chip"></div></div>
+                <div class="zone" data-bet="double-5"><div class="text-num">5 5</div><div class="text-odds">1 wins 11</div><div class="bet-chip"></div></div>
+                <div class="zone" data-bet="double-6"><div class="text-num">6 6</div><div class="text-odds">1 wins 11</div><div class="bet-chip"></div></div>
+            </div>
+            <div class="zone flex-2" data-bet="big">
+                <div class="title-large">BIG</div>
+                <div class="text-desc">ARE NUMBERS</div>
+                <div class="text-num">11 to 17</div>
+                <div class="text-odds">1 wins 1</div>
+                <div class="text-desc" style="color:var(--mgm-red-light);">LOSE IF ANY TRIPLE</div>
+                <div class="bet-chip"></div>
+            </div>
+        </div>
+
+        <div class="row row-mid1">
+            <div class="zone" data-bet="total-4"><div class="text-num">4</div><div class="text-odds">1 wins 60</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-5"><div class="text-num">5</div><div class="text-odds">1 wins 20</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-6"><div class="text-num">6</div><div class="text-odds">1 wins 18</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-7"><div class="text-num">7</div><div class="text-odds">1 wins 12</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-8"><div class="text-num">8</div><div class="text-odds">1 wins 8</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-9"><div class="text-num">9</div><div class="text-odds">1 wins 6</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-10"><div class="text-num">10</div><div class="text-odds">1 wins 6</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-11"><div class="text-num">11</div><div class="text-odds">1 wins 6</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-12"><div class="text-num">12</div><div class="text-odds">1 wins 6</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-13"><div class="text-num">13</div><div class="text-odds">1 wins 8</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-14"><div class="text-num">14</div><div class="text-odds">1 wins 12</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-15"><div class="text-num">15</div><div class="text-odds">1 wins 18</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-16"><div class="text-num">16</div><div class="text-odds">1 wins 20</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="total-17"><div class="text-num">17</div><div class="text-odds">1 wins 60</div><div class="bet-chip"></div></div>
+        </div>
+
+        <div class="row row-mid2">
+            <div class="zone" style="flex: 1.5; pointer-events: none;">
+                <div class="text-num" style="font-size:16px;">2 DIE</div>
+                <div class="text-odds">1 wins 6</div>
+            </div>
+            <script>
+                const combos = [[1,2],[1,3],[1,4],[1,5],[1,6],[2,3],[2,4],[2,5],[2,6],[3,4],[3,5],[3,6],[4,5],[4,6],[5,6]];
+                combos.forEach(c => {
+                    document.write(`<div class="zone" data-bet="combo-${c[0]}-${c[1]}"><div class="text-num" style="font-size:16px;">${c[0]} & ${c[1]}</div><div class="bet-chip"></div></div>`);
+                });
+            </script>
+        </div>
+
+        <div class="row row-bot">
+            <div class="zone" data-bet="single-1"><div class="text-num">ONE</div><div class="text-odds">1:1 / 2:1 / 3:1</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="single-2"><div class="text-num">TWO</div><div class="text-odds">1:1 / 2:1 / 3:1</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="single-3"><div class="text-num">THREE</div><div class="text-odds">1:1 / 2:1 / 3:1</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="single-4"><div class="text-num">FOUR</div><div class="text-odds">1:1 / 2:1 / 3:1</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="single-5"><div class="text-num">FIVE</div><div class="text-odds">1:1 / 2:1 / 3:1</div><div class="bet-chip"></div></div>
+            <div class="zone" data-bet="single-6"><div class="text-num">SIX</div><div class="text-odds">1:1 / 2:1 / 3:1</div><div class="bet-chip"></div></div>
+        </div>
+    </div>
+
+    <div class="controls-panel">
+        <div class="stats">
+            <div>CREDIT: <span id="ui-balance">$ 15,000</span></div>
+            <div>TOTAL BET: <span id="ui-bet">$ 0</span></div>
+            <div>ROLLS: <span id="ui-rolls">0</span></div>
+        </div>
+        
+        <div class="chips" id="chip-container">
+            <button class="chip-btn c10 selected" data-val="10">10</button>
+            <button class="chip-btn c50" data-val="50">50</button>
+            <button class="chip-btn c100" data-val="100">100</button>
+            <button class="chip-btn c500" data-val="500">500</button>
+            <button class="chip-btn c1k" data-val="1000">1K</button>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-clear" onclick="clearBets()">CLEAR</button>
+            <button class="btn" onclick="playGame()" id="btn-roll">ROLL DICE</button>
+        </div>
+    </div>
+</div>
+
+    <div id="msg-box"></div>
+
+    <script>
+        // 遊戲狀態
+        let balance = 15000;
+        let totalBet = 0;
+        let selectedChip = 10;
+        let bets = {}; 
+        let isRolling = false;
+        let rollCount = 0; // 記錄擲骰次數
+
+        const MAX_TOTAL_BET = 30000;
+        const MIN_BET = 10;
+
+        // 初始化
+        document.querySelectorAll('.chip-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('selected'));
+                e.target.classList.add('selected');
+                selectedChip = parseInt(e.target.dataset.val);
+            });
+        });
+
+        // 下注邏輯
+        document.querySelectorAll('.zone[data-bet]').forEach(zone => {
+            zone.addEventListener('click', () => {
+                if (isRolling) return;
+                
+                let zoneId = zone.dataset.bet;
+                
+                if (balance < selectedChip) {
+                    showMsg("Insufficient Credit!");
+                    return;
+                }
+                if (totalBet + selectedChip > MAX_TOTAL_BET) {
+                    showMsg("Max Bet Exceeded!");
+                    return;
+                }
+
+                balance -= selectedChip;
+                totalBet += selectedChip;
+                bets[zoneId] = (bets[zoneId] || 0) + selectedChip;
+                
+                updateUI();
+                
+                let chipLabel = zone.querySelector('.bet-chip');
+                chipLabel.innerText = formatNum(bets[zoneId]);
+                chipLabel.classList.add('active');
+            });
+        });
+
+        function clearBets() {
+            if (isRolling) return;
+            balance += totalBet;
+            totalBet = 0;
+            bets = {};
+            document.querySelectorAll('.bet-chip').forEach(el => {
+                el.classList.remove('active');
+                el.innerText = '';
+            });
+            document.querySelectorAll('.zone').forEach(z => z.classList.remove('winning'));
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('ui-balance').innerText = `$ ${formatNum(balance)}`;
+            document.getElementById('ui-bet').innerText = `$ ${formatNum(totalBet)}`;
+        }
+
+        function formatNum(num) {
+            if(num >= 1000) return (num/1000) + 'K';
+            return num;
+        }
+
+        function showMsg(text, duration = 2000) {
+            let box = document.getElementById('msg-box');
+            box.innerHTML = text;
+            box.classList.add('show');
+            setTimeout(() => box.classList.remove('show'), duration);
+        }
+
+        // 負責更新骰面圖案與紅/黑顏色的函式
+        function setDieFace(dieElem, faceValue) {
+            // 清空目前的點數
+            dieElem.innerHTML = '';
+            dieElem.className = 'die'; // 重置 class
+
+            // 傳統亞洲骰子：1點和4點是紅色的
+            if (faceValue === 1 || faceValue === 4) {
+                dieElem.classList.add('red-face');
+            } else {
+                dieElem.classList.remove('red-face');
+            }
+
+            dieElem.classList.add('die-' + faceValue); // 添加點數 class
+
+            // 根據點數添加相應的點
+            switch (faceValue) {
+                case 1:
+                    dieElem.appendChild(createDot('dot-center'));
+                    break;
+                case 2:
+                    dieElem.appendChild(createDot('dot-top-left'));
+                    dieElem.appendChild(createDot('dot-bottom-right'));
+                    break;
+                case 3:
+                    dieElem.appendChild(createDot('dot-top-left'));
+                    dieElem.appendChild(createDot('dot-center'));
+                    dieElem.appendChild(createDot('dot-bottom-right'));
+                    break;
+                case 4:
+                    dieElem.appendChild(createDot('dot-top-left'));
+                    dieElem.appendChild(createDot('dot-top-right'));
+                    dieElem.appendChild(createDot('dot-bottom-left'));
+                    dieElem.appendChild(createDot('dot-bottom-right'));
+                    break;
+                case 5:
+                    dieElem.appendChild(createDot('dot-top-left'));
+                    dieElem.appendChild(createDot('dot-top-right'));
+                    dieElem.appendChild(createDot('dot-center'));
+                    dieElem.appendChild(createDot('dot-bottom-left'));
+                    dieElem.appendChild(createDot('dot-bottom-right'));
+                    break;
+                case 6:
+                    dieElem.appendChild(createDot('dot-top-left'));
+                    dieElem.appendChild(createDot('dot-top-right'));
+                    dieElem.appendChild(createDot('dot-mid-left'));
+                    dieElem.appendChild(createDot('dot-mid-right'));
+                    dieElem.appendChild(createDot('dot-bottom-left'));
+                    dieElem.appendChild(createDot('dot-bottom-right'));
+                    break;
+            }
+        }
+
+        // 創建點的輔助函式
+        function createDot(positionClass) {
+            const dot = document.createElement('div');
+            dot.className = 'die-dot ' + positionClass;
+            return dot;
+        }
+
+        // 核心遊戲邏輯
+        function playGame() {
+            if (isRolling) return;
+            if (totalBet < MIN_BET) {
+                showMsg("Please place a minimum bet of 10 HKD.");
+                return;
+            }
+
+            isRolling = true;
+            
+            // 更新統計次數
+            rollCount++;
+            document.getElementById('ui-rolls').innerText = rollCount;
+            
+            document.getElementById('btn-roll').style.opacity = '0.5';
+            document.querySelectorAll('.zone').forEach(z => z.classList.remove('winning'));
+
+            let d1 = document.getElementById('d1');
+            let d2 = document.getElementById('d2');
+            let d3 = document.getElementById('d3');
+            
+            // 加上彈跳跳動 Class
+            [d1, d2, d3].forEach(d => d.classList.add('rolling'));
+
+            // 隨機切換點數並配合紅黑顏色變化，創造真實滾動感
+            let rollInterval = setInterval(() => {
+                setDieFace(d1, Math.floor(Math.random() * 6) + 1);
+                setDieFace(d2, Math.floor(Math.random() * 6) + 1);
+                setDieFace(d3, Math.floor(Math.random() * 6) + 1);
+            }, 80);
+
+            // 2秒後停止並結算
+            setTimeout(() => {
+                clearInterval(rollInterval);
+                [d1, d2, d3].forEach(d => d.classList.remove('rolling'));
+                
+                // 產生最終真實結果 (1~6)
+                let res = [
+                    Math.floor(Math.random() * 6) + 1,
+                    Math.floor(Math.random() * 6) + 1,
+                    Math.floor(Math.random() * 6) + 1
+                ];
+                
+                // 渲染最終結果
+                setDieFace(d1, res[0]);
+                setDieFace(d2, res[1]);
+                setDieFace(d3, res[2]);
+
+                calculateWinnings(res);
+            }, 2000);
+        }
+
+        function calculateWinnings(dice) {
+            let sum = dice.reduce((a, b) => a + b, 0);
+            let isTriple = (dice[0] === dice[1] && dice[1] === dice[2]);
+            let counts = {};
+            dice.forEach(d => counts[d] = (counts[d] || 0) + 1);
+
+            let winAmount = 0;
+            let winningZones = [];
+
+            for (let [zone, amount] of Object.entries(bets)) {
+                let payoutRatio = 0; 
+
+                if (zone === 'small' && sum >= 4 && sum <= 10 && !isTriple) { payoutRatio = 1; winningZones.push(zone); }
+                else if (zone === 'big' && sum >= 11 && sum <= 17 && !isTriple) { payoutRatio = 1; winningZones.push(zone); }
+                else if (zone.startsWith('total-') && parseInt(zone.split('-')[1]) === sum) {
+                    const oddsMap = {4:60, 17:60, 5:20, 16:20, 6:18, 15:18, 7:12, 14:12, 8:8, 13:8, 9:6, 10:6, 11:6, 12:6};
+                    payoutRatio = oddsMap[sum];
+                    winningZones.push(zone);
+                }
+                else if (zone === 'any-triple' && isTriple) { payoutRatio = 30; winningZones.push(zone); }
+                else if (zone.startsWith('triple-') && isTriple && parseInt(zone.split('-')[1]) === dice[0]) { payoutRatio = 180; winningZones.push(zone); }
+                else if (zone.startsWith('double-') && counts[parseInt(zone.split('-')[1])] >= 2) { payoutRatio = 11; winningZones.push(zone); }
+                else if (zone.startsWith('combo-')) {
+                    let parts = zone.split('-');
+                    if (counts[parts[1]] >= 1 && counts[parts[2]] >= 1) { payoutRatio = 6; winningZones.push(zone); }
+                }
+                else if (zone.startsWith('single-')) {
+                    let target = parseInt(zone.split('-')[1]);
+                    if (counts[target]) {
+                        payoutRatio = counts[target];
+                        winningZones.push(zone);
+                    }
+                }
+
+                if (payoutRatio > 0) {
+                    winAmount += amount + (amount * payoutRatio); 
+                }
+            }
+
+            winningZones.forEach(z => {
+                let el = document.querySelector(`.zone[data-bet="${z}"]`);
+                if(el) el.classList.add('winning');
+            });
+
+            setTimeout(() => {
+                if (winAmount > 0) {
+                    showMsg(`WIN! + HKD ${winAmount}`, 3000);
+                    balance += winAmount;
+                } else {
+                    showMsg("No Win. Try Again!", 1500);
+                }
+                
+                totalBet = 0;
+                bets = {};
+                document.querySelectorAll('.bet-chip').forEach(el => {
+                    el.classList.remove('active');
+                    el.innerText = '';
+                });
+                
+                updateUI();
+                isRolling = false;
+                document.getElementById('btn-roll').style.opacity = '1';
+                
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

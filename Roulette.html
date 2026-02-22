@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roulette</title>
+    <style>
+        :root {
+            --mgm-gold: #D4AF37;
+            --mgm-gold-light: #F9E596;
+            --mgm-gold-dark: #AA8222;
+            --mgm-green: #0B3A24;
+            --mgm-green-dark: #051A10;
+            --mgm-red: #B22222;
+            --mgm-black: #1a1a1a;
+            --board-border: 1px solid var(--mgm-gold);
+            --neon-glow: rgba(212, 175, 55, 0.6);
+        }
+
+        body {
+            background: radial-gradient(circle at center, #111 0%, #000 100%);
+            color: white;
+            font-family: 'Segoe UI', 'Microsoft JhengHei', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            user-select: none;
+        }
+
+        .scale-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: scale(0.95);
+            transform-origin: top center;
+            gap: 15px;
+        }
+
+        /* 標題區 */
+        .header-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            background: linear-gradient(180deg, #222, #111);
+            border: 1px solid var(--mgm-gold);
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            box-sizing: border-box;
+        }
+
+        .logo { font-size: 28px; font-weight: 900; color: var(--mgm-gold); letter-spacing: 3px; text-shadow: 0 0 10px var(--mgm-gold-dark); }
+        .limits { text-align: right; font-size: 12px; color: #aaa; }
+
+        /* 遊戲顯示區 (開獎與歷史) */
+        .display-area {
+            width: 100%;
+            display: flex;
+            gap: 15px;
+            height: 180px;
+        }
+
+        .result-display {
+            flex: 1;
+            background: var(--mgm-green-dark);
+            border: 2px solid var(--mgm-gold-dark);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-number {
+            font-size: 90px;
+            font-weight: 900;
+            line-height: 1;
+            text-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            transition: color 0.1s;
+            z-index: 2;
+        }
+        
+        /* 數字顏色樣式 */
+        .num-red { color: #ff3333; text-shadow: 0 0 20px rgba(255,0,0,0.8); }
+        .num-black { color: #aaaaaa; text-shadow: 0 0 20px rgba(255,255,255,0.3); }
+        .num-green { color: #00ff00; text-shadow: 0 0 20px rgba(0,255,0,0.8); }
+
+        .spinner-fx {
+            position: absolute; width: 150%; height: 150%;
+            background: conic-gradient(from 0deg, transparent, rgba(212, 175, 55, 0.5), transparent);
+            animation: spinBg 0.5s linear infinite;
+            opacity: 0; z-index: 1;
+        }
+        .rolling .spinner-fx { opacity: 1; }
+        @keyframes spinBg { 100% { transform: rotate(360deg); } }
+
+        .history-panel {
+            flex: 2;
+            background: rgba(11, 58, 36, 0.6);
+            border: 1px solid var(--mgm-gold-dark);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        .history-title { font-size: 14px; color: var(--mgm-gold-light); margin-bottom: 10px; letter-spacing: 1px; font-weight:bold;}
+        .history-track {
+            display: flex; gap: 10px; align-items: center; overflow: hidden; height: 100%;
+        }
+        .hist-ball {
+            width: 45px; height: 45px; border-radius: 50%; display: flex;
+            justify-content: center; align-items: center; font-size: 20px; font-weight: bold;
+            box-shadow: inset -5px -5px 10px rgba(0,0,0,0.5), 0 5px 10px rgba(0,0,0,0.5);
+            border: 2px solid #fff; flex-shrink: 0;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+        .bg-red { background: var(--mgm-red); }
+        .bg-black { background: var(--mgm-black); }
+        .bg-green { background: #006400; }
+
+        /* --- 輪盤下注棋盤 (使用 CSS Grid) --- */
+        .betting-board {
+            width: 100%;
+            background: var(--mgm-green-dark);
+            border: 3px solid var(--mgm-gold);
+            border-radius: 10px;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: 80px repeat(12, 1fr) 80px;
+            grid-template-rows: repeat(5, 70px);
+            gap: 4px;
+            box-shadow: 0 0 30px rgba(11, 58, 36, 0.8), inset 0 0 50px rgba(0,0,0,0.8);
+            box-sizing: border-box;
+        }
+
+        .zone {
+            background: var(--mgm-green);
+            border: 1px solid var(--mgm-gold-dark);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; position: relative; transition: 0.2s; border-radius: 4px; box-sizing: border-box;
+        }
+        .zone:hover { box-shadow: 0 0 15px var(--neon-glow); filter: brightness(1.2); z-index: 5;}
+        .zone:active { transform: scale(0.95); }
+        .zone.winning-zone { animation: winFlash 0.5s infinite alternate; border: 2px solid #fff; z-index: 6;}
+        
+        @keyframes winFlash {
+            from { box-shadow: 0 0 10px var(--mgm-gold); background: var(--mgm-green); }
+            to { box-shadow: 0 0 30px #fff; background: var(--mgm-gold-dark); }
+        }
+
+        .zone-num { font-size: 28px; font-weight: bold; }
+        .zone-text { font-size: 16px; font-weight: bold; color: var(--mgm-gold-light); letter-spacing: 1px; text-align:center;}
+        .zone-odds { font-size: 11px; color: #aaa; margin-top: 2px; }
+
+        /* 特殊區域顏色 */
+        .zone.red-num { background: var(--mgm-red); }
+        .zone.black-num { background: var(--mgm-black); }
+        .zone.green-num { background: #006400; border: 2px solid var(--mgm-gold); }
+
+        /* 零的位置 */
+        #zone-0 { grid-column: 1; grid-row: 1 / span 3; border-radius: 50% 0 0 50%; }
+
+        /* 下注籌碼 */
+        .bet-chip {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(139, 0, 0, 0.9); border: 2px dashed var(--mgm-gold);
+            color: white; font-weight: bold; font-size: 14px; border-radius: 50%;
+            width: 40px; height: 40px; display: flex; justify-content: center; align-items: center;
+            pointer-events: none; opacity: 0; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .bet-chip.active { opacity: 1; }
+
+        /* 控制區 */
+        .controls-panel {
+            width: 100%; display: flex; justify-content: space-between; align-items: flex-end;
+            background: rgba(11, 58, 36, 0.4); padding: 15px 20px; border-radius: 10px;
+            border: 1px solid var(--mgm-gold-dark); box-sizing: border-box;
+        }
+
+        .stats { display: flex; flex-direction: column; gap: 5px; font-size: 18px; }
+        .stats span { color: var(--mgm-gold-light); font-weight: bold; font-family: monospace; font-size: 22px;}
+
+        .chips { display: flex; gap: 10px; }
+        .chip-btn {
+            width: 60px; height: 60px; border-radius: 50%; border: 3px dashed #fff;
+            background: #333; color: white; font-weight: bold; font-size: 16px;
+            cursor: pointer; transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .chip-btn:hover { transform: translateY(-5px); }
+        .chip-btn.selected { border-color: var(--mgm-gold); box-shadow: 0 0 20px var(--mgm-gold); transform: scale(1.1); }
+        .c10 { background: #888; } .c50 { background: #2E8B57; } .c100 { background: #1E90FF; } .c500 { background: #8B008B; } .c1k { background: #B22222; }
+
+        .actions { display: flex; gap: 10px; }
+        .btn {
+            padding: 15px 25px; font-size: 18px; font-weight: 900; color: #000;
+            background: linear-gradient(180deg, var(--mgm-gold-light), var(--mgm-gold-dark));
+            border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 5px 10px rgba(0,0,0,0.5); transition: 0.2s;
+        }
+        .btn:hover { filter: brightness(1.2); }
+        .btn:active { transform: translateY(2px); }
+        .btn-clear { background: linear-gradient(180deg, #666, #333); color: white; }
+        .btn-info { background: linear-gradient(180deg, #1E90FF, #00008B); color: white; border-radius: 50%; padding: 15px; width: 55px; height: 55px; display:flex; justify-content:center; align-items:center; font-size: 24px;}
+
+        /* 模態視窗 (規則) */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: var(--mgm-green-dark); border: 2px solid var(--mgm-gold); border-radius: 10px;
+            padding: 20px; width: 80%; max-width: 600px; color: white; max-height: 80vh; overflow-y: auto;
+        }
+        .modal-content h2 { color: var(--mgm-gold-light); border-bottom: 1px solid var(--mgm-gold); padding-bottom: 10px; margin-top:0;}
+        .modal-content table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size:16px; }
+        .modal-content th, .modal-content td { border: 1px solid #555; padding: 10px; text-align: center; }
+        .modal-content th { background: #222; color: var(--mgm-gold); }
+        .close-btn { background: var(--mgm-red); color: white; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 5px; float: right; margin-top:15px;}
+
+        /* 系統提示 */
+        #msg-box {
+            position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.9); border: 2px solid var(--mgm-gold); color: white;
+            padding: 15px 30px; border-radius: 5px; font-size: 24px; font-weight: bold;
+            z-index: 1000; opacity: 0; pointer-events: none; transition: 0.3s; text-align: center; text-shadow: 0 0 10px var(--mgm-gold);
+        }
+        #msg-box.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div class="scale-wrapper">
+    <div class="header-panel">
+        <div class="logo">ROULETTE MICHAEL</div>
+        <div class="limits">
+            最低投注: 10 HKD<br>最高投注: 30,000 HKD
+        </div>
+    </div>
+
+    <div class="display-area">
+        <div class="result-display" id="spin-display">
+            <div class="spinner-fx"></div>
+            <div style="font-size:14px; color:#aaa; z-index:2; margin-bottom:-10px;">RESULT</div>
+            <div class="result-number num-green" id="result-num">TBD</div>
+        </div>
+        <div class="history-panel">
+            <div class="history-title">歷史開獎紀錄 HISTORY</div>
+            <div class="history-track" id="history-track">
+                </div>
+        </div>
+    </div>
+
+    <div class="betting-board" id="board">
+        </div>
+
+    <div class="controls-panel">
+        <div class="stats">
+            <div>餘額: <span id="ui-balance">$ 15,000</span></div>
+            <div>總投注: <span id="ui-bet">$ 0</span></div>
+            <div style="font-size: 14px; color:#aaa; margin-top: 5px;">局數: <span id="ui-rounds" style="font-size:16px; color:#fff;">0</span></div>
+        </div>
+        
+        <div class="chips" id="chip-container">
+            <button class="chip-btn c10 selected" data-val="10">10</button>
+            <button class="chip-btn c50" data-val="50">50</button>
+            <button class="chip-btn c100" data-val="100">100</button>
+            <button class="chip-btn c500" data-val="500">500</button>
+            <button class="chip-btn c1k" data-val="1000">1K</button>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-info" onclick="toggleRules()">?</button>
+            <button class="btn btn-clear" onclick="clearBets()">清除</button>
+            <button class="btn" onclick="spinWheel()" id="btn-spin">旋轉 SPIN</button>
+        </div>
+    </div>
+</div>
+
+<div id="msg-box"></div>
+
+<div class="modal" id="rulesModal">
+    <div class="modal-content">
+        <h2>電子輪盤 規則與賠率</h2>
+        <p>本機台採用標準歐洲單零輪盤 (0-36)。</p>
+        <table>
+            <tr><th>投注項目</th><th>英文</th><th>賠率</th></tr>
+            <tr><td>單一數字 (含 0)</td><td>Straight Up</td><td>1 賠 35</td></tr>
+            <tr><td>直行 (12個數字)</td><td>Column</td><td>1 賠 2</td></tr>
+            <tr><td>打 (1-12, 13-24, 25-36)</td><td>Dozen</td><td>1 賠 2</td></tr>
+            <tr><td>紅 / 黑</td><td>Red / Black</td><td>1 賠 1</td></tr>
+            <tr><td>單 / 雙</td><td>Odd / Even</td><td>1 賠 1</td></tr>
+            <tr><td>大 (19-36) / 小 (1-18)</td><td>High / Low</td><td>1 賠 1</td></tr>
+        </table>
+        <p style="font-size:13px; color:#aaa; margin-top:10px;">*注意：若開出 0 (綠色)，所有外圍注 (紅黑、單雙、大小、打、列) 皆視為輸。</p>
+        <button class="close-btn" onclick="toggleRules()">關閉</button>
+    </div>
+</div>
+
+<script>
+    // --- 遊戲核心狀態 ---
+    let balance = 15000;
+    let totalBet = 0;
+    let selectedChip = 10;
+    let bets = {};
+    let isSpinning = false;
+    let rounds = 0;
+    let history = [];
+    
+    const MIN_BET = 10;
+    const MAX_BET = 30000;
+
+    // 輪盤紅字定義 (歐洲盤標準)
+    const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+    
+    function getNumColor(num) {
+        if (num === 0) return 'green';
+        return redNumbers.includes(num) ? 'red' : 'black';
+    }
+
+    // --- 動態構建下注棋盤 ---
+    function buildBoard() {
+        const board = document.getElementById('board');
+        
+        // 1. 生成 0
+        board.innerHTML += `<div class="zone green-num" id="zone-0" data-bet="num-0">
+                                <div class="zone-num">0</div><div class="zone-odds">35:1</div>
+                                <div class="bet-chip"></div>
+                            </div>`;
+
+        // 2. 生成 1-36 的數字格
+        for (let i = 1; i <= 36; i++) {
+            let col = Math.ceil(i / 3) + 1; // 1->2, 4->3 ... 34->13
+            let row = 3 - ((i - 1) % 3);    // 1->3, 2->2, 3->1
+            let colorClass = getNumColor(i) + '-num';
+            
+            board.innerHTML += `
+                <div class="zone ${colorClass}" style="grid-column: ${col}; grid-row: ${row};" data-bet="num-${i}">
+                    <div class="zone-num">${i}</div>
+                    <div class="bet-chip"></div>
+                </div>`;
+        }
+
+        // 3. 生成 2:1 直行 (Columns)
+        const cols = [
+            { id: 'col-3', row: 1, text: '2:1' },
+            { id: 'col-2', row: 2, text: '2:1' },
+            { id: 'col-1', row: 3, text: '2:1' }
+        ];
+        cols.forEach(c => {
+            board.innerHTML += `
+                <div class="zone" style="grid-column: 14; grid-row: ${c.row};" data-bet="${c.id}">
+                    <div class="zone-text" style="transform: rotate(-90deg);">${c.text}</div>
+                    <div class="bet-chip"></div>
+                </div>`;
+        });
+
+        // 4. 生成 12 打 (Dozens)
+        const dozs = [
+            { id: 'doz-1', col: '2 / span 4', text: '1st 12 (第一打)' },
+            { id: 'doz-2', col: '6 / span 4', text: '2nd 12 (第二打)' },
+            { id: 'doz-3', col: '10 / span 4', text: '3rd 12 (第三打)' }
+        ];
+        dozs.forEach(d => {
+            board.innerHTML += `
+                <div class="zone" style="grid-column: ${d.col}; grid-row: 4;" data-bet="${d.id}">
+                    <div class="zone-text">${d.text}</div><div class="zone-odds">2:1</div>
+                    <div class="bet-chip"></div>
+                </div>`;
+        });
+
+        // 5. 生成最外圍 (Even/Odd, Red/Black, High/Low)
+        const outsides = [
+            { id: 'low', col: '2 / span 2', text: '1 TO 18 (小)' },
+            { id: 'even', col: '4 / span 2', text: 'EVEN (雙)' },
+            { id: 'red', col: '6 / span 2', text: '<div style="width:30px;height:30px;background:var(--mgm-red);transform:rotate(45deg);"></div>' },
+            { id: 'black', col: '8 / span 2', text: '<div style="width:30px;height:30px;background:#000;transform:rotate(45deg);"></div>' },
+            { id: 'odd', col: '10 / span 2', text: 'ODD (單)' },
+            { id: 'high', col: '12 / span 2', text: '19 TO 36 (大)' }
+        ];
+        outsides.forEach(o => {
+            board.innerHTML += `
+                <div class="zone" style="grid-column: ${o.col}; grid-row: 5;" data-bet="${o.id}">
+                    <div class="zone-text">${o.text}</div><div class="zone-odds">1:1</div>
+                    <div class="bet-chip"></div>
+                </div>`;
+        });
+        
+        // 綁定點擊事件
+        attachBetEvents();
+    }
+
+    // --- 下注邏輯 ---
+    document.querySelectorAll('.chip-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('selected'));
+            e.target.classList.add('selected');
+            selectedChip = parseInt(e.target.dataset.val);
+        });
+    });
+
+    function attachBetEvents() {
+        document.querySelectorAll('.zone').forEach(zone => {
+            zone.addEventListener('click', () => {
+                if (isSpinning) return;
+                let key = zone.dataset.bet;
+                
+                if (balance < selectedChip) { showMsg("餘額不足！"); return; }
+                if (totalBet + selectedChip > MAX_BET) { showMsg("超過最高投注額！"); return; }
+
+                balance -= selectedChip;
+                totalBet += selectedChip;
+                bets[key] = (bets[key] || 0) + selectedChip;
+                
+                updateUI();
+                let chip = zone.querySelector('.bet-chip');
+                chip.innerText = formatNum(bets[key]);
+                chip.classList.add('active');
+            });
+        });
+    }
+
+    function clearBets() {
+        if (isSpinning) return;
+        balance += totalBet;
+        totalBet = 0;
+        bets = {};
+        document.querySelectorAll('.bet-chip').forEach(c => { c.classList.remove('active'); c.innerText = ''; });
+        document.querySelectorAll('.zone').forEach(z => z.classList.remove('winning-zone'));
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('ui-balance').innerText = `$ ${formatNum(balance)}`;
+        document.getElementById('ui-bet').innerText = `$ ${formatNum(totalBet)}`;
+        document.getElementById('ui-rounds').innerText = rounds;
+    }
+
+    function formatNum(num) {
+        return num >= 1000 ? (num/1000) + 'K' : num;
+    }
+
+    function showMsg(text, duration = 2000) {
+        let box = document.getElementById('msg-box');
+        box.innerHTML = text;
+        box.classList.add('show');
+        setTimeout(() => box.classList.remove('show'), duration);
+    }
+
+    function toggleRules() {
+        let m = document.getElementById('rulesModal');
+        m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    // --- 開獎邏輯與動畫 ---
+    function spinWheel() {
+        if (isSpinning) return;
+        if (totalBet < MIN_BET) { showMsg("最低投注為 10 港幣。"); return; }
+
+        isSpinning = true;
+        rounds++;
+        document.getElementById('btn-spin').style.opacity = '0.5';
+        document.querySelectorAll('.zone').forEach(z => z.classList.remove('winning-zone'));
+        
+        let displayDiv = document.getElementById('spin-display');
+        let numEl = document.getElementById('result-num');
+        
+        displayDiv.classList.add('rolling');
+
+        // 模擬電子數字快速跳動
+        let spinInterval = setInterval(() => {
+            let rnd = Math.floor(Math.random() * 37);
+            let c = getNumColor(rnd);
+            numEl.innerText = rnd;
+            numEl.className = `result-number num-${c}`;
+        }, 50);
+
+        // 3秒後停止開獎
+        setTimeout(() => {
+            clearInterval(spinInterval);
+            displayDiv.classList.remove('rolling');
+            
+            // 產生最終結果
+            let result = Math.floor(Math.random() * 37);
+            let color = getNumColor(result);
+            
+            numEl.innerText = result;
+            numEl.className = `result-number num-${color}`;
+
+            calculateWinnings(result, color);
+            updateHistory(result, color);
+
+        }, 3000);
+    }
+
+    function calculateWinnings(res, color) {
+        let winAmount = 0;
+        let returnBet = 0;
+        let winningZones = [];
+
+        // 檢查每一個有下注的區域
+        for (let [key, amount] of Object.entries(bets)) {
+            let isWin = false;
+            let ratio = 0;
+
+            if (key === `num-${res}`) { isWin = true; ratio = 35; }
+            else if (res !== 0) { // 0 通殺所有外圍
+                if (key === color) { isWin = true; ratio = 1; }
+                else if (key === 'even' && res % 2 === 0) { isWin = true; ratio = 1; }
+                else if (key === 'odd' && res % 2 !== 0) { isWin = true; ratio = 1; }
+                else if (key === 'low' && res >= 1 && res <= 18) { isWin = true; ratio = 1; }
+                else if (key === 'high' && res >= 19 && res <= 36) { isWin = true; ratio = 1; }
+                else if (key === 'doz-1' && res >= 1 && res <= 12) { isWin = true; ratio = 2; }
+                else if (key === 'doz-2' && res >= 13 && res <= 24) { isWin = true; ratio = 2; }
+                else if (key === 'doz-3' && res >= 25 && res <= 36) { isWin = true; ratio = 2; }
+                else if (key === 'col-1' && res % 3 === 1) { isWin = true; ratio = 2; }
+                else if (key === 'col-2' && res % 3 === 2) { isWin = true; ratio = 2; }
+                else if (key === 'col-3' && res % 3 === 0) { isWin = true; ratio = 2; }
+            }
+
+            if (isWin) {
+                winAmount += amount * ratio;
+                returnBet += amount; // 退回本金
+                winningZones.push(key);
+            }
+        }
+
+        // 高亮贏的區域
+        winningZones.forEach(z => {
+            let el = document.querySelector(`.zone[data-bet="${z}"]`);
+            if(el) el.classList.add('winning-zone');
+        });
+
+        setTimeout(() => {
+            let finalAdd = winAmount + returnBet;
+            if (finalAdd > 0) {
+                balance += finalAdd;
+                showMsg(`中獎！ WIN!<br>+ $ ${formatNum(finalAdd)}`, 3000);
+            } else {
+                showMsg(`未中獎 NO WIN`, 1500);
+            }
+            
+            // 清理下注準備下一局
+            totalBet = 0;
+            bets = {};
+            document.querySelectorAll('.bet-chip').forEach(c => { c.classList.remove('active'); c.innerText = ''; });
+            updateUI();
+            
+            isSpinning = false;
+            document.getElementById('btn-spin').style.opacity = '1';
+        }, 1500); // 讓贏的光閃爍 1.5 秒
+    }
+
+    function updateHistory(res, color) {
+        let track = document.getElementById('history-track');
+        let ball = document.createElement('div');
+        ball.className = `hist-ball bg-${color}`;
+        ball.innerText = res;
+        
+        // 插入到最前面
+        track.insertBefore(ball, track.firstChild);
+        
+        // 保持最多顯示 12 顆球
+        if (track.children.length > 12) {
+            track.removeChild(track.lastChild);
+        }
+    }
+
+    // 啟動建構
+    buildBoard();
+    updateUI();
+
+</script>
+</body>
+</html>

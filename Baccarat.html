@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baccarat</title>
+    <style>
+        :root {
+            --mgm-gold: #D4AF37;
+            --mgm-gold-light: #F9E596;
+            --mgm-gold-dark: #AA8222;
+            --mgm-green: #0B3A24;
+            --mgm-green-dark: #051A10;
+            --mgm-red: #8B0000;
+            --player-blue: #1E90FF;
+            --banker-red: #D20000;
+            --tie-green: #2E8B57;
+            --board-border: 2px solid var(--mgm-gold);
+        }
+
+        body {
+            background: radial-gradient(circle at center, #111 0%, #000 100%);
+            color: white;
+            font-family: 'Segoe UI', 'Microsoft JhengHei', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            user-select: none;
+        }
+
+        .scale-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: scale(0.95);
+            transform-origin: top center;
+            gap: 15px;
+        }
+
+        /* 標題區 */
+        .header-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            background: linear-gradient(180deg, #222, #111);
+            border: 1px solid var(--mgm-gold);
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            box-sizing: border-box;
+        }
+
+        .logo { font-size: 28px; font-weight: 900; color: var(--mgm-gold); letter-spacing: 3px; text-shadow: 0 0 10px var(--mgm-gold-dark); }
+        .shoe-info { font-size: 16px; color: var(--mgm-gold-light); display: flex; align-items: center; gap: 10px; }
+        .limits { text-align: right; font-size: 12px; color: #aaa; }
+
+        /* 中間遊戲區 (發牌區 + 下注區) */
+        .game-area {
+            display: flex;
+            width: 100%;
+            gap: 15px;
+            height: 380px;
+        }
+
+        /* 發牌顯示區 - 增加比例以容納橫放卡牌 */
+        .cards-display {
+            flex: 1.5;
+            background: var(--mgm-green-dark);
+            border: 2px solid var(--mgm-gold-dark);
+            border-radius: 10px;
+            display: flex;
+            position: relative;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        .side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            position: relative;
+        }
+
+        .side.player-side { border-right: 1px solid rgba(212, 175, 55, 0.3); }
+        
+        .side-title {
+            font-size: 24px; font-weight: bold; letter-spacing: 2px;
+            margin-bottom: 10px; padding: 5px 20px; border-radius: 20px;
+        }
+        .player-side .side-title { color: var(--player-blue); background: rgba(30,144,255,0.1); }
+        .banker-side .side-title { color: var(--banker-red); background: rgba(210,0,0,0.1); }
+
+        .score { font-size: 36px; font-weight: bold; margin-bottom: 10px; color: white; text-shadow: 0 2px 5px #000; }
+        
+        .cards-slot { display: flex; gap: 8px; justify-content: center; height: 160px; align-items: center; width: 100%;}
+        
+        /* 撲克牌樣式 - 稍微縮小以確保三張牌完美放入 */
+        .card {
+            width: 75px; height: 108px;
+            background: white; border-radius: 8px;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 5px; box-sizing: border-box;
+            color: black; font-weight: bold; font-size: 22px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            border: 1px solid #ccc;
+            position: relative;
+            opacity: 0; transform: translateY(-20px); transition: 0.4s ease-out;
+        }
+        .card.show { opacity: 1; transform: translateY(0); }
+        .card.red { color: #d20000; }
+        .card.black { color: #000000; }
+        .card .suit-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 38px; opacity: 0.3; }
+        .card .card-val { line-height: 1; z-index: 2;}
+
+        /* 第三張牌橫放 - 調整左右間距確保不溢出 */
+        .card.third-card { 
+            transform: rotate(90deg) translateX(-20px); 
+            margin-left: 18px; 
+            margin-right: 18px; 
+        }
+        .card.third-card.show { 
+            transform: rotate(90deg) translateX(0); 
+        }
+
+        /* 下注區 */
+        .betting-board {
+            flex: 1.8;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .bet-row { display: flex; gap: 10px; width: 100%; flex: 1; }
+        
+        .bet-zone {
+            flex: 1; background: var(--mgm-green); border: 2px solid var(--mgm-gold-dark);
+            border-radius: 8px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; cursor: pointer;
+            position: relative; transition: 0.2s; box-sizing: border-box;
+        }
+        .bet-zone:hover { filter: brightness(1.2); box-shadow: 0 0 15px var(--mgm-gold); }
+        .bet-zone:active { transform: scale(0.98); }
+        
+        .zone-title { font-size: 26px; font-weight: 900; letter-spacing: 2px; }
+        .zone-odds { font-size: 14px; color: var(--mgm-gold-light); }
+        
+        .zone-player { color: var(--player-blue); text-shadow: 0 0 10px rgba(30,144,255,0.5); }
+        .zone-banker { color: var(--banker-red); text-shadow: 0 0 10px rgba(210,0,0,0.5); }
+        .zone-tie { color: var(--tie-green); text-shadow: 0 0 10px rgba(46,139,87,0.5); }
+        .zone-pair { font-size: 22px; color: #fff; }
+
+        .bet-chip {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(139, 0, 0, 0.9); border: 2px dashed var(--mgm-gold);
+            color: white; font-weight: bold; font-size: 14px; border-radius: 50%;
+            width: 45px; height: 45px; display: flex; justify-content: center; align-items: center;
+            pointer-events: none; opacity: 0; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .bet-chip.active { opacity: 1; }
+        .winning-zone { animation: winPulse 0.5s infinite alternate; border-color: #fff !important; }
+        @keyframes winPulse { from { box-shadow: 0 0 5px var(--mgm-gold); } to { box-shadow: 0 0 30px #fff; background: var(--mgm-gold-dark); } }
+
+        /* 路單區 (珠盤路與大路) */
+        .roadmaps {
+            width: 100%; display: flex; gap: 10px; height: 160px;
+        }
+        .road-grid {
+            background: white; border: 2px solid var(--mgm-gold);
+            border-radius: 5px; display: grid; grid-template-rows: repeat(6, 1fr);
+            grid-auto-flow: column; overflow-x: auto; overflow-y: hidden;
+            padding: 2px; gap: 1px; flex: 1; box-sizing: border-box; background-color: #eee;
+        }
+        .road-cell {
+            width: 22px; height: 22px; background: white; border: 1px solid #ddd;
+            display: flex; justify-content: center; align-items: center; position: relative;
+        }
+        /* 珠盤路樣式 */
+        .bead-P { background: var(--player-blue); border-radius: 50%; width: 18px; height: 18px; color:white; font-size:12px; font-weight:bold; display:flex; justify-content:center; align-items:center; }
+        .bead-B { background: var(--banker-red); border-radius: 50%; width: 18px; height: 18px; color:white; font-size:12px; font-weight:bold; display:flex; justify-content:center; align-items:center; }
+        .bead-T { background: var(--tie-green); border-radius: 50%; width: 18px; height: 18px; color:white; font-size:12px; font-weight:bold; display:flex; justify-content:center; align-items:center; }
+        /* 大路樣式 */
+        .bigroad-P { border: 2px solid var(--player-blue); border-radius: 50%; width: 14px; height: 14px; background: transparent; }
+        .bigroad-B { border: 2px solid var(--banker-red); border-radius: 50%; width: 14px; height: 14px; background: transparent; }
+        .tie-line { position: absolute; width: 18px; height: 2px; background: var(--tie-green); transform: rotate(-45deg); z-index: 2;}
+
+        /* 莊閒對子標記 (大路左上右下紅藍點) */
+        .pair-dot-P { position: absolute; bottom: -2px; right: -2px; width: 6px; height: 6px; background: var(--player-blue); border-radius: 50%; border: 1px solid white;}
+        .pair-dot-B { position: absolute; top: -2px; left: -2px; width: 6px; height: 6px; background: var(--banker-red); border-radius: 50%; border: 1px solid white;}
+
+        /* 控制區 */
+        .controls-panel {
+            width: 100%; display: flex; justify-content: space-between; align-items: flex-end;
+            background: rgba(11, 58, 36, 0.4); padding: 15px 20px; border-radius: 10px;
+            border: 1px solid var(--mgm-gold-dark); box-sizing: border-box;
+        }
+
+        .stats { display: flex; flex-direction: column; gap: 5px; font-size: 18px; }
+        .stats span { color: var(--mgm-gold-light); font-weight: bold; font-family: monospace; font-size: 22px;}
+
+        .chips { display: flex; gap: 10px; }
+        .chip-btn {
+            width: 60px; height: 60px; border-radius: 50%; border: 3px dashed #fff;
+            background: #333; color: white; font-weight: bold; font-size: 16px;
+            cursor: pointer; transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .chip-btn:hover { transform: translateY(-5px); }
+        .chip-btn.selected { border-color: var(--mgm-gold); box-shadow: 0 0 20px var(--mgm-gold); transform: scale(1.1); }
+        .c10 { background: #888; } .c50 { background: #2E8B57; } .c100 { background: #1E90FF; } .c500 { background: #8B008B; } .c1k { background: #B22222; }
+
+        .actions { display: flex; gap: 10px; }
+        .btn {
+            padding: 15px 25px; font-size: 18px; font-weight: 900; color: #000;
+            background: linear-gradient(180deg, var(--mgm-gold-light), var(--mgm-gold-dark));
+            border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 5px 10px rgba(0,0,0,0.5); transition: 0.2s;
+        }
+        .btn:hover { filter: brightness(1.2); }
+        .btn:active { transform: translateY(2px); }
+        .btn-clear { background: linear-gradient(180deg, #666, #333); color: white; }
+        .btn-info { background: linear-gradient(180deg, #1E90FF, #00008B); color: white; border-radius: 50%; padding: 15px; width: 55px; height: 55px; display:flex; justify-content:center; align-items:center; font-size: 24px;}
+
+        /* 模態視窗 (規則) */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: var(--mgm-green-dark); border: 2px solid var(--mgm-gold); border-radius: 10px;
+            padding: 20px; width: 80%; max-width: 650px; color: white; max-height: 80vh; overflow-y: auto;
+        }
+        .modal-content h2 { color: var(--mgm-gold-light); border-bottom: 1px solid var(--mgm-gold); padding-bottom: 10px; margin-top: 0;}
+        .modal-content table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size:14px; }
+        .modal-content th, .modal-content td { border: 1px solid #555; padding: 8px; text-align: center; }
+        .modal-content th { background: #222; color: var(--mgm-gold); }
+        .close-btn { background: var(--mgm-red); color: white; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 5px; float: right; margin-top:15px;}
+
+        /* 系統提示 */
+        #msg-box {
+            position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.9); border: 2px solid var(--mgm-gold); color: white;
+            padding: 15px 30px; border-radius: 5px; font-size: 24px; font-weight: bold;
+            z-index: 1000; opacity: 0; pointer-events: none; transition: 0.3s; text-align: center; text-shadow: 0 0 10px var(--mgm-gold);
+        }
+        #msg-box.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div class="scale-wrapper">
+    <div class="header-panel">
+        <div class="logo">MICHAEL</div>
+        <div class="shoe-info">
+            🂠 牌堆剩餘牌數: <span id="cards-count" style="font-weight:bold; font-size: 20px;">416</span>
+        </div>
+        <div class="limits">
+            最低投注: 10 HKD<br>最高投注: 30,000 HKD
+        </div>
+    </div>
+
+    <div class="game-area">
+        <div class="cards-display">
+            <div class="side player-side">
+                <div class="side-title">閒家 PLAYER</div>
+                <div class="score" id="score-player">0</div>
+                <div class="cards-slot" id="cards-player"></div>
+            </div>
+            <div class="side banker-side">
+                <div class="side-title">莊家 BANKER</div>
+                <div class="score" id="score-banker">0</div>
+                <div class="cards-slot" id="cards-banker"></div>
+            </div>
+        </div>
+
+        <div class="betting-board">
+            <div class="bet-row">
+                <div class="bet-zone" data-bet="ppair">
+                    <div class="zone-title zone-pair" style="color:var(--player-blue)">閒對子</div>
+                    <div class="zone-odds">1 賠 11</div>
+                    <div class="bet-chip"></div>
+                </div>
+                <div class="bet-zone" data-bet="bpair">
+                    <div class="zone-title zone-pair" style="color:var(--banker-red)">莊對子</div>
+                    <div class="zone-odds">1 賠 11</div>
+                    <div class="bet-chip"></div>
+                </div>
+            </div>
+            <div class="bet-row">
+                <div class="bet-zone" data-bet="tie" style="flex:1;">
+                    <div class="zone-title zone-tie">和局 TIE</div>
+                    <div class="zone-odds">1 賠 8</div>
+                    <div class="bet-chip"></div>
+                </div>
+            </div>
+            <div class="bet-row" style="flex:1.5;">
+                <div class="bet-zone" data-bet="player">
+                    <div class="zone-title zone-player">閒家 PLAYER</div>
+                    <div class="zone-odds">1 賠 1</div>
+                    <div class="bet-chip"></div>
+                </div>
+                <div class="bet-zone" data-bet="banker">
+                    <div class="zone-title zone-banker">莊家 BANKER</div>
+                    <div class="zone-odds">1 賠 0.95</div>
+                    <div class="bet-chip"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="roadmaps">
+        <div class="road-grid" id="bead-road"></div>
+        <div class="road-grid" id="big-road" style="flex:2;"></div>
+    </div>
+
+    <div class="controls-panel">
+        <div class="stats">
+            <div>餘額: <span id="ui-balance">$ 15,000</span></div>
+            <div>總投注: <span id="ui-bet">$ 0</span></div>
+            <div style="font-size: 14px; color:#aaa; margin-top: 5px;">局數: <span id="ui-rounds" style="font-size:16px; color:#fff;">0</span></div>
+        </div>
+        
+        <div class="chips" id="chip-container">
+            <button class="chip-btn c10 selected" data-val="10">10</button>
+            <button class="chip-btn c50" data-val="50">50</button>
+            <button class="chip-btn c100" data-val="100">100</button>
+            <button class="chip-btn c500" data-val="500">500</button>
+            <button class="chip-btn c1k" data-val="1000">1K</button>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-info" onclick="toggleRules()">?</button>
+            <button class="btn btn-clear" onclick="clearBets()">清除</button>
+            <button class="btn" onclick="dealCards()" id="btn-deal">發牌</button>
+        </div>
+    </div>
+</div>
+
+<div id="msg-box"></div>
+
+<div class="modal" id="rulesModal">
+    <div class="modal-content">
+        <h2>百家樂規則與賠率</h2>
+        <h3>賠率 (Payouts)</h3>
+        <ul>
+            <li><b>閒家 (Player):</b> 1 賠 1</li>
+            <li><b>莊家 (Banker):</b> 1 賠 0.95 (扣除 5% 佣金)</li>
+            <li><b>和局 (Tie):</b> 1 賠 8</li>
+            <li><b>莊/閒對子 (Pair):</b> 1 賠 11</li>
+        </ul>
+        <h3>點數計算 (Card Values)</h3>
+        <p>A 為 1 點，2-9 為牌面點數，10、J、Q、K 皆為 0 點。加總後取個位數作為最終點數。</p>
+        <h3>博牌規則 (Third Card Rule)</h3>
+        <table>
+            <tr><th>閒家總點數</th><th>動作</th></tr>
+            <tr><td>0, 1, 2, 3, 4, 5</td><td>必須補牌 (Draws a 3rd Card)</td></tr>
+            <tr><td>6, 7</td><td>必須停牌 (Stands)</td></tr>
+            <tr><td>8, 9</td><td>天牌 (Natural) - 雙方皆不補牌</td></tr>
+        </table>
+        <br>
+        <table>
+            <tr><th>莊家總點數</th><th>若閒家第三張牌為以下點數，莊家補牌</th><th>若閒家第三張牌為以下點數，莊家停牌</th></tr>
+            <tr><td>0, 1, 2</td><td>任意牌皆補牌</td><td>-</td></tr>
+            <tr><td>3</td><td>0-7, 9</td><td>8</td></tr>
+            <tr><td>4</td><td>2-7</td><td>0, 1, 8, 9</td></tr>
+            <tr><td>5</td><td>4-7</td><td>0-3, 8, 9</td></tr>
+            <tr><td>6</td><td>6, 7</td><td>0-5, 8, 9</td></tr>
+            <tr><td>7</td><td>-</td><td>必須停牌</td></tr>
+        </table>
+        <p style="font-size:12px; color:#aaa;">*若閒家前兩張牌停牌 (6-7點)，莊家點數 0-5 必須補牌，6-7 必須停牌。</p>
+        <button class="close-btn" onclick="toggleRules()">關閉</button>
+    </div>
+</div>
+
+<script>
+    // --- 遊戲核心狀態 ---
+    let balance = 15000;
+    let totalBet = 0;
+    let selectedChip = 10;
+    let bets = { player:0, banker:0, tie:0, ppair:0, bpair:0 };
+    let isPlaying = false;
+    let rounds = 0;
+    const MIN_BET = 10;
+    const MAX_BET = 30000;
+
+    // --- 撲克牌系統 (8副牌) ---
+    let shoe = [];
+    const suits = ['♠', '♥', '♦', '♣'];
+    const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    
+    // 路單數據
+    let history = []; 
+    
+    // 大路繪製狀態
+    let bigRoad = Array(6).fill().map(() => Array(50).fill(null));
+    let brCurrentCol = 0;
+    let brCurrentRow = 0;
+    let brLastWinner = null;
+
+    // 初始化建構撲克牌
+    function buildShoe() {
+        shoe = [];
+        for (let d = 0; d < 8; d++) {
+            for (let s of suits) {
+                for (let r of ranks) {
+                    let val = (r === 'A') ? 1 : (['10','J','Q','K'].includes(r) ? 0 : parseInt(r));
+                    let color = (s === '♥' || s === '♦') ? 'red' : 'black';
+                    shoe.push({ rank: r, suit: s, value: val, color: color });
+                }
+            }
+        }
+        // 洗牌 (Fisher-Yates)
+        for (let i = shoe.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shoe[i], shoe[j]] = [shoe[j], shoe[i]];
+        }
+        updateCardsCount();
+        resetRoads();
+    }
+
+    function updateCardsCount() {
+        document.getElementById('cards-count').innerText = shoe.length;
+    }
+
+    // --- 下注邏輯 ---
+    document.querySelectorAll('.chip-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('selected'));
+            e.target.classList.add('selected');
+            selectedChip = parseInt(e.target.dataset.val);
+        });
+    });
+
+    document.querySelectorAll('.bet-zone').forEach(zone => {
+        zone.addEventListener('click', () => {
+            if (isPlaying) return;
+            let type = zone.dataset.bet;
+            if (balance < selectedChip) { showMsg("餘額不足！"); return; }
+            if (totalBet + selectedChip > MAX_BET) { showMsg("超過最高投注額！"); return; }
+
+            balance -= selectedChip;
+            totalBet += selectedChip;
+            bets[type] += selectedChip;
+            
+            updateUI();
+            let chip = zone.querySelector('.bet-chip');
+            chip.innerText = formatNum(bets[type]);
+            chip.classList.add('active');
+        });
+    });
+
+    function clearBets() {
+        if (isPlaying) return;
+        balance += totalBet;
+        totalBet = 0;
+        for(let k in bets) bets[k] = 0;
+        document.querySelectorAll('.bet-chip').forEach(c => { c.classList.remove('active'); c.innerText = ''; });
+        document.querySelectorAll('.bet-zone').forEach(z => z.classList.remove('winning-zone'));
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('ui-balance').innerText = `$ ${formatNum(balance)}`;
+        document.getElementById('ui-bet').innerText = `$ ${formatNum(totalBet)}`;
+        document.getElementById('ui-rounds').innerText = rounds;
+    }
+
+    function formatNum(num) {
+        return num >= 1000 ? (num/1000) + 'K' : num;
+    }
+
+    function showMsg(text, duration = 2000) {
+        let box = document.getElementById('msg-box');
+        box.innerHTML = text;
+        box.classList.add('show');
+        setTimeout(() => box.classList.remove('show'), duration);
+    }
+
+    function toggleRules() {
+        let m = document.getElementById('rulesModal');
+        m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    // --- 發牌與百家樂邏輯 ---
+    function drawCardFromShoe() {
+        if (shoe.length < 14) {
+            showMsg("重新洗牌中...", 2000);
+            buildShoe();
+        }
+        let c = shoe.pop();
+        updateCardsCount();
+        return c;
+    }
+
+    function createCardElement(card, isThird = false) {
+        let div = document.createElement('div');
+        div.className = `card ${card.color}` + (isThird ? ' third-card' : '');
+        div.innerHTML = `
+            <div class="card-val">${card.rank}</div>
+            <div class="suit-center">${card.suit}</div>
+            <div class="card-val" style="transform: rotate(180deg); text-align:right;">${card.rank}</div>
+        `;
+        return div;
+    }
+
+    async function dealCards() {
+        if (isPlaying) return;
+        if (totalBet < MIN_BET) { showMsg("最低投注為 10 港幣。"); return; }
+
+        isPlaying = true;
+        rounds++;
+        document.getElementById('btn-deal').style.opacity = '0.5';
+        document.querySelectorAll('.bet-zone').forEach(z => z.classList.remove('winning-zone'));
+        document.getElementById('cards-player').innerHTML = '';
+        document.getElementById('cards-banker').innerHTML = '';
+        document.getElementById('score-player').innerText = '0';
+        document.getElementById('score-banker').innerText = '0';
+
+        let pCards = [];
+        let bCards = [];
+
+        // 模擬發牌節奏 (延長時間增加懸念)
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+
+        // 發前兩張
+        pCards.push(drawCardFromShoe()); await delay(600); renderHand('player', pCards);
+        bCards.push(drawCardFromShoe()); await delay(600); renderHand('banker', bCards);
+        pCards.push(drawCardFromShoe()); await delay(600); renderHand('player', pCards);
+        bCards.push(drawCardFromShoe()); await delay(600); renderHand('banker', bCards);
+
+        let pTotal = (pCards[0].value + pCards[1].value) % 10;
+        let bTotal = (bCards[0].value + bCards[1].value) % 10;
+        
+        let pPair = pCards[0].rank === pCards[1].rank;
+        let bPair = bCards[0].rank === bCards[1].rank;
+
+        // 判斷第三張牌
+        let pThirdCard = null;
+        let bThirdCard = null;
+
+        // 天牌直接結算
+        if (pTotal < 8 && bTotal < 8) {
+            // 閒家補牌規則
+            if (pTotal <= 5) {
+                pThirdCard = drawCardFromShoe();
+                pCards.push(pThirdCard);
+                await delay(800);
+                renderHand('player', pCards, true);
+                pTotal = (pTotal + pThirdCard.value) % 10;
+            }
+
+            // 莊家補牌規則
+            let bankerDraws = false;
+            if (pThirdCard === null) {
+                if (bTotal <= 5) bankerDraws = true;
+            } else {
+                let p3v = pThirdCard.value;
+                if (bTotal <= 2) bankerDraws = true;
+                else if (bTotal === 3 && p3v !== 8) bankerDraws = true;
+                else if (bTotal === 4 && p3v >= 2 && p3v <= 7) bankerDraws = true;
+                else if (bTotal === 5 && p3v >= 4 && p3v <= 7) bankerDraws = true;
+                else if (bTotal === 6 && (p3v === 6 || p3v === 7)) bankerDraws = true;
+            }
+
+            if (bankerDraws) {
+                bThirdCard = drawCardFromShoe();
+                bCards.push(bThirdCard);
+                await delay(800);
+                renderHand('banker', bCards, true);
+                bTotal = (bTotal + bThirdCard.value) % 10;
+            }
+        }
+
+        await delay(800);
+        
+        // 判定勝負
+        let winner = 'T';
+        if (pTotal > bTotal) winner = 'P';
+        else if (bTotal > pTotal) winner = 'B';
+
+        // 結算與紀錄
+        history.push({ winner: winner, pPair: pPair, bPair: bPair });
+        processPayout(winner, pPair, bPair);
+        drawRoadmaps();
+
+        setTimeout(() => {
+            // 清理下注盤面準備下一局
+            totalBet = 0;
+            for(let k in bets) bets[k] = 0;
+            document.querySelectorAll('.bet-chip').forEach(c => { c.classList.remove('active'); c.innerText = ''; });
+            updateUI();
+            isPlaying = false;
+            document.getElementById('btn-deal').style.opacity = '1';
+        }, 3000);
+    }
+
+    function renderHand(side, cards, hasThird = false) {
+        let container = document.getElementById(`cards-${side}`);
+        let total = cards.reduce((sum, c) => sum + c.value, 0) % 10;
+        document.getElementById(`score-${side}`).innerText = total;
+        
+        container.innerHTML = '';
+        cards.forEach((c, i) => {
+            let el = createCardElement(c, i === 2);
+            container.appendChild(el);
+            setTimeout(() => el.classList.add('show'), 50);
+        });
+    }
+
+    function processPayout(winner, pPair, bPair) {
+        let winAmount = 0;
+        let returnBet = 0;
+        let winZones = [];
+
+        if (winner === 'P') {
+            if (bets.player > 0) { winAmount += bets.player * 1; returnBet += bets.player; winZones.push('player'); }
+        } else if (winner === 'B') {
+            if (bets.banker > 0) { winAmount += bets.banker * 0.95; returnBet += bets.banker; winZones.push('banker'); }
+        } else if (winner === 'T') {
+            if (bets.tie > 0) { winAmount += bets.tie * 8; returnBet += bets.tie; winZones.push('tie'); }
+            // 退回莊閒本金
+            returnBet += bets.player;
+            returnBet += bets.banker;
+        }
+
+        if (pPair && bets.ppair > 0) { winAmount += bets.ppair * 11; returnBet += bets.ppair; winZones.push('ppair'); }
+        if (bPair && bets.bpair > 0) { winAmount += bets.bpair * 11; returnBet += bets.bpair; winZones.push('bpair'); }
+
+        winZones.forEach(z => document.querySelector(`[data-bet="${z}"]`).classList.add('winning-zone'));
+
+        let finalAdd = winAmount + returnBet;
+        let winnerText = winner === 'P' ? '閒家贏！' : (winner === 'B' ? '莊家贏！' : '和局！');
+        
+        if (finalAdd > 0) {
+            balance += finalAdd;
+            showMsg(`${winnerText}<br>+ $ ${formatNum(finalAdd)}`, 2500);
+        } else {
+            showMsg(`${winnerText}`, 1500);
+        }
+    }
+
+    // --- 路單渲染系統 ---
+    function resetRoads() {
+        history = [];
+        bigRoad = Array(50).fill().map(() => Array(6).fill(null)); // [col][row]
+        brCurrentCol = 0;
+        brCurrentRow = 0;
+        brLastWinner = null;
+        document.getElementById('bead-road').innerHTML = '';
+        document.getElementById('big-road').innerHTML = '';
+        // 預填空網格
+        for(let i=0; i<6*20; i++) document.getElementById('bead-road').innerHTML += `<div class="road-cell"></div>`;
+        for(let i=0; i<6*40; i++) document.getElementById('big-road').innerHTML += `<div class="road-cell"></div>`;
+    }
+
+    function drawRoadmaps() {
+        let beadContainer = document.getElementById('bead-road');
+        let bigContainer = document.getElementById('big-road');
+        
+        let lastItem = history[history.length - 1];
+        
+        // --- 1. 更新珠盤路 ---
+        let beadCells = beadContainer.children;
+        let beadIndex = history.length - 1;
+        if (beadIndex < beadCells.length) {
+            let cell = beadCells[beadIndex];
+            // 將 P/B/T 轉換為中文
+            let char = lastItem.winner === 'P' ? '閒' : (lastItem.winner === 'B' ? '莊' : '和');
+            let dotP = lastItem.pPair ? '<div class="pair-dot-P"></div>' : '';
+            let dotB = lastItem.bPair ? '<div class="pair-dot-B"></div>' : '';
+            cell.innerHTML = `<div class="bead-${lastItem.winner}">${char}</div>${dotP}${dotB}`;
+        }
+
+        // --- 2. 更新大路 (簡易長龍與右移邏輯) ---
+        if (lastItem.winner === 'T') {
+            // 和局：在當前格子上畫綠線
+            if (brCurrentCol === 0 && brCurrentRow === 0 && !bigRoad[0][0]) {
+                bigRoad[0][0] = { winner: 'T', ties: 1, pPair: lastItem.pPair, bPair: lastItem.bPair };
+            } else {
+                let r = brCurrentRow > 0 ? brCurrentRow - 1 : 0;
+                if(bigRoad[brCurrentCol][r]) bigRoad[brCurrentCol][r].ties = (bigRoad[brCurrentCol][r].ties || 0) + 1;
+                if(lastItem.pPair) bigRoad[brCurrentCol][r].pPair = true;
+                if(lastItem.bPair) bigRoad[brCurrentCol][r].bPair = true;
+            }
+        } else {
+            // 閒或莊
+            if (brLastWinner === null || (brLastWinner === 'T' && brCurrentCol===0 && brCurrentRow===0 && bigRoad[0][0]?.winner==='T')) {
+                if(bigRoad[0][0] && bigRoad[0][0].winner==='T') {
+                    bigRoad[0][0].winner = lastItem.winner;
+                    bigRoad[0][0].pPair = bigRoad[0][0].pPair || lastItem.pPair;
+                    bigRoad[0][0].bPair = bigRoad[0][0].bPair || lastItem.bPair;
+                    brCurrentRow = 1;
+                } else {
+                    bigRoad[0][0] = { winner: lastItem.winner, ties: 0, pPair: lastItem.pPair, bPair: lastItem.bPair };
+                    brCurrentRow = 1;
+                }
+            } else if (lastItem.winner === brLastWinner) {
+                if (brCurrentRow >= 6 || bigRoad[brCurrentCol][brCurrentRow] !== null) {
+                    brCurrentCol++; 
+                } else {
+                    brCurrentRow++;
+                }
+                bigRoad[brCurrentCol][brCurrentRow - 1] = { winner: lastItem.winner, ties: 0, pPair: lastItem.pPair, bPair: lastItem.bPair };
+            } else {
+                brCurrentCol++;
+                while(bigRoad[brCurrentCol][0] !== null) brCurrentCol++; 
+                brCurrentRow = 1;
+                bigRoad[brCurrentCol][0] = { winner: lastItem.winner, ties: 0, pPair: lastItem.pPair, bPair: lastItem.bPair };
+            }
+            brLastWinner = lastItem.winner;
+        }
+
+        // 重新繪製大路 UI
+        bigContainer.innerHTML = '';
+        for (let col = 0; col < 40; col++) {
+            for (let row = 0; row < 6; row++) {
+                let cellData = (bigRoad[col] && bigRoad[col][row]) ? bigRoad[col][row] : null;
+                let inner = '';
+                if (cellData) {
+                    let tieLine = cellData.ties > 0 ? `<div class="tie-line"></div>` : '';
+                    let dotP = cellData.pPair ? '<div class="pair-dot-P"></div>' : '';
+                    let dotB = cellData.bPair ? '<div class="pair-dot-B"></div>' : '';
+                    if (cellData.winner !== 'T') {
+                        inner = `<div class="bigroad-${cellData.winner}"></div>${tieLine}${dotP}${dotB}`;
+                    } else {
+                        inner = tieLine; 
+                    }
+                }
+                bigContainer.innerHTML += `<div class="road-cell">${inner}</div>`;
+            }
+        }
+    }
+
+    // 初始化執行
+    buildShoe();
+    resetRoads();
+
+</script>
+</body>
+</html>
