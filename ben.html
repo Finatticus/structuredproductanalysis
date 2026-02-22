@@ -3,7 +3,7 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Structured Product Quant Analytics (BEN / DCN)</title>
+    <title>BEN/DCN Quant Analytics</title>
     <meta name="theme-color" content="#1a4da1">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -93,8 +93,8 @@
             <div class="input-group">
                 <label>產品架構 Structure</label>
                 <select id="productType">
-                    <option value="BEN">BEN</option>
-                    <option value="DCN">DCN</option>
+                    <option value="BEN">BEN (Bonus Enhanced Note)</option>
+                    <option value="DCN">DCN (Digital Note)</option>
                 </select>
             </div>
             <div class="input-group">
@@ -103,13 +103,16 @@
             </div>
             <div class="input-group">
                 <label>天期 (月)</label>
-                <input type="number" id="months" value="3">
+                <input type="number" id="months" value="1">
             </div>
             <div class="input-group">
                 <label>履約價 Strike (%)</label>
                 <input type="number" id="strikePct" value="100">
             </div>
-            
+            <div class="input-group">
+                <label>紅利基準 Coupon Strike (%)</label>
+                <input type="number" id="couponStrikePct" value="100">
+            </div>
             <div class="input-group">
                 <div class="label-action-group">
                     <label>下限價 KI (%)</label>
@@ -126,12 +129,14 @@
                 </div>
                 <input type="number" id="kiPct" value="90">
             </div>
-            
             <div class="input-group">
                 <label>紅利率 Bonus Rate (%)</label>
-                <input type="number" id="bonusPct" value="20">
+                <input type="number" id="bonusPct" value="5">
             </div>
-            
+                        <div class="input-group">
+                <label>回顧期間 Lookback (天)</label>
+                <input type="number" id="lookbackDays" value="0" min="0">
+            </div>
             <div class="input-group">
                 <label>無風險利率 (%)</label>
                 <input type="number" id="riskFreeRate" value="5" step="0.1">
@@ -181,7 +186,7 @@
 
             <div class="metric-card">
                 <div class="metric-header">
-                    <span class="metric-icon">📜</span><span class="metric-title">歷史波動度</span>
+                    <span class="metric-icon">📜</span><span class="metric-title">歷史波動度 (HISTORICAL VOL)</span>
                 </div>
                 <div id="volList" class="vol-grid">
                     </div>
@@ -246,7 +251,7 @@
             </div>
         </div>
 
-        <h3 style="margin-top:40px; margin-bottom:15px; border-left: 4px solid var(--primary); padding-left: 10px;">技術分析 Technical Analysis</h3>
+        <h3 style="margin-top:40px; margin-bottom:15px; border-left: 4px solid var(--primary); padding-left: 10px;">技術分析 & 回測結果 Technical Analysis & Long-term Backtesting</h3>
         <div id="techOptions">
             <label class="tech-option active"><input type="radio" name="tech" value="none" checked><span>給我乾淨的線圖就好</span></label>
             <label class="tech-option"><input type="radio" name="tech" value="ma"><span>移動平均線MA (20/60/200)</span></label>
@@ -254,7 +259,7 @@
             <label class="tech-option"><input type="radio" name="tech" value="rsi"><span>相對強弱指標 RSI 14</span></label>
             <label class="tech-option"><input type="radio" name="tech" value="macd"><span>平滑異同移動平均線指標 MACD</span></label>
             <label class="tech-option"><input type="radio" name="tech" value="hv"><span>歷史波動度 Hist Vol</span></label>
-            <label class="tech-option level-toggle" id="lvlBtn"><input type="checkbox" id="showPriceLevels"><span>顯示Strike, KI線</span></label>
+            <label class="tech-option level-toggle" id="lvlBtn"><input type="checkbox" id="showPriceLevels"><span>顯示Strike, Coupon Strike, KI線</span></label>
         </div>
         <div id="stockChartsArea" class="stock-charts-area"></div>
 
@@ -278,7 +283,6 @@
 </div>
 
 <script>
-    // PRNG 偽亂數生成器
     function mulberry32(a) {
         return function() {
             var t = a += 0x6D2B79F5;
@@ -288,7 +292,6 @@
         }
     }
 
-    // 綁定 UI 的 KI 條件切換邏輯 (NA 防呆)
     document.querySelectorAll('.mini-btn-group[data-target="kiType"] .mini-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.mini-btn-group[data-target="kiType"] .mini-btn').forEach(b => b.classList.remove('active'));
@@ -306,9 +309,6 @@
         });
     });
 
-    // ==========================================
-    // 技術指標計算函式庫 (TA Math Helpers)
-    // ==========================================
     function calcSMA(data, period) {
         return data.map((val, idx) => {
             if(idx < period - 1) return null;
@@ -380,7 +380,6 @@
         });
     }
 
-    // ========== API 串接與數據運算 ==========
     async function fetchTwelveData(symbols, apiKey) {
         const dataObj = {};
         for (let sym of symbols) {
@@ -393,7 +392,6 @@
             if (json.status === 'error') throw new Error(`獲取 ${sym} 資料失敗: ${json.message}`);
             if (!json.values || json.values.length === 0) throw new Error(`無法獲取 ${sym} 的歷史資料`);
             
-            // 加入 dates 用於技術線圖 X 軸
             const dates = json.values.map(v => v.datetime).reverse();
             const closes = json.values.map(v => parseFloat(v.close)).reverse();
             const returns = [];
@@ -465,9 +463,8 @@
     let cachedSymbolsStr = "";
     let cachedCorMat = null;
     let cachedDataObj = null;
-    let techCharts = {}; // 存放技術指標圖表的物件
+    let techCharts = {}; 
 
-    // 初始化技術線圖圖表物件
     function initTechCharts(symbols) {
         const area = document.getElementById('stockChartsArea');
         area.innerHTML = '';
@@ -498,13 +495,13 @@
         updateAllTechCharts();
     }
 
-    // 根據選擇動態更新技術分析資料
     function updateAllTechCharts() {
         if(!cachedDataObj) return;
         const techType = document.querySelector('input[name="tech"]:checked').value;
         const showLevels = document.getElementById('showPriceLevels').checked;
         const strikePct = parseFloat(document.getElementById('strikePct').value) / 100;
         let kiPct = parseFloat(document.getElementById('kiPct').value) / 100;
+        const couponStrikePct = parseFloat(document.getElementById('couponStrikePct').value) / 100; // 取得紅利基準
         if(document.getElementById('kiType').value === 'NA') kiPct = strikePct;
 
         Object.keys(techCharts).forEach(sym => {
@@ -512,9 +509,10 @@
             const data = cachedDataObj[sym];
             const closes = data.closes;
             const dates = data.dates;
-            const S0 = closes[closes.length - 1]; // 當前最新收盤價
+            const S0 = closes[closes.length - 1]; 
             const strikeLvl = S0 * strikePct;
             const kiLvl = S0 * kiPct;
+            const couponStrikeLvl = S0 * couponStrikePct;
 
             let datasets = [
                 { label: '收盤價', data: closes, borderColor: 'rgba(26, 77, 161, 0.8)', borderWidth: 2, yAxisID: 'y', pointRadius: 0, fill: false }
@@ -546,6 +544,7 @@
             if(showLevels) {
                 datasets.push({ label: 'Strike (履約價)', data: Array(closes.length).fill(strikeLvl), borderColor: '#f29900', borderWidth: 2, borderDash: [5,5], pointRadius: 0, yAxisID: 'y' });
                 datasets.push({ label: 'KI (下限價)', data: Array(closes.length).fill(kiLvl), borderColor: '#d93025', borderWidth: 2, borderDash: [5,5], pointRadius: 0, yAxisID: 'y' });
+                datasets.push({ label: 'Coupon Strike (紅利基準)', data: Array(closes.length).fill(couponStrikeLvl), borderColor: '#8e24aa', borderWidth: 2, borderDash: [5,5], pointRadius: 0, yAxisID: 'y' });
             }
 
             chart.data.labels = dates.map(d => d.substring(0,10));
@@ -554,7 +553,6 @@
         });
     }
 
-    // 技術指標按鈕的切換事件監聽
     document.querySelectorAll('input[name="tech"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
             document.querySelectorAll('.tech-option:not(.level-toggle)').forEach(lbl => lbl.classList.remove('active'));
@@ -605,6 +603,7 @@
             const strike = parseFloat(document.getElementById('strikePct').value) / 100;
             const kiType = document.getElementById('kiType').value;
             const bonusRate = parseFloat(document.getElementById('bonusPct').value) / 100;
+            const couponStrike = parseFloat(document.getElementById('couponStrikePct').value) / 100; // 取得紅利基準
             const r = parseFloat(document.getElementById('riskFreeRate').value) / 100;
 
             let kiPct = parseFloat(document.getElementById('kiPct').value) / 100;
@@ -615,6 +614,10 @@
             }
 
             const days = Math.round(months * 21);
+            
+            let lookbackDays = parseInt(document.getElementById('lookbackDays').value) || 0;
+            if (lookbackDays > days) lookbackDays = days; 
+
             const dt = 1 / 252;
             const numAssets = symbols.length;
 
@@ -676,7 +679,9 @@
             let samplePaths = [];
             let prng = mulberry32(123456); 
 
+            // Monte Carlo 迴圈
             for (let i = 0; i < N; i++) {
+                let pathPrices = [];
                 let prices = Array(numAssets).fill(1.0);
                 let knockedIn = false;
                 let pathRecord = [];
@@ -688,39 +693,66 @@
                         Z.push(Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2));
                     }
                     
-                    let currentWorst = Infinity;
                     for (let j = 0; j < numAssets; j++) {
                         let correlatedZ = 0;
                         for(let k = 0; k <= j; k++) correlatedZ += L[j][k] * Z[k];
                         prices[j] = prices[j] * Math.exp((r - 0.5 * vols[j] * vols[j]) * dt + vols[j] * Math.sqrt(dt) * correlatedZ);
-                        if (prices[j] < currentWorst) currentWorst = prices[j];
                     }
+                    pathPrices.push([...prices]);
+                }
 
+                let basePrices = Array(numAssets).fill(1.0);
+                for (let j = 0; j < numAssets; j++) {
+                    let minPrice = 1.0; 
+                    for (let d = 0; d < lookbackDays; d++) {
+                        if (pathPrices[d][j] < minPrice) minPrice = pathPrices[d][j];
+                    }
+                    basePrices[j] = minPrice;
+                }
+
+                for (let d = 0; d < days; d++) {
+                    let currentWorst = Infinity;
+                    for (let j = 0; j < numAssets; j++) {
+                        let perf = pathPrices[d][j] / basePrices[j]; 
+                        if (perf < currentWorst) currentWorst = perf;
+                    }
                     if (i < 100) pathRecord.push(currentWorst);
                     if (effectiveKiType === 'AKI' && currentWorst <= kiPct) knockedIn = true;
                 }
 
                 if (i < 100) samplePaths.push(pathRecord);
 
-                let finalWorst = Math.min(...prices);
+                let finalWorst = Infinity;
+                let finalPerfs = [];
+                for(let j = 0; j < numAssets; j++) {
+                    let perf = pathPrices[days - 1][j] / basePrices[j];
+                    finalPerfs.push(perf);
+                    if (perf < finalWorst) finalWorst = perf;
+                }
+                
                 if (effectiveKiType === 'EKI' && finalWorst <= kiPct) knockedIn = true;
 
                 let payoff = 0;
+                // === 判斷紅利發放邏輯 ===
+                let getsCoupon = (finalWorst >= couponStrike); 
+                let actualBonus = getsCoupon ? bonusRate : 0; // 若沒在Coupon Strike之上，則拿不到紅利
+
                 if (knockedIn && finalWorst < strike) {
-                    payoff = finalWorst / strike; 
+                    payoff = (finalWorst / strike) + actualBonus; // 實物履約加上可能拿到的紅利
                     physicalDeliveryCount++;
-                    let worstIdx = prices.indexOf(finalWorst);
+                    let worstIdx = finalPerfs.indexOf(finalWorst);
                     deliveryCountsArray[worstIdx]++;
                 } else {
                     if (productType === 'DCN') {
-                        payoff = 1 + bonusRate;
+                        payoff = 1 + actualBonus;
                     } else { 
-                        payoff = Math.max(1 + bonusRate, finalWorst);
+                        payoff = Math.max(1 + actualBonus, finalWorst); // BEN: 向上參與漲幅邏輯不變
                     }
                 }
                 payoffs.push(payoff);
             }
 
+            // ======= 歷史回測模組 (同步支援 Coupon Strike 邏輯) =======
             let minHistLen = Infinity;
             symbols.forEach(sym => {
                 if(cachedDataObj[sym].closes.length < minHistLen) minHistLen = cachedDataObj[sym].closes.length;
@@ -728,14 +760,27 @@
 
             if(minHistLen > 0) {
                 let actualDays = Math.min(days, minHistLen);
-                let S0 = symbols.map(sym => cachedDataObj[sym].closes[cachedDataObj[sym].closes.length - actualDays]);
+                
+                let histPrices = [];
+                for(let d = 0; d < actualDays; d++) {
+                    histPrices.push(symbols.map(sym => cachedDataObj[sym].closes[cachedDataObj[sym].closes.length - actualDays + d]));
+                }
+
+                let basePricesHist = [];
+                let lookbackDaysHist = Math.min(lookbackDays, actualDays - 1);
+                for (let j = 0; j < numAssets; j++) {
+                    let minP = histPrices[0][j]; 
+                    for (let d = 1; d <= lookbackDaysHist; d++) {
+                        if (histPrices[d][j] < minP) minP = histPrices[d][j];
+                    }
+                    basePricesHist.push(minP);
+                }
+
                 let histKnockedIn = false;
                 let histFinalWorst = 1.0;
                 
                 for(let d = 0; d < actualDays; d++) {
-                    let currentPrices = symbols.map((sym, j) => {
-                        return cachedDataObj[sym].closes[cachedDataObj[sym].closes.length - actualDays + d] / S0[j];
-                    });
+                    let currentPrices = symbols.map((sym, j) => histPrices[d][j] / basePricesHist[j]);
                     let currentWorst = Math.min(...currentPrices);
                     
                     if (effectiveKiType === 'AKI' && currentWorst <= kiPct) histKnockedIn = true;
@@ -746,13 +791,17 @@
                 }
 
                 let histPayoff = 0;
+                // 歷史回測同步判斷紅利基準
+                let histGetsCoupon = (histFinalWorst >= couponStrike);
+                let histActualBonus = histGetsCoupon ? bonusRate : 0;
+
                 if (histKnockedIn && histFinalWorst < strike) {
-                    histPayoff = histFinalWorst / strike;
+                    histPayoff = (histFinalWorst / strike) + histActualBonus;
                 } else {
                     if (productType === 'DCN') {
-                        histPayoff = 1 + bonusRate;
+                        histPayoff = 1 + histActualBonus;
                     } else {
-                        histPayoff = Math.max(1 + bonusRate, histFinalWorst);
+                        histPayoff = Math.max(1 + histActualBonus, histFinalWorst);
                     }
                 }
 
@@ -792,9 +841,8 @@
                 document.getElementById('cvar' + key).innerText = cvarVal >= 0 ? '-' : cvarVal.toFixed(2) + '%';
             });
 
-            renderCharts(payoffs, samplePaths, days, kiPct, strike, bonusRate, symbols, deliveryCountsArray, physicalDeliveryCount);
+            renderCharts(payoffs, samplePaths, days, kiPct, strike, bonusRate, couponStrike, symbols, deliveryCountsArray, physicalDeliveryCount);
             
-            // 初始化技術線圖
             initTechCharts(symbols);
 
             resSec.classList.add('active');
@@ -807,7 +855,7 @@
         }
     });
 
-    function renderCharts(payoffs, samplePaths, days, kiPct, strike, bonusRate, symbols, deliveryCountsArray, totalDeliveryCount) {
+    function renderCharts(payoffs, samplePaths, days, kiPct, strike, bonusRate, couponStrike, symbols, deliveryCountsArray, totalDeliveryCount) {
         if(chart1) chart1.destroy();
         if(chart2) chart2.destroy();
         if(chart3) chart3.destroy();
@@ -859,6 +907,7 @@
         datasets.push({ label: 'Strike (履約價)', data: Array(days).fill(strike), borderColor: '#f29900', borderWidth: 2, borderDash: [5,5], pointRadius: 0 });
         if(kiType !== 'NA') datasets.push({ label: 'KI (下限價)', data: Array(days).fill(kiPct), borderColor: '#d93025', borderWidth: 2, borderDash: [5,5], pointRadius: 0 });
         datasets.push({ label: 'Bonus Yield', data: Array(days).fill(1 + bonusRate), borderColor: '#188038', borderWidth: 2, borderDash: [5,5], pointRadius: 0 });
+        datasets.push({ label: 'Coupon Strike (紅利基準)', data: Array(days).fill(couponStrike), borderColor: '#8e24aa', borderWidth: 2, borderDash: [5,5], pointRadius: 0 });
 
         chart2 = new Chart(ctx2, {
             type: 'line',
