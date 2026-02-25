@@ -12,7 +12,7 @@
     <div class="config-panel">
 <div class="grid">
 <div class="input-group" title="FCN: 每月固定配息&#10;DRA: 每月浮動計息&#10;Bullet FCN: 第一期單次實質配息">
-    <label>產品架構</label>
+    <label>產品架構 Product Type</label>
     <select id="couponType" class="form-control">
         <option value="Fixed">FCN (固定配息)</option>
         <option value="Floating">DRA (浮動配息)</option>
@@ -22,8 +22,8 @@
 
 
     <div class="input-group" title="一個連結標的會抓一次API
-... 以此類推"><label>股票代號 (用逗號分隔)</label><input type="text" id="symbols" value="TSLA,TSM,NVDA"></div>
-    <div class="input-group" title="不保本商品超過12個月要高資產客戶才能下單唷"><label>天期 (月)</label><input type="number" id="months" value="6"></div>
+... 以此類推"><label>股票代號 Underlying (用逗號分隔)</label><input type="text" id="symbols" value="TSLA,TSM,NVDA"></div>
+    <div class="input-group" title="不保本商品超過12個月要高資產客戶才能下單唷"><label>天期 Tenor (月)</label><input type="number" id="months" value="6"></div>
 
 <div class="input-group" title="默認為每月配息，Bullet為單次配息">
     <label id="couponLabel">年化配息率 Coupon (%)</label>
@@ -78,7 +78,7 @@ Monthly:每月觀察">
 填寫-5就是每月遞減5%
 填寫+5就是每月遞增5%
 ...以此類推"><label>KO Step 每月遞增(減) (%)</label><input type="number" id="koStep" value="0" step="0.1"></div>
-    <div class="input-group" title="設定上不能超過天期，Bullet FCN不可以調整保證領息期間"><label>保證領息期間 (月)</label><input type="number" id="guaranteedMonths" value="1" min="1"></div>
+    <div class="input-group" title="設定上不能超過天期，Bullet FCN不可以調整保證領息期間"><label>保證領息期間 GP (月)</label><input type="number" id="guaranteedMonths" value="1" min="1"></div>
 <div style="grid-column: 1 / -1; height: 10px; border-top: 1px dashed var(--border); margin-top: 10px; padding-top: 10px;"></div>
  
 <div class="input-group" title="免費API:
@@ -167,7 +167,7 @@ Monthly:每月觀察">
         <table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
             <thead>
                 <tr style="border-bottom: 2px solid var(--border); color: var(--text-sub);">
-                    <th style="padding: 10px; text-align: left;">信心水準</th>
+                    <th style="padding: 10px; text-align: left;">信心水準 Confidence Level</th>
                     <th style="padding: 10px; text-align: center;">99%</th>
                     <th style="padding: 10px; text-align: center;">97%</th>
                     <th style="padding: 10px; text-align: center;">95%</th>
@@ -177,7 +177,7 @@ Monthly:每月觀察">
             </thead>
             <tbody>
                 <tr style="border-bottom: 1px solid var(--border);">
-                    <td style="padding: 10px; font-weight: bold; color: var(--danger); text-align: left;">VaR (最大損失)</td>
+                    <td style="padding: 10px; font-weight: bold; color: var(--danger); text-align: left;">Value at Risk, VaR (風險價值)</td>
                     <td id="var99" style="text-align: center;">-</td>
                     <td id="var97" style="text-align: center;">-</td>
                     <td id="var95" style="text-align: center;">-</td>
@@ -185,7 +185,7 @@ Monthly:每月觀察">
                     <td id="var85" style="text-align: center;">-</td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px; font-weight: bold; color: var(--warning); text-align: left;">CVaR (極端平均)</td>
+                    <td style="padding: 10px; font-weight: bold; color: var(--warning); text-align: left;">Conditional Value at Risk, CVaR (條件風險價值)</td>
                     <td id="cvar99" style="text-align: center;">-</td>
                     <td id="cvar97" style="text-align: center;">-</td>
                     <td id="cvar95" style="text-align: center;">-</td>
@@ -1322,5 +1322,6 @@ function renderWorstPathsChart(paths, params) {
 
 </script>
  
+
 
 </body></html>
