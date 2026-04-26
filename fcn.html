@@ -1749,5 +1749,106 @@ function renderGreeks(greeks, symbols) {
     });
     tbody.innerHTML = html;
 }
+
+const pressedKeys = new Set();
+document.addEventListener('keydown', (e) => {
+    pressedKeys.add(e.key.toLowerCase());
+    if (pressedKeys.has('r') && pressedKeys.has('m') && pressedKeys.has('p') && pressedKeys.has('4')) {
+        showSecretBox();
+        pressedKeys.clear();
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    pressedKeys.delete(e.key.toLowerCase());
+});
+
+function showSecretBox() {
+    if (document.getElementById('rmp-secret-modal')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'rmp-secret-modal';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.zIndex = '9998';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+    overlay.style.animation = 'fadeInUp 0.3s ease-out forwards';
+    const modal = document.createElement('div');
+    modal.style.backgroundColor = 'var(--card-bg, #ffffff)';
+    modal.style.padding = '25px';
+    modal.style.borderRadius = '12px';
+    modal.style.boxShadow = '0 20px 25px -5px rgba(0,0,0,0.1)';
+    modal.style.width = '400px';
+    modal.style.maxWidth = '90%';
+    modal.style.border = '1px solid var(--border, #e2e8f0)';
+    const title = document.createElement('h3');
+    title.innerText = '🕵️‍♂️ 隱藏空間 (Michael der API)';
+    title.style.marginTop = '0';
+    title.style.color = 'var(--primary, #0f172a)';
+    const textarea = document.createElement('textarea');
+    textarea.value = 'd7de0902b30e47dead805e170f78bac6';
+    textarea.style.width = '100%';
+    textarea.style.height = '120px';
+    textarea.style.padding = '12px';
+    textarea.style.marginBottom = '15px';
+    textarea.style.borderRadius = '8px';
+    textarea.style.border = '1px solid var(--border, #e2e8f0)';
+    textarea.style.fontFamily = 'monospace';
+    textarea.style.resize = 'vertical';
+    textarea.style.boxSizing = 'border-box';
+    const btnGroup = document.createElement('div');
+    btnGroup.style.display = 'flex';
+    btnGroup.style.justifyContent = 'flex-end';
+    btnGroup.style.gap = '10px';
+    const copyBtn = document.createElement('button');
+    copyBtn.innerText = '複製並關閉';
+    copyBtn.style.padding = '10px 15px';
+    copyBtn.style.backgroundColor = 'var(--primary, #0f172a)';
+    copyBtn.style.color = 'white';
+    copyBtn.style.border = 'none';
+    copyBtn.style.borderRadius = '6px';
+    copyBtn.style.cursor = 'pointer';
+    copyBtn.style.fontWeight = 'bold';
+
+    copyBtn.onclick = async () => {
+        try {
+            await navigator.clipboard.writeText(textarea.value);
+            document.body.removeChild(overlay);
+        } catch (err) {
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(overlay);
+        }
+    };
+
+    const closeBtn = document.createElement('button');
+    closeBtn.innerText = '關閉';
+    closeBtn.style.padding = '10px 15px';
+    closeBtn.style.backgroundColor = '#e2e8f0';
+    closeBtn.style.color = '#475569';
+    closeBtn.style.border = 'none';
+    closeBtn.style.borderRadius = '6px';
+    closeBtn.style.cursor = 'pointer';
+    closeBtn.style.fontWeight = 'bold';
+
+    closeBtn.onclick = () => {
+        document.body.removeChild(overlay);
+    };
+
+    btnGroup.appendChild(closeBtn);
+    btnGroup.appendChild(copyBtn);
+    
+    modal.appendChild(title);
+    modal.appendChild(textarea);
+    modal.appendChild(btnGroup);
+    overlay.appendChild(modal);
+    
+    document.body.appendChild(overlay);
+}
 </script>
 </body></html>
