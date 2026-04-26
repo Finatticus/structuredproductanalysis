@@ -213,14 +213,16 @@ input:focus, select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 
 </div>
     </div>
     <div id="result-section" class="result-section">
-        
-        <!-- Smart Insights Panel -->
-        <div id="smart-insights" style="background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border-left: 5px solid #3b82f6; padding: 25px; margin-bottom: 30px; border-radius: 12px; display: none; box-shadow: var(--shadow); border: 1px solid var(--border);">
-            <h3 style="margin-top: 0; color: #0f172a; font-size: 1.25rem; display: flex; align-items: center; gap: 10px; border-bottom: none; padding-bottom: 0;">
-                <span style="font-size: 1.6rem;">🤖</span> 量化模型智能總結 (Smart Insights)
-            </h3>
-            <div id="insight-text" style="font-size: 1.05rem; line-height: 1.7; color: #334155; margin-bottom: 0; font-weight: 500;"></div>
-        </div>
+
+
+
+<details id="smart-insights" style="background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border-left: 5px solid #3b82f6; padding: 15px 25px; margin-bottom: 30px; border-radius: 12px; display: none; box-shadow: var(--shadow); border: 1px solid var(--border);">
+    <summary style="margin-top: 0; color: #0f172a; font-size: 1.25rem; display: flex; align-items: center; gap: 10px; font-weight: 700; cursor: pointer; outline: none; list-style: none;">
+        <span style="font-size: 1.6rem;"></span>量化模型簡單摘要 (TLDR)
+    </summary>
+    <div id="insight-text" style="font-size: 1.05rem; line-height: 1.7; color: #334155; margin-top: 15px; margin-bottom: 0; font-weight: 500;"></div>
+</details>
+
 
         <div class="metrics">
 <div class="metric-card" style="display: none;">
@@ -691,7 +693,9 @@ function dynamicCholesky(A) {
 }
 function renderMCResults(res, params) {
 
-    // 智能總結 Smart Insights 生成邏輯 (更加詳細)
+// ==========================================
+    // 智能總結 Smart Insights 生成邏輯 (更加詳細與動態排版)
+    // ==========================================
     const koProbs = (res.scenarioProbs || []).slice(0, params.totalMonths).reduce((a,b)=>a+b, 0);
     const fullRepayProb = (res.scenarioProbs || [])[params.totalMonths] || 0;
     const mcWinRate = koProbs + fullRepayProb;
@@ -707,6 +711,8 @@ function renderMCResults(res, params) {
     }
     
     const cvar99 = (res.riskResults && res.riskResults['CVaR99']) || 0;
+    const gOverallDelta = window.lastGreeks ? window.lastGreeks.product.delta : 0;
+    const gOverallVega = window.lastGreeks ? window.lastGreeks.product.vega : 0;
     
     let stockInsightsHtml = "";
     let underlyingGreeksHtml = "";
@@ -714,7 +720,7 @@ function renderMCResults(res, params) {
     params.symbols.forEach(sym => {
         // --- 1. Get Stock Greeks ---
         const gDelta = (window.lastGreeks && window.lastGreeks.stocks[sym]) ? window.lastGreeks.stocks[sym].delta : 0;
-        underlyingGreeksHtml += `<li style="margin-bottom: 6px;"><b>【${sym}】</b>：Delta 約為 <b>${gDelta.toFixed(2)}%</b>，這代表如果該股票單獨上漲 1%，預期將帶動這整檔商品價值跟著上升 ${gDelta.toFixed(2)}%。</li>`;
+        underlyingGreeksHtml += `<li style="margin-bottom: 6px;"><b>【${sym}】</b>：Delta 約為 <b>${gDelta.toFixed(2)}%</b>，代表若該股票單獨上漲 1%，預期將帶動商品價值跟著上升 ${gDelta.toFixed(2)}%。</li>`;
         
         // --- 2. Calculate Stock Backtest ---
         const data = globalStockData[sym];
@@ -735,12 +741,12 @@ function renderMCResults(res, params) {
             const strikeVal = entry * strikeThreshold;
             const windowPrices = displayPrices.slice(i + 1, i + holdDays + 1);
             const expiryPrice = windowPrices[windowPrices.length - 1];
-           
+            
             const change = (expiryPrice - entry) / entry;
             returns.push(change);
             if (change > 0) upCount++;
             if (windowPrices.some(p => p < entry * kiThreshold)) touchKICount++;
-           
+            
             if (expiryPrice < strikeVal) {
                 endBelowStrikeCount++;
                 const expiryGlobalIdx = (data.prices.length - displayPrices.length) + i + holdDays;
@@ -753,7 +759,6 @@ function renderMCResults(res, params) {
         
         const winRate = ((upCount / totalScenarios) * 100).toFixed(1);
         const avgRet = ((returns.reduce((a, b) => a + b, 0) / totalScenarios) * 100).toFixed(1);
-        
         const avgRetDaily = returns.reduce((a, b) => a + b, 0) / totalScenarios;
         const stdRetDaily = math.std(returns) || 0.0001;
         const sharpeRatio = ((avgRetDaily / stdRetDaily) * Math.sqrt(252 / holdDays)).toFixed(2);
@@ -770,48 +775,96 @@ function renderMCResults(res, params) {
             
         stockBacktestHtml += `<div style="margin-top:12px; padding-left:12px; border-left:3px solid var(--primary); font-size:0.95rem;">
             <b style="font-size:1.05rem;">【${sym}】</b><br>
-            以過去 ${years} 年的回測來看，如果單獨投資此標的，勝率為 <b>${winRate}%</b>，平均報酬 <b>${avgRet}%</b>。<br>
-            其<b>「夏普比率」為 ${sharpeRatio}</b> (這是一個衡量『承擔每單位風險能獲取多少超額報酬』的指標，數字越高代表這檔股票的走勢越穩健)。<b>「獲利因子」為 ${profitFactor}</b> (代表總獲利與總虧損的比例，只要大於 1，就代表投資這檔股票在歷史上是一門穩賺不賠的好生意)。<br>
-            <div style="margin-top: 6px; background: #f8fafc; padding: 8px; border-radius: 4px;">🛡️ <b>安全性分析 (持有期內風險)：</b>在歷史樣本中，曾經跌破 KI (下限價) 的機率大約為 <b>${kiProb}%</b>，而到期時不幸跌破履約價的機率約 <b>${strikeProb}%</b>。<br>💊 <b>恢復力分析 (若到期低於 Strike 需多久解套)：</b>就算真的不幸跌破履約價而遭到套牢，歷史數據顯示平均只需要 <b>${avgRecoveryDays} 天</b> 就能漲回履約價成功解套。</div>
+            以過去 ${years} 年的回測來看，若單獨投資此標的，勝率為 <b>${winRate}%</b>，平均報酬 <b>${avgRet}%</b>。<br>
+            其<b>「夏普比率」為 ${sharpeRatio}</b>。「獲利因子」為 <b>${profitFactor}</b> (總獲利與虧損比，大於 1 代表期望值為正)。<br>
+            <div style="margin-top: 6px; background: #f8fafc; padding: 8px; border-radius: 4px;">🛡️ <b>安全性分析：</b>歷史曾跌破 KI 機率約 <b>${kiProb}%</b>，到期跌破履約價機率約 <b>${strikeProb}%</b>。<br>💊 <b>恢復力分析：</b>若不幸跌破履約價，歷史數據顯示平均需 <b>${avgRecoveryDays} 天</b> 能成功解套。</div>
         </div>`;
     });
 
-    let insightHtml = `<div style="display:flex; flex-direction:column; gap:16px;">`;
+    // --- 計算新增的波動度與相關係數邏輯 ---
+    let vols = params.V.map(v => v * 100);
+    let maxVolIdx = vols.indexOf(Math.max(...vols));
+    let minVolIdx = vols.indexOf(Math.min(...vols));
+    let nDim = params.symbols.length;
+
+    let corSum = 0, corCount = 0;
+    for (let i = 0; i < nDim; i++) {
+        for (let j = i + 1; j < nDim; j++) {
+            corSum += params.COR[i][j];
+            corCount++;
+        }
+    }
+    let avgCor = corCount > 0 ? (corSum / corCount).toFixed(2) : 1;
+    let corDesc = avgCor > 0.6 ? "高度正相關" : (avgCor > 0.3 ? "中度正相關" : (avgCor > -0.3 ? "低度相關" : "負相關"));
+
+    let insightHtml = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:10px; border-bottom:1px dashed #cbd5e1;">
+        <span style="font-size:0.95rem; color:var(--text-sub); font-weight:600;">點擊各項目展開：</span>
+        <div style="display:flex; gap:8px;">
+            <button onclick="document.querySelectorAll('.insight-details').forEach(d => d.open = true)" style="padding:4px 10px; font-size:12px; border-radius:6px; border:1px solid #3b82f6; background:#eff6ff; color:#3b82f6; cursor:pointer; font-weight:bold; transition:all 0.2s;">全部展開</button>
+            <button onclick="document.querySelectorAll('.insight-details').forEach(d => d.open = false)" style="padding:4px 10px; font-size:12px; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; color:#64748b; cursor:pointer; font-weight:bold; transition:all 0.2s;">全部收起</button>
+        </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px;">`; // 縮減項目間距
+
+    // 輔助函數：建立獨立的折疊面板 (顏色統一為 var(--primary))
+    const createDetail = (title, content) => `
+    <details class="insight-details" style="background:#fff; border-radius:8px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+        <summary style="padding:12px 15px; cursor:pointer; font-weight:bold; color:var(--primary); font-size:1.05rem; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-radius:8px;">
+            ${title}
+        </summary>
+        <div style="padding:15px; border-top:1px solid #e2e8f0; line-height:1.7; color:#334155;">
+            ${content}
+        </div>
+    </details>`;
+
+    // --- 項目 1 ---
+    let item1Content = `經過 ${params.N} 次蒙地卡羅路徑模擬，本商品的整體勝率（包含因為提早達到 KO 條件而提早結算，或是成功撐到滿期保本的機率總和）為 <b style="color:var(--primary);">${mcWinRate.toFixed(1)}%</b>。<br>
+    雖然這檔產品設定的天期為 ${params.totalMonths} 個月，但考量到提早出場 (KO) 的機率，資金實際被鎖定的「平均存續期間」預估大約只有 <b style="color:var(--primary);">${(res.avgDay || 0).toFixed(0)} 天</b>。<br>
+    <div style="margin-top: 12px; padding: 12px; background: #eff6ff; border-radius: 6px; border-left: 4px solid #3b82f6;">
+        <b style="color:#1e40af;">📊 波動度與相關性解析：</b><br>
+        目前連結的 ${nDim} 檔標的間，平均相關係數約為 <b>${avgCor}</b> (${corDesc})。<br>
+        其中歷史波動度最高為 <b>${params.symbols[maxVolIdx]} (${vols[maxVolIdx].toFixed(1)}%)</b>，最低為 <b>${params.symbols[minVolIdx]} (${vols[minVolIdx].toFixed(1)}%)</b>。<br>
+        <span style="font-size:0.9rem; color:#475569;"><i>💡 解讀：較高的波動度會增加提早獲利出場 (KO) 或實物交割風險 (KI) 的機會；而標的間若相關性越低，代表彼此走勢容易分歧，這通常會提高單一弱勢標的拖累整體表現的風險。</i></span>
+    </div>`;
+    insightHtml += createDetail("1. 勝率、存續期間與標的關聯性", item1Content);
+
+    // --- 修改後的項目 2 (加入各股實物履約機率與最高標的) ---
+    // 計算整體實物交割機率 (陣列最後一個元素)
+    const overallKIProb = (res.scenarioProbs || [])[params.totalMonths + 1] || 0; 
     
-    insightHtml += `<div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #e2e8f0;">
-        <b style="color:var(--primary); font-size:1.05rem;">1. 預期報酬、勝率與存續期間</b><br>
-        經過 ${params.N} 次蒙地卡羅路徑模擬，本商品的整體勝率（包含因為提早達到 KO 條件而提早結算，或是雖然沒提早出場但也成功撐到滿期保本的機率總和）為 <b style="color:var(--primary);">${mcWinRate.toFixed(1)}%</b>。<br>
-        這代表您有極高的機率能安全拿回完整的本金與配息。綜合所有可能賺錢與賠錢的情境，投資人平均預期能拿回 <b style="color:var(--primary);">${(100 + res.avgReturn).toFixed(2)}%</b> 的總價值。<br>
-        另外，雖然這檔產品設定的天期為 ${params.totalMonths} 個月，但考量到提早出場 (KO) 的機率，您的資金實際被鎖定的「平均存續期間」預估大約只有 <b style="color:var(--primary);">${(res.avgDay || 0).toFixed(0)} 天</b> 就會被釋放回您的帳戶。
-    </div>`;
+    let kiBreakdownHtml = `<ul style="margin: 8px 0 0 0; padding-left: 20px;">`;
+    params.symbols.forEach((sym, idx) => {
+        let p = (res.worstAssetProbs && res.worstAssetProbs[idx]) ? res.worstAssetProbs[idx] : 0;
+        let isMax = (sym === worstSymbolName);
+        kiBreakdownHtml += `<li style="margin-bottom: 4px;">${sym}: <b>${p.toFixed(1)}%</b> ${isMax ? '<span style="color:var(--danger); font-size:0.85rem; font-weight:bold;">(機率最高)</span>' : ''}</li>`;
+    });
+    kiBreakdownHtml += `</ul>`;
 
-    insightHtml += `<div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #e2e8f0;">
-        <b style="color:var(--danger); font-size:1.05rem;">2. 風險評估 (VaR & 實物交割)</b><br>
-        在 99% 的極端市場情境下 (VaR)，也就是市場發生罕見崩盤時，您的本金預期最大損失幅度為 <b style="color:var(--danger);">${Math.abs(var99).toFixed(2)}%</b>；
-        萬一不幸真的發生了這種極端下跌 (CVaR)，平均的虧損幅度會達到 <b style="color:var(--danger);">${Math.abs(cvar99).toFixed(2)}%</b>。<br>
-        萬一產品最終不幸必須進行「實物交割」(也就是跌破 KI 且到期沒漲回履約價，被迫換成滿手套牢的股票)，模擬顯示您有高達 <b style="color:var(--warning);">${maxWorstProb.toFixed(1)}%</b> 的機率會拿到【${worstSymbolName}】的股票，這通常是因為它在所有標的中的歷史波動度最高，或者目前股價最弱勢，因此最容易成為拖累整個商品的「最差表現標的」。
+    let item2Content = `在 99% 的極端市場情境下 (VaR)，也就是市場發生罕見崩盤時，本金預期最大損失幅度為 <b style="color:var(--danger);">${Math.abs(var99).toFixed(2)}%</b>；若發生此極端下跌 (CVaR)，平均虧損幅度將達 <b style="color:var(--danger);">${Math.abs(cvar99).toFixed(2)}%</b>。<br>
+    <div style="margin-top: 12px; padding: 12px; background: #fff5f5; border-radius: 6px; border-left: 4px solid var(--danger);">
+        <b style="color:var(--danger);">⚠️ 實物履約 (交割) 機率解析：</b><br>
+        模型模擬顯示，本產品最終發生實物履約的整體總機率為 <b>${overallKIProb.toFixed(1)}%</b>。<br>
+        若不幸發生實物交割，各標的成為「最差表現標的」而被強迫換股的機率分佈如下：
+        ${kiBreakdownHtml}
+        <span style="font-size:0.9rem; color:#475569; display:block; margin-top:6px;"><i>💡 提示：【${worstSymbolName}】的交割風險最高，是拖累整體商品表現的主要來源。</i></span>
     </div>`;
+    insightHtml += createDetail("2. 風險評估 (VaR & 實物交割)", item2Content);
 
-    const gOverallDelta = window.lastGreeks ? window.lastGreeks.product.delta : 0;
-    const gOverallVega = window.lastGreeks ? window.lastGreeks.product.vega : 0;
-    
-    insightHtml += `<div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #e2e8f0;">
-        <b style="color:#8b5cf6; font-size:1.05rem;">3. 敏感度分析 (Greeks)</b><br>
-        敏感度指標是用來客觀衡量「當市場發生波動時，商品價值會受到多大影響」的科學數據：<br>
-        目前整檔商品的綜合 <b>Delta 為 ${gOverallDelta.toFixed(2)}%</b>，這代表當所有標的同時上漲 1% 時，商品淨值預期將會增加 ${gOverallDelta.toFixed(2)}%。<br>
-        綜合 <b>Vega 為 ${gOverallVega.toFixed(2)}%</b>，代表市場的整體波動率每增加 1% 時，對您商品價值的影響程度。<br>
-        <br>在個別標的方面，每一檔股票對整體的連動性如下：
-        <ul style="margin: 8px 0 0 0; padding-left: 20px;">${underlyingGreeksHtml}</ul>
-    </div>`;
+    // --- 項目 3 ---
+    let item3Content = `敏感度指標用來客觀衡量「當市場發生波動時，商品價值會受到多大影響」：<br>
+    整檔商品的綜合 <b>Delta 為 ${gOverallDelta.toFixed(2)}%</b>，代表當所有標的同時上漲 1% 時，商品淨值預期將增加 ${gOverallDelta.toFixed(2)}%。<br>
+    綜合 <b>Vega 為 ${gOverallVega.toFixed(2)}%</b>，代表市場整體波動率每增加 1% 時的影響程度。<br>
+    <br>在個別標的方面，每一檔股票對整體的連動性如下：
+    <ul style="margin: 8px 0 0 0; padding-left: 20px;">${underlyingGreeksHtml}</ul>`;
+    insightHtml += createDetail("3. 敏感度分析 (Greeks)", item3Content);
 
-    insightHtml += `<div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #e2e8f0;">
-        <b style="color:#0ea5e9; font-size:1.05rem;">4. 個別標的回測</b><br>
-        我們針對您選擇的各檔標的，進行了嚴格的長期歷史回測。這能幫助您用最白話的方式了解，若把投資眼光放長遠，這些股票本身能帶來什麼樣的風險與報酬：
-        ${stockBacktestHtml}
-    </div>`;
+    // --- 項目 4 ---
+    let item4Content = `我們針對各檔標的進行了長期歷史回測，以了解若把投資眼光放長遠，這些股票本身能帶來什麼樣的風險與報酬：
+    ${stockBacktestHtml}`;
+    insightHtml += createDetail("4. 個別標的長期回測", item4Content);
 
-    insightHtml += `</div>`;
-    
+    insightHtml += `</div>`;    
     const insightEl = document.getElementById('insight-text');
     if(insightEl) insightEl.innerHTML = insightHtml;
     const insightBox = document.getElementById('smart-insights');
