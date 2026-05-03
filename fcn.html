@@ -513,7 +513,7 @@ input:focus, select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 
  
 </div>
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwhYB64AosmYTKr60y2XkzL_SUwk-DbVHg009oRBZZfUewK8i7oXadN7RekcQMcBth6/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwL7xKOvEbacRHPM7IKZMFkafslijgXzD5-MgevNtefjq1NESrB3zs4_WE1aTM9Hm_D/exec';
 
 function switchAuthTab(tab) {
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
@@ -1413,7 +1413,7 @@ function updateSingleStockChart(symbol) {
             </div>
            <div class="stat-box"><span class="stat-label">平均報酬</span><span class="stat-num">${avgRet}%</span></div>
             <div class="stat-box"><span class="stat-label">最大回撤(MDD)</span><span class="stat-num" style="color:var(--danger); white-space: nowrap;">${maxDrawdownPct}% <span style="font-size: 0.75rem; color: var(--text-sub); font-weight: normal;">(${mddPeakDate} ~ ${mddTroughDate})</span></span></div>
-            <div class="stat-box" title="承擔每單位風險所獲得的報酬，數值越高越好"><span class="stat-label">夏普比率</span><span class="stat-num" style="color:var(--primary)">${sharpeRatio}</span></div>
+            <div class="stat-box" title="夏普比率 = 平均報酬 ÷ 報酬標準差（波動度）。衡量的是：投資人每承受 1% 的價格波動風險，能獲得多少倍的報酬回饋。數值越高代表「用同樣的風險，賺到更多」。一般認為 ≥ 1 表示不錯，≥ 2 表示優秀，< 0 表示期望報酬為負。"><span class="stat-label">夏普比率</span><span class="stat-num" style="color:var(--primary)">${sharpeRatio}</span></div>
             <div class="stat-box" title="總獲利除以總虧損，大於1代表具備正期望值"><span class="stat-label">獲利因子</span><span class="stat-num" style="color:var(--primary)">${profitFactor}</span></div>
         </div>
         <p style="font-size: 0.9rem; color: var(--text-sub); margin-top: 15px; line-height: 1.6;">
@@ -1659,27 +1659,6 @@ document.getElementById('runBtn').addEventListener('click', async () => {
        
         document.getElementById('volPeriodLabel').innerText = `(${params.D}天)`;
        
-        if (window.currentUser && typeof GAS_URL !== 'undefined') {
-            const formData = new URLSearchParams();
-            formData.append('action', 'log_usage');
-            formData.append('account', window.currentUser.account);
-            formData.append('name', window.currentUser.name);
-            formData.append('pType', document.getElementById('couponType').value);
-            formData.append('symbols', symbols.join(','));
-            formData.append('tenor', months);
-            formData.append('coupon', document.getElementById('coupon').value);
-            formData.append('strike', document.getElementById('strikePct').value);
-            formData.append('ki', `${document.getElementById('kiPct').value}(${kiType})`);
-            formData.append('ko', `${document.getElementById('koPct').value}(${koMode},${koFreq})`);
-            formData.append('koStep', document.getElementById('koStep').value);
-            formData.append('gp', gMonths);
-            formData.append('rfr', document.getElementById('riskFreeRate').value);
-            formData.append('sim', params.N);
-            formData.append('skew', volSkewRaw);
-            formData.append('tech', years);
-            
-            fetch(GAS_URL, { method: 'POST', body: formData }).catch(console.error);
-        }
         const simFormData = new URLSearchParams();
         simFormData.append('action', 'run_simulation');
         simFormData.append('params', JSON.stringify({
@@ -1710,6 +1689,29 @@ document.getElementById('runBtn').addEventListener('click', async () => {
 
         const mcResult = simData.mcResult;
         const greeks = simData.greeks;
+
+        if (window.currentUser && typeof GAS_URL !== 'undefined') {
+            const formData = new URLSearchParams();
+            formData.append('action', 'log_usage');
+            formData.append('account', window.currentUser.account);
+            formData.append('name', window.currentUser.name);
+            formData.append('pType', document.getElementById('couponType').value);
+            formData.append('symbols', symbols.join(','));
+            formData.append('tenor', months);
+            formData.append('coupon', document.getElementById('coupon').value);
+            formData.append('strike', document.getElementById('strikePct').value);
+            formData.append('ki', `${document.getElementById('kiPct').value}(${kiType})`);
+            formData.append('ko', `${document.getElementById('koPct').value}(${koMode},${koFreq})`);
+            formData.append('koStep', document.getElementById('koStep').value);
+            formData.append('gp', gMonths);
+            formData.append('rfr', document.getElementById('riskFreeRate').value);
+            formData.append('sim', params.N);
+            formData.append('skew', volSkewRaw);
+            formData.append('tech', years);
+            formData.append('mu', (100 + mcResult.avgReturn).toFixed(2));
+            formData.append('avgDay', mcResult.avgDay.toFixed(1));
+            fetch(GAS_URL, { method: 'POST', body: formData }).catch(console.error);
+        }
 
         const histLen = globalStockData[symbols[0]].prices.length;
         const maxValidIdx = histLen - params.D - 1;
