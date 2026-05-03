@@ -149,7 +149,14 @@ input:focus, select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 
         <div id="loginForm" class="auth-form active">
             <div class="auth-input-group">
                 <label>帳號 Account</label>
-                <input type="text" id="loginAccount" placeholder="輸入您的帳號">
+                <input type="text" id="loginAccount" placeholder="輸入您的帳號" onkeypress="if(event.key === 'Enter') handleLogin()">
+            </div>
+            <div class="auth-input-group">
+                <label>密碼 Password</label>
+                <div style="position: relative;">
+                    <input type="password" id="loginPassword" placeholder="輸入您的密碼" onkeypress="if(event.key === 'Enter') handleLogin()" style="padding-right: 40px;">
+                    <button type="button" onclick="togglePassword('loginPassword')" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.2rem; outline:none;" tabindex="-1">👁️</button>
+                </div>
             </div>
             <button class="auth-btn" onclick="handleLogin()">登入 Login</button>
             <div id="loginMessage" class="auth-message"></div>
@@ -162,12 +169,22 @@ input:focus, select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 
                 <input type="text" id="regAccount" placeholder="設定您的帳號">
             </div>
             <div class="auth-input-group">
+                <label>密碼 Password</label>
+                <div style="position: relative;">
+                    <input type="password" id="regPassword" placeholder="設定您的密碼" style="padding-right: 40px;">
+                    <button type="button" onclick="togglePassword('regPassword')" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.2rem; outline:none;" tabindex="-1">👁️</button>
+                </div>
+            </div>
+            <div class="auth-input-group">
                 <label>名字 Name</label>
                 <input type="text" id="regName" placeholder="您的姓名">
             </div>
             <div class="auth-input-group">
                 <label>API Key</label>
-                <input type="password" id="regApiKey" placeholder="您的 API Key">
+                <div style="position: relative;">
+                    <input type="password" id="regApiKey" placeholder="您的 API Key" style="padding-right: 40px;">
+                    <button type="button" onclick="togglePassword('regApiKey')" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.2rem; outline:none;" tabindex="-1">👁️</button>
+                </div>
             </div>
             <button class="auth-btn" onclick="handleRegister()">註冊 Register</button>
             <div id="regMessage" class="auth-message"></div>
@@ -500,7 +517,7 @@ input:focus, select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 
 // 🔐 登入系統設定區 (Auth System Settings)
 // ==========================================
 // ⚠️ 請將下方的網址替換為您從 Google Apps Script 部署取得的「網頁應用程式網址」
-const GAS_URL = https://script.google.com/macros/s/AKfycbyg3731Med_DGqdQlQ2ZnOOMDRXhVuE1wpCV89wJkg2Y3HV1pdSURz8nR5g4GdUSEAt/exec;
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzzjyn3MBExqsnbyizhwSQIP4tvjNsFe1ekf5mxG60u0_k0whoqBl-aBUEmtbiY6iJc/exec';
 
 function switchAuthTab(tab) {
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
@@ -549,8 +566,7 @@ async function handleRegister() {
         
         const response = await fetch(GAS_URL, {
             method: 'POST',
-            body: formData,
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            body: formData
         });
         
         const result = await response.json();
@@ -602,8 +618,7 @@ async function handleLogin() {
         
         const response = await fetch(GAS_URL, {
             method: 'POST',
-            body: formData,
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            body: formData
         });
         
         const result = await response.json();
@@ -611,6 +626,8 @@ async function handleLogin() {
         if (result.status === 'success') {
             msg.className = 'auth-message success';
             msg.innerText = '✅ 登入成功！歡迎, ' + result.name;
+            
+            window.currentUser = { account: account, name: result.name };
             
             // Apply API Key and disable input
             const apiKeyInput = document.getElementById('apiKey');
@@ -1789,6 +1806,28 @@ document.getElementById('runBtn').addEventListener('click', async () => {
        
         document.getElementById('volPeriodLabel').innerText = `(${params.D}天)`;
        
+        if (window.currentUser && typeof GAS_URL !== 'undefined') {
+            const formData = new URLSearchParams();
+            formData.append('action', 'log_usage');
+            formData.append('account', window.currentUser.account);
+            formData.append('name', window.currentUser.name);
+            formData.append('pType', document.getElementById('couponType').value);
+            formData.append('symbols', symbols.join(','));
+            formData.append('tenor', months);
+            formData.append('coupon', document.getElementById('coupon').value);
+            formData.append('strike', document.getElementById('strikePct').value);
+            formData.append('ki', document.getElementById('kiPct').value);
+            formData.append('ko', document.getElementById('koPct').value);
+            formData.append('koStep', document.getElementById('koStep').value);
+            formData.append('gp', gMonths);
+            formData.append('rfr', document.getElementById('riskFreeRate').value);
+            formData.append('sim', params.N);
+            formData.append('skew', volSkewRaw);
+            formData.append('tech', years);
+            
+            fetch(GAS_URL, { method: 'POST', body: formData }).catch(console.error);
+        }
+        
         const mcResult = runSimulation(params);
         
         const histLen = globalStockData[symbols[0]].prices.length;
