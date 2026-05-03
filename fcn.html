@@ -513,11 +513,7 @@ input:focus, select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 
  
 </div>
 <script>
-// ==========================================
-// 🔐 登入系統設定區 (Auth System Settings)
-// ==========================================
-// ⚠️ 請將下方的網址替換為您從 Google Apps Script 部署取得的「網頁應用程式網址」
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwqq7e8JFth2Ggz-HHCXKcQ4fo6-LIFrlIP6XrBIyn7nV5IX4I4EjsknhtwGZEZMuTe/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwhYB64AosmYTKr60y2XkzL_SUwk-DbVHg009oRBZZfUewK8i7oXadN7RekcQMcBth6/exec';
 
 function switchAuthTab(tab) {
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
@@ -642,16 +638,12 @@ async function handleLogin() {
             msg.innerText = '✅ 登入成功！歡迎, ' + result.name;
             
             window.currentUser = { account: account, name: result.name };
-            
-            // Apply API Key and disable input
             const apiKeyInput = document.getElementById('apiKey');
             apiKeyInput.value = result.apiKey;
             apiKeyInput.disabled = true;
             apiKeyInput.style.backgroundColor = '#f1f5f9';
             apiKeyInput.style.cursor = 'not-allowed';
             apiKeyInput.style.opacity = '0.7';
-            
-            // Hide Auth Overlay after a brief delay
             setTimeout(() => {
                 document.getElementById('authOverlay').classList.add('hidden');
             }, 1000);
@@ -669,25 +661,15 @@ async function handleLogin() {
     }
 }
 
-let mcScenarioChart = null, mcWorstChart = null; let techChartInstances = {}; let globalStockData = {}; let currentVolDays = 126; class SeededRandom {
-    constructor(seed = 12345) { this.seed = seed; }
-    next() {
-        this.seed = (this.seed * 1664525 + 1013904223) % 4294967296;
-        return this.seed / 4294967296;
-    }
-}
-function seededRandn(rng) {
-    let u = 0, v = 0;
-    while (u === 0) u = rng.next();
-    while (v === 0) v = rng.next();
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-}
+let mcScenarioChart = null, mcWorstChart = null; let techChartInstances = {}; let globalStockData = {}; let currentVolDays = 126;
 function getCorrelation(x, y) {
     const muX = math.mean(x), muY = math.mean(y);
     const stdX = math.std(x), stdY = math.std(y);
     let sum = 0;
     for (let i = 0; i < x.length; i++) sum += (x[i] - muX) * (y[i] - muY);
-    return sum / ((x.length - 1) * stdX * stdY); } const Calc = {
+    return sum / ((x.length - 1) * stdX * stdY);
+}
+const Calc = {
     MA: (p, n) => p.map((_, i) => i < n - 1 ? null : parseFloat((p.slice(i - n + 1, i + 1).reduce((a, b) => a + b) / n).toFixed(2))),
     BIAS: (p, n = 20) => { const ma = Calc.MA(p, n); return p.map((v, i) => ma[i] ? parseFloat(((v - ma[i]) / ma[i] * 100).toFixed(2)) : null); },
     RSI: (p, n = 14) => {
@@ -714,135 +696,6 @@ function getCorrelation(x, y) {
         return parseFloat((Math.sqrt(math.variance(rets)) * Math.sqrt(252) * 100).toFixed(2));
     })
 };
-function runSimulation(p) {
-    const {S0, KO, koStep, AKI, K, V, COR, N, D, R, r, totalMonths, symbols, kiType, gMonths, koFreq, koMode, shock} = p;
-    const dim = symbols.length;
-    const dt = 1/252;
-    const L = dynamicCholesky(COR);
-    const rng = new SeededRandom(42);
-    let payoffs = [], periods = [];
-    let allWorstPaths = []; 
-    let scCounts = new Array(totalMonths + 2).fill(0);
-    let worstCounts = new Array(dim).fill(0);
-    
-    // 取得當前選擇的產品架構
-    const couponType = document.getElementById('couponType') ? document.getElementById('couponType').value : "Fixed";
-    
-    // 如果是 Bullet，強制保證天數只適用於第 1 個月
-    const effectiveGMonths = (couponType === "Bullet") ? 1 : gMonths;
-    const minKoDays = effectiveGMonths * 21;
- 
-    // 套用壓力測試衝擊 (Shock)
-    const S0_shocked = S0.map(s => s * (1 + shock));
-
-    for (let n = 0; n < N; n++) {
-        let St = [...S0_shocked];
-        let kiTouched = (kiType === "NA");
-        let ended = false;
-        let koReachedEver = new Array(dim).fill(false);
-        let pathWorstOf = new Array(D + 1).fill(null);
-        pathWorstOf[0] = 1.0 + shock;
-        let accruedCouponDays = 0;
-        
-        for (let d = 1; d <= D; d++) {
-            let rawZ = Array.from({length: dim}, () => seededRandn(rng));
-            let dz = new Array(dim).fill(0);
-            for (let i = 0; i < dim; i++) {
-                for (let j = 0; j <= i; j++) { dz[i] += L[i][j] * rawZ[j]; }
-            }
-            
-            let currentDayWorst = 1.0 + Math.abs(shock)*2; // arbitrarily high
-            for (let i = 0; i < dim; i++) {
-                St[i] *= Math.exp((r - 0.5 * V[i]**2) * dt + V[i] * Math.sqrt(dt) * dz[i]);
-                if (kiType === "AKI" && St[i] < AKI[i]) kiTouched = true;
-                let perf = St[i] / S0[i]; // Compare to original S0 for perf
-                if (i === 0 || perf < currentDayWorst) { currentDayWorst = perf; }
-            }
-            pathWorstOf[d] = currentDayWorst;
- 
-            let isGuaranteed = d <= minKoDays;
-            let allAboveStrike = St.every((s, i) => s >= K[i]);
-            
-            if (couponType === "Fixed" || couponType === "Bullet" || isGuaranteed || allAboveStrike) {
-                accruedCouponDays++;
-            }
- 
-            let currentStepIdx = Math.floor((d - 1) / 21);
-            let currentStepShift = 1 + (currentStepIdx * koStep);
-            let currentKO = KO.map(baseKO => baseKO * currentStepShift);
- 
-            if (d >= minKoDays) {
-                for (let i = 0; i < dim; i++) {
-                    if (St[i] >= currentKO[i]) koReachedEver[i] = true;
-                }
- 
-                let isObservationDay = (koFreq === "Daily") ? true : (d % 21 === 0);
-                if (isObservationDay) {
-                   let isKoTriggered = (koMode === "Memory") ?
-                        koReachedEver.every(v => v === true) :
-                        St.every((s, i) => s >= currentKO[i]);
- 
-                    if (isKoTriggered) {
-                        let survivedMonths = Math.floor(d / 21);
-                        let totalCoupon = (couponType === "Bullet") ? ((survivedMonths >= 1) ? R : 0) : ((accruedCouponDays / 252) * R);
-                        
-                        let payoff = 100 * (1 + totalCoupon) * Math.exp(-r * (d / 252));
-                        payoffs.push(payoff);
-                        periods.push(d);
-                        let mIdx = Math.min(Math.floor((d - 1) / 21), totalMonths - 1);
-                        scCounts[mIdx]++;
-                        ended = true;
-                        break;
-                    }
-                }
-            }
- 
-            if (d === D && !ended) {
-                if (kiType === "EKI" && St.some((s, i) => s < AKI[i])) kiTouched = true;
-                let disc = Math.exp(-r * (D / 252));
-                let survivedMonths = Math.floor(D / 21);
-                let totalCoupon = (couponType === "Bullet") ? ((survivedMonths >= 1) ? R : 0) : ((accruedCouponDays / 252) * R);
-                
-                if (!kiTouched || St.every((s, i) => s >= K[i])) {
-                    payoffs.push(100 * (1 + totalCoupon) * disc);
-                    scCounts[totalMonths]++;
-                } else {
-                    let perf = St.map((s, i) => s / S0[i]);
-                    let mP = Math.min(...perf);
-                    let worstAssetIdx = perf.indexOf(mP);
-                    worstCounts[worstAssetIdx]++;
-                    payoffs.push((100 * totalCoupon + 100 * (St[worstAssetIdx] / K[worstAssetIdx])) * disc);
-                    scCounts[totalMonths + 1]++;
-                }
-                periods.push(D);
-            }
-        }
-        if (n < 1000) allWorstPaths.push(pathWorstOf);
-    }
- 
-    const sortedPayoffs = [...payoffs].sort((a, b) => a - b);
-    const riskData = {};
-    [0.01, 0.03, 0.05, 0.10, 0.15].forEach(alpha => {
-        const index = Math.max(0, Math.floor(N * alpha));
-        const label = Math.round((1 - alpha) * 100);
-        const varVal = sortedPayoffs[index] - 100;
-        riskData[`VaR${label}`] = varVal;
-        const worstPayoffSlice = sortedPayoffs.slice(0, index + 1);
-        const avgPayoff = worstPayoffSlice.reduce((a, b) => a + b, 0) / (worstPayoffSlice.length || 1);
-        riskData[`CVaR${label}`] = avgPayoff - 100;
-    });
- 
-    return {
-        avgReturn: (math.mean(payoffs) - 100),
-        avgDay: math.mean(periods),
-        scenarioProbs: scCounts.map(c => (c / N) * 100),
-        worstAssetProbs: worstCounts.map(c => (c / N) * 100),
-        riskResults: riskData,
-        topWorstPaths: allWorstPaths,
-        rawPayoffs: payoffs
-    };
-}
- 
 function runBacktest(p, explicitStartIndex = null) {
     const {symbols, D, R, totalMonths, kiType, koFreq, gMonths, koMode, koStep} = p;
     const histLen = globalStockData[symbols[0]].prices.length;
@@ -924,24 +777,13 @@ function runBacktest(p, explicitStartIndex = null) {
     document.getElementById('btReturn').style.color = (finalPayoff >= 100) ? "var(--success)" : "var(--danger)";
 }
  
-function dynamicCholesky(A) {
-    const n = A.length; let L = Array.from({length: n}, () => new Array(n).fill(0));
-    for (let i = 0; i < n; i++) { for (let j = 0; j <= i; j++) {
-        let s = 0; for (let k = 0; k < j; k++) s += L[i][k] * L[j][k];
-        L[i][j] = (i === j) ? Math.sqrt(Math.max(A[i][i] - s, 0)) : (1.0 / L[j][j] * (A[i][j] - s));
-    } } return L;
-}
-function renderMCResults(res, params) {
 
-// ==========================================
-    // 智能總結 Smart Insights 生成邏輯 (更加詳細與動態排版)
-    // ==========================================
+function renderMCResults(res, params) {
     const koProbs = (res.scenarioProbs || []).slice(0, params.totalMonths).reduce((a,b)=>a+b, 0);
     const fullRepayProb = (res.scenarioProbs || [])[params.totalMonths] || 0;
     const mcWinRate = koProbs + fullRepayProb;
     const var99 = (res.riskResults && res.riskResults['VaR99']) || 0;
     
-    // 找出實物交割最高機率的標的
     let maxWorstProb = 0;
     let worstSymbolName = "";
     if (res.worstAssetProbs && res.worstAssetProbs.length > 0) {
@@ -958,11 +800,8 @@ function renderMCResults(res, params) {
     let underlyingGreeksHtml = "";
     let stockBacktestHtml = "";
     params.symbols.forEach(sym => {
-        // --- 1. Get Stock Greeks ---
         const gDelta = (window.lastGreeks && window.lastGreeks.stocks[sym]) ? window.lastGreeks.stocks[sym].delta : 0;
         underlyingGreeksHtml += `<li style="margin-bottom: 6px;"><b>【${sym}】</b>：Delta 約為 <b>${gDelta.toFixed(2)}%</b>，代表若該股票單獨上漲 1%，預期將帶動商品價值跟著上升 ${gDelta.toFixed(2)}%。</li>`;
-        
-        // --- 2. Calculate Stock Backtest ---
         const data = globalStockData[sym];
         const years = parseInt(document.getElementById('chartYears').value);
         const holdDays = parseInt(document.getElementById('months').value) * 21;
@@ -1841,9 +1680,37 @@ document.getElementById('runBtn').addEventListener('click', async () => {
             
             fetch(GAS_URL, { method: 'POST', body: formData }).catch(console.error);
         }
-        
-        const mcResult = runSimulation(params);
-        
+        const simFormData = new URLSearchParams();
+        simFormData.append('action', 'run_simulation');
+        simFormData.append('params', JSON.stringify({
+            symbols:    params.symbols,
+            S0:         params.S0,
+            KO:         params.KO,
+            AKI:        params.AKI,
+            K:          params.K,
+            V:          params.V,
+            COR:        params.COR,
+            N:          params.N,
+            D:          params.D,
+            R:          params.R,
+            r:          params.r,
+            totalMonths: params.totalMonths,
+            gMonths:    params.gMonths,
+            koFreq:     params.koFreq,
+            koMode:     params.koMode,
+            kiType:     params.kiType,
+            koStep:     params.koStep,
+            shock:      params.shock,
+            couponType: document.getElementById('couponType') ? document.getElementById('couponType').value : 'Fixed'
+        }));
+
+        const simResponse = await fetch(GAS_URL, { method: 'POST', body: simFormData });
+        const simData = await simResponse.json();
+        if (simData.status !== 'success') throw new Error(simData.message || '模型伺服器運算失敗');
+
+        const mcResult = simData.mcResult;
+        const greeks = simData.greeks;
+
         const histLen = globalStockData[symbols[0]].prices.length;
         const maxValidIdx = histLen - params.D - 1;
         const btSelect = document.getElementById('btDateSelect');
@@ -1860,8 +1727,6 @@ document.getElementById('runBtn').addEventListener('click', async () => {
             btSelect.onchange = () => runBacktest(window.lastParams, parseInt(btSelect.value));
         }
 
-        const basePrice = 100 + mcResult.avgReturn;
-        const greeks = calculateGreeks(params, basePrice);
         window.lastGreeks = greeks;
         renderGreeks(greeks, params.symbols);
         renderMCResults(mcResult, params);
@@ -1970,67 +1835,7 @@ function renderWorstPathsChart(paths, params) {
     });
 }
  
-function calculateGreeks(p, basePrice) {
-    let greeks = { 
-        product: { delta: 0, gamma: 0, vega: 0, theta: 0, rho: 0 },
-        stocks: {} 
-    };
-    const bumpS = 0.01; 
-    const bumpV = 0.01; 
-    const bumpR = 0.01; 
- 
-    const getPrice = (modFN) => {
-        let p2 = Object.assign({}, p);
-        p2.S0 = [...p.S0];
-        p2.KO = [...p.KO];
-        p2.AKI = [...p.AKI];
-        p2.K = [...p.K];
-        p2.V = [...p.V];
-        p2.COR = p.COR.map(row => [...row]); 
-        modFN(p2);
-        return 100 + runSimulation(p2).avgReturn;
-    };
- 
-    let pAllUp = getPrice(p2 => { 
-        for(let i=0; i < p2.S0.length; i++) p2.S0[i] *= (1 + bumpS);
-    });
-    let pAllDn = getPrice(p2 => { 
-        for(let i=0; i < p2.S0.length; i++) p2.S0[i] *= (1 - bumpS);
-    });
-    greeks.product.delta = (pAllUp - pAllDn) / 2;
-    greeks.product.gamma = (pAllUp - 2 * basePrice + pAllDn);
- 
-    let pAllVega = getPrice(p2 => {
-        for(let i=0; i < p2.V.length; i++) p2.V[i] += bumpV;
-    });
-    greeks.product.vega = pAllVega - basePrice;
- 
-    let pRho = getPrice(p2 => { p2.r += bumpR; });
-    greeks.product.rho = pRho - basePrice;
- 
-    if (p.D > 1) {
-        let pTheta = getPrice(p2 => { p2.D -= 1; });
-        greeks.product.theta = pTheta - basePrice;
-    } else {
-        greeks.product.theta = 0;
-    }
- 
-    for(let i=0; i < p.symbols.length; i++) {
-        let sym = p.symbols[i];
-        
-        let pUp = getPrice(p2 => { p2.S0[i] *= (1 + bumpS); });
-        let pDn = getPrice(p2 => { p2.S0[i] *= (1 - bumpS); });
-        let dDelta = (pUp - pDn) /2;
-        let dGamma = (pUp - 2 * basePrice + pDn);
- 
-        let pStockVega = getPrice(p2 => { p2.V[i] += bumpV; });
-        let dVega = pStockVega - basePrice;
- 
-        greeks.stocks[sym] = { delta: dDelta, gamma: dGamma, vega: dVega };
-    }
- 
-    return greeks;
-}
+
  
 function renderGreeks(greeks, symbols) {
     const formatStr = (v) => (v > 0 ? '+' + v.toFixed(3) : v.toFixed(3)) + '%';
