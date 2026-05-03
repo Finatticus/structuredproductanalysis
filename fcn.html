@@ -517,7 +517,7 @@ input:focus, select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 
 // 🔐 登入系統設定區 (Auth System Settings)
 // ==========================================
 // ⚠️ 請將下方的網址替換為您從 Google Apps Script 部署取得的「網頁應用程式網址」
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzzjyn3MBExqsnbyizhwSQIP4tvjNsFe1ekf5mxG60u0_k0whoqBl-aBUEmtbiY6iJc/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwqq7e8JFth2Ggz-HHCXKcQ4fo6-LIFrlIP6XrBIyn7nV5IX4I4EjsknhtwGZEZMuTe/exec';
 
 function switchAuthTab(tab) {
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
@@ -534,14 +534,24 @@ function switchAuthTab(tab) {
     }
 }
 
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+        input.type = 'text';
+    } else {
+        input.type = 'password';
+    }
+}
+
 async function handleRegister() {
     const account = document.getElementById('regAccount').value.trim();
+    const password = document.getElementById('regPassword').value.trim();
     const name = document.getElementById('regName').value.trim();
     const apiKey = document.getElementById('regApiKey').value.trim();
     const btn = document.querySelector('#registerForm .auth-btn');
     const msg = document.getElementById('regMessage');
     
-    if(!account || !name || !apiKey) {
+    if(!account || !password || !name || !apiKey) {
         msg.className = 'auth-message error';
         msg.innerText = '⚠️ 請填寫完整資訊';
         return;
@@ -561,6 +571,7 @@ async function handleRegister() {
         const formData = new URLSearchParams();
         formData.append('action', 'register');
         formData.append('account', account);
+        formData.append('password', password);
         formData.append('name', name);
         formData.append('apiKey', apiKey);
         
@@ -575,6 +586,7 @@ async function handleRegister() {
             msg.className = 'auth-message success';
             msg.innerText = '✅ ' + result.message;
             document.getElementById('regAccount').value = '';
+            document.getElementById('regPassword').value = '';
             document.getElementById('regName').value = '';
             document.getElementById('regApiKey').value = '';
         } else {
@@ -592,12 +604,13 @@ async function handleRegister() {
 
 async function handleLogin() {
     const account = document.getElementById('loginAccount').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
     const btn = document.querySelector('#loginForm .auth-btn');
     const msg = document.getElementById('loginMessage');
     
-    if(!account) {
+    if(!account || !password) {
         msg.className = 'auth-message error';
-        msg.innerText = '⚠️ 請輸入帳號';
+        msg.innerText = '⚠️ 請輸入帳號與密碼';
         return;
     }
 
@@ -615,6 +628,7 @@ async function handleLogin() {
         const formData = new URLSearchParams();
         formData.append('action', 'login');
         formData.append('account', account);
+        formData.append('password', password);
         
         const response = await fetch(GAS_URL, {
             method: 'POST',
