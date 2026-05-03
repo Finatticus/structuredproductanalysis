@@ -1669,8 +1669,8 @@ document.getElementById('runBtn').addEventListener('click', async () => {
             formData.append('tenor', months);
             formData.append('coupon', document.getElementById('coupon').value);
             formData.append('strike', document.getElementById('strikePct').value);
-            formData.append('ki', document.getElementById('kiPct').value);
-            formData.append('ko', document.getElementById('koPct').value);
+            formData.append('ki', `${document.getElementById('kiPct').value}(${kiType})`);
+            formData.append('ko', `${document.getElementById('koPct').value}(${koMode},${koFreq})`);
             formData.append('koStep', document.getElementById('koStep').value);
             formData.append('gp', gMonths);
             formData.append('rfr', document.getElementById('riskFreeRate').value);
