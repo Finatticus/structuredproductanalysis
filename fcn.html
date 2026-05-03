@@ -898,13 +898,13 @@ function renderMCResults(res, params) {
     </details>`;
 
     // --- 項目 1 ---
-    let item1Content = `經過 ${params.N} 次蒙地卡羅路徑模擬，本商品的整體勝率（包含因為提早達到 KO 條件而提早結算，或是成功撐到滿期保本的機率總和）為 <b style="color:var(--primary);">${mcWinRate.toFixed(1)}%</b>。<br>
+    let item1Content = `經過 ${params.N} 次蒙地卡羅路徑模擬，本商品的整體勝率（包含因為提早達到 KO 條件而提早結算，或是成功撐到滿期保本的機率總和）約為 <b style="color:var(--primary);">${mcWinRate.toFixed(1)}%</b>。<br>
     雖然這檔產品設定的天期為 ${params.totalMonths} 個月，但考量到提早出場 (KO) 的機率，資金實際被鎖定的「平均存續期間」預估大約只有 <b style="color:var(--primary);">${(res.avgDay || 0).toFixed(0)} 天</b>。<br>
     <div style="margin-top: 12px; padding: 12px; background: #eff6ff; border-radius: 6px; border-left: 4px solid #3b82f6;">
-        <b style="color:#1e40af;">📊 波動度與相關性解析：</b><br>
+        <b style="color:#1e40af;">波動度與相關性解析：</b><br>
         目前連結的 ${nDim} 檔標的間，平均相關係數約為 <b>${avgCor}</b> (${corDesc})。<br>
         其中歷史波動度最高為 <b>${params.symbols[maxVolIdx]} (${vols[maxVolIdx].toFixed(1)}%)</b>，最低為 <b>${params.symbols[minVolIdx]} (${vols[minVolIdx].toFixed(1)}%)</b>。<br>
-        <span style="font-size:0.9rem; color:#475569;"><i>💡 解讀：較高的波動度會增加提早獲利出場 (KO) 或實物交割風險 (KI) 的機會；而標的間若相關性越低，代表彼此走勢容易分歧，這通常會提高單一弱勢標的拖累整體表現的風險。</i></span>
+        <span style="font-size:0.9rem; color:#475569;"><i>**較高的波動度會增加提早獲利出場 (KO) 或實物交割的機會；而標的間若相關性越低，代表彼此走勢容易分歧，這通常會提高單一弱勢標的拖累整體表現的風險。</i></span>
     </div>`;
     insightHtml += createDetail("1. 勝率、存續期間與標的關聯性", item1Content);
 
@@ -920,13 +920,13 @@ function renderMCResults(res, params) {
     });
     kiBreakdownHtml += `</ul>`;
 
-    let item2Content = `在 99% 的極端市場情境下 (VaR)，也就是市場發生罕見崩盤時，本金預期最大損失幅度為 <b style="color:var(--danger);">${Math.abs(var99).toFixed(2)}%</b>；若發生此極端下跌 (CVaR)，平均虧損幅度將達 <b style="color:var(--danger);">${Math.abs(cvar99).toFixed(2)}%</b>。<br>
+    let item2Content = `在 99% 的極端市場情境下 (VaR)，也就是市場發生罕見崩盤時，本金預期損失幅度至少為 <b style="color:var(--danger);">${Math.abs(var99).toFixed(2)}%</b>；若發生此極端下跌 (CVaR)，平均虧損幅度將達 <b style="color:var(--danger);">${Math.abs(cvar99).toFixed(2)}%</b>。<br>
     <div style="margin-top: 12px; padding: 12px; background: #fff5f5; border-radius: 6px; border-left: 4px solid var(--danger);">
-        <b style="color:var(--danger);">⚠️ 實物履約 (交割) 機率解析：</b><br>
+        <b style="color:var(--danger);">實物履約 (交割) 機率解析：</b><br>
         模型模擬顯示，本產品最終發生實物履約的整體總機率為 <b>${overallKIProb.toFixed(1)}%</b>。<br>
         若不幸發生實物交割，各標的成為「最差表現標的」而被強迫換股的機率分佈如下：
         ${kiBreakdownHtml}
-        <span style="font-size:0.9rem; color:#475569; display:block; margin-top:6px;"><i>💡 提示：【${worstSymbolName}】的交割風險最高，是拖累整體商品表現的主要來源。</i></span>
+        <span style="font-size:0.9rem; color:#475569; display:block; margin-top:6px;"><i>【${worstSymbolName}】因波動度較高，會使整體商品條件提升，但是同時伴隨的交割風險也會上升。</i></span>
     </div>`;
     insightHtml += createDetail("2. 風險評估 (VaR & 實物交割)", item2Content);
 
@@ -939,7 +939,7 @@ function renderMCResults(res, params) {
     insightHtml += createDetail("3. 敏感度分析 (Greeks)", item3Content);
 
     // --- 項目 4 ---
-    let item4Content = `我們針對各檔標的進行了長期歷史回測，以了解若把投資眼光放長遠，這些股票本身能帶來什麼樣的風險與報酬：
+    let item4Content = `針對各檔標的進行長期歷史回測，以了解這些股票在歷史數據上帶來什麼樣的風險與報酬（請注意歷史數據僅供參考，不完全等同於未來）：
     ${stockBacktestHtml}`;
     insightHtml += createDetail("4. 個別標的長期回測", item4Content);
 
