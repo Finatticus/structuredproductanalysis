@@ -191,11 +191,104 @@ input:focus, select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 
         </div>
     </div>
 </div>
+</div>
+
+<!-- Admin Overlay -->
+<div id="adminOverlay" class="auth-overlay hidden" style="z-index: 10000;">
+    <div class="auth-container" style="max-width: 1100px; max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="auth-header" style="margin-bottom: 20px;">
+            <h2 style="font-size: 1.5rem; margin-bottom: 5px;">⚙️ 管理員介面</h2>
+        </div>
+        
+        <div class="auth-tabs" style="margin-bottom: 15px;">
+            <button class="auth-tab active" id="tabUsers" onclick="switchAdminTab('users')">帳號審核</button>
+            <button class="auth-tab" id="tabLogin" onclick="switchAdminTab('login')">登入紀錄</button>
+            <button class="auth-tab" id="tabUsage" onclick="switchAdminTab('usage')">模型使用紀錄</button>
+        </div>
+
+        <div id="adminLoading" style="text-align: center; padding: 20px; color: var(--text-sub); display: none;">載入中...</div>
+        
+        <!-- Users Section -->
+        <div id="adminSectionUsers" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+            <div class="auth-tabs" style="margin-bottom: 10px;">
+                <button class="auth-tab active" id="subtabPending" onclick="renderAdminTable('pending')">待審核</button>
+                <button class="auth-tab" id="subtabO" onclick="renderAdminTable('O')">已啟用</button>
+                <button class="auth-tab" id="subtabX" onclick="renderAdminTable('X')">已拒絕</button>
+                <button class="auth-tab" id="subtabAll" onclick="renderAdminTable('all')">全部</button>
+            </div>
+            <div style="flex: 1; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead style="background: var(--bg-color); text-align: left; position: sticky; top: 0; z-index: 1;">
+                        <tr>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">帳號</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">密碼</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">名字</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">API Key</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Login Logs Section -->
+        <div id="adminSectionLogin" style="flex: 1; display: none; flex-direction: column; overflow: hidden;">
+            <div style="flex: 1; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead style="background: var(--bg-color); text-align: left; position: sticky; top: 0; z-index: 1;">
+                        <tr>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">登入時間</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">名字</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">帳號</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">登入狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody id="loginTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Usage Logs Section -->
+        <div id="adminSectionUsage" style="flex: 1; display: none; flex-direction: column; overflow: hidden;">
+            <div style="flex: 1; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; white-space: nowrap;">
+                    <thead style="background: var(--bg-color); text-align: left; position: sticky; top: 0; z-index: 1;">
+                        <tr>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">時間</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">名字</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">類型</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">標的</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">天期</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">配息</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">KI</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">KO</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">µ</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #e2e8f0;">均期</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usageTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <button class="auth-btn" style="background: #94a3b8; margin-top: 20px;" onclick="closeAdminPanel()">關閉</button>
+    </div>
+</div>
 
 <div class="container">
-    <h1 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-    <span>FCN/DRA QUANT ANALYTICS</span>
-    <span id="hiddenReturn" style="color: var(--bg-color); font-size: 1rem; user-select: all;">-</span>
+    <h1 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span>FCN/DRA QUANT ANALYTICS</span>
+            <button id="adminPanelBtn" class="auth-btn" style="width: auto; padding: 6px 12px; font-size: 0.9rem; margin-top: 0; background: #eab308; display: none;" onclick="openAdminPanel()">⚙️ 管理員</button>
+            <div style="display: flex; gap: 8px; align-items: center; display: none;" id="presetContainer">
+                <select id="presetSelect" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.9rem;" onchange="applyPreset()">
+                    <option value="">-- 最愛參數組合 --</option>
+                </select>
+                <button id="savePresetBtn" class="auth-btn" style="width: auto; padding: 6px 12px; font-size: 0.9rem; margin-top: 0;" onclick="savePreset()">⭐ 儲存此條件</button>
+            </div>
+        </div>
+        <span id="hiddenReturn" style="color: var(--bg-color); font-size: 1rem; user-select: all;">-</span>
     </h1>
     <div class="config-panel">
 <div class="grid">
@@ -513,7 +606,7 @@ input:focus, select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 
  
 </div>
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxWBxSy6o8Pb0pYfMA82xA9Pmj56bfm0tgSX3Qi4Lh1IL_fPPGX0vHou2ypTwAjWO6x/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycby04JjTczxJutHAyAQHEsNCzOF6RbeMiJxm3bFtGbsI6ae5-Uod8ADRAxyAHHT6Pmvx/exec';
 
 function switchAuthTab(tab) {
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
@@ -638,6 +731,9 @@ async function handleLogin() {
             msg.innerText = '✅ 登入成功！歡迎, ' + result.name;
             
             window.currentUser = { account: account, name: result.name };
+            if (account === 'admin') {
+                document.getElementById('adminPanelBtn').style.display = 'block';
+            }
             const apiKeyInput = document.getElementById('apiKey');
             apiKeyInput.value = result.apiKey;
             apiKeyInput.disabled = true;
@@ -646,6 +742,7 @@ async function handleLogin() {
             apiKeyInput.style.opacity = '0.7';
             setTimeout(() => {
                 document.getElementById('authOverlay').classList.add('hidden');
+                loadPresets();
             }, 1000);
             
         } else {
@@ -658,6 +755,269 @@ async function handleLogin() {
     } finally {
         btn.disabled = false;
         btn.innerText = '登入 Login';
+    }
+}
+
+window.userPresets = [];
+
+async function loadPresets() {
+    try {
+        const formData = new URLSearchParams();
+        formData.append('action', 'load_presets');
+        formData.append('account', window.currentUser.account);
+        const response = await fetch(GAS_URL, { method: 'POST', body: formData });
+        const result = await response.json();
+        if (result.status === 'success') {
+            window.userPresets = result.presets;
+            const select = document.getElementById('presetSelect');
+            select.innerHTML = '<option value="">-- 最愛參數組合 --</option>';
+            window.userPresets.forEach((p, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = p.name;
+                select.appendChild(opt);
+            });
+            document.getElementById('presetContainer').style.display = 'flex';
+        }
+    } catch (e) {
+        console.error("Failed to load presets", e);
+    }
+}
+
+async function savePreset() {
+    if (!window.currentUser) return alert('請先登入');
+    const presetName = prompt('請輸入此參數組合的名稱 (例如: 保守型-TSLA):');
+    if (!presetName) return;
+    
+    const presetData = {
+        couponType: document.getElementById('couponType').value,
+        symbols: document.getElementById('symbols').value,
+        months: document.getElementById('months').value,
+        coupon: document.getElementById('coupon').value,
+        strikePct: document.getElementById('strikePct').value,
+        kiType: document.getElementById('kiType').value,
+        kiPct: document.getElementById('kiPct').value,
+        koFreq: document.getElementById('koFreq').value,
+        koMode: document.getElementById('koMode').value,
+        koPct: document.getElementById('koPct').value,
+        koStep: document.getElementById('koStep').value,
+        guaranteedMonths: document.getElementById('guaranteedMonths').value,
+        riskFreeRate: document.getElementById('riskFreeRate').value,
+        simN: document.getElementById('simN').value
+    };
+    
+    document.getElementById('savePresetBtn').innerText = '儲存中...';
+    try {
+        const formData = new URLSearchParams();
+        formData.append('action', 'save_preset');
+        formData.append('account', window.currentUser.account);
+        formData.append('presetName', presetName);
+        formData.append('presetData', JSON.stringify(presetData));
+        
+        const response = await fetch(GAS_URL, { method: 'POST', body: formData });
+        const result = await response.json();
+        if (result.status === 'success') {
+            alert('✅ ' + result.message);
+            loadPresets(); 
+        } else {
+            alert('❌ 儲存失敗: ' + result.message);
+        }
+    } catch (e) {
+        alert('⚠️ 連線失敗');
+    } finally {
+        document.getElementById('savePresetBtn').innerText = '⭐儲存條件';
+    }
+}
+
+function applyPreset() {
+    const idx = document.getElementById('presetSelect').value;
+    if (idx === "") return;
+    const preset = window.userPresets[idx];
+    if (!preset) return;
+    try {
+        const data = JSON.parse(preset.data);
+        const map = {
+            'couponType': 'couponType', 'symbols': 'symbols', 'months': 'months', 'coupon': 'coupon',
+            'strikePct': 'strikePct', 'kiType': 'kiType', 'kiPct': 'kiPct', 'koFreq': 'koFreq',
+            'koMode': 'koMode', 'koPct': 'koPct', 'koStep': 'koStep', 'guaranteedMonths': 'guaranteedMonths',
+            'riskFreeRate': 'riskFreeRate', 'simN': 'simN'
+        };
+        for (const key in data) {
+            const el = document.getElementById(map[key]);
+            if (el) {
+                el.value = data[key];
+            }
+        }
+        
+        document.querySelectorAll('.mini-btn-group').forEach(group => {
+            const targetId = group.getAttribute('data-target');
+            if (data[targetId]) {
+                group.querySelectorAll('.mini-btn').forEach(b => b.classList.remove('active'));
+                const btn = group.querySelector(`.mini-btn[data-value="${data[targetId]}"]`);
+                if(btn) btn.classList.add('active');
+            }
+        });
+        
+    } catch(e) {
+        console.error("Failed to apply preset", e);
+    }
+}
+
+// Admin Panel Logic
+let allAdminUsers = [];
+let allLoginLogs = [];
+let allUsageLogs = [];
+let currentFilterType = 'pending';
+
+function openAdminPanel() {
+    document.getElementById('adminOverlay').classList.remove('hidden');
+    switchAdminTab('users');
+    loadAdminData();
+}
+
+function closeAdminPanel() {
+    document.getElementById('adminOverlay').classList.add('hidden');
+}
+
+function switchAdminTab(tabName) {
+    document.getElementById('tabUsers').classList.remove('active');
+    document.getElementById('tabLogin').classList.remove('active');
+    document.getElementById('tabUsage').classList.remove('active');
+    
+    document.getElementById('adminSectionUsers').style.display = 'none';
+    document.getElementById('adminSectionLogin').style.display = 'none';
+    document.getElementById('adminSectionUsage').style.display = 'none';
+    
+    if (tabName === 'users') {
+        document.getElementById('tabUsers').classList.add('active');
+        document.getElementById('adminSectionUsers').style.display = 'flex';
+        renderAdminTable(currentFilterType);
+    } else if (tabName === 'login') {
+        document.getElementById('tabLogin').classList.add('active');
+        document.getElementById('adminSectionLogin').style.display = 'flex';
+        renderLoginLogs();
+    } else if (tabName === 'usage') {
+        document.getElementById('tabUsage').classList.add('active');
+        document.getElementById('adminSectionUsage').style.display = 'flex';
+        renderUsageLogs();
+    }
+}
+
+async function loadAdminData() {
+    const loading = document.getElementById('adminLoading');
+    loading.style.display = 'block';
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('action', 'get_users');
+        formData.append('account', window.currentUser.account);
+        const res = await fetch(GAS_URL, { method: 'POST', body: formData });
+        const json = await res.json();
+        
+        if(json.status === 'success') {
+            allAdminUsers = json.users;
+            allLoginLogs = json.loginLogs || [];
+            allUsageLogs = json.usageLogs || [];
+            
+            const activeTab = document.querySelector('#adminOverlay > .auth-container > .auth-tabs > .active');
+            if(activeTab.id === 'tabUsers') renderAdminTable(currentFilterType);
+            if(activeTab.id === 'tabLogin') renderLoginLogs();
+            if(activeTab.id === 'tabUsage') renderUsageLogs();
+        } else {
+            alert('載入失敗: ' + json.message);
+        }
+    } catch(e) {
+        alert('載入失敗，連線錯誤');
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+function renderAdminTable(filterType) {
+    currentFilterType = filterType;
+    document.getElementById('subtabPending').classList.remove('active');
+    document.getElementById('subtabO').classList.remove('active');
+    document.getElementById('subtabX').classList.remove('active');
+    document.getElementById('subtabAll').classList.remove('active');
+    
+    if(filterType === 'pending') document.getElementById('subtabPending').classList.add('active');
+    else if(filterType === 'O') document.getElementById('subtabO').classList.add('active');
+    else if(filterType === 'X') document.getElementById('subtabX').classList.add('active');
+    else document.getElementById('subtabAll').classList.add('active');
+
+    const tbody = document.getElementById('adminTableBody');
+    tbody.innerHTML = '';
+    
+    const filtered = allAdminUsers.filter(u => {
+        const s = (u.status || '').toString().trim().toUpperCase();
+        if(filterType === 'pending') return s !== 'O' && s !== 'X';
+        if(filterType === 'O') return s === 'O';
+        if(filterType === 'X') return s === 'X';
+        return true;
+    });
+    
+    if(filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color: #64748b;">沒有符合條件的帳號</td></tr>';
+        return;
+    }
+    
+    filtered.forEach(u => {
+        let actionHtml = '';
+        const currentStatus = (u.status || '').toString().trim().toUpperCase();
+        if (currentStatus === 'O') {
+            actionHtml = `<button onclick="updateUserStatus('${u.account}', 'X')" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">封鎖 (改X)</button>`;
+        } else if (currentStatus === 'X') {
+            actionHtml = `<button onclick="updateUserStatus('${u.account}', 'O')" style="background:#10b981; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">啟用 (改O)</button>`;
+        } else {
+            actionHtml = `<button onclick="updateUserStatus('${u.account}', 'O')" style="background:#10b981; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; margin-right: 5px;">核准 (O)</button><button onclick="updateUserStatus('${u.account}', 'X')" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">拒絕 (X)</button>`;
+        }
+        
+        tbody.innerHTML += `<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight:600;">${u.account}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${u.password}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${u.name}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace; font-size: 0.8rem;">${u.apiKey}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">${actionHtml}</td></tr>`;
+    });
+}
+
+function renderLoginLogs() {
+    const tbody = document.getElementById('loginTableBody');
+    tbody.innerHTML = '';
+    if(!allLoginLogs.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">無紀錄</td></tr>';
+        return;
+    }
+    allLoginLogs.forEach(l => {
+        let statusStyle = (l.status && l.status.includes('成功')) ? 'color: #10b981;' : 'color: #ef4444;';
+        tbody.innerHTML += `<tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${l.time}</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${l.name}</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${l.account}</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: 600; ${statusStyle}">${l.status}</td></tr>`;
+    });
+}
+
+function renderUsageLogs() {
+    const tbody = document.getElementById('usageTableBody');
+    tbody.innerHTML = '';
+    if(!allUsageLogs.length) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 20px;">無紀錄</td></tr>';
+        return;
+    }
+    allUsageLogs.forEach(l => {
+        tbody.innerHTML += `<tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${l.time}</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${l.name}</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${l.pType}</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${l.symbols}</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${l.tenor}M</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${l.coupon}%</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${l.ki}</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${l.ko}</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">${l.mu}</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${l.avgDay}</td></tr>`;
+    });
+}
+
+async function updateUserStatus(account, newStatus) {
+    if(!confirm(`確定要將帳號 ${account} 的狀態改為 ${newStatus} 嗎？`)) return;
+    try {
+        const formData = new URLSearchParams();
+        formData.append('action', 'update_user_status');
+        formData.append('adminAccount', window.currentUser.account);
+        formData.append('targetAccount', account);
+        formData.append('newStatus', newStatus);
+        const res = await fetch(GAS_URL, { method: 'POST', body: formData });
+        const json = await res.json();
+        if (json.status === 'success') {
+            loadAdminData();
+        } else {
+            alert('更新失敗: ' + json.message);
+        }
+    } catch(e) {
+        alert('更新失敗，連線錯誤');
     }
 }
 
