@@ -22,7 +22,7 @@
         body { background-color: var(--bg-color); color: var(--text-main); font-size: calc(16px * var(--font-scale)); padding-bottom: calc(90px + env(safe-area-inset-bottom)); padding-top: env(safe-area-inset-top); min-height: 100vh; transition: background-color 0.4s ease, color 0.4s ease; }
 
         header { background-color: transparent; padding: 16px 24px; position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(16px); border-bottom: 1px solid rgba(0, 0, 0, 0.03); min-height: 64px; }
-        header h1 { position: absolute; left: 50%; transform: translateX(-50%); font-size: 18px; font-weight: 800; color: var(--text-main); letter-spacing: 1px; text-transform: uppercase; padding: 6px 16px; background: var(--card-bg); border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+        header h1 { font-size: 20px; font-weight: 800; color: var(--text-main); letter-spacing: 1px; }
 
         main { padding: 16px 20px; max-width: 600px; margin: 0 auto; }
         section { display: none; animation: fadeIn 0.3s ease-out; }
@@ -363,32 +363,35 @@
                 <h3 style="margin-bottom:16px; font-size:16px; color:var(--text-main); font-weight:800;"><i class="fas fa-newspaper" style="color:var(--primary);"></i> 雙語新聞閱讀 (The Guardian)</h3>
                 <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">閱讀國際權威新聞並自動雙語翻譯，點擊單字即可加入學習庫。</p>
                 
-                <div class="flex-row" style="margin-bottom:16px;">
-                    <div class="input-wrapper" style="flex:1;">
-                        <select id="news-category">
-                            <option value="world">國際時事</option>
-                            <option value="business">商業金融</option>
-                            <option value="politics">政治動態</option>
-                            <option value="technology">科技新知</option>
-                            <option value="science">科學與環境</option>
-                            <option value="society">社會與健康</option>
-                            <option value="education">教育發展</option>
-                            <option value="culture">藝術與文化</option>
-                        </select>
-                        <i class="fas fa-chevron-down select-icon"></i>
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; margin-bottom: 16px;">
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div class="input-wrapper" style="width: 100%;">
+                            <select id="news-category">
+                                <option value="world">國際時事</option>
+                                <option value="business">商業金融</option>
+                                <option value="politics">政治動態</option>
+                                <option value="technology">科技新知</option>
+                                <option value="science">科學與環境</option>
+                                <option value="society">社會與健康</option>
+                                <option value="education">教育發展</option>
+                                <option value="culture">藝術與文化</option>
+                            </select>
+                            <i class="fas fa-chevron-down select-icon"></i>
+                        </div>
+                        <div class="input-wrapper" style="width: 100%;">
+                            <select id="news-sentences" title="段落長度">
+                                <option value="1" selected>1 段/區塊</option>
+                                <option value="2">2 段/區塊</option>
+                                <option value="3">3 段/區塊</option>
+                                <option value="4">4 段/區塊</option>
+                                <option value="5">5 段/區塊</option>
+                            </select>
+                            <i class="fas fa-chevron-down select-icon"></i>
+                        </div>
                     </div>
-                    <div class="input-wrapper" style="width:110px;">
-                        <select id="news-sentences" title="段落長度">
-                            <option value="1" selected>1 段/區塊</option>
-                            <option value="2">2 段/區塊</option>
-                            <option value="3">3 段/區塊</option>
-                            <option value="4">4 段/區塊</option>
-                            <option value="5">5 段/區塊</option>
-                        </select>
-                        <i class="fas fa-chevron-down select-icon"></i>
-                    </div>
-                    <button class="btn-primary" onclick="loadNews(false)" id="btn-load-news" style="width:auto; padding:0 20px;">
-                        <i class="fas fa-bolt"></i> 抓取
+                    <button class="btn-primary" onclick="loadNews(false)" id="btn-load-news" style="padding: 0 24px; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px;">
+                        <i class="fas fa-bolt" style="font-size:24px;"></i>
+                        <span style="font-weight:700;">抓取</span>
                     </button>
                 </div>
                 <div id="news-container" style="display:none; margin-top:20px;"></div>
