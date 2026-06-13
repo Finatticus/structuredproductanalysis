@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Vocab Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            /* 預設明亮主題 */
+            --bg-color: #F8FAFC; --card-bg: #FFFFFF; --text-main: #0F172A; --text-muted: #64748B;
+            --primary: #4F46E5; --primary-hover: #4338CA; --primary-light: #E0E7FF; --border: #E2E8F0;
+            --nav-bg: rgba(255, 255, 255, 0.85); --success: #10B981; --danger: #EF4444; --warning: #F59E0B;
+            --font-scale: 1;
+        }
+
+        html { font-size: calc(16px * var(--font-scale)); }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+        body { background-color: var(--bg-color); color: var(--text-main); font-size: calc(16px * var(--font-scale)); padding-bottom: calc(90px + env(safe-area-inset-bottom)); padding-top: env(safe-area-inset-top); min-height: 100vh; transition: background-color 0.4s ease, color 0.4s ease; }
+
+        header { background-color: transparent; padding: 16px 24px; position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(16px); border-bottom: 1px solid rgba(0, 0, 0, 0.03); min-height: 64px; }
+        header h1 { position: absolute; left: 50%; transform: translateX(-50%); font-size: 18px; font-weight: 800; color: var(--text-main); letter-spacing: 1px; text-transform: uppercase; padding: 6px 16px; background: var(--card-bg); border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+
+        main { padding: 16px 20px; max-width: 600px; margin: 0 auto; }
+        section { display: none; animation: fadeIn 0.3s ease-out; }
+        section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { background: var(--card-bg); padding: 24px; border-radius: 20px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04); margin-bottom: 24px; border: 1px solid var(--border); transition: background-color 0.4s ease, border-color 0.4s ease; }
+
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+
+        input[type="text"], select, textarea { width: 100%; padding: 16px; border: 1.5px solid var(--border); border-radius: 14px; font-size: calc(16px * var(--font-scale)); color: var(--text-main); background: var(--bg-color); transition: all 0.2s ease; appearance: none; }
+        textarea { resize: none; min-height: 110px; line-height: 1.5; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-light); background: var(--card-bg); }
+        .select-icon { position: absolute; right: 16px; color: var(--text-muted); pointer-events: none; }
+
+        button { border: none; border-radius: 14px; padding: 16px 20px; font-size: calc(16px * var(--font-scale)); font-weight: 600; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        button:active { transform: scale(0.96); }
+        button:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 6px 16px var(--primary-light); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary { background: var(--primary-light); color: var(--primary); }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text-main); padding: 14px 20px; }
+        .btn-icon { background: var(--bg-color); color: var(--primary); border-radius: 50%; width: 48px; height: 48px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid var(--border); }
+        .list-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .list-item:first-child { padding-top: 0; }
+        .book-item { cursor: pointer; transition: background 0.2s; border-radius: 16px; padding: 16px; margin: 0 -16px; }
+        .book-item:active { background-color: var(--bg-color); transform: scale(0.98); }
+        .book-icon-wrapper { width: 48px; height: 48px; border-radius: 14px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; margin-right: 16px; font-size: 20px; }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+        .pulse-warning { animation: pulse 2s infinite; }
+
+        .word-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px; padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02); transition: transform 0.2s; }
+        .word-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .word-en { font-weight: 800; font-size: calc(22px * var(--font-scale)); color: var(--text-main); letter-spacing: -0.5px; }
+        .word-actions { display: flex; gap: 6px; }
+        .btn-icon-small { background: var(--bg-color); border: none; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: calc(14px * var(--font-scale)); color: var(--text-muted); }
+        .btn-icon-small:active { transform: scale(0.9); }
+        .text-primary { color: var(--primary); }
+        .text-danger { color: var(--danger); }
+        .word-zh { font-size: calc(16px * var(--font-scale)); color: var(--text-muted); font-weight: 600; margin-bottom: 12px; line-height: 1.5; }
+        .word-notes { font-size: calc(14px * var(--font-scale)); color: var(--text-main); background: var(--bg-color); padding: 12px 16px; border-radius: 12px; border-left: 4px solid var(--primary-light); margin-bottom: 12px; }
+
+        .pos-tag { font-size: 12px; padding: 3px 8px; border-radius: 8px; font-weight: 700; color: white; text-transform: lowercase; margin-left: 8px; vertical-align: middle; }
+        .pos-n { background: #3B82F6; } .pos-v { background: #EF4444; } .pos-adj { background: #10B981; } .pos-adv { background: #F59E0B; } .pos-prep { background: #8B5CF6; } .pos-conj { background: #EC4899; } .pos-phr { background: #64748B; }
+
+        .expand-card { background: var(--bg-color); border-radius: 14px; padding: 16px; margin-top: 12px; border: 1px dashed var(--border); display: none; }
+        .expand-section { margin-bottom: 16px; }
+        .expand-section h4 { font-size: 14px; color: var(--text-main); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .expand-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag { padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); }
+        .tag small { opacity: 0.7; font-weight: 400; margin-left: 4px; }
+        .col-list { list-style: none; padding: 0; font-size: 14px; color: var(--text-main); }
+        .col-list li { padding: 8px 0; border-bottom: 1px solid var(--border); display:flex; align-items:center; gap:8px;}
+        .col-list li:last-child { border-bottom: none; }
+        .btn-expand { width: 100%; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-muted); font-size: 14px; padding: 10px; border-radius: 10px; }
+
+        .flashcard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .fc-counter { background: var(--primary-light); color: var(--primary); padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 15px; }
+        .scene { perspective: 1200px; margin-bottom: 24px; width: 100%; height: 380px; }
+        .flashcard { width: 100%; height: 100%; position: relative; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; cursor: pointer; }
+        .flashcard.is-flipped { transform: rotateY(180deg); }
+        .fc-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; background: var(--card-bg); border-radius: 28px; box-shadow: 0 12px 36px rgba(0, 0, 0, 0.06); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 32px; border: 1px solid var(--border); }
+        .fc-back { transform: rotateY(180deg); background: var(--card-bg); border: 4px solid var(--primary-light); }
+        .fc-hint { position: absolute; bottom: 28px; font-size: 14px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+        .fc-play { position: absolute; top: 24px; right: 24px; }
+
+        .fc-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .srs-controls { grid-template-columns: 1fr 1fr 1fr; gap: 12px; display: none; }
+        .btn-srs { border: none; border-radius: 16px; padding: 14px 10px; color: white; cursor: pointer; font-weight: 700; font-size: 16px; }
+        .btn-srs small { font-size: 12px; font-weight: 500; opacity: 0.9; display:block; }
+        .btn-forget { background: var(--danger); } .btn-hard { background: var(--warning); } .btn-easy { background: var(--success); }
+
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: var(--nav-bg); backdrop-filter: blur(24px); display: none; justify-content: space-around; padding: 14px 0 calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); z-index: 100; }
+        .nav-item { text-decoration: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; font-size: 12px; font-weight: 600; gap: 6px; width: 80px; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item.active i { transform: translateY(-4px); }
+
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--text-main); color: var(--bg-color); padding: 16px 28px; border-radius: 30px; font-size: 15px; font-weight: 600; box-shadow: 0 12px 30px rgba(0,0,0,0.18); display: flex; align-items: center; gap: 12px; z-index: 1000; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .toast.show { transform: translateX(-50%) translateY(env(safe-area-inset-top)); }
+
+        .flex-row { display: flex; align-items: center; gap: 12px; }
+        .empty-state { text-align: center; color: var(--text-muted); padding: 50px 20px; }
+        .empty-state i { font-size: 56px; color: var(--border); margin-bottom: 20px; }
+        
+        .clickable-word { cursor: pointer; transition: background 0.2s, color 0.2s; border-radius: 4px; padding: 0 2px; }
+        .clickable-word:active { background: var(--primary-light); color: var(--primary); }
+        @media (hover: hover) { .clickable-word:hover { background: var(--primary-light); color: var(--primary); } }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast"><i class="fas fa-check-circle"></i> <span></span></div>
+
+    <header>
+        <h1 id="header-title">Vocab Pro</h1>
+        <div id="user-info" style="display:none; align-items:center; gap:12px; margin-left:auto;">
+            <div style="background:var(--primary-light); padding:6px 12px; border-radius:20px; display:flex; align-items:center; gap:6px;">
+                <i class="fas fa-user-circle" style="color:var(--primary);"></i> 
+                <span id="current-username-display" style="font-size:14px; font-weight:700; color:var(--primary);"></span>
+            </div>
+            <button onclick="logout()" style="background:transparent; border:none; color:var(--text-muted); font-size:16px; cursor:pointer;" title="登出"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+    </header>
+
+    <main>
+        <!-- 登入頁面 -->
+        <section id="sec-login" class="active">
+            <div class="card" style="text-align:center; padding: 50px 20px; border-top: 4px solid var(--primary);">
+                <i class="fas fa-user-astronaut" style="font-size:56px; color:var(--primary); margin-bottom:20px;"></i>
+                <h2 style="margin-bottom:12px; font-weight:800; color:var(--text-main);">登入專屬單字庫</h2>
+                <p style="color:var(--text-muted); font-size:14px; margin-bottom:30px;">輸入帳號即可無縫登入<br>若無帳號將為您自動建立全新資料庫</p>
+                
+                <div class="input-group" style="text-align:left;">
+                    <input type="text" id="login-username" placeholder="請輸入帳號名稱..." style="text-align:center; font-weight:700; font-size:18px; padding:20px; letter-spacing:1px;" onkeypress="if(event.key==='Enter') login()">
+                </div>
+                
+                <button class="btn-primary" id="btn-login" onclick="login()" style="width:100%; padding:18px; font-size:18px;">
+                    <i class="fas fa-sign-in-alt"></i> 登入 / 註冊
+                </button>
+            </div>
+        </section>
+
+        <!-- 新增單字頁面 -->
+        <section id="sec-add">
+            <!-- 主要功能：新增單字 -->
+            <div class="card" style="border: 2px solid var(--primary-light); box-shadow: 0 8px 24px rgba(0,0,0,0.06);">
+                <h2 style="font-size:18px; margin-bottom:20px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                    <i class="fas fa-pen-nib" style="color:var(--primary);"></i> 新增英文單字
+                </h2>
+                
+                <div class="input-group">
+                    <label>儲存至單字本</label>
+                    <div class="input-wrapper">
+                        <select id="active-book-select"></select>
+                        <i class="fas fa-chevron-down select-icon"></i>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>英文單字</label>
+                    <input type="text" id="word-en" placeholder="(輸入完自動翻譯)" autocomplete="off">
+                </div>
+                
+                <div class="input-group">
+                    <label>中文意思</label>
+                    <input type="text" id="word-zh" placeholder="(自動翻譯後可修改)" autocomplete="off">
+                </div>
+                
+                <div class="input-group">
+                    <label>詞性標籤 (自動判斷或手動調整)</label>
+                    <div class="input-wrapper">
+                        <select id="word-pos">
+                            <option value="">(無)</option>
+                            <option value="n.">名詞 (n.)</option>
+                            <option value="v.">動詞 (v.)</option>
+                            <option value="adj.">形容詞 (adj.)</option>
+                            <option value="adv.">副詞 (adv.)</option>
+                            <option value="prep.">介系詞 (prep.)</option>
+                            <option value="conj.">連接詞 (conj.)</option>
+                            <option value="phr.">片語 (phr.)</option>
+                        </select>
+                        <i class="fas fa-chevron-down select-icon"></i>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>備註 (選填)</label>
+                    <textarea id="word-notes" placeholder="寫些例句或需要提醒自己的重點..."></textarea>
+                </div>
+                
+                <button class="btn-primary" id="btn-save" onclick="saveWord()" style="width: 100%; padding:18px; font-size:18px; margin-top:8px;">
+                    <i class="fas fa-check-circle"></i> 儲存單字
+                </button>
+            </div>
+        </section>
+
+        <!-- 單字本列表頁面 -->
+        <section id="sec-books">
+            <!-- SRS 視覺化橫幅按鈕 -->
+            <div class="card" onclick="startDueFlashcards()" style="cursor:pointer; background:linear-gradient(135deg, var(--warning), #D97706); color:white; padding:20px; display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; border:none; box-shadow:0 8px 24px rgba(245, 158, 11, 0.25);">
+                <div>
+                    <h3 style="margin-bottom:6px; font-size:18px; font-weight:800;"><i class="fas fa-fire"></i> 今日需複習</h3>
+                    <p style="font-size:13px; opacity:0.95; font-weight:500;">點擊進入間隔重複記憶訓練</p>
+                </div>
+                <div style="font-size:26px; font-weight:800; background:rgba(255,255,255,0.25); padding:8px 18px; border-radius:18px; text-align:center; min-width:64px;">
+                    <span id="btn-due-count">0</span>
+                </div>
+            </div>
+
+            <!-- 次要操作按鈕 -->
+            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+                <button class="btn-outline" id="btn-sync" onclick="fetchData()" style="flex: 1; padding: 14px; font-size: 15px; border-color:var(--primary-light); color:var(--primary); background:var(--card-bg);">
+                    <i class="fas fa-sync-alt"></i> 同步資料
+                </button>
+                <button class="btn-outline" onclick="startAllFlashcards()" style="flex: 1; padding: 14px; font-size: 15px; border-color:var(--primary-light); color:var(--primary); background:var(--card-bg);">
+                    <i class="fas fa-layer-group"></i> 複習全部
+                </button>
+            </div>
+            
+            <div class="text-center" style="margin-bottom:24px;">
+                <a href="#" onclick="openSrsList(); return false;" style="color:var(--text-muted); font-size:14px; text-decoration:underline; font-weight:600;"><i class="fas fa-calendar-check"></i> 查看 SRS 複習時間表確認</a>
+            </div>
+
+            <div class="card" style="padding: 16px 24px;">
+                <div id="books-list"></div>
+            </div>
+        </section>
+
+        <!-- SRS 狀態除錯清單 -->
+        <section id="sec-srs-list">
+            <div class="flashcard-header">
+                <button class="btn-outline" style="padding: 12px 18px; font-size: 15px;" onclick="switchTab('sec-books')">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+                <h2 style="font-size:18px; color:var(--text-main);">SRS 時間表</h2>
+            </div>
+            <div class="card" style="padding: 16px; overflow-x: auto;">
+                <table style="width:100%; border-collapse: collapse; font-size:14px; text-align:left;">
+                    <thead>
+                        <tr style="border-bottom:2px solid var(--border); color:var(--text-muted);">
+                            <th style="padding:8px;">單字</th>
+                            <th style="padding:8px;">中文</th>
+                            <th style="padding:8px;">下次複習時間</th>
+                            <th style="padding:8px;">間隔</th>
+                        </tr>
+                    </thead>
+                    <tbody id="srs-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 單字清單頁面 -->
+        <section id="sec-words">
+            <div class="flashcard-header">
+                <button class="btn-outline" style="padding: 12px 18px; font-size: 15px;" onclick="switchTab('sec-books')">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+                <div class="flex-row">
+                    <button class="btn-outline text-danger" style="padding: 12px 16px;" onclick="deleteCurrentBook()" title="刪除此單字本">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <button class="btn-primary" style="width: auto; padding: 12px 20px; font-size: 15px;" onclick="startFlashcard()">
+                        <i class="fas fa-play"></i> 開始背單字
+                    </button>
+                </div>
+            </div>
+            <div id="words-list"></div>
+        </section>
+
+        <!-- 閃卡頁面 -->
+        <section id="sec-flashcard">
+            <div class="flashcard-header">
+                <button class="btn-outline" style="padding: 12px 18px; font-size: 15px;" onclick="exitFlashcard()">
+                    <i class="fas fa-times"></i> 結束
+                </button>
+                <span id="fc-counter" class="fc-counter">1 / 10</span>
+            </div>
+            
+            <div class="card" style="padding: 20px; margin-bottom:24px;">
+                <div class="flex-row">
+                    <div class="input-wrapper" style="flex: 1;">
+                        <select id="fc-mode" onchange="initFlashcard()">
+                            <option value="en-zh">看英文 ➔ 猜中文</option>
+                            <option value="zh-en">看中文 ➔ 猜英文</option>
+                            <option value="dictation">聽音 ➔ 拼寫 (Dictation)</option>
+                        </select>
+                        <i class="fas fa-chevron-down select-icon"></i>
+                    </div>
+                    <div class="input-wrapper" style="flex: 1;">
+                        <select id="fc-order" onchange="initFlashcard()">
+                            <option value="seq">照順序</option>
+                            <option value="shuffle">打亂</option>
+                        </select>
+                        <i class="fas fa-chevron-down select-icon"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scene">
+                <div class="flashcard" id="flashcard-box" onclick="flipCard()">
+                    <div class="fc-face fc-front">
+                        <div id="fc-question" style="width:100%;">Question</div>
+                        <button class="btn-icon fc-play" id="fc-play-btn" onclick="event.stopPropagation(); playTTS(currentFcWord)"><i class="fas fa-volume-up"></i></button>
+                        <div class="fc-hint"><i class="fas fa-hand-pointer"></i> 點擊卡片空白處對答案</div>
+                    </div>
+                    <div class="fc-face fc-back">
+                        <div id="fc-answer" style="width:100%;">Answer</div>
+                        <p id="fc-notes"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fc-controls" id="standard-controls">
+                <button class="btn-secondary" onclick="nextCard(-1)"><i class="fas fa-chevron-left"></i> 上一個</button>
+                <button class="btn-primary" onclick="nextCard(1)">下一個 <i class="fas fa-chevron-right"></i></button>
+            </div>
+
+            <div class="fc-controls srs-controls" id="srs-controls">
+                <button class="btn-srs btn-forget" onclick="answerSRS('forget')">忘記<br><small>10 分鐘後</small></button>
+                <button class="btn-srs btn-hard" onclick="answerSRS('hard')">困難<br><small>1 天後</small></button>
+                <button class="btn-srs btn-easy" onclick="answerSRS('easy')">簡單<br><small>4 天後</small></button>
+            </div>
+        </section>
+
+        <!-- 探索與設定頁面 -->
+        <section id="sec-settings">
+            <!-- 1. 學習統計儀表板 -->
+            <div class="card" style="background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: white; border: none; padding:20px;">
+                <h3 style="margin-bottom:12px; font-size:15px; opacity:0.95;"><i class="fas fa-chart-pie"></i> 學習統計數據</h3>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <div style="background:rgba(255,255,255,0.15); padding:12px; border-radius:12px;">
+                        <div style="font-size:22px; font-weight:800;" id="stat-total">0</div>
+                        <div style="font-size:11px; opacity:0.9; font-weight:600; margin-top:2px;">總收錄單字</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.15); padding:12px; border-radius:12px;">
+                        <div style="font-size:22px; font-weight:800;" id="stat-mastered">0</div>
+                        <div style="font-size:11px; opacity:0.9; font-weight:600; margin-top:2px;">精熟 (間隔>7天)</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.15); padding:12px; border-radius:12px;">
+                        <div style="font-size:22px; font-weight:800;" id="stat-today">0</div>
+                        <div style="font-size:11px; opacity:0.9; font-weight:600; margin-top:2px;">今日新增</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.15); padding:12px; border-radius:12px;">
+                        <div style="font-size:22px; font-weight:800;" id="stat-due">0</div>
+                        <div style="font-size:11px; opacity:0.9; font-weight:600; margin-top:2px;">待複習單字</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 雙語新聞閱讀 -->
+            <div class="card">
+                <h3 style="margin-bottom:16px; font-size:16px; color:var(--text-main); font-weight:800;"><i class="fas fa-newspaper" style="color:var(--primary);"></i> 雙語新聞閱讀 (The Guardian)</h3>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">閱讀國際權威新聞並自動雙語翻譯，點擊單字即可加入學習庫。</p>
+                
+                <div class="flex-row" style="margin-bottom:16px;">
+                    <div class="input-wrapper" style="flex:1;">
+                        <select id="news-category">
+                            <option value="world">國際時事</option>
+                            <option value="business">商業金融</option>
+                            <option value="politics">政治動態</option>
+                            <option value="technology">科技新知</option>
+                            <option value="science">科學與環境</option>
+                            <option value="society">社會與健康</option>
+                            <option value="education">教育發展</option>
+                            <option value="culture">藝術與文化</option>
+                        </select>
+                        <i class="fas fa-chevron-down select-icon"></i>
+                    </div>
+                    <div class="input-wrapper" style="width:110px;">
+                        <select id="news-sentences" title="段落長度">
+                            <option value="1" selected>1 段/區塊</option>
+                            <option value="2">2 段/區塊</option>
+                            <option value="3">3 段/區塊</option>
+                            <option value="4">4 段/區塊</option>
+                            <option value="5">5 段/區塊</option>
+                        </select>
+                        <i class="fas fa-chevron-down select-icon"></i>
+                    </div>
+                    <button class="btn-primary" onclick="loadNews(false)" id="btn-load-news" style="width:auto; padding:0 20px;">
+                        <i class="fas fa-bolt"></i> 抓取
+                    </button>
+                </div>
+                <div id="news-container" style="display:none; margin-top:20px;"></div>
+            </div>
+
+            <!-- 3. 系統偏好設定 -->
+            <div class="card" style="border:1px dashed var(--border); box-shadow:none;">
+                <h3 style="margin-bottom:20px; font-size:16px; color:var(--text-main); font-weight:800;"><i class="fas fa-cog"></i> 系統設定</h3>
+                
+                <div class="input-group">
+                    <label>字體大小調整</label>
+                    <div class="input-wrapper">
+                        <select id="font-size-select" onchange="applyFontSize(this.value)">
+                            <option value="0.9">小 (90%)</option>
+                            <option value="1">標準 (100%)</option>
+                            <option value="1.15">大 (115%)</option>
+                            <option value="1.3">特大 (130%)</option>
+                        </select>
+                        <i class="fas fa-chevron-down select-icon"></i>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>佈景主題</label>
+                    <div class="input-wrapper">
+                        <select id="theme-select" onchange="applyTheme(this.value)">
+                            <option value="default">明亮主題</option>
+                            <option value="diablo">暗黑破壞神</option>
+                            <option value="sakura">極簡櫻花</option>
+                            <option value="matrix">駭客任務</option>
+                            <option value="ocean">海洋微風</option>
+                            <option value="coffee">溫暖拿鐵</option>
+                            <option value="matcha">靜謐抹茶</option>
+                            <option value="sunset">夕陽餘暉</option>
+                            <option value="lavender">紫色迷情</option>
+                            <option value="cyberpunk">賽博龐克</option>
+                            <option value="autumn">秋日楓葉</option>
+                            <option value="dracula">夜訪吸血鬼</option>
+                        </select>
+                        <i class="fas fa-chevron-down select-icon"></i>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>預設儲存單字本位置</label>
+                    <div class="input-wrapper" style="margin-bottom:12px;">
+                        <select id="book-select"></select>
+                        <i class="fas fa-chevron-down select-icon"></i>
+                    </div>
+                    <div style="display:flex; gap:12px;">
+                        <button class="btn-outline" style="flex:1; padding:12px; font-size:14px;" onclick="setDefaultBook()">設定為預設</button>
+                        <button class="btn-secondary" style="flex:1; padding:12px; font-size:14px;" onclick="addNewBook()"><i class="fas fa-plus"></i> 建立新單字本</button>
+                    </div>
+                    <!-- 隱藏多餘的下拉選單 -->
+                    <select id="default-book-select" style="display:none;"></select>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="#" onclick="switchTab('sec-add'); return false;" class="nav-item active" id="nav-add"><i class="fas fa-plus-circle"></i><span>新增</span></a>
+        <a href="#" onclick="switchTab('sec-books'); return false;" class="nav-item" id="nav-books"><i class="fas fa-layer-group"></i><span>單字本</span></a>
+        <a href="#" onclick="switchTab('sec-settings'); return false;" class="nav-item" id="nav-settings"><i class="fas fa-compass"></i><span>探索</span></a>
+    </nav>
+
+    <!-- 全螢幕新聞閱讀 Modal -->
+    <div id="news-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-color); z-index:2000; overflow-y:auto; padding-bottom:100px;">
+        <div style="position:sticky; top:0; background:rgba(255,255,255,0.85); backdrop-filter:blur(16px); padding:16px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); z-index:10;">
+            <h3 style="font-size:18px; font-weight:800; color:var(--text-main);" id="news-modal-title">The Guardian 雙語閱讀</h3>
+            <button class="btn-icon-small" onclick="closeNewsModal()" style="background:var(--border);"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="news-modal-content" style="padding:24px 20px; max-width:600px; margin:0 auto; line-height:1.8;">
+        </div>
+
+        <!-- 浮動新增單字面板 -->
+        <div id="news-mini-add" style="display:none; position:fixed; bottom:0; left:0; width:100%; background:var(--card-bg); border-top:1px solid var(--border); box-shadow:0 -10px 40px rgba(0,0,0,0.15); padding:20px; z-index:2010; border-radius:24px 24px 0 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h4 style="font-size:16px; font-weight:800; color:var(--text-main); margin:0;"><i class="fas fa-bolt text-primary"></i> 快速新增單字</h4>
+                <button class="btn-icon-small" onclick="closeNewsMini()" style="background:var(--bg-color);"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div style="display:flex; gap:12px; margin-bottom:12px;">
+                <div class="input-wrapper" style="flex:1;">
+                    <select id="news-mini-book" style="padding:12px; font-size:calc(14px * var(--font-scale)); border-radius:10px;"></select>
+                    <i class="fas fa-chevron-down select-icon" style="right:12px;"></i>
+                </div>
+                <div class="input-wrapper" style="width:130px;">
+                    <select id="news-mini-pos" style="padding:12px; font-size:calc(14px * var(--font-scale)); border-radius:10px;">
+                        <option value="">無詞性</option>
+                        <option value="n.">名詞 (n.)</option>
+                        <option value="v.">動詞 (v.)</option>
+                        <option value="adj.">形容詞 (adj.)</option>
+                        <option value="adv.">副詞 (adv.)</option>
+                        <option value="prep.">介詞(prep.)</option>
+                        <option value="conj.">連接詞</option>
+                    </select>
+                    <i class="fas fa-chevron-down select-icon" style="right:12px;"></i>
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:12px; margin-bottom:12px;">
+                <input type="text" id="news-mini-en" placeholder="英文單字..." style="flex:1; padding:12px; font-size:calc(15px * var(--font-scale)); font-weight:700; border-radius:10px;" onblur="autoTranslateMini()">
+                <input type="text" id="news-mini-zh" placeholder="中文意思..." style="flex:1; padding:12px; font-size:calc(15px * var(--font-scale)); border-radius:10px;">
+            </div>
+            
+            <div style="display:flex; gap:12px; align-items:center;">
+                <input type="text" id="news-mini-notes" placeholder="備註(選填)..." style="flex:1; padding:12px; font-size:calc(14px * var(--font-scale)); border-radius:10px;">
+                <button class="btn-primary" onclick="saveNewsMiniWord()" style="padding:12px 24px; border-radius:10px; width:auto; font-size:calc(15px * var(--font-scale));"><i class="fas fa-plus"></i> 儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwuoJKZoI2lU31rRPuhPSPN4QapV_-pTuv-rrSIc6_bz07GljkB9yFNuDDlf-VoCxc/exec";
+
+        const THEMES = {
+            "default": { "--bg-color": "#F8FAFC", "--card-bg": "#FFFFFF", "--text-main": "#0F172A", "--text-muted": "#64748B", "--primary": "#4F46E5", "--primary-hover": "#4338CA", "--primary-light": "#E0E7FF", "--border": "#E2E8F0", "--nav-bg": "rgba(255, 255, 255, 0.85)" },
+            "diablo": { "--bg-color": "#110E0E", "--card-bg": "#1A1515", "--text-main": "#E5E5E5", "--text-muted": "#9CA3AF", "--primary": "#DC2626", "--primary-hover": "#B91C1C", "--primary-light": "#451A1A", "--border": "#372929", "--nav-bg": "rgba(17, 14, 14, 0.85)" },
+            "sakura": { "--bg-color": "#FFF0F5", "--card-bg": "#FFFFFF", "--text-main": "#4A4A4A", "--text-muted": "#9B8B93", "--primary": "#FF8DA1", "--primary-hover": "#FF6B8B", "--primary-light": "#FFE6EB", "--border": "#FADADD", "--nav-bg": "rgba(255, 255, 255, 0.85)" },
+            "matrix": { "--bg-color": "#0D110D", "--card-bg": "#000000", "--text-main": "#00FF41", "--text-muted": "#008F11", "--primary": "#00FF41", "--primary-hover": "#008F11", "--primary-light": "rgba(0, 255, 65, 0.1)", "--border": "#003300", "--nav-bg": "rgba(0, 0, 0, 0.85)" },
+            "ocean": { "--bg-color": "#E0F2FE", "--card-bg": "#F0F9FF", "--text-main": "#0C4A6E", "--text-muted": "#0284C7", "--primary": "#0284C7", "--primary-hover": "#0369A1", "--primary-light": "#BAE6FD", "--border": "#7DD3FC", "--nav-bg": "rgba(240, 249, 255, 0.85)" },
+            "coffee": { "--bg-color": "#FDF8F5", "--card-bg": "#FFFFFF", "--text-main": "#4A3B32", "--text-muted": "#8A7968", "--primary": "#8C6A5D", "--primary-hover": "#705348", "--primary-light": "#F2E8E3", "--border": "#E6D7CE", "--nav-bg": "rgba(253, 248, 245, 0.85)" },
+            "matcha": { "--bg-color": "#F4F7F4", "--card-bg": "#FFFFFF", "--text-main": "#2C3E2D", "--text-muted": "#687D69", "--primary": "#557A58", "--primary-hover": "#3E5B41", "--primary-light": "#E6EDE6", "--border": "#D5E0D6", "--nav-bg": "rgba(244, 247, 244, 0.85)" },
+            "sunset": { "--bg-color": "#FFFBEB", "--card-bg": "#FFFFFF", "--text-main": "#78350F", "--text-muted": "#B45309", "--primary": "#EA580C", "--primary-hover": "#C2410C", "--primary-light": "#FFEDD5", "--border": "#FDE68A", "--nav-bg": "rgba(255, 251, 235, 0.85)" },
+            "lavender": { "--bg-color": "#FAF5FF", "--card-bg": "#FFFFFF", "--text-main": "#4C1D95", "--text-muted": "#7C3AED", "--primary": "#9333EA", "--primary-hover": "#7E22CE", "--primary-light": "#F3E8FF", "--border": "#E9D5FF", "--nav-bg": "rgba(250, 245, 255, 0.85)" },
+            "cyberpunk": { "--bg-color": "#09090B", "--card-bg": "#18181B", "--text-main": "#E879F9", "--text-muted": "#A1A1AA", "--primary": "#D946EF", "--primary-hover": "#C026D3", "--primary-light": "rgba(217, 70, 239, 0.15)", "--border": "#27272A", "--nav-bg": "rgba(9, 9, 11, 0.85)" },
+            "autumn": { "--bg-color": "#FEFCE8", "--card-bg": "#FFFFFF", "--text-main": "#713F12", "--text-muted": "#A16207", "--primary": "#D97706", "--primary-hover": "#B45309", "--primary-light": "#FEF3C7", "--border": "#FDE047", "--nav-bg": "rgba(254, 252, 232, 0.85)" },
+            "dracula": { "--bg-color": "#282A36", "--card-bg": "#44475A", "--text-main": "#F8F8F2", "--text-muted": "#6272A4", "--primary": "#FF79C6", "--primary-hover": "#FF92D0", "--primary-light": "rgba(255, 121, 198, 0.15)", "--border": "#6272A4", "--nav-bg": "rgba(40, 42, 54, 0.85)" }
+        };
+
+        function applyTheme(themeName) {
+            const theme = THEMES[themeName]; if(!theme) return;
+            const root = document.documentElement;
+            for(let key in theme) { root.style.setProperty(key, theme[key]); }
+            localStorage.setItem("vocabTheme", themeName);
+        }
+
+        let currentUser = null;
+        let allWords = []; let books = ["預設單字本"]; let currentViewBook = "";
+        let flashcards = []; let currentFcIndex = 0; let currentFcWord = ""; let isShowingAnswer = false;
+
+        const ROOTS_DICT = { "bio": "生命", "logy": "學問", "un": "不/否定", "pre": "在...之前", "post": "在...之後", "anti": "反對", "inter": "在...之間", "trans": "跨越", "sub": "在...之下", "re": "再次", "ex": "向外", "in": "向內", "con": "共同", "com": "共同", "pro": "向前", "tele": "遠處", "dict": "說話", "spect": "看", "ject": "投擲", "port": "攜帶", "tract": "拉", "struct": "建立", "micro": "微小", "macro": "巨大", "poly": "多個", "mono": "單一", "auto": "自動", "graph": "寫/畫", "meter": "測量", "phon": "聲音", "photo": "光", "therm": "熱", "hydr": "水", "chron": "時間", "phob": "恐懼", "phil": "喜愛", "anthrop": "人類", "path": "情感/疾病", "morph": "形態", "tion": "名詞字尾", "ment": "名詞字尾", "ness": "名詞字尾", "ity": "名詞字尾", "able": "能...的", "ible": "能...的", "ive": "傾向...的", "ous": "充滿...的", "ful": "充滿...的", "less": "無...的", "ly": "副詞結尾(地)", "ate": "使...", "ize": "使成為", "en": "動詞結尾(使)", "ify": "使...化", "dis": "相反/分離", "mis": "錯誤", "over": "過度", "under": "不足" };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedTheme = localStorage.getItem("vocabTheme") || "default";
+            document.getElementById("theme-select").value = savedTheme; applyTheme(savedTheme);
+            
+            const savedFontScale = localStorage.getItem("vocabFontScale") || "1";
+            const fontSelect = document.getElementById("font-size-select");
+            if(fontSelect) fontSelect.value = savedFontScale; 
+            applyFontSize(savedFontScale);
+
+            currentUser = localStorage.getItem("vocabUser");
+            if (currentUser) {
+                showApp(currentUser);
+            } else {
+                switchTab('sec-login');
+            }
+            document.getElementById("word-en").addEventListener("blur", autoTranslate);
+        });
+
+        function applyFontSize(scale) {
+            document.documentElement.style.setProperty('--font-scale', scale);
+            localStorage.setItem("vocabFontScale", scale);
+        }
+
+        function showApp(username) {
+            currentUser = username;
+            document.getElementById("user-info").style.display = "flex";
+            document.getElementById("current-username-display").innerText = username;
+            document.querySelector(".bottom-nav").style.display = "flex";
+            loadLocalBooks(); updateBookDropdowns(); 
+            switchTab('sec-add'); 
+            fetchData(); 
+        }
+
+        async function login() {
+            const input = document.getElementById("login-username").value.trim();
+            if (!input) { showToast("請輸入帳號！", "error"); return; }
+            
+            const btn = document.getElementById("btn-login"); const origHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 驗證中...'; btn.disabled = true;
+            
+            try {
+                const response = await fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "login", username: input }) });
+                const result = await response.json();
+                if (result.status === "success") {
+                    localStorage.setItem("vocabUser", input);
+                    showToast("登入成功！", "success");
+                    showApp(input);
+                } else throw new Error(result.message);
+            } catch (error) {
+                showToast("登入失敗，請確認後端是否已更新", "error");
+            } finally {
+                btn.innerHTML = origHtml; btn.disabled = false;
+            }
+        }
+
+        function logout() {
+            if(!confirm("確定要登出嗎？")) return;
+            localStorage.removeItem("vocabUser");
+            currentUser = null; allWords = []; books = ["預設單字本"];
+            document.getElementById("user-info").style.display = "none";
+            document.querySelector(".bottom-nav").style.display = "none";
+            document.getElementById("books-list").innerHTML = "";
+            document.getElementById("login-username").value = "";
+            switchTab('sec-login');
+        }
+
+        async function translateText(text) {
+            try {
+                const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q=${encodeURIComponent(text)}`);
+                const data = await res.json(); return data[0][0][0];
+            } catch (e) { return text; }
+        }
+
+        let lastTranslatedEn = "";
+        async function autoTranslate() {
+            const en = document.getElementById("word-en").value.trim();
+            const zhInput = document.getElementById("word-zh");
+            if (en && en !== lastTranslatedEn) {
+                lastTranslatedEn = en; const originalPlaceholder = zhInput.placeholder; zhInput.placeholder = "🔄 自動翻譯中...";
+                try {
+                    const zh = await translateText(en);
+                    if (zh) { zhInput.value = zh; showToast("自動翻譯完成", "success"); }
+                    
+                    // 同步獲取精準詞性 (POS)
+                    fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(en)}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if(d && d[0] && d[0].meanings && d[0].meanings[0]) {
+                            const pos = d[0].meanings[0].partOfSpeech.toLowerCase();
+                            const posSelect = document.getElementById("word-pos");
+                            if(pos.includes("noun")) posSelect.value = "n.";
+                            else if(pos.includes("verb")) posSelect.value = "v.";
+                            else if(pos.includes("adjective")) posSelect.value = "adj.";
+                            else if(pos.includes("adverb")) posSelect.value = "adv.";
+                            else if(pos.includes("preposition")) posSelect.value = "prep.";
+                            else if(pos.includes("conjunction")) posSelect.value = "conj.";
+                        }
+                    }).catch(e => console.log(e));
+                    
+                } catch(e) { console.error("自動翻譯失敗:", e); } 
+                finally { zhInput.placeholder = originalPlaceholder; }
+            }
+        }
+
+        async function fetchAccurateSynAnt(wordEn) {
+            try {
+                const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(wordEn)}`);
+                if(!res.ok) return { syns: [], ants: [] };
+                const data = await res.json();
+                let syns = new Set(); let ants = new Set();
+                data.forEach(entry => {
+                    entry.meanings.forEach(meaning => {
+                        (meaning.synonyms || []).forEach(s => syns.add(s));
+                        (meaning.antonyms || []).forEach(a => ants.add(a));
+                    });
+                });
+                return { syns: Array.from(syns).slice(0, 4), ants: Array.from(ants).slice(0, 4) };
+            } catch(e) { return { syns: [], ants: [] }; }
+        }
+
+        function analyzeWordRoots(word) {
+            let lowerWord = word.toLowerCase(); let foundRoots = [];
+            for (let root in ROOTS_DICT) { if (lowerWord.includes(root)) foundRoots.push({ root: root, meaning: ROOTS_DICT[root] }); }
+            return foundRoots.filter(fr => !foundRoots.some(other => other.root !== fr.root && other.root.includes(fr.root)));
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast'); toast.className = `toast ${type}`;
+            toast.innerHTML = type === 'success' ? `<i class="fas fa-check-circle"></i> <span>${message}</span>` : `<i class="fas fa-exclamation-triangle"></i> <span>${message}</span>`;
+            toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll("section").forEach(sec => sec.classList.remove("active"));
+            document.getElementById(tabId).classList.add("active");
+            document.querySelectorAll(".nav-item").forEach(nav => nav.classList.remove("active"));
+            
+            if(tabId === 'sec-add') { 
+                const nav = document.getElementById("nav-add"); if(nav) nav.classList.add("active"); 
+                document.getElementById("header-title").innerText = "新增單字"; 
+            }
+            if(tabId === 'sec-books') { 
+                const nav = document.getElementById("nav-books"); if(nav) nav.classList.add("active"); 
+                document.getElementById("header-title").innerText = "單字本總覽"; 
+                updateDueCount(); renderBooksList(); 
+            }
+            if(tabId === 'sec-settings') {
+                const nav = document.getElementById("nav-settings"); if(nav) nav.classList.add("active");
+                document.getElementById("header-title").innerText = "探索與設定";
+                updateStatistics();
+            }
+            if(tabId === 'sec-srs-list') { document.getElementById("header-title").innerText = "SRS 狀態"; }
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function updateStatistics() {
+            if(!document.getElementById("stat-total")) return;
+            document.getElementById("stat-total").innerText = allWords.length;
+            const mastered = allWords.filter(w => w.interval > 7).length;
+            document.getElementById("stat-mastered").innerText = mastered;
+
+            const now = Date.now();
+            const due = allWords.filter(w => w.nextReviewTime && w.nextReviewTime <= now).length;
+            document.getElementById("stat-due").innerText = due;
+
+            const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+            const todayCount = allWords.filter(w => new Date(w.timestamp) >= todayStart).length;
+            document.getElementById("stat-today").innerText = todayCount;
+        }
+
+        function updateDueCount() {
+            const now = Date.now();
+            const dueCount = allWords.filter(w => !w.nextReviewTime || w.nextReviewTime <= now).length;
+            const badge = document.getElementById("btn-due-count");
+            if (badge) {
+                badge.innerText = dueCount;
+            }
+        }
+
+        function loadLocalBooks() {
+            const savedBooks = localStorage.getItem(`vocabBooks_${currentUser}`); 
+            if (savedBooks) books = JSON.parse(savedBooks);
+            else books = ["預設單字本"];
+            
+            const defaultBook = localStorage.getItem(`defaultBook_${currentUser}`); 
+            if (defaultBook && !books.includes(defaultBook)) books.push(defaultBook);
+        }
+
+        function updateBookDropdowns() {
+            const defaultBook = localStorage.getItem(`defaultBook_${currentUser}`) || books[0];
+            const select1 = document.getElementById("book-select"); 
+            const select2 = document.getElementById("default-book-select");
+            const select3 = document.getElementById("active-book-select");
+            
+            const currentActive = select3 && select3.value ? select3.value : defaultBook;
+
+            if(select1) select1.innerHTML = ""; 
+            if(select2) select2.innerHTML = "";
+            if(select3) select3.innerHTML = "";
+            
+            books.forEach(b => { 
+                if(select1) select1.add(new Option(b, b)); 
+                if(select2) select2.add(new Option(b, b)); 
+                if(select3) select3.add(new Option(b, b));
+            });
+            
+            if(select1) select1.value = defaultBook; 
+            if(select2) select2.value = defaultBook;
+            if(select3) select3.value = books.includes(currentActive) ? currentActive : defaultBook;
+        }
+
+        function setDefaultBook() {
+            const selected = document.getElementById("book-select").value;
+            localStorage.setItem(`defaultBook_${currentUser}`, selected); showToast("已更新預設單字本");
+        }
+
+        function addNewBook() {
+            const newBook = prompt("請輸入新單字本名稱：");
+            if (newBook && newBook.trim() !== "" && !books.includes(newBook)) {
+                books.push(newBook.trim()); localStorage.setItem(`vocabBooks_${currentUser}`, JSON.stringify(books));
+                updateBookDropdowns(); document.getElementById("book-select").value = newBook.trim(); showToast("單字本新增成功");
+            }
+        }
+
+        function playTTS(text) {
+            if (!text) return;
+            const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'en-US'; utterance.rate = 0.9; window.speechSynthesis.speak(utterance);
+        }
+
+        async function saveWord() {
+            const book = document.getElementById("active-book-select").value;
+            const en = document.getElementById("word-en").value.trim();
+            const zh = document.getElementById("word-zh").value.trim();
+            const notes = document.getElementById("word-notes").value.trim();
+            const pos = document.getElementById("word-pos").value;
+
+            if (!en || !zh) { showToast("英文與中文為必填！", "error"); return; }
+
+            const btn = document.getElementById("btn-save"); const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 儲存中...'; btn.disabled = true;
+
+            const payload = { action: "addWord", username: currentUser, book, english: en, chinese: zh, notes, pos };
+            try {
+                const response = await fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) });
+                const result = await response.json();
+                if (result.status === "success") {
+                    showToast("單字新增成功！"); 
+                    document.getElementById("word-en").value = ""; document.getElementById("word-zh").value = ""; 
+                    document.getElementById("word-notes").value = ""; document.getElementById("word-pos").value = "";
+                    allWords.push(payload); lastTranslatedEn = ""; updateDueCount();
+                } else showToast(`儲存失敗：${result.message}`, "error");
+            } catch (error) { showToast("連線錯誤或未更新後端", "error"); } finally { btn.innerHTML = originalHtml; btn.disabled = false; }
+        }
+
+        async function deleteWord(english) {
+            if (!confirm(`確定要刪除「${english}」嗎？`)) return;
+            const originalWords = [...allWords]; allWords = allWords.filter(w => !(w.book === currentViewBook && w.english === english));
+            openBook(currentViewBook); updateDueCount();
+            
+            try {
+                const response = await fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "deleteWord", username: currentUser, book: currentViewBook, english: english }) });
+                const result = await response.json();
+                if (result.status === "success") showToast("已刪除"); else throw new Error(result.message);
+            } catch (error) { allWords = originalWords; openBook(currentViewBook); showToast("刪除失敗", "error"); }
+        }
+
+        async function deleteCurrentBook() {
+            if (books.length <= 1) { showToast("至少需保留一本！", "error"); return; }
+            if (!confirm(`確定刪除單字本「${currentViewBook}」？無法還原！`)) return;
+            
+            const bookToDelete = currentViewBook; books = books.filter(b => b !== bookToDelete); allWords = allWords.filter(w => w.book !== bookToDelete);
+            localStorage.setItem(`vocabBooks_${currentUser}`, JSON.stringify(books));
+            if (localStorage.getItem(`defaultBook_${currentUser}`) === bookToDelete) localStorage.setItem(`defaultBook_${currentUser}`, books[0]);
+            updateBookDropdowns(); updateDueCount(); switchTab('sec-books'); showToast("已刪除單字本");
+            
+            fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "deleteBook", username: currentUser, book: bookToDelete }) }).catch(e => console.error(e));
+        }
+
+        async function fetchData() {
+            const btn = document.getElementById("btn-sync"); if (!btn) return;
+            const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 同步中...'; btn.disabled = true;
+            try {
+                const response = await fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getData", username: currentUser }) });
+                const result = await response.json();
+                if (result.status === "success") {
+                    allWords = result.data;
+                    const cloudBooks = [...new Set(allWords.map(w => w.book))];
+                    cloudBooks.forEach(b => { if (!books.includes(b) && b !== "") books.push(b); });
+                    localStorage.setItem(`vocabBooks_${currentUser}`, JSON.stringify(books));
+                    updateBookDropdowns(); updateDueCount();
+                    if(document.getElementById('sec-books').classList.contains('active')) renderBooksList();
+                    if(document.getElementById('sec-settings').classList.contains('active')) updateStatistics();
+                    showToast("同步完成");
+                } else showToast("同步失敗", "error");
+            } catch (e) { showToast("連線錯誤", "error"); } finally { btn.innerHTML = originalHtml; btn.disabled = false; }
+        }
+
+        function renderBooksList() {
+            const list = document.getElementById("books-list"); list.innerHTML = "";
+            if (books.length === 0) return list.innerHTML = `<div class="empty-state"><p>尚無單字本</p></div>`;
+
+            books.forEach(book => {
+                const count = allWords.filter(w => w.book === book).length;
+                const div = document.createElement("div"); div.className = "list-item book-item";
+                div.innerHTML = `
+                    <div style="display:flex; align-items:center;">
+                        <div class="book-icon-wrapper"><i class="fas fa-book"></i></div>
+                        <span style="font-weight:700; font-size:17px;">${book}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; color:var(--text-muted);">
+                        <span style="font-size:13px; background:var(--bg-color); padding:6px 12px; border-radius:12px; font-weight:700;">${count} 字</span>
+                        <i class="fas fa-chevron-right" style="color:var(--border);"></i>
+                    </div>
+                `;
+                div.onclick = () => openBook(book); list.appendChild(div);
+            });
+        }
+
+        function openSrsList() {
+            const tbody = document.getElementById("srs-table-body"); tbody.innerHTML = "";
+            const sortedWords = [...allWords].sort((a, b) => (a.nextReviewTime || 0) - (b.nextReviewTime || 0));
+            
+            sortedWords.forEach(w => {
+                const tr = document.createElement("tr"); tr.style.borderBottom = "1px solid var(--border)";
+                let timeStr = "尚未測驗"; let statusColor = "var(--text-main)";
+                if (w.nextReviewTime) {
+                    const d = new Date(w.nextReviewTime);
+                    timeStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                    if (w.nextReviewTime <= Date.now()) statusColor = "var(--danger)"; 
+                }
+                tr.innerHTML = `
+                    <td style="padding:12px 8px; font-weight:700; color:var(--primary);">${w.english}</td>
+                    <td style="padding:12px 8px;">${w.chinese}</td>
+                    <td style="padding:12px 8px; color:${statusColor}; font-weight:600;">${timeStr}</td>
+                    <td style="padding:12px 8px;">${w.interval ? w.interval.toFixed(1) : 0}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            switchTab('sec-srs-list');
+        }
+
+        function openBook(bookName) {
+            currentViewBook = bookName; document.getElementById("header-title").innerText = bookName;
+            const list = document.getElementById("words-list"); list.innerHTML = "";
+            
+            const bookWords = allWords.filter(w => w.book === bookName);
+            if(bookWords.length === 0) {
+                list.innerHTML = `<div class="empty-state"><i class="fas fa-box-open"></i><p>尚無單字</p></div>`; switchTab('sec-words'); return;
+            }
+
+            bookWords.forEach((w, idx) => {
+                const div = document.createElement("div"); div.className = "word-card";
+                const safeEnglish = w.english.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                let posHtml = w.pos ? `<span class="pos-tag pos-${w.pos.replace('.', '')}">${w.pos}</span>` : '';
+
+                div.innerHTML = `
+                    <div class="word-card-header">
+                        <div style="display:flex; align-items:baseline;">
+                            <div class="word-en">${w.english}</div>
+                            ${posHtml}
+                        </div>
+                        <div class="word-actions">
+                            <button class="btn-icon-small" onclick="playTTS('${safeEnglish}')"><i class="fas fa-volume-up"></i></button>
+                            <button class="btn-icon-small text-danger" onclick="deleteWord('${safeEnglish}')"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="word-zh">${w.chinese}</div>
+                    ${w.notes ? `<div class="word-notes"><i class="fas fa-lightbulb" style="color:var(--primary); margin-right:6px;"></i> ${w.notes}</div>` : ''}
+                    <button class="btn-expand" onclick="expandWord('w-${idx}', '${safeEnglish}')"><i class="fas fa-magic"></i> 延伸學習 (精準詞典)</button>
+                    <div id="expand-w-${idx}" class="expand-card"></div>
+                `;
+                list.appendChild(div);
+            });
+            switchTab('sec-words');
+        }
+
+        async function expandWord(elementId, wordEn) {
+            const container = document.getElementById(`expand-${elementId}`);
+            if (container.style.display === 'block') { container.style.display = 'none'; return; }
+            
+            container.style.display = 'block';
+            container.innerHTML = '<div class="text-center" style="padding:20px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> 正在查詢權威字典與關聯詞彙...</div>';
+            
+            try {
+                const roots = analyzeWordRoots(wordEn);
+                const dictData = await fetchAccurateSynAnt(wordEn);
+                // 使用 rel_trg 取代 rel_bgb 以獲取有意義的語意關聯詞 (而不是單純相鄰的介系詞)
+                const colRes = await fetch(`https://api.datamuse.com/words?rel_trg=${wordEn}&max=5`);
+                const cols = await colRes.json();
+                
+                const translateMapper = async (list) => {
+                    return await Promise.all(list.map(async w => {
+                        const word = typeof w === 'string' ? w : w.word;
+                        const zh = await translateText(word);
+                        return `${word} <small>(${zh})</small>`;
+                    }));
+                };
+                
+                const [synList, antList, colList] = await Promise.all([ translateMapper(dictData.syns), translateMapper(dictData.ants), translateMapper(cols) ]);
+
+                let html = '';
+                if (roots.length > 0) {
+                    html += `<div class="expand-section"><h4><i class="fas fa-puzzle-piece"></i> 字根字首參考</h4><div class="expand-tags">`;
+                    roots.forEach(r => html += `<span class="tag tag-blue">${r.root} <small>${r.meaning}</small></span>`); html += `</div></div>`;
+                }
+                if (synList.length > 0) {
+                    html += `<div class="expand-section"><h4><i class="fas fa-equals"></i> 同義詞 (Dictionary)</h4><div class="expand-tags">`;
+                    synList.forEach(w => html += `<span class="tag tag-green">${w}</span>`); html += `</div></div>`;
+                }
+                if (antList.length > 0) {
+                    html += `<div class="expand-section"><h4><i class="fas fa-not-equal"></i> 反義詞 (Dictionary)</h4><div class="expand-tags">`;
+                    antList.forEach(w => html += `<span class="tag tag-red">${w}</span>`); html += `</div></div>`;
+                }
+                if (colList.length > 0) {
+                    html += `<div class="expand-section"><h4><i class="fas fa-link"></i> 關聯詞彙 (Associated Words)</h4><ul class="col-list">`;
+                    colList.forEach(w => html += `<li><i class="fas fa-angle-right" style="color:var(--primary);"></i> ${w}</li>`); html += `</ul></div>`;
+                }
+                if (!html) html = '<div class="text-center" style="padding:10px; color:var(--text-muted);">查無延伸資料。</div>';
+                container.innerHTML = html;
+            } catch(e) { container.innerHTML = '<div class="text-danger text-center">查詢失敗，請檢查網路。</div>'; }
+        }
+
+        let currentNewsList = [];
+        let currentNewsIndex = 0;
+
+        async function loadNews(isNext = false) {
+            const category = document.getElementById("news-category").value;
+            const btn = document.getElementById("btn-load-news");
+            const origHtml = btn.innerHTML;
+            
+            // Only show spinner if not navigating next
+            if (!isNext) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+            }
+            
+            try {
+                if (!isNext || currentNewsList.length === 0) {
+                    const apiUrl = `https://content.guardianapis.com/search?api-key=test&show-fields=body&section=${category}&page-size=15`;
+                    const res = await fetch(apiUrl);
+                    const data = await res.json();
+                    
+                    if (data.response && data.response.results && data.response.results.length > 0) {
+                        currentNewsList = data.response.results.filter(i => i.fields && i.fields.body && i.fields.body.length > 200);
+                        currentNewsIndex = Math.floor(Math.random() * currentNewsList.length);
+                    } else {
+                        currentNewsList = [];
+                    }
+                } else {
+                    currentNewsIndex = (currentNewsIndex + 1) % currentNewsList.length;
+                }
+                
+                if (currentNewsList.length === 0) { 
+                    showToast("目前該類別無足夠內容", "error"); 
+                    return; 
+                }
+                
+                const item = currentNewsList[currentNewsIndex];
+                document.getElementById("news-modal").style.display = "block";
+                document.getElementById("news-modal").scrollTop = 0; // Scroll to top for next article
+                
+                const makeClickable = (text) => {
+                    return text.split(/(\s+)/).map(w => {
+                        if(w.trim() === '') return w;
+                        return `<span class="clickable-word" onclick="addNewsWord(this)">${w}</span>`;
+                    }).join('');
+                };
+                
+                document.getElementById("news-modal-content").innerHTML = `
+                    <h1 style="font-size:24px; font-weight:800; color:var(--text-main); margin-bottom:24px; line-height:1.4;">${makeClickable(item.webTitle)}</h1>
+                    
+                    <div id="news-summary-container"></div>
+                    
+                    <div id="full-text-loader" style="margin-top:30px; text-align:center; padding:20px; color:var(--primary); font-size:14px; font-weight:700; border:1px solid var(--border); border-radius:12px;">
+                        <i class="fas fa-spinner fa-spin"></i> 正在排版並翻譯全文...
+                    </div>
+                    <div id="full-text-container"></div>
+                    
+                    <div style="margin-top:30px; display:flex; gap:12px; border-top:1px dashed var(--border); padding-top:20px;">
+                        <button class="btn-primary" onclick="loadNews(true)" style="flex:1; padding:16px; font-size:15px;"><i class="fas fa-step-forward"></i> 下一篇</button>
+                        <a href="${item.webUrl}" target="_blank" class="btn-outline" style="flex:1; text-decoration:none; text-align:center; padding:16px; font-size:15px; font-weight:600; display:flex; justify-content:center; align-items:center; gap:8px;"><i class="fas fa-external-link-alt"></i> 閱讀原文</a>
+                    </div>
+                `;
+                
+                const sumContainer = document.getElementById("news-summary-container");
+                
+                const titleZh = await translateText(item.webTitle);
+                const titleZhEl = document.createElement("div");
+                titleZhEl.style = "font-size:16px; color:var(--primary); font-weight:700; margin-bottom:30px; border-left:4px solid var(--primary); padding-left:14px;";
+                titleZhEl.innerText = titleZh;
+                sumContainer.appendChild(titleZhEl);
+                
+                const parasPerBlock = parseInt(document.getElementById("news-sentences").value) || 1;
+                
+                // 透過解析官方的 HTML body，精準抓取所有 <p> 標籤，保證 100% 還原作者原始段落
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(item.fields.body, "text/html");
+                const rawParas = Array.from(doc.querySelectorAll('p')).map(p => p.innerText.trim()).filter(p => p.length > 20);
+                
+                let allParagraphs = [];
+                for(let i = 0; i < rawParas.length; i += parasPerBlock) {
+                    allParagraphs.push(rawParas.slice(i, i + parasPerBlock).join('\n\n').trim());
+                }
+                
+                if(allParagraphs.length > 12) allParagraphs = allParagraphs.slice(0, 12);
+                
+                const renderParagraphs = async (paragraphsToRender, targetContainer) => {
+                    for (let text of paragraphsToRender) {
+                        const pContainer = document.createElement("div");
+                        pContainer.style = "margin-bottom:28px;";
+                        if(targetContainer.id === "full-text-container") {
+                            pContainer.style.paddingTop = "20px";
+                            pContainer.style.borderTop = "1px dashed var(--border)";
+                        }
+                        
+                        const enEl = document.createElement("p");
+                        enEl.style = "font-size:1.15em; color:var(--text-main); line-height:1.75; margin-bottom:10px; font-weight:500; white-space:pre-wrap;";
+                        enEl.innerHTML = makeClickable(text);
+                        pContainer.appendChild(enEl);
+                        
+                        const zhEl = document.createElement("p");
+                        zhEl.style = "font-size:1em; color:var(--text-muted); line-height:1.75; font-weight:400; padding-left:14px; border-left:3px solid var(--primary-light); margin-bottom:8px; white-space:pre-wrap;";
+                        zhEl.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 即時翻譯中...';
+                        pContainer.appendChild(zhEl);
+                        
+                        const ttsBtn = document.createElement("button");
+                        ttsBtn.innerHTML = '<i class="fas fa-volume-up"></i> 朗讀此段';
+                        ttsBtn.style = "background:none; color:var(--primary); border:1px solid var(--primary-light); border-radius:20px; padding:4px 12px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; margin-left:14px; margin-top:4px; transition:all 0.2s;";
+                        ttsBtn.onmouseover = () => { ttsBtn.style.background = 'var(--primary-light)'; };
+                        ttsBtn.onmouseout = () => { ttsBtn.style.background = 'none'; };
+                        ttsBtn.onclick = () => playTTS(text);
+                        pContainer.appendChild(ttsBtn);
+                        
+                        targetContainer.appendChild(pContainer);
+                        try { zhEl.innerText = await translateText(text); } 
+                        catch(e) { zhEl.innerText = "(翻譯服務暫時忙碌)"; }
+                    }
+                };
+                
+                if(allParagraphs.length > 0) {
+                    await renderParagraphs([allParagraphs[0]], sumContainer);
+                }
+                
+                setTimeout(async () => {
+                    const loader = document.getElementById("full-text-loader");
+                    if(loader) loader.style.display = "none";
+                    
+                    if(allParagraphs.length > 1) {
+                        await renderParagraphs(allParagraphs.slice(1), document.getElementById("full-text-container"));
+                    }
+                }, 100);
+
+            } catch(e) {
+                showToast("新聞抓取失敗", "error");
+            } finally {
+                if(!isNext) {
+                    btn.innerHTML = origHtml; btn.disabled = false;
+                }
+            }
+        }
+
+
+        function closeNewsModal() {
+            document.getElementById("news-modal").style.display = "none";
+            closeNewsMini();
+        }
+
+        async function addNewsWord(el) {
+            const word = el.innerText.replace(/[^a-zA-Z\-]/g, '');
+            if(!word) return;
+            
+            // 播放讀音
+            playTTS(word);
+            
+            document.getElementById("news-mini-add").style.display = "block";
+            const enInput = document.getElementById("news-mini-en");
+            const zhInput = document.getElementById("news-mini-zh");
+            const bookSelect = document.getElementById("news-mini-book");
+            
+            enInput.value = word.toLowerCase();
+            zhInput.value = "翻譯中...";
+            document.getElementById("news-mini-notes").value = "來自新聞閱讀";
+            document.getElementById("news-mini-pos").value = "";
+            
+            bookSelect.innerHTML = "";
+            books.forEach(b => bookSelect.add(new Option(b, b)));
+            bookSelect.value = document.getElementById("active-book-select").value || books[0];
+            
+            try {
+                const zh = await translateText(word.toLowerCase());
+                zhInput.value = zh;
+            } catch(e) {
+                zhInput.value = "";
+            }
+            
+            try {
+                const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`);
+                if(dictRes.ok) {
+                    const dictData = await dictRes.json();
+                    if(dictData[0] && dictData[0].meanings && dictData[0].meanings[0]) {
+                        const partOfSpeech = dictData[0].meanings[0].partOfSpeech;
+                        let pos = "";
+                        if(partOfSpeech === 'noun') pos = 'n.';
+                        else if(partOfSpeech === 'verb') pos = 'v.';
+                        else if(partOfSpeech === 'adjective') pos = 'adj.';
+                        else if(partOfSpeech === 'adverb') pos = 'adv.';
+                        document.getElementById("news-mini-pos").value = pos;
+                    }
+                }
+            } catch(e) { console.log(e); }
+        }
+        
+        async function autoTranslateMini() {
+            const word = document.getElementById("news-mini-en").value.trim();
+            if(!word) return;
+            document.getElementById("news-mini-zh").value = "翻譯中...";
+            try {
+                const zh = await translateText(word);
+                document.getElementById("news-mini-zh").value = zh;
+            } catch(e) { document.getElementById("news-mini-zh").value = ""; }
+            
+            try {
+                const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+                if(dictRes.ok) {
+                    const dictData = await dictRes.json();
+                    if(dictData[0] && dictData[0].meanings && dictData[0].meanings[0]) {
+                        const partOfSpeech = dictData[0].meanings[0].partOfSpeech;
+                        let pos = "";
+                        if(partOfSpeech === 'noun') pos = 'n.';
+                        else if(partOfSpeech === 'verb') pos = 'v.';
+                        else if(partOfSpeech === 'adjective') pos = 'adj.';
+                        else if(partOfSpeech === 'adverb') pos = 'adv.';
+                        document.getElementById("news-mini-pos").value = pos;
+                    }
+                }
+            } catch(e) { console.log(e); }
+        }
+        
+        function closeNewsMini() {
+            document.getElementById("news-mini-add").style.display = "none";
+        }
+        
+        async function saveNewsMiniWord() {
+            const en = document.getElementById("news-mini-en").value.trim();
+            const zh = document.getElementById("news-mini-zh").value.trim();
+            const notes = document.getElementById("news-mini-notes").value.trim();
+            const pos = document.getElementById("news-mini-pos").value;
+            const book = document.getElementById("news-mini-book").value || books[0] || "預設單字本";
+            
+            if (!en || !zh) { showToast("單字與中文不可為空", "error"); return; }
+            
+            const btn = document.querySelector("#news-mini-add .btn-primary");
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+            
+            const payload = { action: "addWord", username: currentUser, book, english: en, chinese: zh, notes, pos };
+            try {
+                const response = await fetch(GAS_URL, { 
+                    method: "POST", 
+                    headers: { "Content-Type": "text/plain" }, 
+                    body: JSON.stringify(payload) 
+                });
+                const result = await response.json();
+                
+                if (result.status === "success") {
+                    showToast("單字儲存成功！");
+                    closeNewsMini();
+                    
+                    const newWord = { book, english: en, chinese: zh, notes, timestamp: new Date().toISOString(), nextReviewTime: 0, interval: 0, easeFactor: 2.5, pos };
+                    allWords.push(newWord);
+                    
+                    if(document.getElementById('sec-settings').classList.contains('active')) updateStatistics();
+                    updateDueCount();
+                    renderBooksList();
+                } else {
+                    showToast(`儲存失敗: ${result.message}`, "error");
+                }
+            } catch (error) {
+                showToast("連線錯誤或後端未回應", "error");
+            } finally {
+                btn.innerHTML = orig; btn.disabled = false;
+            }
+        }
+
+        // ================= 閃卡與 SRS 邏輯 =================
+        function startAllFlashcards() {
+            if (allWords.length === 0) { showToast("目前沒有單字！", "error"); return; }
+            currentViewBook = "ALL_BOOKS"; document.getElementById("header-title").innerText = "複習全部單字";
+            switchTab('sec-flashcard'); initFlashcard();
+        }
+
+        function startFlashcard() {
+            const bookWords = allWords.filter(w => w.book === currentViewBook);
+            if (bookWords.length === 0) { showToast("沒有單字喔！", "error"); return; }
+            switchTab('sec-flashcard'); initFlashcard();
+        }
+
+        function startDueFlashcards() {
+            const now = Date.now();
+            const dueWords = allWords.filter(w => !w.nextReviewTime || w.nextReviewTime <= now);
+            if (dueWords.length === 0) { showToast("太棒了！今日需複習的單字已經全部清空了 🎉", "success"); return; }
+            
+            currentViewBook = "DUE_WORDS"; document.getElementById("header-title").innerText = `SRS 需複習 (${dueWords.length})`;
+            switchTab('sec-flashcard'); initFlashcard();
+        }
+
+        function exitFlashcard() {
+            updateDueCount();
+            if (currentViewBook === "ALL_BOOKS" || currentViewBook === "DUE_WORDS") switchTab('sec-books'); else switchTab('sec-words');
+        }
+
+        function initFlashcard() {
+            let baseWords = [];
+            if (currentViewBook === "ALL_BOOKS") baseWords = allWords;
+            else if (currentViewBook === "DUE_WORDS") {
+                const now = Date.now(); baseWords = allWords.filter(w => !w.nextReviewTime || w.nextReviewTime <= now);
+                if(baseWords.length === 0) { showToast("複習完畢！", "success"); exitFlashcard(); return; }
+                document.getElementById("header-title").innerText = `SRS 需複習 (${baseWords.length})`;
+            }
+            else baseWords = allWords.filter(w => w.book === currentViewBook);
+
+            const order = document.getElementById("fc-order").value;
+            flashcards = order === "shuffle" ? [...baseWords].sort(() => Math.random() - 0.5) : [...baseWords];
+            currentFcIndex = 0; renderFlashcard();
+        }
+
+        function renderFlashcard() {
+            document.getElementById("flashcard-box").classList.remove("is-flipped");
+            isShowingAnswer = false;
+            
+            if (currentViewBook === "DUE_WORDS") {
+                document.getElementById("standard-controls").style.display = "none";
+                document.getElementById("srs-controls").style.display = "none"; 
+            } else {
+                document.getElementById("standard-controls").style.display = "grid";
+                document.getElementById("srs-controls").style.display = "none";
+            }
+
+            const word = flashcards[currentFcIndex];
+            const mode = document.getElementById("fc-mode").value;
+            document.getElementById("fc-counter").innerText = `${currentFcIndex + 1} / ${flashcards.length}`;
+            
+            const qEl = document.getElementById("fc-question");
+            const aEl = document.getElementById("fc-answer");
+            const nEl = document.getElementById("fc-notes");
+            const playBtn = document.getElementById("fc-play-btn");
+
+            setTimeout(() => {
+                if (mode === "en-zh") {
+                    qEl.innerHTML = `<h2 style="font-size:36px; font-weight:800; color:var(--text-main); margin-bottom:16px;">${word.english}</h2>`; 
+                    aEl.innerHTML = `<h3 style="font-size:26px; font-weight:700; color:var(--primary); margin-bottom:20px;">${word.chinese}</h3>`;
+                    currentFcWord = word.english; playBtn.style.display = "flex";
+                } else if (mode === "zh-en") {
+                    qEl.innerHTML = `<h2 style="font-size:36px; font-weight:800; color:var(--text-main); margin-bottom:16px;">${word.chinese}</h2>`; 
+                    aEl.innerHTML = `<h3 style="font-size:26px; font-weight:700; color:var(--primary); margin-bottom:20px;">${word.english}</h3>`;
+                    currentFcWord = word.english; playBtn.style.display = "none";
+                } else if (mode === "dictation") {
+                    const safeEn = word.english.replace(/'/g, "\\'");
+                    qEl.innerHTML = `
+                        <div style="font-size:16px; color:var(--text-muted); margin-bottom:20px;">請聽發音並輸入拼寫</div>
+                        <button class="btn-icon" style="margin:0 auto 24px auto; transform:scale(1.4);" onclick="event.stopPropagation(); playTTS('${safeEn}')"><i class="fas fa-volume-up"></i></button>
+                        <input type="text" id="dict-input" onclick="event.stopPropagation()" onkeypress="if(event.key==='Enter'){ flipCard(); this.blur(); }" style="text-align:center; font-size:22px; font-weight:700; letter-spacing:1px; border-color:var(--primary); box-shadow:0 4px 12px var(--primary-light);" placeholder="在此拼寫..." autocomplete="off">
+                    `;
+                    aEl.innerHTML = `<div>正在驗證...</div>`;
+                    currentFcWord = word.english; playBtn.style.display = "none";
+                    setTimeout(() => playTTS(word.english), 300);
+                    setTimeout(() => { const input = document.getElementById('dict-input'); if(input) input.focus(); }, 400);
+                }
+                
+                nEl.innerHTML = word.notes ? `<i class="fas fa-lightbulb" style="color:var(--primary); margin-right:6px;"></i> ${word.notes}` : "";
+                nEl.style.display = word.notes ? "block" : "none";
+            }, 150); 
+        }
+
+        function flipCard() {
+            if(isShowingAnswer) return;
+            isShowingAnswer = true;
+            document.getElementById("flashcard-box").classList.add("is-flipped");
+            
+            if (currentViewBook === "DUE_WORDS") document.getElementById("srs-controls").style.display = "grid";
+
+            const mode = document.getElementById("fc-mode").value;
+            if (mode === "dictation") {
+                const input = document.getElementById("dict-input");
+                const typed = input ? input.value.trim().toLowerCase() : "";
+                const correct = currentFcWord.trim().toLowerCase();
+                const aEl = document.getElementById("fc-answer");
+                
+                if (typed === correct) {
+                    aEl.innerHTML = `<div><i class="fas fa-check-circle" style="color:var(--success); font-size:48px; margin-bottom:16px;"></i><br><span style="font-size:32px; font-weight:800; color:var(--primary);">${currentFcWord}</span><br><span style="font-size:18px; color:var(--text-muted); margin-top:8px; display:block;">${flashcards[currentFcIndex].chinese}</span></div>`;
+                } else {
+                    aEl.innerHTML = `<div><i class="fas fa-times-circle" style="color:var(--danger); font-size:48px; margin-bottom:16px;"></i><br><span style="font-size:16px; color:var(--text-muted);">你的拼寫：</span><span style="text-decoration:line-through; color:var(--danger); font-size:18px; margin-bottom:10px; display:block;">${typed || "(未輸入)"}</span><span style="font-size:14px; color:var(--text-muted);">正確解答：</span><br><span style="font-size:32px; font-weight:800; color:var(--primary);">${currentFcWord}</span><br><span style="font-size:18px; color:var(--text-muted); margin-top:8px; display:block;">${flashcards[currentFcIndex].chinese}</span></div>`;
+                }
+            }
+            
+            setTimeout(() => playTTS(currentFcWord), 400); 
+        }
+
+        function nextCard(step) {
+            currentFcIndex += step;
+            if (currentFcIndex < 0) currentFcIndex = flashcards.length - 1;
+            if (currentFcIndex >= flashcards.length) currentFcIndex = 0;
+            renderFlashcard();
+        }
+
+        async function answerSRS(rating) {
+            const word = flashcards[currentFcIndex]; const now = Date.now();
+            let interval = word.interval || 0; let easeFactor = word.easeFactor || 2.5;
+            
+            if (rating === 'forget') { interval = 0; easeFactor = Math.max(1.3, easeFactor - 0.2); }
+            else if (rating === 'hard') { interval = interval === 0 ? 1 : interval * 1.2; easeFactor = Math.max(1.3, easeFactor - 0.15); }
+            else if (rating === 'easy') { interval = interval === 0 ? 4 : interval * easeFactor; easeFactor += 0.15; }
+            
+            word.interval = interval; word.easeFactor = easeFactor;
+            word.nextReviewTime = rating === 'forget' ? now + 600000 : now + (interval * 86400000);
+            
+            fetch(GAS_URL, {
+                method: "POST", headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify({ action: "updateSRS", username: currentUser, book: word.book, english: word.english, nextReviewTime: word.nextReviewTime, interval: word.interval, easeFactor: word.easeFactor })
+            }).catch(e => console.error("Update error, likely need to redeploy backend script."));
+            
+            flashcards.splice(currentFcIndex, 1);
+            if (flashcards.length === 0) { showToast("🎉 恭喜！今日複習任務完成！"); exitFlashcard(); } 
+            else { if (currentFcIndex >= flashcards.length) currentFcIndex = 0; renderFlashcard(); }
+        }
+    </script>
+</body>
+</html>
