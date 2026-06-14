@@ -1,0 +1,16 @@
+{
+  "name": "Vocab Pro",
+  "short_name": "VocabPro",
+  "start_url": "./vcl.html",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#4F46E5",
+  "icons": [
+    {
+      "src": "./icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+function getSpreadsheet() {
+  var spreadsheetId = ""; 
+  if (spreadsheetId) {
+    return SpreadsheetApp.openById(spreadsheetId);
+  }
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
+
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var action = data.action;
+    var username = data.username;
+    var ss = getSpreadsheet();
+    
+    if (!ss) throw new Error("找不到試算表！");
+    if (!username || username.toString().trim() === "") throw new Error("請提供帳號名稱！");
+
+    var sheetName = username.toString().trim();
+    var sheet = ss.getSheetByName(sheetName);
+    
+    if (action === "login") {
+      if (!sheet) {
+        sheet = ss.insertSheet(sheetName);
+        sheet.appendRow(["Book", "English", "Chinese", "Notes", "Timestamp", "NextReviewTime", "Interval", "EaseFactor", "POS"]);
+      }
+      return ContentService.createTextOutput(JSON.stringify({"status": "success", "message": "Login successful"})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (!sheet) throw new Error("找不到該使用者的資料庫工作表！");
+    
+    if (action === "addWord") {
+      sheet.appendRow([
+        data.book || "預設單字本", data.english || "", data.chinese || "", data.notes || "", 
+        new Date(), 0, 0, 2.5, data.pos || ""
+      ]);
+      return ContentService.createTextOutput(JSON.stringify({"status": "success"})).setMimeType(ContentService.MimeType.JSON);
+                           
+    } else if (action === "batchAddWords") {
+      var newRows = [];
+      var d = new Date();
+      for (var j = 0; j < data.words.length; j++) {
+        var w = data.words[j];
+        newRows.push([
+          w.book || "預設單字本", w.english || "", w.chinese || "", w.notes || "", 
+          d, 0, 0, 2.5, w.pos || ""
+        ]);
+      }
+      if (newRows.length > 0) {
+        var lastRow = sheet.getLastRow();
+        sheet.getRange(lastRow + 1, 1, newRows.length, 9).setValues(newRows);
+      }
+      return ContentService.createTextOutput(JSON.stringify({"status": "success"})).setMimeType(ContentService.MimeType.JSON);
+    } else if (action === "getData") {
+      var rows = sheet.getDataRange().getValues();
+      var words = [];
+      for (var i = 1; i < rows.length; i++) {
+        var row = rows[i];
+        words.push({
+          book: row[0] ? row[0].toString().trim() : "預設單字本",
+          english: row[1] ? row[1].toString().trim() : "",
+          chinese: row[2] ? row[2].toString().trim() : "",
+          notes: row[3] ? row[3].toString().trim() : "",
+          timestamp: row[4] ? row[4].toString() : "",
+          nextReviewTime: row[5] ? parseFloat(row[5]) : 0,
+          interval: row[6] ? parseFloat(row[6]) : 0,
+          easeFactor: row[7] ? parseFloat(row[7]) : 2.5,
+          pos: row[8] ? row[8].toString().trim() : ""
+        });
+      }
+      return ContentService.createTextOutput(JSON.stringify({"status": "success", "data": words})).setMimeType(ContentService.MimeType.JSON);
+      
+    } else if (action === "editWord") {
+      var range = sheet.getDataRange();
+      var rows = range.getValues();
+      var modified = false;
+      for (var i = rows.length - 1; i >= 1; i--) {
+        if (rows[i][0] == data.oldBook && rows[i][1] == data.oldEnglish) {
+          if (data.newBook !== undefined) rows[i][0] = data.newBook;
+          if (data.newEnglish !== undefined) rows[i][1] = data.newEnglish;
+          if (data.newChinese !== undefined) rows[i][2] = data.newChinese;
+          if (data.newNotes !== undefined) rows[i][3] = data.newNotes;
+          if (data.newPos !== undefined) rows[i][8] = data.newPos;
+          modified = true;
+          break;
+        }
+      }
+      if (modified) range.setValues(rows);
+      return ContentService.createTextOutput(JSON.stringify({"status": "success"})).setMimeType(ContentService.MimeType.JSON);
+      
+    } else if (action === "deleteWord" || action === "deleteBook") {
+      var rows = sheet.getDataRange().getValues();
+      var newRows = [rows[0]]; // header
+      for (var i = 1; i < rows.length; i++) {
+        if (action === "deleteWord" && rows[i][0] == data.book && rows[i][1] == data.english) continue;
+        if (action === "deleteBook" && rows[i][0] == data.book) continue;
+        newRows.push(rows[i]);
+      }
+      sheet.clearContents();
+      if (newRows.length > 0) {
+        sheet.getRange(1, 1, newRows.length, newRows[0].length).setValues(newRows);
+      }
+      return ContentService.createTextOutput(JSON.stringify({"status": "success"})).setMimeType(ContentService.MimeType.JSON);
+      
+    } else if (action === "updateSRS") {
+      var range = sheet.getDataRange();
+      var rows = range.getValues();
+      var modified = false;
+      for (var i = rows.length - 1; i >= 1; i--) {
+        if (rows[i][0] == data.book && rows[i][1] == data.english) {
+          rows[i][5] = data.nextReviewTime;
+          rows[i][6] = data.interval;
+          rows[i][7] = data.easeFactor;
+          if (data.pos !== undefined) rows[i][8] = data.pos;
+          modified = true;
+          break;
+        }
+      }
+      if (modified) range.setValues(rows);
+      return ContentService.createTextOutput(JSON.stringify({"status": "success"})).setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch(error) {
+    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": error.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doOptions(e) {
+  return ContentService.createTextOutput("").setMimeType(ContentService.MimeType.JSON);
+}
