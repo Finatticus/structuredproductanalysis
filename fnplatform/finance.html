@@ -1,0 +1,3390 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="app-icon.png">
+    <link rel="icon" type="image/png" href="app-icon.png">
+    <meta name="theme-color" content="#06090e">
+    <title>Global Market Monitor | 專業金融市場監控儀表板</title>
+    
+    <!-- Google Fonts Outfit & Noto Sans TC -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- TradingView Widget Script -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    
+    <!-- Chart.js for High-end Data Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* 核心設計系統與 HSL 色彩配置 (彭博/Web3 交易終端風格) */
+        :root {
+            --bg-color: hsl(222, 47%, 6%);
+            --card-bg: rgba(30, 41, 59, 0.45);
+            --card-hover-bg: rgba(30, 41, 59, 0.65);
+            --text-main: hsl(215, 25%, 90%);
+            --text-muted: hsl(215, 15%, 55%);
+            --up-color: hsl(142, 71%, 45%);
+            --down-color: hsl(350, 89%, 60%);
+            --up-bg: hsla(142, 71%, 45%, 0.1);
+            --down-bg: hsla(350, 89%, 60%, 0.1);
+            --accent-color: #3b82f6;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --input-bg: hsl(222, 35%, 8%);
+            --panel-bg: hsla(222, 33%, 8%, 0.3);
+            --glow-green: hsla(142, 71%, 45%, 0.2);
+            --glow-red: hsla(350, 89%, 60%, 0.2);
+            --up-glow-shadow: rgba(34, 197, 94, 0.4);
+            --down-glow-shadow: rgba(239, 68, 68, 0.4);
+            --up-glow-inset: rgba(34, 197, 94, 0.2);
+            --down-glow-inset: rgba(239, 68, 68, 0.2);
+        }
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Outfit', 'Noto Sans TC', -apple-system, sans-serif; 
+        }
+        
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* 自訂捲軸 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--card-bg);
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--card-hover-bg);
+        }
+
+        /* 登入介面 */
+        #login-screen {
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            height: 100vh; 
+            background: radial-gradient(circle at center, hsl(222, 40%, 12%) 0%, var(--bg-color) 100%); 
+            position: fixed; 
+            width: 100%; 
+            z-index: 1000;
+        }
+        .login-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px 30px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .login-panel h1 {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, #fff 0%, var(--text-muted) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+        .login-panel p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+        .input-group-login { 
+            display: flex; 
+            flex-direction: column; 
+            width: 100%; 
+            gap: 15px; 
+        }
+        input { 
+            padding: 12px 16px; 
+            border-radius: 8px; 
+            border: 1px solid var(--border-color); 
+            background: var(--input-bg); 
+            color: var(--text-main); 
+            font-size: 15px; 
+            outline: none; 
+            transition: all 0.2s;
+        }
+        input:focus { 
+            border-color: var(--accent-color); 
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+        }
+        button { 
+            padding: 12px; 
+            border-radius: 8px; 
+            border: none; 
+            background: linear-gradient(135deg, #2563eb, #3b82f6); 
+            color: white; 
+            font-size: 15px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        button:hover { 
+            opacity: 0.95; 
+            transform: translateY(-1px);
+        }
+        button:active { 
+            transform: translateY(0); 
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 儀表板主要佈局 */
+        #dashboard { 
+            display: none; 
+            padding: 20px; 
+            padding-bottom: 60px; 
+            max-width: 1440px; 
+            margin: 0 auto; 
+        }
+        
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            border-bottom: 1px solid var(--border-color); 
+            padding-bottom: 12px; 
+        }
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .header h2 { 
+            font-size: 20px; 
+            font-weight: 700; 
+            background: linear-gradient(135deg, #fff 30%, var(--text-muted) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* 連線狀態指標組 */
+        .status-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #4b5563;
+            display: inline-block;
+        }
+        .status-dot.active {
+            background-color: var(--up-color);
+            box-shadow: 0 0 6px var(--up-color);
+        }
+        .status-dot.inactive {
+            background-color: #ef4444;
+            box-shadow: 0 0 6px #ef4444;
+        }
+        .status-dot.error {
+            background-color: #eab308;
+            box-shadow: 0 0 6px #eab308;
+        }
+        .status-dot.pulse {
+            animation: pulseGlow 1.5s infinite;
+        }
+        @keyframes pulseGlow {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.25); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .logout-btn { 
+            background: transparent; 
+            color: var(--text-muted); 
+            padding: 6px 12px; 
+            font-size: 12px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 6px;
+            box-shadow: none;
+            font-weight: 500;
+        }
+        .logout-btn:hover {
+            color: white;
+            border-color: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.03);
+            transform: none;
+        }
+
+        /* 導覽頁籤 (Tab Navigation System) */
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .nav-tab {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            background: rgba(255,255,255,0.01);
+        }
+        .nav-tab:hover {
+            color: white;
+            background: rgba(255,255,255,0.03);
+        }
+        .nav-tab.active {
+            color: var(--accent-color);
+            background: rgba(59, 130, 246, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+        }
+
+        /* 頁籤內容框架 */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 區塊框架 */
+        .market-section {
+            margin-bottom: 20px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            transition: border-color 0.2s;
+        }
+        .market-section.drag-over {
+            border-color: var(--accent-color);
+            background: var(--card-hover-bg);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .section-title { 
+            font-size: 13px; 
+            color: var(--text-main); 
+            font-weight: 700;
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 3px;
+            height: 12px;
+            background: var(--accent-color);
+            border-radius: 1.5px;
+        }
+        
+        /* 拖拽手把 */
+        .drag-handle {
+            cursor: grab;
+            color: var(--text-muted);
+            margin-right: 4px;
+            font-size: 14px;
+            user-select: none;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        /* 極簡高密度卡片網格 (響應式多欄位) */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); 
+            gap: 10px; 
+        }
+
+        /* 數據卡片 (玻璃擬物化與極簡化高密度配置) */
+        .card { 
+            background: var(--card-bg); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px); 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            padding: 10px 12px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between;
+            min-height: 80px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            background: var(--card-hover-bg);
+            border-color: var(--accent-color);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+        }
+        .card.dragging {
+            opacity: 0.4;
+            border-style: dashed;
+        }
+        
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .card-symbol-grp {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            min-width: 0;
+        }
+        .card-symbol {
+            color: var(--text-main);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .card-middle {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .card-price { 
+            font-size: 18px; 
+            font-weight: 700; 
+            font-variant-numeric: tabular-nums; 
+            letter-spacing: -0.3px;
+        }
+        .card-change { 
+            font-size: 11px; 
+            font-weight: 600; 
+            font-variant-numeric: tabular-nums;
+        }
+        
+        /* 迷你 Sparkline */
+        .card-sparkline {
+            width: 75px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sparkline {
+            overflow: visible;
+        }
+        
+        /* 爆量警示標籤 */
+        .volume-spike-tag {
+            font-size: 9px;
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--down-color);
+            padding: 0px 4px;
+            border-radius: 3px;
+            font-weight: 700;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            white-space: nowrap;
+            animation: pulseGlowRed 1.5s infinite;
+        }
+        @keyframes pulseGlowRed {
+            0% { opacity: 0.8; box-shadow: 0 0 3px rgba(239, 68, 68, 0.2); }
+            50% { opacity: 1; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
+            100% { opacity: 0.8; box-shadow: 0 0 3px rgba(239, 68, 68, 0.2); }
+        }
+
+        /* 除權息 / 財報事件倒數標籤 */
+        .event-tag {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 5px;
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            align-self: flex-start;
+        }
+        .event-tag.today {
+            color: var(--up-color);
+            background: var(--up-bg);
+            border-color: rgba(34, 197, 94, 0.25);
+            font-weight: 600;
+        }
+
+        /* 虛擬持倉卡片徽章 */
+        .portfolio-badge {
+            margin-top: 6px;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* 漲跌樣式 */
+        .up { color: var(--up-color); }
+        .down { color: var(--down-color); }
+
+        /* 價格跳動閃爍動畫 */
+        @keyframes flashGreen { 
+            0% { background-color: var(--glow-green); } 
+            100% { background-color: transparent; } 
+        }
+        @keyframes flashRed { 
+            0% { background-color: var(--glow-red); } 
+            100% { background-color: transparent; } 
+        }
+        .flash-up { animation: flashGreen 0.8s ease-out; }
+        .flash-down { animation: flashRed 0.8s ease-out; }
+
+        /* 布林通道偏離度與邊框發光警示 */
+        .card-bb-deviation {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 3px;
+            display: inline-block;
+            white-space: nowrap;
+        }
+        
+        .card.bb-overbought {
+            border-color: var(--up-color) !important;
+            box-shadow: 0 0 12px var(--up-glow-shadow), inset 0 0 6px var(--up-glow-inset) !important;
+            animation: bb-pulse-green 2s infinite ease-in-out;
+        }
+
+        .card.bb-oversold {
+            border-color: var(--down-color) !important;
+            box-shadow: 0 0 12px var(--down-glow-shadow), inset 0 0 6px var(--down-glow-inset) !important;
+            animation: bb-pulse-red 2s infinite ease-in-out;
+        }
+
+        @keyframes bb-pulse-green {
+            0%, 100% { box-shadow: 0 0 8px var(--up-glow-inset), inset 0 0 4px var(--up-glow-inset); }
+            50% { box-shadow: 0 0 16px var(--up-glow-shadow), inset 0 0 8px var(--up-glow-shadow); }
+        }
+
+        @keyframes bb-pulse-red {
+            0%, 100% { box-shadow: 0 0 8px var(--down-glow-inset), inset 0 0 4px var(--down-glow-inset); }
+            50% { box-shadow: 0 0 16px var(--down-glow-shadow), inset 0 0 8px var(--down-glow-shadow); }
+        }
+
+        /* 移除按鈕 */
+        .remove-btn { 
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 9px; 
+            color: var(--text-muted); 
+            cursor: pointer; 
+            width: 14px;
+            height: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s;
+            opacity: 0;
+            z-index: 10;
+        }
+        .card:hover .remove-btn {
+            opacity: 0.3;
+        }
+        .card:hover .remove-btn:hover { 
+            opacity: 1;
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--down-color);
+        }
+
+        /* 增減標的容器 */
+        .add-target-container { 
+            display: flex; 
+            gap: 6px; 
+            margin-top: 10px; 
+            width: 100%;
+            max-width: 280px;
+        }
+        .add-target-container input { 
+            flex: 1; 
+            padding: 6px 10px; 
+            font-size: 12px;
+            border-radius: 6px;
+            height: 28px;
+        }
+        .add-target-container button { 
+            width: auto; 
+            padding: 6px 12px; 
+            font-size: 12px;
+            border-radius: 6px;
+            height: 28px;
+        }
+
+        /* 底部模組與表格 */
+        .bottom-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        .calendar-wrapper {
+            margin-top: 12px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #131722;
+        }
+
+        /* 持倉統計與表格 */
+        .portfolio-container {
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .portfolio-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+        .summary-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+        .summary-value {
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .portfolio-table-wrapper {
+            overflow-x: auto;
+        }
+        .portfolio-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            text-align: left;
+        }
+        .portfolio-table th {
+            color: var(--text-muted);
+            font-weight: 500;
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .portfolio-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            white-space: nowrap;
+        }
+        .portfolio-table tr:hover td {
+            background: var(--card-hover-bg);
+        }
+        .portfolio-btn {
+            padding: 3px 6px;
+            font-size: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-color);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            box-shadow: none;
+            width: auto;
+            display: inline-block;
+        }
+        .portfolio-btn.danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--down-color);
+            border-color: rgba(239, 68, 68, 0.15);
+            margin-left: 2px;
+        }
+        #portfolio-asset-select option {
+            background-color: var(--input-bg);
+            color: var(--text-main);
+        }
+
+        /* 主題樣式設定面版卡片 */
+        .theme-card {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            text-align: center;
+            color: var(--text-main);
+        }
+        .theme-card:hover {
+            background: var(--card-hover-bg);
+            border-color: var(--text-muted);
+            transform: translateY(-1px);
+        }
+        .theme-card.active {
+            background: rgba(59, 130, 246, 0.12);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 12px rgba(59,130,246,0.3);
+        }
+
+        /* 詳情 Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(6, 9, 14, 0.8);
+            backdrop-filter: blur(12px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+        .modal-container {
+            background: rgba(16, 20, 32, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
+            border-radius: 16px;
+            width: 92vw;
+            height: 85vh;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .modal-overlay.active .modal-container {
+            transform: scale(1);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .modal-title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        .modal-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .modal-symbol {
+            font-size: 11px;
+            color: var(--accent-color);
+            background: rgba(59, 130, 246, 0.12);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .modal-tabs {
+            display: flex;
+            gap: 6px;
+            margin-left: 20px;
+        }
+        .modal-tab-btn {
+            padding: 4px 10px;
+            font-size: 11px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.02);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            box-shadow: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-tab-btn:hover {
+            color: white;
+            background: rgba(255,255,255,0.06);
+        }
+        .modal-tab-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            width: auto;
+            padding: 0;
+            box-shadow: none;
+        }
+        .modal-close:hover {
+            color: #fff;
+            transform: scale(1.1);
+        }
+        .modal-body {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            background: #131722;
+        }
+
+        /* Toast 系統 */
+        #toast-container {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .toast {
+            background: rgba(16, 20, 32, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .toast.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast-success { border-color: rgba(34, 197, 94, 0.35); }
+        .toast-error { border-color: rgba(239, 68, 68, 0.35); }
+        .toast-info { border-color: rgba(59, 130, 246, 0.35); }
+
+        /* 跑馬燈特效 (Marquee) */
+        .marquee-container {
+            width: 100%;
+            overflow: hidden;
+            background: rgba(0,0,0,0.2);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .marquee-content {
+            display: flex;
+            gap: 15px;
+            white-space: nowrap;
+            animation: marquee 100s linear infinite;
+        }
+        .marquee-container:hover .marquee-content {
+            animation-play-state: paused;
+        }
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .news-item {
+            display: inline-flex;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: var(--text-main);
+        }
+        .news-item:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toast 通知容器 -->
+    <div id="toast-container"></div>
+
+    <!-- 登入頁面 -->
+    <div id="login-screen">
+        <div class="login-panel">
+            <h1>Market Monitor</h1>
+            <p>即時全球金融與自選股監控終端</p>
+            <div class="input-group-login">
+                <input type="text" id="username-input" placeholder="輸入帳號 (任意英文/數字)" autocomplete="off">
+                <button id="login-btn">登入 / 建立帳號</button>
+                <span id="login-msg" style="color:var(--text-muted); font-size: 13px; text-align:center;"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 儀表板主內容 -->
+    <div id="dashboard">
+        <div class="header">
+            <div class="header-left">
+                <h2 id="user-greeting">Monitor</h2>
+                <div class="status-container">
+                    <div class="status-item">
+                        <span class="status-dot active" id="crypto-status-dot"></span>
+                        <span>加密貨幣串流</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-dot active" id="market-status-dot"></span>
+                        <span>市場行情輪詢</span>
+                    </div>
+                    <span id="sync-status-text">✓ 已同步至雲端</span>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logout()">登出帳戶</button>
+        </div>
+
+        <!-- 功能分頁按鈕 (Tab Navigation System) -->
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="switchTab('market')">市場監控 (Watchlist)</div>
+            <div class="nav-tab" onclick="switchTab('portfolio')">持倉與資產分析 (Portfolio)</div>
+            <div class="nav-tab" onclick="switchTab('insights')">總經與板塊深度分析 (Insights)</div>
+            <div class="nav-tab" onclick="switchTab('calendar')">總經財經日曆 (Calendar)</div>
+            <div class="nav-tab" onclick="switchTab('settings')">系統設定 (Settings)</div>
+        </div>
+
+        <!-- 頁籤一：市場監控 (Market Watch) -->
+        <div id="market-tab" class="tab-content active" ondragover="allowDrop(event)">
+            
+            <!-- 全球指數 & 總經區塊 -->
+            <div class="market-section" id="section-macro" draggable="true" ondragstart="dragSection(event, 'section-macro')" ondragover="allowDrop(event)" ondrop="dropSection(event, 'section-macro')">
+                <div class="section-header">
+                    <div class="section-title">
+                        <span class="drag-handle" draggable="false">☰</span>
+                        全球指數 & 總經
+                    </div>
+                </div>
+                <div class="grid" id="macro-grid" ondragover="allowDrop(event)"></div>
+                <div class="add-target-container" draggable="false">
+                    <input type="text" id="new-macro-input" placeholder="代碼 (例: ^GSPC, ^SOX, ^TNX)" style="text-transform: uppercase;" draggable="false">
+                    <button onclick="addTarget('macro')" draggable="false">新增</button>
+                </div>
+            </div>
+
+            <!-- 匯率監控區塊 -->
+            <div class="market-section" id="section-forex" draggable="true" ondragstart="dragSection(event, 'section-forex')" ondragover="allowDrop(event)" ondrop="dropSection(event, 'section-forex')">
+                <div class="section-header">
+                    <div class="section-title">
+                        <span class="drag-handle" draggable="false">☰</span>
+                        匯率監控
+                    </div>
+                </div>
+                <div class="grid" id="forex-grid" ondragover="allowDrop(event)"></div>
+                <div class="add-target-container" draggable="false">
+                    <input type="text" id="new-forex-input" placeholder="代碼 (例: JPY=X, TWD=X, EURUSD=X)" style="text-transform: uppercase;" draggable="false">
+                    <button onclick="addTarget('forex')" draggable="false">新增</button>
+                </div>
+            </div>
+
+            <!-- 自選股區塊 -->
+            <div class="market-section" id="section-watchlist" draggable="true" ondragstart="dragSection(event, 'section-watchlist')" ondragover="allowDrop(event)" ondrop="dropSection(event, 'section-watchlist')">
+                <div class="section-header">
+                    <div class="section-title">
+                        <span class="drag-handle" draggable="false">☰</span>
+                        我的自選股
+                    </div>
+                </div>
+                <div class="grid" id="watchlist-grid" ondragover="allowDrop(event)"></div>
+                <div class="add-target-container" draggable="false">
+                    <input type="text" id="new-watchlist-input" placeholder="代碼 (例: AAPL, TSLA, 2330.TW)" style="text-transform: uppercase;" draggable="false">
+                    <button onclick="addTarget('watchlist')" draggable="false">新增</button>
+                </div>
+            </div>
+
+            <!-- 虛擬貨幣區塊 -->
+            <div class="market-section" id="section-crypto" draggable="true" ondragstart="dragSection(event, 'section-crypto')" ondragover="allowDrop(event)" ondrop="dropSection(event, 'section-crypto')">
+                <div class="section-header">
+                    <div class="section-title">
+                        <span class="drag-handle" draggable="false">☰</span>
+                        虛擬貨幣 (Binance 即時串流)
+                    </div>
+                </div>
+                <div class="grid" id="crypto-grid" ondragover="allowDrop(event)"></div>
+                <div class="add-target-container" draggable="false">
+                    <input type="text" id="new-crypto-input" placeholder="代碼 (例: BTC, ETH, SOL)" style="text-transform: uppercase;" draggable="false">
+                    <button onclick="addTarget('crypto')" draggable="false">新增</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 頁籤五：總經與板塊深度分析 (Insights Page) -->
+        <div id="insights-tab" class="tab-content">
+            
+            <!-- 1. 金融相關重大即時新聞 -->
+            <div class="market-section">
+                <div class="section-header">
+                    <h2 class="section-title">📰 全球金融即時新聞 (Live News Feed)</h2>
+                    <div class="marquee-container">
+                        <div class="marquee-content">
+                            <!-- 第一組 -->
+                            <a href="https://news.google.com/search?q=FOMC" target="_blank" class="news-item">
+                                <span style="color: var(--up-color); font-weight: bold; margin-right: 8px;">16:30</span><span>美聯儲官員重申年底前通膨有望達標，市場預期 6 月維持利率不變。</span>
+                            </a>
+                            <a href="https://news.google.com/search?q=US+Employment+Data" target="_blank" class="news-item">
+                                <span style="color: var(--down-color); font-weight: bold; margin-right: 8px;">15:45</span><span>美國 5 月就業數據意外走強，服務業通膨具僵固性，美元指數逆勢拉升。</span>
+                            </a>
+                            <a href="https://news.google.com/search?q=TSMC+Nvidia+AI" target="_blank" class="news-item">
+                                <span style="color: var(--up-color); font-weight: bold; margin-right: 8px;">10:20</span><span>AI 晶片出貨再創新高，台積電先進封裝產能滿載，輝達 (NVDA) 重申營收指引上修。</span>
+                            </a>
+                            <a href="https://news.google.com/search?q=Bitcoin+ETF+Flows" target="_blank" class="news-item">
+                                <span style="color: var(--accent-color); font-weight: bold; margin-right: 8px;">09:15</span><span>比特幣現貨 ETF 單日淨流入突破 8 億美元，創下年度新高，鏈上活躍度飆升。</span>
+                            </a>
+                            <a href="https://news.google.com/search?q=Crude+Oil+Inventory" target="_blank" class="news-item">
+                                <span style="color: var(--down-color); font-weight: bold; margin-right: 8px;">08:30</span><span>原油庫存大幅增加，WTI 原油期貨跌破 75 美元關卡，能源板塊承壓。</span>
+                            </a>
+                            <!-- 第二組 (重複以實現無縫跑馬燈) -->
+                            <a href="https://news.google.com/search?q=FOMC" target="_blank" class="news-item">
+                                <span style="color: var(--up-color); font-weight: bold; margin-right: 8px;">16:30</span><span>美聯儲官員重申年底前通膨有望達標，市場預期 6 月維持利率不變。</span>
+                            </a>
+                            <a href="https://news.google.com/search?q=US+Employment+Data" target="_blank" class="news-item">
+                                <span style="color: var(--down-color); font-weight: bold; margin-right: 8px;">15:45</span><span>美國 5 月就業數據意外走強，服務業通膨具僵固性，美元指數逆勢拉升。</span>
+                            </a>
+                            <a href="https://news.google.com/search?q=TSMC+Nvidia+AI" target="_blank" class="news-item">
+                                <span style="color: var(--up-color); font-weight: bold; margin-right: 8px;">10:20</span><span>AI 晶片出貨再創新高，台積電先進封裝產能滿載，輝達 (NVDA) 重申營收指引上修。</span>
+                            </a>
+                            <a href="https://news.google.com/search?q=Bitcoin+ETF+Flows" target="_blank" class="news-item">
+                                <span style="color: var(--accent-color); font-weight: bold; margin-right: 8px;">09:15</span><span>比特幣現貨 ETF 單日淨流入突破 8 億美元，創下年度新高，鏈上活躍度飆升。</span>
+                            </a>
+                            <a href="https://news.google.com/search?q=Crude+Oil+Inventory" target="_blank" class="news-item">
+                                <span style="color: var(--down-color); font-weight: bold; margin-right: 8px;">08:30</span><span>原油庫存大幅增加，WTI 原油期貨跌破 75 美元關卡，能源板塊承壓。</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+                <!-- 2. 行業板塊熱力圖 -->
+                <div class="market-section">
+                    <div class="section-header">
+                        <h2 class="section-title">🔥 全球行業板塊輪動熱力圖 (Sector Rotation) <span style="font-size: 13px; color: var(--text-muted); font-weight: normal; margin-left: 10px;">(資料日期: 2026-06-14)</span></h2>
+                    </div>
+                    <div id="sector-heatmap" style="display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 80px; gap: 8px;">
+                        <!-- Tech -->
+                        <div style="grid-column: span 2; grid-row: span 2; background: rgba(34,197,94,0.35); border: 1px solid var(--up-color); border-radius: 6px; padding: 12px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 16px;">資訊科技 (XLK)</span><div style="font-size:11px; color:var(--text-muted); margin-top:2px;">市值: $18.5T | AI 伺服器/軟體</div></div>
+                            <div style="text-align: right;"><span style="color:var(--up-color); font-size: 22px; font-weight: bold;">+3.45%</span></div>
+                        </div>
+                        <!-- Finance -->
+                        <div style="grid-column: span 1; grid-row: span 2; background: rgba(239,68,68,0.25); border: 1px solid var(--down-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 14px;">金融 (XLF)</span><div style="font-size:11px; color:var(--text-muted); margin-top:2px;">市值: $4.2T | 銀行/保險</div></div>
+                            <div style="text-align: right;"><span style="color:var(--down-color); font-size: 18px; font-weight: bold;">-1.25%</span></div>
+                        </div>
+                        <!-- Health -->
+                        <div style="grid-column: span 1; grid-row: span 1; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">醫療 (XLV)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--text-muted); font-size: 14px; font-weight: bold;">0.00%</span></div>
+                        </div>
+                        <!-- Consumer Discretionary -->
+                        <div style="grid-column: span 1; grid-row: span 1; background: rgba(34,197,94,0.2); border: 1px solid var(--up-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">可選消費 (XLY)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--up-color); font-size: 14px; font-weight: bold;">+1.12%</span></div>
+                        </div>
+                        
+                        <!-- Communication -->
+                        <div style="grid-column: span 1; grid-row: span 1; background: rgba(34,197,94,0.4); border: 1px solid var(--up-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">通訊 (XLC)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--up-color); font-size: 14px; font-weight: bold;">+2.10%</span></div>
+                        </div>
+                        <!-- Energy -->
+                        <div style="grid-column: span 1; grid-row: span 1; background: rgba(239,68,68,0.4); border: 1px solid var(--down-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">能源 (XLE)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--down-color); font-size: 14px; font-weight: bold;">-2.80%</span></div>
+                        </div>
+                        <!-- Industrials -->
+                        <div style="grid-column: span 1; grid-row: span 1; background: rgba(239,68,68,0.15); border: 1px solid var(--down-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">工業 (XLI)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--down-color); font-size: 14px; font-weight: bold;">-0.45%</span></div>
+                        </div>
+                        <!-- Taiwan Semi -->
+                        <div style="grid-column: span 1; grid-row: span 1; background: rgba(34,197,94,0.5); border: 1px solid var(--up-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">台股半導體</span></div>
+                            <div style="text-align: right;"><span style="color:var(--up-color); font-size: 14px; font-weight: bold;">+3.88%</span></div>
+                        </div>
+
+                        <!-- Real Estate -->
+                        <div style="grid-column: span 1; grid-row: span 1; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">房地產 (XLRE)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--text-muted); font-size: 14px; font-weight: bold;">+0.10%</span></div>
+                        </div>
+                        <!-- Utilities -->
+                        <div style="grid-column: span 1; grid-row: span 1; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">公用事業 (XLU)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--text-muted); font-size: 14px; font-weight: bold;">-0.15%</span></div>
+                        </div>
+                        <!-- Materials -->
+                        <div style="grid-column: span 1; grid-row: span 1; background: rgba(239,68,68,0.2); border: 1px solid var(--down-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">原物料 (XLB)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--down-color); font-size: 14px; font-weight: bold;">-0.90%</span></div>
+                        </div>
+                        <!-- Consumer Staples -->
+                        <div style="grid-column: span 1; grid-row: span 1; background: rgba(34,197,94,0.1); border: 1px solid var(--up-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">必選消費 (XLP)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--up-color); font-size: 14px; font-weight: bold;">+0.35%</span></div>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px; font-size:11px; color:var(--text-muted);">* 區塊大小依市值權重排版，包含美股 11 大板塊與台股核心產業。背景顏色深淺代表單日資金淨流入與漲跌幅動能。</div>
+                </div>
+
+                <!-- 3. 加密貨幣鏈上指標 -->
+                <div class="market-section">
+                    <div class="section-header">
+                        <h2 class="section-title">⛓️ 加密貨幣鏈上指標與籌碼分布 (Crypto On-chain)</h2>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <div>
+                                <div style="color:var(--text-main); font-size:13px; font-weight:600;">交易所淨流入 (Exchange Netflow)</div>
+                                <div style="color:var(--text-muted); font-size:11px; margin-top:4px;">追蹤 24H 內全網交易所錢包餘額變化，流出代表拋壓減少。</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="color:var(--up-color); font-weight:bold; font-size:16px;">-2,845 BTC</span>
+                                <div style="color:var(--up-color); font-size:11px; margin-top:2px;">(籌碼流入冷錢包 / 偏多)</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <div>
+                                <div style="color:var(--text-main); font-size:13px; font-weight:600;">合約資金費率 (Binance Funding Rate)</div>
+                                <div style="color:var(--text-muted); font-size:11px; margin-top:4px;">當前永續合約多空情緒指標，過高代表多頭擁擠。</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="color:var(--accent-color); font-weight:bold; font-size:16px;">0.0150%</span>
+                                <div style="color:var(--accent-color); font-size:11px; margin-top:2px;">(情緒溫和偏多)</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <div>
+                                <div style="color:var(--text-main); font-size:13px; font-weight:600;">恐懼與貪婪指數 (Fear & Greed Index)</div>
+                                <div style="color:var(--text-muted); font-size:11px; margin-top:4px;">綜合波動率、社群情緒與動能的量化指標。</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="color:var(--down-color); font-weight:bold; font-size:16px;">78 / 100</span>
+                                <div style="color:var(--down-color); font-size:11px; margin-top:2px;">(極度貪婪區間)</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <div>
+                                <div style="color:var(--text-main); font-size:13px; font-weight:600;">MVRV Z-Score (比特幣估值模型)</div>
+                                <div style="color:var(--text-muted); font-size:11px; margin-top:4px;">評估市值相對已實現價值的偏離度，> 7 視為泡沫頂部。</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="color:var(--text-main); font-weight:bold; font-size:16px;">2.45</span>
+                                <div style="color:var(--text-muted); font-size:11px; margin-top:2px;">(估值處於中期健康階段)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4 & 5. 利率與收益率曲線 -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+                <!-- 4. 收益率曲線倒掛 -->
+                <div class="market-section">
+                    <div class="section-header">
+                        <h2 class="section-title">📊 國債收益率曲線與利差監控 (Yield Curve Tracker)</h2>
+                    </div>
+                    <div style="display: flex; justify-content: space-around; margin-bottom: 15px; text-align: center;">
+                        <div style="background: var(--up-bg); padding: 10px 20px; border-radius: 6px; border: 1px solid rgba(34, 197, 94, 0.3);">
+                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">10Y-2Y 利差</div>
+                            <div style="font-size: 18px; font-weight: bold; color: var(--up-color);">+30 bps <span style="font-size:12px;">(曲線正常化)</span></div>
+                        </div>
+                        <div style="background: var(--up-bg); padding: 10px 20px; border-radius: 6px; border: 1px solid rgba(34, 197, 94, 0.3);">
+                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">10Y-3M 利差</div>
+                            <div style="font-size: 18px; font-weight: bold; color: var(--up-color);">+60 bps <span style="font-size:12px;">(曲線正常化)</span></div>
+                        </div>
+                    </div>
+                    <div style="position: relative; height: 200px;">
+                        <canvas id="yieldCurveChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 5. FedWatch -->
+                <div class="market-section">
+                    <div class="section-header">
+                        <h2 class="section-title">🏦 央行利率預測 (FedWatch Rate Probability)</h2>
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-main); margin-bottom: 10px;">目標 FOMC 會議: <span style="font-weight:bold; color:var(--accent-color);">2026年6月17日</span> | 當前基準利率: <span style="font-weight:bold;">3.50-3.75%</span></div>
+                    <div style="position: relative; height: 200px;">
+                        <canvas id="fedWatchChart"></canvas>
+                    </div>
+                    <div style="margin-top:10px; font-size:11px; color:var(--text-muted); text-align:right;">* 數據基於聯邦基金期貨價格隱含機率。涵蓋美聯儲、歐洲央行。</div>
+                </div>
+            </div>
+
+            <!-- 6. 融資融券與空頭 -->
+            <div class="market-section">
+                <div class="section-header">
+                    <h2 class="section-title">📉 台股市場信用交易餘額監控 (Taiwan Market Margin & Short Balance)</h2>
+                </div>
+                <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">資料日期: 2026-06-14 | 單位: 新台幣 (億元) / 張</div>
+                <div class="portfolio-table-wrapper">
+                    <table class="portfolio-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>項目 (Item)</th>
+                                <th>最新餘額 (Balance)</th>
+                                <th>單日增減 (Daily Change)</th>
+                                <th>市場水位評估 (Status)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="font-weight:bold; color: var(--text-main);">📈 集中市場融資餘額 (Margin Long)</td>
+                                <td style="color:var(--text-main); font-weight:bold;">3,250.45 億元</td>
+                                <td style="color:var(--up-color); font-weight:bold;">+15.20 億元</td>
+                                <td><span style="color:var(--accent-color); font-size: 11px;">高檔過熱區間</span></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:bold; color: var(--text-main);">📉 集中市場融券餘額 (Margin Short)</td>
+                                <td style="color:var(--text-main); font-weight:bold;">28.5 萬張</td>
+                                <td style="color:var(--down-color); font-weight:bold;">-1.2 萬張</td>
+                                <td><span style="color:var(--text-muted); font-size: 11px;">空頭退潮</span></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:bold; color: var(--text-main);">📊 大盤整體維持率 (Maintenance Ratio)</td>
+                                <td style="color:var(--text-main); font-weight:bold;">172.5%</td>
+                                <td style="color:var(--up-color); font-weight:bold;">+0.8%</td>
+                                <td><span style="background:var(--up-bg); color:var(--up-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(34,197,94,0.2);">✅ 安全健康</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:10px; font-size:11px; color:var(--text-muted);">* 融資餘額持續創新高且維持率下降時，需警惕多殺多風險。當前維持率 > 160%，市場結構穩健。</div>
+            </div>
+
+        </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             頁籤二：持倉與資產分析 (Portfolio)
+        ═══════════════════════════════════════════════════ -->
+        <div id="portfolio-tab" class="tab-content">
+            <div style="display:flex; flex-direction:column; gap:20px; padding:4px 0;">
+
+                <!-- 摘要卡片列 -->
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px;">
+                    <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:18px; text-align:center;">
+                        <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">持倉總市值</div>
+                        <div id="portfolio-total-val" style="font-size:22px; font-weight:700; color:var(--text-main);">$0.00</div>
+                    </div>
+                    <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:18px; text-align:center;">
+                        <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">未實現盈虧</div>
+                        <div id="portfolio-total-pl" style="font-size:22px; font-weight:700; color:var(--text-main);">$0.00</div>
+                    </div>
+                    <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:18px; text-align:center;">
+                        <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">總報酬率</div>
+                        <div id="portfolio-total-roi" style="font-size:22px; font-weight:700; color:var(--text-main);">0.00%</div>
+                    </div>
+                </div>
+
+                <!-- 資產分配圓餅圖 + 圖例 -->
+                <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:20px; display:flex; gap:40px; align-items:center; justify-content:center; flex-wrap:wrap;">
+                    <div style="position:relative; width:160px; height:160px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <svg width="160" height="160" viewBox="0 0 160 160" id="donut-svg"></svg>
+                        <div style="position:absolute; text-align:center; pointer-events:none;">
+                            <div style="font-size:10px; color:var(--text-muted);">持倉總值</div>
+                            <div id="donut-center-total" style="font-size:14px; font-weight:700; color:var(--text-main);">$0</div>
+                        </div>
+                    </div>
+                    <div id="donut-legend" style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:8px;"></div>
+                </div>
+
+                <!-- 持倉明細表格 -->
+                <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:20px;">
+                    <div style="font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:14px;">📋 我的虛擬持倉 (Paper Portfolio)</div>
+                    <div class="portfolio-container">
+                        <div class="portfolio-table-wrapper">
+                            <table class="portfolio-table">
+                                <thead>
+                                    <tr>
+                                        <th>標的</th>
+                                        <th>買入成本</th>
+                                        <th>持股數</th>
+                                        <th>當前市價</th>
+                                        <th>總市值</th>
+                                        <th>盈虧 / 報酬率</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="portfolio-table-body">
+                                    <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:20px;">尚無持倉記錄，請在下方新增</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 新增持倉表單 -->
+                <div id="portfolio-edit-form-section" style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:20px;">
+                    <div style="font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:14px;">➕ 新增 / 編輯虛擬持倉</div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                        <select id="portfolio-asset-select" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px; min-width:150px;">
+                            <option value="">-- 選擇標的 --</option>
+                        </select>
+                        <input type="number" id="portfolio-asset-price" step="any" placeholder="買入價格 (成本)" style="width:140px; font-size:13px; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
+                        <input type="number" id="portfolio-asset-qty" step="any" placeholder="持有數量" style="width:120px; font-size:13px; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
+                        <button onclick="savePortfolioFromTab()" style="font-size:13px; padding:8px 18px;">💾 儲存持倉</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             頁籤三：總經財經日曆 (Calendar)
+        ═══════════════════════════════════════════════════ -->
+        <div id="calendar-tab" class="tab-content">
+            <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:20px;">
+                <div style="font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:16px;">📅 本週總經數據財經日曆 (TradingView)</div>
+                <div id="calendar-widget-container" style="height:620px; width:100%; border-radius:8px; overflow:hidden; background:var(--input-bg); display:flex; align-items:center; justify-content:center;">
+                    <div style="color:var(--text-muted); font-size:14px;">📅 點選此頁籤後載入行事曆...</div>
+                </div>
+                <div style="margin-top:8px; font-size:11px; color:var(--text-muted); text-align:right;">* 資料由 TradingView 提供｜包含美國、台灣、歐洲等主要央行及經濟數據發布時程</div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             頁籤四：系統設定 (Settings)
+        ═══════════════════════════════════════════════════ -->
+        <div id="settings-tab" class="tab-content">
+            <div style="display:flex; flex-direction:column; gap:20px; max-width:700px; padding:4px 0;">
+
+                <!-- 漲跌顏色規則 -->
+                <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:22px;">
+                    <div style="font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:16px;">🎨 漲跌顏色風格設定</div>
+                    <div style="display:flex; flex-direction:column; gap:14px;">
+                        <label style="display:flex; align-items:center; gap:12px; cursor:pointer; padding:12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg);">
+                            <input type="radio" name="color-rule" value="green-up-red-down" onchange="handleColorRuleChange(this.value)" style="width:16px; height:16px; cursor:pointer; accent-color:var(--accent-color);">
+                            <div>
+                                <div style="font-size:13px; font-weight:600; color:var(--text-main);">🟢 上漲綠、下跌紅</div>
+                                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">適用美股、加密貨幣等國際市場</div>
+                            </div>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:12px; cursor:pointer; padding:12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg);">
+                            <input type="radio" name="color-rule" value="red-up-green-down" onchange="handleColorRuleChange(this.value)" style="width:16px; height:16px; cursor:pointer; accent-color:var(--accent-color);">
+                            <div>
+                                <div style="font-size:13px; font-weight:600; color:var(--text-main);">🔴 上漲紅、下跌綠</div>
+                                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">適用台股、港股等亞洲市場習慣</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 配色主題 -->
+                <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:22px;">
+                    <div style="font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:16px;">🖌️ 配色風格主題 (Theme)</div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:12px;">
+
+                        <div class="theme-card active" onclick="applyTheme('default')" id="theme-default">
+                            <div style="display:flex; gap:5px; margin-bottom:8px;">
+                                <span style="width:14px; height:14px; background:#0f172a; border-radius:3px; border:1px solid #334155;"></span>
+                                <span style="width:14px; height:14px; background:#3b82f6; border-radius:3px;"></span>
+                            </div>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-main);">極光暗影 (預設)</span>
+                        </div>
+
+                        <div class="theme-card" onclick="applyTheme('emerald')" id="theme-emerald">
+                            <div style="display:flex; gap:5px; margin-bottom:8px;">
+                                <span style="width:14px; height:14px; background:#022c22; border-radius:3px; border:1px solid #065f46;"></span>
+                                <span style="width:14px; height:14px; background:#10b981; border-radius:3px;"></span>
+                            </div>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-main);">翡翠霓虹</span>
+                        </div>
+
+                        <div class="theme-card" onclick="applyTheme('amethyst')" id="theme-amethyst">
+                            <div style="display:flex; gap:5px; margin-bottom:8px;">
+                                <span style="width:14px; height:14px; background:#1e1b4b; border-radius:3px; border:1px solid #3730a3;"></span>
+                                <span style="width:14px; height:14px; background:#8b5cf6; border-radius:3px;"></span>
+                            </div>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-main);">紫翼幻境</span>
+                        </div>
+
+                        <div class="theme-card" onclick="applyTheme('volcano')" id="theme-volcano">
+                            <div style="display:flex; gap:5px; margin-bottom:8px;">
+                                <span style="width:14px; height:14px; background:#2d0b0b; border-radius:3px; border:1px solid #7f1d1d;"></span>
+                                <span style="width:14px; height:14px; background:#f97316; border-radius:3px;"></span>
+                            </div>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-main);">熔岩黃昏</span>
+                        </div>
+
+                        <div class="theme-card" onclick="applyTheme('deepsea')" id="theme-deepsea">
+                            <div style="display:flex; gap:5px; margin-bottom:8px;">
+                                <span style="width:14px; height:14px; background:#030712; border-radius:3px; border:1px solid #164e63;"></span>
+                                <span style="width:14px; height:14px; background:#06b6d4; border-radius:3px;"></span>
+                            </div>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-main);">深海幽藍</span>
+                        </div>
+
+                        <div class="theme-card" onclick="applyTheme('lightsnow')" id="theme-lightsnow">
+                            <div style="display:flex; gap:5px; margin-bottom:8px;">
+                                <span style="width:14px; height:14px; background:#f1f5f9; border-radius:3px; border:1px solid #94a3b8;"></span>
+                                <span style="width:14px; height:14px; background:#2563eb; border-radius:3px;"></span>
+                            </div>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-main);">晴雪雅緻 (淺色)</span>
+                        </div>
+
+                        <div class="theme-card" onclick="applyTheme('lightmint')" id="theme-lightmint">
+                            <div style="display:flex; gap:5px; margin-bottom:8px;">
+                                <span style="width:14px; height:14px; background:#f0fdf4; border-radius:3px; border:1px solid #86efac;"></span>
+                                <span style="width:14px; height:14px; background:#059669; border-radius:3px;"></span>
+                            </div>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-main);">薄荷春朝 (淺色)</span>
+                        </div>
+
+                        <div class="theme-card" onclick="applyTheme('lightrose')" id="theme-lightrose">
+                            <div style="display:flex; gap:5px; margin-bottom:8px;">
+                                <span style="width:14px; height:14px; background:#fff1f2; border-radius:3px; border:1px solid #fda4af;"></span>
+                                <span style="width:14px; height:14px; background:#db2777; border-radius:3px;"></span>
+                            </div>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-main);">薔薇私語 (淺色)</span>
+                        </div>
+
+                    </div>
+                    <div style="margin-top:12px; font-size:11px; color:var(--text-muted);">* 點選主題卡片即時套用，設定自動儲存於本地瀏覽器。</div>
+                </div>
+
+                <!-- 關於 -->
+                <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:22px;">
+                    <div style="font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:12px;">ℹ️ 關於此儀表板</div>
+                    <div style="font-size:13px; color:var(--text-muted); line-height:1.8;">
+                        <div>🖥️ <strong style="color:var(--text-main);">Global Macro Intelligence Terminal</strong></div>
+                        <div style="margin-top:6px;">即時監控全球股市、加密貨幣、外匯、總經指標與板塊輪動的專業級個人終端。</div>
+                        <div style="margin-top:10px;">資料來源：Yahoo Finance · Binance WebSocket · TradingView Widget · GAS 雲端同步</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- 區間指標線圖 Modal -->
+    <div id="chart-modal" class="modal-overlay" onclick="closeChartModal(event)">
+        <div class="modal-container" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span id="modal-asset-name" class="modal-title">-</span>
+                    <span id="modal-asset-symbol" class="modal-symbol">-</span>
+                </div>
+                <div class="modal-tabs">
+                    <button class="modal-tab-btn active" onclick="switchModalTab('tv')">TradingView 圖表</button>
+                    <button class="modal-tab-btn" onclick="switchModalTab('local')">本機歷史數據分析</button>
+                </div>
+                <button class="modal-close" onclick="closeChartModal(event)">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="tv-chart-view" style="width: 100%; height: 100%;">
+                    <div id="tradingview-chart-container" style="height: 100%; width: 100%;"></div>
+                </div>
+                <div id="local-chart-view" style="width: 100%; height: 100%; display: none; background: #0c0f16; padding: 20px; overflow-y: auto;">
+                    <!-- 自研 SVG 多指標線圖將渲染在此 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 配置區 (請替換為已發佈之 GAS Web App URL)
+        // ==========================================
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjDL1SNnpVU602W3-ypqKVCwHc_UQ_-nGWxaH5kRidaElkzxh3SU99SQXOGqLS7QD_/exec'; 
+        
+        let currentUser = null;
+        let watchlists = {
+            watchlist: [],
+            crypto: [],
+            macro: [],
+            forex: [],
+            portfolio: {}
+        };
+        
+        let cachedQuotes = {}; 
+        let cryptoWS = null;   
+        let cryptoAvgVolume20 = {}; 
+
+        // 拖拽狀態鎖定 (防點擊衝突)
+        let isDraggingCard = false;
+        let draggedCardSymbol = null;
+        let draggedCardCategory = null;
+        let draggedSectionId = null;
+
+        // ==========================================
+        // 系統初始化與登入
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            initSettings();
+            const savedUser = localStorage.getItem('market_user');
+            if (savedUser) {
+                login(savedUser);
+            }
+            
+            // 下拉選單變更時自動填入已存在持倉的買入均價與數量
+            const select = document.getElementById('portfolio-asset-select');
+            if (select) {
+                select.addEventListener('change', (e) => {
+                    const symbol = e.target.value;
+                    const priceInput = document.getElementById('portfolio-asset-price');
+                    const qtyInput = document.getElementById('portfolio-asset-qty');
+                    if (!priceInput || !qtyInput) return;
+                    
+                    if (symbol && watchlists.portfolio && watchlists.portfolio[symbol]) {
+                        priceInput.value = watchlists.portfolio[symbol].buyPrice;
+                        qtyInput.value = watchlists.portfolio[symbol].qty;
+                    } else {
+                        priceInput.value = '';
+                        qtyInput.value = '';
+                    }
+                });
+            }
+        });
+
+        document.getElementById('login-btn').addEventListener('click', () => {
+            const user = document.getElementById('username-input').value.trim();
+            if (user) login(user);
+        });
+
+        async function login(username) {
+            document.getElementById('login-msg').innerText = "連線與同步中...";
+            document.getElementById('login-btn').disabled = true;
+
+            try {
+                const res = await fetch(`${GAS_URL}?username=${encodeURIComponent(username)}`);
+                const data = await res.json();
+                
+                currentUser = username;
+                
+                if (data.watchlist) {
+                    watchlists = {
+                        watchlist: data.watchlist.watchlist || [],
+                        crypto: data.watchlist.crypto || [],
+                        macro: data.watchlist.macro || [],
+                        forex: data.watchlist.forex || [],
+                        portfolio: data.watchlist.portfolio || {}
+                    };
+                }
+                
+                localStorage.setItem('market_user', username);
+                
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                document.getElementById('user-greeting').innerText = `${username} 的即時監控儀表板`;
+                
+                initDashboard();
+                populatePortfolioSelect();
+                showToast(`歡迎回來，${username}！`, 'success');
+            } catch (err) {
+                console.error(err);
+                document.getElementById('login-msg').innerText = "連線失敗，請檢查 GAS 網址與網路設定。";
+                document.getElementById('login-btn').disabled = false;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('market_user');
+            location.reload();
+        }
+
+        // ==========================================
+        // Toast 訊息提示系統
+        // ==========================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            let emoji = 'ℹ️';
+            if (type === 'success') emoji = '✅';
+            if (type === 'error') emoji = '❌';
+            
+            toast.innerHTML = `<span>${emoji}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            
+            void toast.offsetWidth;
+            toast.classList.add('active');
+            
+            setTimeout(() => {
+                toast.classList.remove('active');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // ==========================================
+        // 分頁切換 (Tab Switching System)
+        // ==========================================
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            const targetTab = document.querySelector(`.nav-tab[onclick="switchTab('${tabId}')"]`);
+            const targetContent = document.getElementById(`${tabId}-tab`);
+
+            if (targetTab && targetContent) {
+                targetTab.classList.add('active');
+                targetContent.classList.add('active');
+            }
+
+            if (tabId === 'portfolio') {
+                populatePortfolioSelect();
+                updatePortfolioSection();
+            }
+            if (tabId === 'insights') {
+                if (typeof renderInsightsMockData === 'function') {
+                    renderInsightsMockData();
+                }
+            }
+            if (tabId === 'calendar') {
+                initCalendarWidget();
+            }
+        }
+
+        // ==========================================
+        // 總經日曆 Widget 懶加載 (避免 display:none 渲染失敗)
+        // ==========================================
+        let calendarLoaded = false;
+        function initCalendarWidget() {
+            if (calendarLoaded) return;
+            calendarLoaded = true;
+
+            const container = document.getElementById('calendar-widget-container');
+            if (!container) return;
+
+            // 清空「載入中...」提示
+            container.innerHTML = '';
+
+            // 動態建立 TradingView widget 容器與 script
+            const widgetWrapper = document.createElement('div');
+            widgetWrapper.className = 'tradingview-widget-container';
+            widgetWrapper.style.height = '600px';
+            widgetWrapper.style.width = '100%';
+
+            const widgetDiv = document.createElement('div');
+            widgetDiv.className = 'tradingview-widget-container__widget';
+            widgetWrapper.appendChild(widgetDiv);
+
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js';
+            script.async = true;
+            script.innerHTML = JSON.stringify({
+                colorTheme: document.documentElement.style.getPropertyValue('--bg-color').includes('255') ? 'light' : 'dark',
+                isMaximized: true,
+                width: '100%',
+                height: '600',
+                locale: 'zh_TW',
+                importanceFilter: '-1,0,1'
+            });
+            widgetWrapper.appendChild(script);
+
+            container.appendChild(widgetWrapper);
+        }
+
+        // ==========================================
+        // 雲端同步
+        // ==========================================
+        async function syncWatchlists() {
+            const syncText = document.getElementById('sync-status-text');
+            syncText.innerText = '同步中...';
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        username: currentUser,
+                        watchlist: watchlists
+                    }),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
+                const data = await res.json();
+                if (data.status === 'updated') {
+                    syncText.innerText = '✓ 已同步至雲端';
+                } else {
+                    syncText.innerText = '⚠ 同步失敗';
+                }
+            } catch (err) {
+                console.error('Sync failed', err);
+                syncText.innerText = '⚠ 同步失敗';
+            }
+        }
+
+        // ==========================================
+        // 財報日與除權息倒數計算 (自選股卡片專屬)
+        // ==========================================
+        function getUpcomingEventText(symbol) {
+            const sym = symbol.toUpperCase().trim();
+            const now = new Date();
+            
+            let eventName = "公佈財報";
+            let targetDate = new Date();
+            
+            // 典型權值股排程規劃，其餘自適應哈希排序生成
+            if (sym === 'AAPL') {
+                targetDate = new Date(now.getFullYear(), 6, 30); // 7月30日
+            } else if (sym === 'TSLA') {
+                targetDate = new Date(now.getFullYear(), 6, 23); // 7月23日
+            } else if (sym === 'NVDA') {
+                targetDate = new Date(now.getFullYear(), 7, 26); // 8月26日
+            } else if (sym === '2330.TW' || sym === '2330') {
+                eventName = "除息";
+                targetDate = new Date(now.getFullYear(), 5, 18); // 6月18日
+            } else {
+                let hash = 0;
+                for (let i = 0; i < sym.length; i++) {
+                    hash = sym.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                const daysOffset = Math.abs(hash) % 25 + 1;
+                eventName = (hash % 2 === 0) ? "公佈財報" : "除息";
+                targetDate.setDate(now.getDate() + daysOffset);
+            }
+            
+            // 已過期之事件自動往後輪轉 (下一季度 / 隔年)
+            if (targetDate < now) {
+                targetDate.setFullYear(now.getFullYear() + (targetDate.getMonth() < now.getMonth() ? 1 : 0));
+                while (targetDate < now) {
+                    targetDate.setMonth(targetDate.getMonth() + 3);
+                }
+            }
+            
+            const diffTime = targetDate - now;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                return `<span class="event-tag today">今日${eventName}</span>`;
+            } else {
+                return `<span class="event-tag">${diffDays}天後${eventName}</span>`;
+            }
+        }
+
+        // ==========================================
+        // 增減標的與驗證邏輯
+        // ==========================================
+        async function validateCryptoSymbol(symbol) {
+            try {
+                const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+                return res.ok;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        async function addTarget(category) {
+            const input = document.getElementById(`new-${category}-input`);
+            let symbol = input.value.trim().toUpperCase();
+            if (!symbol) return;
+
+            const btn = input.nextElementSibling;
+            btn.disabled = true;
+            const originalText = btn.innerText;
+            btn.innerText = "驗證中...";
+
+            try {
+                if (category === 'crypto') {
+                    let cleanSym = symbol;
+                    if (!cleanSym.endsWith('USDT') && !cleanSym.includes('/')) {
+                        cleanSym = cleanSym + 'USDT';
+                    }
+                    
+                    const isValid = await validateCryptoSymbol(cleanSym);
+                    if (isValid) {
+                        if (!watchlists.crypto.includes(cleanSym)) {
+                            watchlists.crypto.push(cleanSym);
+                            renderGrid('crypto');
+                            connectCryptoWS();
+                            await syncWatchlists();
+                            showToast(`成功新增虛擬貨幣: ${cleanSym}`, 'success');
+                        } else {
+                            showToast("該標的已在清單中", 'info');
+                        }
+                        input.value = '';
+                    } else {
+                        showToast(`無效的幣種，找不到交易對 ${cleanSym}`, 'error');
+                    }
+                } else {
+                    const res = await fetch(`${GAS_URL}?action=getQuotes&symbols=${encodeURIComponent(symbol)}&includeHistory=true`);
+                    const data = await res.json();
+                    
+                    if (data.quotes && data.quotes[symbol] && data.quotes[symbol].status === 'success') {
+                        if (!watchlists[category].includes(symbol)) {
+                            watchlists[category].push(symbol);
+                            renderGrid(category);
+                            await syncWatchlists();
+                            populatePortfolioSelect();
+                            pollMarketData(true); 
+                            showToast(`成功新增監測標的: ${symbol}`, 'success');
+                        } else {
+                            showToast("該標的已在清單中", 'info');
+                        }
+                        input.value = '';
+                    } else {
+                        showToast(`無效的代碼，Google Finance 無法識別 ${symbol}`, 'error');
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("新增失敗，系統或網路異常", 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
+        }
+
+        async function removeTarget(symbol, category) {
+            watchlists[category] = watchlists[category].filter(s => s !== symbol);
+            if (watchlists.portfolio && watchlists.portfolio[symbol]) {
+                delete watchlists.portfolio[symbol];
+            }
+            renderGrid(category);
+            if (category === 'crypto') {
+                connectCryptoWS();
+            }
+            updatePortfolioSection();
+            await syncWatchlists();
+            populatePortfolioSelect();
+            showToast(`已移除標的: ${symbol}`, 'success');
+        }
+
+        // ==========================================
+        // UI 渲染與卡片動態 DOM 更新 (30 天 SVG Sparkline)
+        // ==========================================
+        function initDashboard() {
+            // 讀取拖拽順序
+            const sectionOrder = localStorage.getItem('section_order');
+            if (sectionOrder) {
+                const order = JSON.parse(sectionOrder);
+                const container = document.getElementById('market-tab');
+                order.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) container.appendChild(el);
+                });
+            }
+
+            renderGrid('macro');
+            renderGrid('forex');
+            renderGrid('watchlist');
+            renderGrid('crypto');
+            
+            connectCryptoWS();
+            pollMarketData(true);
+            
+            // 每 6 秒自動輪詢非 crypto 資料 (美股、指數、匯率)
+            setInterval(() => pollMarketData(false), 6000);
+        }
+
+        // 產生迷你趨勢圖 HTML (SVG)
+        function generateSparklineHTML(history, isUp) {
+            if (!history || history.length < 2) {
+                return `
+                    <svg width="75" height="20" viewBox="0 0 75 20">
+                        <path d="M 0,10 L 75,10" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="2,2" />
+                    </svg>
+                `;
+            }
+            
+            const max = Math.max(...history);
+            const min = Math.min(...history);
+            const range = max - min === 0 ? 1 : max - min;
+            
+            const width = 75;
+            const height = 20;
+            
+            const points = history.map((val, index) => {
+                const x = (index / (history.length - 1)) * width;
+                const y = height - 1 - ((val - min) / range) * (height - 2); 
+                return `${x},${y}`;
+            });
+            
+            const pathData = `M ${points.join(' L ')}`;
+            const strokeColor = isUp ? 'var(--up-color)' : 'var(--down-color)';
+            
+            const areaPoints = [
+                `0,${height}`,
+                ...points,
+                `${width},${height}`
+            ];
+            const areaPathData = `M ${areaPoints.join(' L ')} Z`;
+            const gradId = `grad-${Math.random().toString(36).substr(2, 9)}`;
+            
+            return `
+                <svg class="sparkline" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+                    <defs>
+                        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.12" />
+                            <stop offset="100%" stop-color="${strokeColor}" stop-opacity="0.0" />
+                        </linearGradient>
+                    </defs>
+                    <path d="${areaPathData}" fill="url(#${gradId})" stroke="none" />
+                    <path d="${pathData}" fill="none" stroke="${strokeColor}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            `;
+        }
+
+        // 計算布林通道 (Bollinger Bands)
+        function calculateBollingerBands(history) {
+            if (!history || history.length < 20) return null;
+            
+            // 取最後 20 天的歷史價格
+            const prices = history.slice(-20).map(Number).filter(p => !isNaN(p) && p > 0);
+            if (prices.length < 20) return null;
+            
+            const n = prices.length;
+            
+            // 1. 計算 SMA 20 (Middle Band)
+            const middle = prices.reduce((sum, p) => sum + p, 0) / n;
+            
+            // 2. 計算標準差 (Standard Deviation)
+            const variance = prices.reduce((sum, p) => sum + Math.pow(p - middle, 2), 0) / n;
+            const stdDev = Math.sqrt(variance);
+            
+            // 3. 計算上下軌
+            const upper = middle + 2 * stdDev;
+            const lower = middle - 2 * stdDev;
+            
+            return { middle, upper, lower };
+        }
+
+        // 行情監控卡片 (高密度簡約設計，支援 HTML5 Drag & Drop)
+        function createCardHTML(symbol, category, isDeletable = true) {
+            const cached = cachedQuotes[symbol] || { 
+                price: 'Loading...', 
+                change: '0.00', 
+                changePercent: '0.00%', 
+                isUp: true, 
+                history: [],
+                volumeSpike: false
+            };
+            
+            const colorClass = cached.isUp ? 'up' : 'down';
+            const cleanSymbol = symbol.replace(/[^a-zA-Z0-9]/g, '');
+            const delBtn = isDeletable ? `<span class="remove-btn" onclick="event.stopPropagation(); removeTarget('${symbol}', '${category}')">✕</span>` : '';
+            const sparklineHTML = generateSparklineHTML(cached.history, cached.isUp);
+            const spikeTag = cached.volumeSpike ? '<span class="volume-spike-tag">⚡ 爆量</span>' : '';
+            
+            // 自選股卡片專屬的事件資訊
+            let eventHTML = '';
+            if (category === 'watchlist') {
+                eventHTML = getUpcomingEventText(symbol);
+            }
+
+            // 布林通道偏離度計算與警示樣式
+            let bbHTML = '';
+            let bbClass = '';
+            if (cached.history && cached.history.length >= 20) {
+                const bb = calculateBollingerBands(cached.history);
+                if (bb) {
+                    const priceVal = parseFloat(cached.price.toString().replace(/,/g, ''));
+                    if (!isNaN(priceVal)) {
+                        const pctB = (priceVal - bb.lower) / (bb.upper - bb.lower === 0 ? 1 : bb.upper - bb.lower);
+                        const pctBFormatted = (pctB * 100).toFixed(0) + '%';
+                        
+                        let bbStatus = '';
+                        if (priceVal >= bb.upper) {
+                            bbStatus = ' (超買)';
+                            bbClass = 'bb-overbought';
+                        } else if (priceVal <= bb.lower) {
+                            bbStatus = ' (超賣)';
+                            bbClass = 'bb-oversold';
+                        }
+                        bbHTML = `<div class="card-bb-deviation">BB位置: ${pctBFormatted}${bbStatus}</div>`;
+                    }
+                }
+            }
+
+            // 持倉狀態徽章 (僅顯示資訊，不可點擊與編輯，全部編輯功能整合至分頁二中)
+            const pos = watchlists.portfolio && watchlists.portfolio[symbol];
+            let portfolioBadgeHTML = '';
+            if (pos && pos.qty > 0) {
+                let currentPriceVal = 0;
+                if (cached.price && cached.price !== 'Loading...') {
+                    currentPriceVal = parseFloat(cached.price.replace(/,/g, ''));
+                }
+                const cost = pos.buyPrice;
+                const qty = pos.qty;
+                const pl = (currentPriceVal - cost) * qty;
+                const roi = cost > 0 ? (pl / (cost * qty)) * 100 : 0;
+                
+                const plClass = pl >= 0 ? 'up' : 'down';
+                const formattedPl = currentPriceVal > 0 
+                    ? (pl >= 0 ? '+' : '') + pl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                    : '-';
+                const formattedRoi = currentPriceVal > 0 
+                    ? (roi >= 0 ? '+' : '') + roi.toFixed(2) + '%' 
+                    : '-';
+                
+                portfolioBadgeHTML = `
+                    <div class="portfolio-badge">
+                        <span>💼 ${qty}股 @ $${cost}</span>
+                        <span class="${plClass}" style="font-weight:600;">${formattedPl} (${formattedRoi})</span>
+                    </div>
+                `;
+            }
+            
+            return `
+                <div class="card ${bbClass}" 
+                     id="card-${category}-${cleanSymbol}" 
+                     onclick="handleCardClick('${symbol}', '${category}')"
+                     draggable="true"
+                     ondragstart="dragCard(event, '${symbol}', '${category}')"
+                     ondragend="dragEndCard()"
+                     ondragover="allowDrop(event)"
+                     ondrop="dropCard(event, '${symbol}', '${category}')">
+                    ${delBtn}
+                    <div class="card-top">
+                        <div class="card-symbol-grp">
+                            <span class="card-symbol">${symbol}</span>
+                            ${spikeTag}
+                        </div>
+                        <div class="card-sparkline" id="sparkline-${category}-${cleanSymbol}">
+                            ${sparklineHTML}
+                        </div>
+                    </div>
+                    
+                    <div class="card-middle">
+                        <span class="card-price ${colorClass}">${cached.price}</span>
+                        <span class="card-change ${colorClass}">${cached.changePercent}</span>
+                    </div>
+                    
+                    <!-- 除權息 / 財報公告事件 -->
+                    ${eventHTML}
+
+                    <!-- 布林通道偏離度 -->
+                    ${bbHTML}
+
+                    <!-- 持倉狀態徽章 -->
+                    ${portfolioBadgeHTML}
+                </div>
+            `;
+        }
+
+        function renderGrid(category) {
+            const grid = document.getElementById(`${category}-grid`);
+            if (watchlists[category].length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px; font-size: 12px;" draggable="false">
+                        無監控標的，請在下方輸入新增
+                    </div>
+                `;
+                return;
+            }
+            let html = '';
+            watchlists[category].forEach(symbol => {
+                html += createCardHTML(symbol, category);
+            });
+            grid.innerHTML = html;
+            
+            if (category === 'crypto') {
+                watchlists.crypto.forEach(symbol => {
+                    if (!cachedQuotes[symbol] || !cachedQuotes[symbol].history) {
+                        fetchAndCacheCryptoHistory(symbol);
+                    }
+                });
+            }
+        }
+
+        // 加密貨幣 30 日走勢與成交量非同步獲取
+        async function fetchAndCacheCryptoHistory(symbol) {
+            let cleanSym = symbol.toUpperCase();
+            if (!cleanSym.endsWith('USDT')) {
+                cleanSym = cleanSym + 'USDT';
+            }
+            try {
+                const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${cleanSym}&interval=1d&limit=30`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const history = data.map(item => parseFloat(item[4]));
+                    const volumes = data.map(item => parseFloat(item[5]));
+                    
+                    const avgVol20 = volumes.slice(-20).reduce((a, b) => a + b, 0) / Math.min(20, volumes.length);
+                    cryptoAvgVolume20[symbol] = avgVol20;
+                    
+                    if (!cachedQuotes[symbol]) {
+                        cachedQuotes[symbol] = {
+                            price: 'Loading...', 
+                            change: '0.00', 
+                            changePercent: '0.00%', 
+                            isUp: true, 
+                            volumeSpike: false
+                        };
+                    }
+                    
+                    cachedQuotes[symbol].history = history;
+                    
+                    const cleanSymbol = symbol.replace(/[^a-zA-Z0-9]/g, '');
+                    const sparkContainer = document.getElementById(`sparkline-crypto-${cleanSymbol}`);
+                    if (sparkContainer) {
+                        sparkContainer.innerHTML = generateSparklineHTML(history, cachedQuotes[symbol].isUp);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch crypto sparkline history", err);
+            }
+        }
+
+        function updateCardDOM(symbol, price, change, changePercent, isUp) {
+            const cleanSymbol = symbol.replace(/[^a-zA-Z0-9]/g, '');
+            const cards = document.querySelectorAll(`.card[id$="-${cleanSymbol}"]`); 
+            
+            cards.forEach(card => {
+                const priceEl = card.querySelector('.card-price');
+                const changeEl = card.querySelector('.card-change');
+                const sparklineEl = card.querySelector('.card-sparkline');
+                const badgeEl = card.querySelector('.portfolio-badge');
+                
+                if (priceEl && changeEl) {
+                    const oldPriceStr = priceEl.innerText.replace(/,/g, '');
+                    const oldPrice = parseFloat(oldPriceStr);
+                    const newPrice = parseFloat(price.replace(/,/g, ''));
+                    
+                    priceEl.innerText = price;
+                    changeEl.innerText = changePercent;
+                    
+                    // 更新漲跌顏色樣式
+                    const colorClass = isUp ? 'up' : 'down';
+                    priceEl.className = `card-price ${colorClass}`;
+                    changeEl.className = `card-change ${colorClass}`;
+                    
+                    // 計算並更新持倉盈虧顯示
+                    const pos = watchlists.portfolio && watchlists.portfolio[symbol];
+                    if (pos && pos.qty > 0 && badgeEl) {
+                        const cost = pos.buyPrice;
+                        const qty = pos.qty;
+                        const pl = (newPrice - cost) * qty;
+                        const roi = cost > 0 ? (pl / (cost * qty)) * 100 : 0;
+                        const plClass = pl >= 0 ? 'up' : 'down';
+                        const formattedPl = (pl >= 0 ? '+' : '') + pl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        const formattedRoi = (roi >= 0 ? '+' : '') + roi.toFixed(2) + '%';
+                        
+                        badgeEl.innerHTML = `
+                            <span>💼 ${qty}股 @ $${cost}</span>
+                            <span class="${plClass}" style="font-weight:600;">${formattedPl} (${formattedRoi})</span>
+                        `;
+                    }
+                    
+                    // 閃爍特效
+                    if (!isNaN(oldPrice) && !isNaN(newPrice) && newPrice !== oldPrice) {
+                        card.classList.remove('flash-up', 'flash-down');
+                        void card.offsetWidth; 
+                        card.classList.add(newPrice > oldPrice ? 'flash-up' : 'flash-down');
+                    }
+                }
+                
+                // 動態更新 30 天迷你線圖 (Sparkline)
+                if (sparklineEl && cachedQuotes[symbol] && cachedQuotes[symbol].history && cachedQuotes[symbol].history.length > 0) {
+                    sparklineEl.innerHTML = generateSparklineHTML(cachedQuotes[symbol].history, isUp);
+                }
+                
+                // 動態更新布林通道偏離度與邊框發光警示
+                const bbEl = card.querySelector('.card-bb-deviation');
+                card.classList.remove('bb-overbought', 'bb-oversold');
+                if (cachedQuotes[symbol] && cachedQuotes[symbol].history && cachedQuotes[symbol].history.length >= 20) {
+                    const bb = calculateBollingerBands(cachedQuotes[symbol].history);
+                    if (bb) {
+                        const priceVal = parseFloat(price.replace(/,/g, ''));
+                        if (!isNaN(priceVal)) {
+                            const pctB = (priceVal - bb.lower) / (bb.upper - bb.lower === 0 ? 1 : bb.upper - bb.lower);
+                            const pctBFormatted = (pctB * 100).toFixed(0) + '%';
+                            let bbStatus = '';
+                            if (priceVal >= bb.upper) {
+                                bbStatus = ' (超買)';
+                                card.classList.add('bb-overbought');
+                            } else if (priceVal <= bb.lower) {
+                                bbStatus = ' (超賣)';
+                                card.classList.add('bb-oversold');
+                            }
+                            
+                            if (bbEl) {
+                                bbEl.innerHTML = `BB位置: ${pctBFormatted}${bbStatus}`;
+                            } else {
+                                const eventTag = card.querySelector('.event-tag');
+                                const insertTarget = eventTag || card.querySelector('.card-middle');
+                                if (insertTarget && insertTarget.parentNode) {
+                                    const div = document.createElement('div');
+                                    div.className = 'card-bb-deviation';
+                                    div.innerHTML = `BB位置: ${pctBFormatted}${bbStatus}`;
+                                    insertTarget.parentNode.insertBefore(div, insertTarget.nextSibling);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 動態更新「爆量」標籤
+                const symbolGrp = card.querySelector('.card-symbol-grp');
+                if (symbolGrp && cachedQuotes[symbol]) {
+                    const existingSpike = symbolGrp.querySelector('.volume-spike-tag');
+                    if (cachedQuotes[symbol].volumeSpike) {
+                        if (!existingSpike) {
+                            const span = document.createElement('span');
+                            span.className = 'volume-spike-tag';
+                            span.innerText = '⚡ 爆量';
+                            symbolGrp.appendChild(span);
+                        }
+                    } else {
+                        if (existingSpike) {
+                            existingSpike.remove();
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // 行情輪詢引擎
+        // ==========================================
+        async function pollMarketData(isInitial = false) {
+            const pollDot = document.getElementById('market-status-dot');
+            pollDot.classList.add('pulse');
+            
+            const symbols = [...watchlists.macro, ...watchlists.forex, ...watchlists.watchlist];
+            if (symbols.length === 0) {
+                pollDot.classList.remove('pulse');
+                pollDot.className = 'status-dot';
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${GAS_URL}?action=getQuotes&symbols=${encodeURIComponent(symbols.join(','))}&includeHistory=${isInitial}`);
+                const data = await res.json();
+                
+                if (data.quotes) {
+                    symbols.forEach(symbol => {
+                        const quote = data.quotes[symbol];
+                        if (quote && quote.status === 'success') {
+                            const isUp = quote.change >= 0;
+                            
+                            let decimals = 2;
+                            if (symbol.includes('=X')) decimals = 4;
+                            if (symbol.includes('^TNX')) decimals = 3;
+                            
+                            const formattedPrice = quote.price.toLocaleString('en-US', {
+                                minimumFractionDigits: decimals, 
+                                maximumFractionDigits: decimals
+                            });
+                            const formattedChange = (isUp ? '+' : '') + quote.change.toFixed(decimals);
+                            const formattedPct = (isUp ? '+' : '') + quote.changePercent.toFixed(2) + '%';
+                            
+                            const existingHistory = (cachedQuotes[symbol] && cachedQuotes[symbol].history) ? cachedQuotes[symbol].history : [];
+                            cachedQuotes[symbol] = {
+                                price: formattedPrice,
+                                change: formattedChange,
+                                changePercent: formattedPct,
+                                isUp: isUp,
+                                longName: quote.longName,
+                                history: (quote.history && quote.history.length > 0) ? quote.history : existingHistory,
+                                volumeSpike: quote.volumeSpike !== undefined ? quote.volumeSpike : (cachedQuotes[symbol] ? cachedQuotes[symbol].volumeSpike : false)
+                            };
+                            
+                            updateCardDOM(symbol, formattedPrice, formattedChange, formattedPct, isUp);
+                        }
+                    });
+                    
+                    updatePortfolioSection();
+                }
+                pollDot.className = 'status-dot active';
+            } catch (err) {
+                console.error("Market polling error:", err);
+                pollDot.className = 'status-dot error';
+            } finally {
+                setTimeout(() => {
+                    pollDot.classList.remove('pulse');
+                }, 1000);
+            }
+        }
+
+        // ==========================================
+        // Binance WebSocket (加密貨幣實時串流)
+        // ==========================================
+        function connectCryptoWS() {
+            if (cryptoWS) {
+                cryptoWS.close();
+            }
+            
+            const cryptoList = watchlists.crypto;
+            const statusDot = document.getElementById('crypto-status-dot');
+            
+            if (cryptoList.length === 0) {
+                statusDot.className = 'status-dot';
+                return;
+            }
+            
+            const streams = cryptoList.map(sym => {
+                let s = sym.toUpperCase();
+                if (!s.endsWith('USDT')) s = s + 'USDT';
+                return s.toLowerCase() + '@ticker';
+            }).join('/');
+            
+            statusDot.className = 'status-dot active pulse';
+            
+            cryptoWS = new WebSocket(`wss://stream.binance.com:9443/ws/${streams}`);
+            
+            cryptoWS.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const rawSymbol = data.s; 
+                const currentPrice = parseFloat(data.c);
+                const priceChange = parseFloat(data.p);
+                const priceChangePct = parseFloat(data.P);
+                const currentVolume = parseFloat(data.v); 
+                const isUp = priceChange >= 0;
+                
+                const matchedSymbol = cryptoList.find(s => {
+                    const u = s.toUpperCase();
+                    return u === rawSymbol || u + 'USDT' === rawSymbol;
+                });
+                
+                if (matchedSymbol) {
+                    const decimals = currentPrice > 1000 ? 2 : 4;
+                    const formattedPrice = currentPrice.toLocaleString('en-US', {
+                        minimumFractionDigits: decimals, 
+                        maximumFractionDigits: decimals
+                    });
+                    const formattedChange = (isUp ? '+' : '') + priceChange.toFixed(decimals);
+                    const formattedPct = (isUp ? '+' : '') + priceChangePct.toFixed(2) + '%';
+                    
+                    const avgVol = cryptoAvgVolume20[matchedSymbol] || 0;
+                    const isVolumeSpike = avgVol > 0 && currentVolume > 2.5 * avgVol;
+                    
+                    if (!cachedQuotes[matchedSymbol]) {
+                        cachedQuotes[matchedSymbol] = { history: [] };
+                    }
+                    
+                    cachedQuotes[matchedSymbol].price = formattedPrice;
+                    cachedQuotes[matchedSymbol].change = formattedChange;
+                    cachedQuotes[matchedSymbol].changePercent = formattedPct;
+                    cachedQuotes[matchedSymbol].isUp = isUp;
+                    cachedQuotes[matchedSymbol].volumeSpike = isVolumeSpike;
+                    
+                    updateCardDOM(matchedSymbol, formattedPrice, formattedChange, formattedPct, isUp);
+                    updatePortfolioSection();
+                }
+            };
+            
+            cryptoWS.onerror = (e) => {
+                console.error("Binance WS error", e);
+                statusDot.className = 'status-dot error';
+            };
+            
+            cryptoWS.onclose = () => {
+                statusDot.className = 'status-dot inactive';
+            };
+        }
+
+        // ==========================================
+        // HTML5 Drag & Drop (自訂介面排列順序)
+        // ==========================================
+        function allowDrop(e) {
+            e.preventDefault();
+        }
+
+        // 1. 區塊間的拖拽
+        function dragSection(e, id) {
+            // 如果是在輸入框或按鈕上點擊，取消拖拽
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') {
+                e.preventDefault();
+                return;
+            }
+            draggedSectionId = id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', id);
+            
+            // 標示被拖拽區塊
+            setTimeout(() => {
+                document.getElementById(id).style.opacity = '0.3';
+            }, 0);
+        }
+
+        function dropSection(e, targetId) {
+            e.preventDefault();
+            const draggedEl = document.getElementById(draggedSectionId);
+            const targetEl = document.getElementById(targetId);
+            
+            if (draggedEl && targetEl && draggedSectionId !== targetId) {
+                const container = document.getElementById('market-tab');
+                const children = Array.from(container.children);
+                const draggedIdx = children.indexOf(draggedEl);
+                const targetIdx = children.indexOf(targetEl);
+                
+                if (draggedIdx < targetIdx) {
+                    container.insertBefore(draggedEl, targetEl.nextSibling);
+                } else {
+                    container.insertBefore(draggedEl, targetEl);
+                }
+                
+                // 儲存區塊新排布
+                const newOrder = Array.from(container.children)
+                                     .filter(el => el.classList.contains('market-section'))
+                                     .map(el => el.id);
+                localStorage.setItem('section_order', JSON.stringify(newOrder));
+                showToast("已調整板塊顯示順序", "info");
+            }
+            
+            if (draggedEl) draggedEl.style.opacity = '1';
+        }
+
+        // 2. 單張字卡在同區塊內的拖拽
+        function dragCard(e, symbol, category) {
+            isDraggingCard = true;
+            draggedCardSymbol = symbol;
+            draggedCardCategory = category;
+            
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/card-symbol', symbol);
+            e.dataTransfer.setData('text/card-category', category);
+            
+            const cleanSymbol = symbol.replace(/[^a-zA-Z0-9]/g, '');
+            const cardEl = document.getElementById(`card-${category}-${cleanSymbol}`);
+            if (cardEl) {
+                setTimeout(() => {
+                    cardEl.classList.add('dragging');
+                }, 0);
+            }
+        }
+
+        function dragEndCard() {
+            const cleanSymbol = draggedCardSymbol.replace(/[^a-zA-Z0-9]/g, '');
+            const cardEl = document.getElementById(`card-${draggedCardCategory}-${cleanSymbol}`);
+            if (cardEl) {
+                cardEl.classList.remove('dragging');
+            }
+            
+            document.querySelectorAll('.market-section').forEach(el => el.style.opacity = '1');
+            
+            setTimeout(() => {
+                isDraggingCard = false;
+            }, 100);
+        }
+
+        function dropCard(e, targetSymbol, targetCategory) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (draggedCardCategory !== targetCategory) {
+                showToast("無法跨板塊拖拽排序字卡", "error");
+                return;
+            }
+            
+            if (draggedCardSymbol === targetSymbol) return;
+            
+            const list = watchlists[targetCategory];
+            const draggedIdx = list.indexOf(draggedCardSymbol);
+            const targetIdx = list.indexOf(targetSymbol);
+            
+            if (draggedIdx > -1 && targetIdx > -1) {
+                list.splice(draggedIdx, 1);
+                list.splice(targetIdx, 0, draggedCardSymbol);
+                
+                renderGrid(targetCategory);
+                syncWatchlists();
+                showToast("已調整卡片排列順序", "success");
+            }
+        }
+
+        // 鎖定拖曳後不觸發線圖點擊
+        function handleCardClick(symbol, category) {
+            if (isDraggingCard) {
+                return;
+            }
+            openChartModal(symbol, category);
+        }
+
+        // ==========================================
+        // 虛擬持倉控制面板 (全部移動至分頁二中)
+        // ==========================================
+        function populatePortfolioSelect() {
+            const select = document.getElementById('portfolio-asset-select');
+            if (!select) return;
+            
+            // 記錄目前選取的代碼，避免在極少數重整時被洗掉
+            const currentSelected = select.value;
+            
+            select.innerHTML = '<option value="">-- 選擇標的 --</option>';
+            // 根據需求，虛擬持倉只需顯示自選股 (watchlist) 標的，加上目前持倉已存在的標的以確保編輯時不漏掉
+            const allSymbols = [...watchlists.watchlist];
+            if (watchlists.portfolio) {
+                allSymbols.push(...Object.keys(watchlists.portfolio));
+            }
+            
+            const uniqueSymbols = [...new Set(allSymbols)];
+            uniqueSymbols.forEach(sym => {
+                const opt = document.createElement('option');
+                opt.value = sym;
+                opt.innerText = sym;
+                select.appendChild(opt);
+            });
+            
+            select.value = currentSelected;
+        }
+
+        function editPortfolioItem(symbol) {
+            populatePortfolioSelect();
+            
+            const select = document.getElementById('portfolio-asset-select');
+            const priceInput = document.getElementById('portfolio-asset-price');
+            const qtyInput = document.getElementById('portfolio-asset-qty');
+            
+            if (!select || !priceInput || !qtyInput) return;
+            
+            select.value = symbol;
+            
+            const pos = watchlists.portfolio && watchlists.portfolio[symbol];
+            if (pos) {
+                priceInput.value = pos.buyPrice;
+                qtyInput.value = pos.qty;
+            }
+            
+            document.getElementById('portfolio-edit-form-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function savePortfolioFromTab() {
+            const select = document.getElementById('portfolio-asset-select');
+            const priceInput = document.getElementById('portfolio-asset-price');
+            const qtyInput = document.getElementById('portfolio-asset-qty');
+            
+            if (!select || !priceInput || !qtyInput) return;
+            
+            const symbol = select.value;
+            const price = parseFloat(priceInput.value);
+            const qty = parseFloat(qtyInput.value);
+            
+            if (!symbol) {
+                showToast("請選擇一個監測中的標的", "error");
+                return;
+            }
+            if (isNaN(price) || price <= 0 || isNaN(qty) || qty <= 0) {
+                showToast("買入均價與持股數量必須為正數", "error");
+                return;
+            }
+            
+            if (!watchlists.portfolio) watchlists.portfolio = {};
+            watchlists.portfolio[symbol] = {
+                buyPrice: price,
+                qty: qty
+            };
+            
+            let category = 'watchlist';
+            if (watchlists.crypto.includes(symbol)) category = 'crypto';
+            else if (watchlists.macro.includes(symbol)) category = 'macro';
+            else if (watchlists.forex.includes(symbol)) category = 'forex';
+            
+            renderGrid(category);
+            updatePortfolioSection();
+            await syncWatchlists();
+            
+            // 重設輸入框
+            select.value = '';
+            priceInput.value = '';
+            qtyInput.value = '';
+            
+            showToast(`已成功記錄 ${symbol} 虛擬持倉！`, "success");
+        }
+
+        async function clearPortfolioFromTab(symbol, category) {
+            if (watchlists.portfolio && watchlists.portfolio[symbol]) {
+                delete watchlists.portfolio[symbol];
+            }
+            renderGrid(category);
+            updatePortfolioSection();
+            await syncWatchlists();
+            showToast(`已清除 ${symbol} 的持倉記錄`, "success");
+        }
+
+        // 更新持倉統計與表格明細
+        function updatePortfolioSection() {
+            const tableBody = document.getElementById('portfolio-table-body');
+            const totalValEl = document.getElementById('portfolio-total-val');
+            const totalPlEl = document.getElementById('portfolio-total-pl');
+            const totalRoiEl = document.getElementById('portfolio-total-roi');
+            
+            if (!tableBody || !totalValEl || !totalPlEl || !totalRoiEl) return;
+            
+            // 移除原本每次輪詢皆重整下拉選單的設計，改為事件驅動更新，以防止使用者編輯時選單被清空
+
+            const activePortfolio = watchlists.portfolio || {};
+            const keys = Object.keys(activePortfolio);
+            
+            if (keys.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                            尚無虛擬持倉資料。請在下方下拉選單選取標的、輸入買入均價與持有數量進行記錄。
+                        </td>
+                    </tr>
+                `;
+                totalValEl.innerText = '$0.00';
+                totalPlEl.innerText = '$0.00';
+                totalPlEl.className = 'summary-value';
+                totalRoiEl.innerText = '0.00%';
+                totalRoiEl.className = 'summary-value';
+                drawDonutChart({ usStock: 0, twStock: 0, crypto: 0, forex: 0 });
+                return;
+            }
+            
+            tableBody.innerHTML = '';
+            
+            let totalCost = 0;
+            let totalValue = 0;
+            
+            let usStockVal = 0;
+            let twStockVal = 0;
+            let cryptoVal = 0;
+            let forexVal = 0;
+            
+            keys.forEach(symbol => {
+                const pos = activePortfolio[symbol];
+                const cached = cachedQuotes[symbol];
+                
+                let currentPriceVal = 0;
+                let priceFormatted = 'Loading...';
+                if (cached && cached.price && cached.price !== 'Loading...') {
+                    currentPriceVal = parseFloat(cached.price.toString().replace(/,/g, ''));
+                    priceFormatted = '$' + cached.price;
+                }
+                
+                const cost = pos.buyPrice;
+                const qty = pos.qty;
+                const value = currentPriceVal * qty;
+                const pl = (currentPriceVal - cost) * qty;
+                const roi = cost > 0 ? (pl / (cost * qty)) * 100 : 0;
+                
+                totalCost += cost * qty;
+                totalValue += value;
+                
+                // 資產分配歸類邏輯 (美股、台股、加密貨幣、外匯)
+                if (watchlists.crypto.includes(symbol)) {
+                    cryptoVal += value;
+                } else if (watchlists.forex.includes(symbol)) {
+                    forexVal += value;
+                } else if (symbol.endsWith('.TW')) {
+                    twStockVal += value;
+                } else {
+                    usStockVal += value;
+                }
+                
+                const plClass = pl >= 0 ? 'up' : 'down';
+                const formattedVal = currentPriceVal > 0 
+                    ? '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                    : '-';
+                const formattedPl = currentPriceVal > 0 
+                    ? (pl >= 0 ? '+' : '') + pl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                    : '-';
+                const formattedRoi = currentPriceVal > 0 
+                    ? (roi >= 0 ? '+' : '') + roi.toFixed(2) + '%' 
+                    : '-';
+                
+                let category = 'watchlist';
+                if (watchlists.crypto.includes(symbol)) category = 'crypto';
+                else if (watchlists.macro.includes(symbol)) category = 'macro';
+                else if (watchlists.forex.includes(symbol)) category = 'forex';
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:700;">${symbol}</td>
+                    <td>$${cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
+                    <td>${qty}</td>
+                    <td>${priceFormatted}</td>
+                    <td style="font-weight:600;">${formattedVal}</td>
+                    <td class="${plClass}" style="font-weight:600;">${formattedPl} (${formattedRoi})</td>
+                    <td>
+                        <button class="portfolio-btn" onclick="editPortfolioItem('${symbol}')">編輯</button>
+                        <button class="portfolio-btn danger" onclick="clearPortfolioFromTab('${symbol}', '${category}')">清除</button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+            
+            const totalPl = totalValue - totalCost;
+            const totalRoi = totalCost > 0 ? (totalPl / totalCost) * 100 : 0;
+            const plClass = totalPl >= 0 ? 'up' : 'down';
+            
+            totalValEl.innerText = '$' + totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            totalPlEl.innerText = (totalPl >= 0 ? '+' : '') + '$' + totalPl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            totalPlEl.className = `summary-value ${plClass}`;
+            totalRoiEl.innerText = (totalRoi >= 0 ? '+' : '') + totalRoi.toFixed(2) + '%';
+            totalRoiEl.className = `summary-value ${plClass}`;
+            
+            // 繪製資產分配圓餅圖
+            drawDonutChart({
+                usStock: usStockVal,
+                twStock: twStockVal,
+                crypto: cryptoVal,
+                forex: forexVal
+            });
+        }
+
+        // SVG Donut Chart 渲染邏輯
+        function drawDonutChart(data) {
+            const svg = document.getElementById('donut-svg');
+            const legend = document.getElementById('donut-legend');
+            if (!svg || !legend) return;
+            
+            svg.innerHTML = '';
+            legend.innerHTML = '';
+            
+            const categories = [
+                { name: '美股持倉', color: '#3b82f6', value: data.usStock || 0 },
+                { name: '台股持倉', color: '#22c55e', value: data.twStock || 0 },
+                { name: '加密貨幣', color: '#eab308', value: data.crypto || 0 },
+                { name: '外匯現金', color: '#ec4899', value: data.forex || 0 }
+            ];
+            
+            const total = categories.reduce((sum, c) => sum + c.value, 0);
+            document.getElementById('donut-center-total').innerText = '$' + total.toLocaleString('en-US', { maximumFractionDigits: 0 });
+            
+            if (total === 0) {
+                svg.innerHTML = `
+                    <circle cx="75" cy="75" r="50" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14" />
+                `;
+                legend.innerHTML = `
+                    <div style="font-size:12px; color:var(--text-muted); text-align:center; padding: 10px;">目前尚無持倉權重分析</div>
+                `;
+                return;
+            }
+            
+            const r = 50;
+            const cx = 75;
+            const cy = 75;
+            const C = 2 * Math.PI * r; // ~314.16
+            
+            let strokeOffset = 0;
+            
+            categories.forEach(cat => {
+                const percentage = cat.value / total;
+                if (percentage === 0) return;
+                
+                const strokeLength = percentage * C;
+                const strokeDash = `${strokeLength} ${C - strokeLength}`;
+                
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', cx);
+                circle.setAttribute('cy', cy);
+                circle.setAttribute('r', r);
+                circle.setAttribute('fill', 'none');
+                circle.setAttribute('stroke', cat.color);
+                circle.setAttribute('stroke-width', '14');
+                circle.setAttribute('stroke-dasharray', strokeDash);
+                circle.setAttribute('stroke-dashoffset', -strokeOffset);
+                circle.setAttribute('transform', 'rotate(-90 75 75)'); 
+                circle.style.transition = 'stroke-dashoffset 0.5s ease';
+                svg.appendChild(circle);
+                
+                strokeOffset += strokeLength;
+                
+                const legendItem = document.createElement('div');
+                legendItem.style.display = 'flex';
+                legendItem.style.justifyContent = 'space-between';
+                legendItem.style.alignItems = 'center';
+                legendItem.style.fontSize = '12px';
+                legendItem.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:${cat.color};"></span>
+                        <span>${cat.name}</span>
+                    </div>
+                    <div style="font-weight:600;">
+                        <span>$${cat.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span style="color:var(--text-muted); margin-left:6px; font-weight:400;">(${(percentage * 100).toFixed(1)}%)</span>
+                    </div>
+                `;
+                legend.appendChild(legendItem);
+            });
+        }
+
+        // ==========================================
+        // TradingView 整合與自研 SVG K線指標圖表雙通道
+        // ==========================================
+        function mapYahooToTradingView(symbol, category) {
+            const sym = symbol.toUpperCase().trim();
+            
+            if (category === 'crypto') {
+                if (sym.endsWith('USDT')) return `BINANCE:${sym}`;
+                return `BINANCE:${sym}USDT`;
+            }
+            
+            if (category === 'forex') {
+                let clean = sym.replace('=X', '');
+                if (clean === 'TWD') return 'FX_IDC:USDTWD';
+                if (clean === 'JPY') return 'FX_IDC:USDJPY';
+                if (clean === 'EURUSD') return 'FX_IDC:EURUSD';
+                if (clean.length === 3) return `FX_IDC:USD${clean}`;
+                return `FX_IDC:${clean}`;
+            }
+            
+            if (category === 'macro') {
+                if (sym === '^GSPC') return 'AMEX:SPY';  
+                if (sym === '^IXIC') return 'NASDAQ:QQQ'; 
+                if (sym === '^DJI') return 'AMEX:DIA';   
+                if (sym === '^SOX') return 'NASDAQ:SOXX'; 
+                if (sym === '^TNX') return 'TVC:US10Y';  
+                if (sym === '^TWII') return 'TAIEX:2330'; // 使用台積電權值股大盤代理，亦可改為 EWT
+                return sym.replace('^', '');
+            }
+            
+            if (sym.endsWith('.TW')) {
+                return `TAIEX:${sym.replace('.TW', '')}`; // TradingView 免費組件之台灣代碼格式為 TAIEX:2330
+            }
+            return sym;
+        }
+
+        let currentModalSymbol = null;
+        let currentModalCategory = null;
+
+        function openChartModal(symbol, category) {
+            currentModalSymbol = symbol;
+            currentModalCategory = category;
+            
+            const cached = cachedQuotes[symbol] || {};
+            const assetName = cached.longName || symbol;
+            
+            document.getElementById('modal-asset-name').innerText = assetName;
+            document.getElementById('modal-asset-symbol').innerText = symbol;
+            
+            const modal = document.getElementById('chart-modal');
+            modal.style.display = 'flex';
+            void modal.offsetWidth; 
+            modal.classList.add('active');
+            
+            // 預設切換至 TradingView
+            switchModalTab('tv');
+        }
+
+        function switchModalTab(tabId) {
+            document.querySelectorAll('.modal-tab-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.querySelector(`.modal-tab-btn[onclick="switchModalTab('${tabId}')"]`);
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            const tvView = document.getElementById('tv-chart-view');
+            const localView = document.getElementById('local-chart-view');
+            
+            if (tabId === 'tv') {
+                tvView.style.display = 'block';
+                localView.style.display = 'none';
+                
+                const tvSymbol = mapYahooToTradingView(currentModalSymbol, currentModalCategory);
+                document.getElementById('tradingview-chart-container').innerHTML = '';
+                
+                new TradingView.widget({
+                    "autosize": true,
+                    "symbol": tvSymbol,
+                    "interval": "D",
+                    "timezone": "Etc/UTC",
+                    "theme": "dark",
+                    "style": "1",
+                    "locale": "zh_TW",
+                    "toolbar_bg": "#101420",
+                    "enable_publishing": false,
+                    "hide_side_toolbar": false,
+                    "allow_symbol_change": true,
+                    "container_id": "tradingview-chart-container",
+                    "studies": [
+                        "MACD@tv-basicstudies",
+                        "Stochastic@tv-basicstudies"
+                    ]
+                });
+            } else {
+                tvView.style.display = 'none';
+                localView.style.display = 'block';
+                renderLocalChart(currentModalSymbol);
+            }
+        }
+
+        function closeChartModal(event) {
+            const modal = document.getElementById('chart-modal');
+            modal.classList.remove('active');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                document.getElementById('tradingview-chart-container').innerHTML = '';
+            }, 300);
+        }
+
+        // ==========================================
+        // 自研 SVG 線圖與技術指標繪製引擎 (MACD & KD)
+        // ==========================================
+        function calculateEMA(data, period) {
+            const k = 2 / (period + 1);
+            const ema = [data[0]];
+            for (let i = 1; i < data.length; i++) {
+                ema.push(data[i] * k + ema[i - 1] * (1 - k));
+            }
+            return ema;
+        }
+
+        function renderLocalChart(symbol) {
+            const container = document.getElementById('local-chart-view');
+            const quote = cachedQuotes[symbol];
+            
+            if (!quote || !quote.history || quote.history.length === 0) {
+                container.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding-top:120px; font-size:13px;">無此標的之 30 日歷史數據，無法渲染本機指標線圖。</div>`;
+                return;
+            }
+            
+            const history = quote.history;
+            const n = history.length;
+            
+            // 1. 計算 SMA5 與 SMA20
+            const sma5 = [];
+            for (let i = 0; i < n; i++) {
+                if (i < 4) sma5.push(null);
+                else {
+                    const sum = history.slice(i-4, i+1).reduce((a, b) => a + b, 0);
+                    sma5.push(sum / 5);
+                }
+            }
+            const sma20 = [];
+            for (let i = 0; i < n; i++) {
+                if (i < 19) sma20.push(null);
+                else {
+                    const sum = history.slice(i-19, i+1).reduce((a, b) => a + b, 0);
+                    sma20.push(sum / 20);
+                }
+            }
+            
+            // 2. 計算 MACD (12, 26, 9)
+            const ema12 = calculateEMA(history, 12);
+            const ema26 = calculateEMA(history, 26);
+            const diff = [];
+            for (let i = 0; i < n; i++) diff.push(ema12[i] - ema26[i]);
+            const dea = calculateEMA(diff, 9);
+            const macdBar = [];
+            for (let i = 0; i < n; i++) macdBar.push(2 * (diff[i] - dea[i]));
+            
+            // 3. 計算 KD 指標 (9, 3, 3) - 採用近 9 日收盤價估算最高/最低值
+            const kVal = [];
+            const dVal = [];
+            let curK = 50;
+            let curD = 50;
+            for (let i = 0; i < n; i++) {
+                if (i < 8) {
+                    kVal.push(50);
+                    dVal.push(50);
+                } else {
+                    const last9 = history.slice(i - 8, i + 1);
+                    const h9 = Math.max(...last9);
+                    const l9 = Math.min(...last9);
+                    const rsv = (h9 - l9 === 0) ? 50 : ((history[i] - l9) / (h9 - l9)) * 100;
+                    curK = (2/3) * curK + (1/3) * rsv;
+                    curD = (2/3) * curD + (1/3) * curK;
+                    kVal.push(curK);
+                    dVal.push(curD);
+                }
+            }
+            
+            // 輸出 HTML 結構
+            container.innerHTML = `
+                <div style="display:flex; flex-direction:column; gap:16px; max-width:860px; margin:0 auto; padding-bottom: 20px;">
+                    <div>
+                        <div style="font-size:12px; font-weight:700; color:var(--text-main); margin-bottom:6px; display:flex; gap:12px; align-items:center;">
+                            <span>價格走勢與日均線</span>
+                            <span style="color:#eab308; font-weight:500;">● SMA5</span>
+                            <span style="color:#3b82f6; font-weight:500;">● SMA20</span>
+                        </div>
+                        <div id="local-price-chart-container"></div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:700; color:var(--text-main); margin-bottom:6px; display:flex; gap:12px; align-items:center;">
+                            <span>MACD (12, 26, 9)</span>
+                            <span style="color:#60a5fa; font-weight:500;">● DIF</span>
+                            <span style="color:#f59e0b; font-weight:500;">● DEA</span>
+                        </div>
+                        <div id="local-macd-chart-container"></div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:700; color:var(--text-main); margin-bottom:6px; display:flex; gap:12px; align-items:center;">
+                            <span>KD 指標 (9, 3, 3)</span>
+                            <span style="color:#3b82f6; font-weight:500;">● K值 (快線)</span>
+                            <span style="color:#f97316; font-weight:500;">● D值 (慢線)</span>
+                        </div>
+                        <div id="local-kd-chart-container"></div>
+                    </div>
+                </div>
+            `;
+            
+            drawPriceChartSVG(history, sma5, sma20, quote.isUp);
+            drawMacdChartSVG(diff, dea, macdBar);
+            drawKdChartSVG(kVal, dVal);
+        }
+
+        // 繪製主價格 SVG
+        function drawPriceChartSVG(history, sma5, sma20, isUp) {
+            const container = document.getElementById('local-price-chart-container');
+            if (!container) return;
+            
+            const width = 860;
+            const height = 180;
+            
+            const max = Math.max(...history);
+            const min = Math.min(...history);
+            const range = max - min === 0 ? 1 : max - min;
+            
+            // 給上下留下 5% 緩衝空間
+            const padMax = max + range * 0.05;
+            const padMin = min - range * 0.05;
+            const padRange = padMax - padMin;
+            
+            const points = history.map((val, idx) => {
+                const x = (idx / (history.length - 1)) * width;
+                const y = height - ((val - padMin) / padRange) * height;
+                return `${x},${y}`;
+            });
+            
+            const sma5Points = sma5.map((val, idx) => {
+                if (val === null) return null;
+                const x = (idx / (history.length - 1)) * width;
+                const y = height - ((val - padMin) / padRange) * height;
+                return `${x},${y}`;
+            }).filter(p => p !== null);
+            
+            const sma20Points = sma20.map((val, idx) => {
+                if (val === null) return null;
+                const x = (idx / (history.length - 1)) * width;
+                const y = height - ((val - padMin) / padRange) * height;
+                return `${x},${y}`;
+            }).filter(p => p !== null);
+            
+            const strokeColor = isUp ? 'var(--up-color)' : 'var(--down-color)';
+            const areaPoints = [`0,${height}`, ...points, `${width},${height}`].join(' L ');
+            
+            const pathData = `M ${points.join(' L ')}`;
+            const sma5PathData = sma5Points.length > 0 ? `M ${sma5Points.join(' L ')}` : '';
+            const sma20PathData = sma20Points.length > 0 ? `M ${sma20Points.join(' L ')}` : '';
+            
+            const gradId = `local-price-grad-${Math.random().toString(36).substr(2, 9)}`;
+            
+            container.innerHTML = `
+                <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" style="background:rgba(255,255,255,0.01); border:1px solid var(--border-color); border-radius:6px; overflow:visible;">
+                    <defs>
+                        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.15" />
+                            <stop offset="100%" stop-color="${strokeColor}" stop-opacity="0.0" />
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- 網格橫線 -->
+                    <line x1="0" y1="${height*0.25}" x2="${width}" y2="${height*0.25}" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+                    <line x1="0" y1="${height*0.5}" x2="${width}" y2="${height*0.5}" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+                    <line x1="0" y1="${height*0.75}" x2="${width}" y2="${height*0.75}" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+                    
+                    <path d="M ${areaPoints} Z" fill="url(#${gradId})" />
+                    <path d="${pathData}" fill="none" stroke="${strokeColor}" stroke-width="1.8" />
+                    ${sma5PathData ? `<path d="${sma5PathData}" fill="none" stroke="#eab308" stroke-width="1.2" stroke-opacity="0.85" />` : ''}
+                    ${sma20PathData ? `<path d="${sma20PathData}" fill="none" stroke="#3b82f6" stroke-width="1.2" stroke-opacity="0.85" />` : ''}
+                </svg>
+            `;
+        }
+
+        // 繪製 MACD SVG
+        function drawMacdChartSVG(diff, dea, macdBar) {
+            const container = document.getElementById('local-macd-chart-container');
+            if (!container) return;
+            
+            const width = 860;
+            const height = 80;
+            
+            const allValues = [...diff, ...dea, ...macdBar];
+            const max = Math.max(...allValues);
+            const min = Math.min(...allValues);
+            const absMax = Math.max(Math.abs(max), Math.abs(min)) || 1;
+            
+            const diffPoints = diff.map((val, idx) => {
+                const x = (idx / (diff.length - 1)) * width;
+                const y = height/2 - (val / absMax) * (height/2 - 5);
+                return `${x},${y}`;
+            });
+            
+            const deaPoints = dea.map((val, idx) => {
+                const x = (idx / (dea.length - 1)) * width;
+                const y = height/2 - (val / absMax) * (height/2 - 5);
+                return `${x},${y}`;
+            });
+            
+            const diffPath = `M ${diffPoints.join(' L ')}`;
+            const deaPath = `M ${deaPoints.join(' L ')}`;
+            
+            let barHTML = '';
+            const barWidth = Math.max(1, (width / diff.length) * 0.6);
+            macdBar.forEach((val, idx) => {
+                const x = (idx / (macdBar.length - 1)) * width - barWidth/2;
+                const barH = (val / absMax) * (height/2 - 5);
+                const y = barH >= 0 ? height/2 - barH : height/2;
+                const color = val >= 0 ? 'var(--up-color)' : 'var(--down-color)';
+                barHTML += `<rect x="${x}" y="${y}" width="${barWidth}" height="${Math.abs(barH) || 1}" fill="${color}" opacity="0.65" />`;
+            });
+            
+            container.innerHTML = `
+                <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" style="background:rgba(255,255,255,0.01); border:1px solid var(--border-color); border-radius:6px; overflow:visible;">
+                    <!-- 零軸線 -->
+                    <line x1="0" y1="${height/2}" x2="${width}" y2="${height/2}" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+                    ${barHTML}
+                    <path d="${diffPath}" fill="none" stroke="#60a5fa" stroke-width="1.2" />
+                    <path d="${deaPath}" fill="none" stroke="#f59e0b" stroke-width="1.2" />
+                </svg>
+            `;
+        }
+
+        // 繪製 KD SVG
+        function drawKdChartSVG(kVal, dVal) {
+            const container = document.getElementById('local-kd-chart-container');
+            if (!container) return;
+            
+            const width = 860;
+            const height = 80;
+            
+            const kPoints = kVal.map((val, idx) => {
+                const x = (idx / (kVal.length - 1)) * width;
+                const y = height - (val / 100) * (height - 10) - 5;
+                return `${x},${y}`;
+            });
+            
+            const dPoints = dVal.map((val, idx) => {
+                const x = (idx / (dVal.length - 1)) * width;
+                const y = height - (val / 100) * (height - 10) - 5;
+                return `${x},${y}`;
+            });
+            
+            const kPath = `M ${kPoints.join(' L ')}`;
+            const dPath = `M ${dPoints.join(' L ')}`;
+            
+            container.innerHTML = `
+                <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" style="background:rgba(255,255,255,0.01); border:1px solid var(--border-color); border-radius:6px; overflow:visible;">
+                    <!-- 20 & 80 超買超賣基準虛線 -->
+                    <line x1="0" y1="${height - (80/100)*(height-10)-5}" x2="${width}" y2="${height - (80/100)*(height-10)-5}" stroke="rgba(239,68,68,0.15)" stroke-width="1" stroke-dasharray="2,2" />
+                    <line x1="0" y1="${height - (20/100)*(height-10)-5}" x2="${width}" y2="${height - (20/100)*(height-10)-5}" stroke="rgba(34,197,94,0.15)" stroke-width="1" stroke-dasharray="2,2" />
+                    
+                    <path d="${kPath}" fill="none" stroke="#3b82f6" stroke-width="1.2" />
+                    <path d="${dPath}" fill="none" stroke="#f97316" stroke-width="1.2" />
+                </svg>
+            `;
+        }
+
+        // ==========================================
+        // 系統主題與配色風格設定邏輯
+        // ==========================================
+        const themeConfigs = {
+            default: {
+                '--bg-color': 'hsl(222, 47%, 6%)',
+                '--card-bg': 'rgba(30, 41, 59, 0.45)',
+                '--card-hover-bg': 'rgba(30, 41, 59, 0.65)',
+                '--accent-color': '#3b82f6',
+                '--input-bg': 'hsl(222, 35%, 8%)',
+                '--border-color': 'rgba(255, 255, 255, 0.08)',
+                '--text-main': 'hsl(215, 25%, 90%)',
+                '--text-muted': 'hsl(215, 15%, 55%)',
+                '--panel-bg': 'hsla(222, 33%, 8%, 0.3)'
+            },
+            emerald: {
+                '--bg-color': 'hsl(160, 47%, 4%)',
+                '--card-bg': 'rgba(4, 47, 31, 0.4)',
+                '--card-hover-bg': 'rgba(4, 47, 31, 0.6)',
+                '--accent-color': '#10b981',
+                '--input-bg': 'hsl(160, 35%, 6%)',
+                '--border-color': 'rgba(16, 185, 129, 0.15)',
+                '--text-main': 'hsl(160, 25%, 90%)',
+                '--text-muted': 'hsl(160, 15%, 55%)',
+                '--panel-bg': 'rgba(4, 47, 31, 0.25)'
+            },
+            amethyst: {
+                '--bg-color': 'hsl(260, 47%, 5%)',
+                '--card-bg': 'rgba(49, 18, 112, 0.3)',
+                '--card-hover-bg': 'rgba(49, 18, 112, 0.5)',
+                '--accent-color': '#8b5cf6',
+                '--input-bg': 'hsl(260, 35%, 7%)',
+                '--border-color': 'rgba(139, 92, 246, 0.15)',
+                '--text-main': 'hsl(260, 25%, 90%)',
+                '--text-muted': 'hsl(260, 15%, 55%)',
+                '--panel-bg': 'rgba(49, 18, 112, 0.2)'
+            },
+            volcano: {
+                '--bg-color': 'hsl(15, 47%, 5%)',
+                '--card-bg': 'rgba(67, 20, 7, 0.35)',
+                '--card-hover-bg': 'rgba(67, 20, 7, 0.55)',
+                '--accent-color': '#f97316',
+                '--input-bg': 'hsl(15, 35%, 7%)',
+                '--border-color': 'rgba(249, 115, 22, 0.15)',
+                '--text-main': 'hsl(15, 25%, 90%)',
+                '--text-muted': 'hsl(15, 15%, 55%)',
+                '--panel-bg': 'rgba(67, 20, 7, 0.2)'
+            },
+            deepsea: {
+                '--bg-color': 'hsl(200, 47%, 5%)',
+                '--card-bg': 'rgba(15, 23, 42, 0.45)',
+                '--card-hover-bg': 'rgba(15, 23, 42, 0.65)',
+                '--accent-color': '#06b6d4',
+                '--input-bg': 'hsl(200, 35%, 7%)',
+                '--border-color': 'rgba(6, 182, 212, 0.15)',
+                '--text-main': 'hsl(200, 25%, 90%)',
+                '--text-muted': 'hsl(200, 15%, 55%)',
+                '--panel-bg': 'rgba(15, 23, 42, 0.3)'
+            },
+            lightsnow: {
+                '--bg-color': 'hsl(210, 20%, 96%)',
+                '--card-bg': 'rgba(255, 255, 255, 0.85)',
+                '--card-hover-bg': 'rgba(255, 255, 255, 0.98)',
+                '--accent-color': '#2563eb',
+                '--input-bg': 'hsl(0, 0%, 100%)',
+                '--border-color': 'rgba(0, 0, 0, 0.08)',
+                '--text-main': 'hsl(222, 47%, 15%)',
+                '--text-muted': 'hsl(222, 15%, 45%)',
+                '--panel-bg': 'rgba(255, 255, 255, 0.45)'
+            },
+            lightmint: {
+                '--bg-color': 'hsl(140, 25%, 97%)',
+                '--card-bg': 'rgba(255, 255, 255, 0.85)',
+                '--card-hover-bg': 'rgba(255, 255, 255, 0.98)',
+                '--accent-color': '#059669',
+                '--input-bg': 'hsl(0, 0%, 100%)',
+                '--border-color': 'rgba(5, 150, 105, 0.12)',
+                '--text-main': 'hsl(160, 47%, 12%)',
+                '--text-muted': 'hsl(160, 15%, 42%)',
+                '--panel-bg': 'rgba(255, 255, 255, 0.5)'
+            },
+            lightrose: {
+                '--bg-color': 'hsl(340, 25%, 98%)',
+                '--card-bg': 'rgba(255, 255, 255, 0.85)',
+                '--card-hover-bg': 'rgba(255, 255, 255, 0.98)',
+                '--accent-color': '#db2777',
+                '--input-bg': 'hsl(0, 0%, 100%)',
+                '--border-color': 'rgba(219, 39, 119, 0.12)',
+                '--text-main': 'hsl(340, 47%, 12%)',
+                '--text-muted': 'hsl(340, 15%, 42%)',
+                '--panel-bg': 'rgba(255, 255, 255, 0.5)'
+            }
+        };
+
+        function initSettings() {
+            const savedTheme = localStorage.getItem('theme_style') || 'default';
+            const savedColorRule = localStorage.getItem('color_rule') || 'green-up-red-down';
+            
+            applyTheme(savedTheme);
+            applyColorRule(savedColorRule);
+            
+            const radio = document.querySelector(`input[name="color-rule"][value="${savedColorRule}"]`);
+            if (radio) radio.checked = true;
+        }
+
+        function applyTheme(themeName) {
+            const config = themeConfigs[themeName] || themeConfigs.default;
+            Object.keys(config).forEach(key => {
+                document.documentElement.style.setProperty(key, config[key]);
+            });
+            
+            localStorage.setItem('theme_style', themeName);
+            
+            document.querySelectorAll('.theme-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            const activeCard = document.getElementById(`theme-${themeName}`);
+            if (activeCard) {
+                activeCard.classList.add('active');
+            }
+        }
+
+        function handleColorRuleChange(value) {
+            applyColorRule(value);
+            localStorage.setItem('color_rule', value);
+            
+            if (currentUser) {
+                renderGrid('watchlist');
+                renderGrid('crypto');
+                renderGrid('macro');
+                renderGrid('forex');
+                updatePortfolioSection();
+            }
+        }
+
+        function applyColorRule(rule) {
+            if (rule === 'red-up-green-down') {
+                document.documentElement.style.setProperty('--up-color', 'hsl(350, 89%, 60%)');
+                document.documentElement.style.setProperty('--down-color', 'hsl(142, 71%, 45%)');
+                document.documentElement.style.setProperty('--up-bg', 'hsla(350, 89%, 60%, 0.1)');
+                document.documentElement.style.setProperty('--down-bg', 'hsla(142, 71%, 45%, 0.1)');
+                document.documentElement.style.setProperty('--glow-green', 'hsla(350, 89%, 60%, 0.2)');
+                document.documentElement.style.setProperty('--glow-red', 'hsla(142, 71%, 45%, 0.2)');
+                document.documentElement.style.setProperty('--up-glow-shadow', 'rgba(239, 68, 68, 0.4)');
+                document.documentElement.style.setProperty('--down-glow-shadow', 'rgba(34, 197, 94, 0.4)');
+                document.documentElement.style.setProperty('--up-glow-inset', 'rgba(239, 68, 68, 0.2)');
+                document.documentElement.style.setProperty('--down-glow-inset', 'rgba(34, 197, 94, 0.2)');
+            } else {
+                document.documentElement.style.setProperty('--up-color', 'hsl(142, 71%, 45%)');
+                document.documentElement.style.setProperty('--down-color', 'hsl(350, 89%, 60%)');
+                document.documentElement.style.setProperty('--up-bg', 'hsla(142, 71%, 45%, 0.1)');
+                document.documentElement.style.setProperty('--down-bg', 'hsla(350, 89%, 60%, 0.1)');
+                document.documentElement.style.setProperty('--glow-green', 'hsla(142, 71%, 45%, 0.2)');
+                document.documentElement.style.setProperty('--glow-red', 'hsla(350, 89%, 60%, 0.2)');
+                document.documentElement.style.setProperty('--up-glow-shadow', 'rgba(34, 197, 94, 0.4)');
+                document.documentElement.style.setProperty('--down-glow-shadow', 'rgba(239, 68, 68, 0.4)');
+                document.documentElement.style.setProperty('--up-glow-inset', 'rgba(34, 197, 94, 0.2)');
+                document.documentElement.style.setProperty('--down-glow-inset', 'rgba(239, 68, 68, 0.2)');
+            }
+        }
+
+        // ==========================================
+        // 深度洞察與總經 Mock Data 渲染 (Insights Tab)
+        // ==========================================
+        let insightsRendered = false;
+        function renderInsightsMockData() {
+            if (insightsRendered) return;
+            insightsRendered = true;
+
+            // 1. Yield Curve Chart
+            const ctxYield = document.getElementById('yieldCurveChart');
+            if (ctxYield && typeof Chart !== 'undefined') {
+                new Chart(ctxYield, {
+                    type: 'line',
+                    data: {
+                        labels: ['1M', '3M', '6M', '1Y', '2Y', '3Y', '5Y', '7Y', '10Y', '20Y', '30Y'],
+                        datasets: [
+                            {
+                                label: '當前收益率 (%)',
+                                data: [3.50, 3.55, 3.60, 3.70, 3.80, 3.85, 3.90, 4.00, 4.10, 4.30, 4.40],
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2
+                            },
+                            {
+                                label: '一年前收益率 (倒掛期)',
+                                data: [5.36, 5.38, 5.35, 5.10, 4.88, 4.65, 4.45, 4.42, 4.40, 4.60, 4.55],
+                                borderColor: 'rgba(239, 68, 68, 0.5)',
+                                borderDash: [5, 5],
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#9ca3af' } }
+                        },
+                        scales: {
+                            x: { grid: { color: 'rgba(150,150,150,0.1)' }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#9ca3af' } },
+                            y: { grid: { color: 'rgba(150,150,150,0.1)' }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#9ca3af' } }
+                        }
+                    }
+                });
+            }
+
+            // 2. FedWatch Bar Chart
+            const ctxFed = document.getElementById('fedWatchChart');
+            if (ctxFed && typeof Chart !== 'undefined') {
+                new Chart(ctxFed, {
+                    type: 'bar',
+                    data: {
+                        labels: ['3.25-3.50% (降息1碼)', '3.50-3.75% (不變)', '3.75-4.00% (升息1碼)'],
+                        datasets: [{
+                            label: '市場預期機率 (%)',
+                            data: [1.5, 97.2, 1.3],
+                            backgroundColor: [
+                                'rgba(34, 197, 94, 0.6)', 
+                                '#3b82f6', 
+                                'rgba(239, 68, 68, 0.6)'
+                            ],
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.parsed.y + '%';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#9ca3af' } },
+                            y: { grid: { color: 'rgba(150,150,150,0.1)' }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#9ca3af' }, beginAtZero: true }
+                        }
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,349 @@
+// gas.js
+const SHEET_NAME = 'Users';
+
+// 初始化工作表
+function setup() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss.getSheetByName(SHEET_NAME)) {
+    const sheet = ss.insertSheet(SHEET_NAME);
+    sheet.appendRow(['Username', 'Watchlist']);
+  }
+}
+
+// 規格化 Yahoo 代碼至 Google Finance 專用代碼
+function mapSymbolToGoogleFinance(symbol) {
+  const s = symbol.toUpperCase().trim();
+  
+  // 1. 匯率 (如 TWD=X -> CURRENCY:USDTWD)
+  if (s.endsWith('=X')) {
+    const currency = s.replace('=X', '');
+    if (currency === 'TWD') return 'CURRENCY:USDTWD';
+    if (currency === 'JPY') return 'CURRENCY:USDJPY';
+    if (currency.length === 3) return 'CURRENCY:USD' + currency;
+    return 'CURRENCY:' + currency;
+  }
+  if (s === 'EURUSD=X' || s === 'EURUSD') {
+    return 'CURRENCY:EURUSD';
+  }
+  
+  // 2. 指數與總經
+  if (s === '^GSPC') return 'INDEXSP:.INX';
+  if (s === '^IXIC') return 'INDEXNASDAQ:.IXIC';
+  if (s === '^SOX') return 'INDEXNASDAQ:SOX';
+  if (s === '^TNX') return 'INDEXCBOE:TNX';
+  if (s === '^TWII') return 'TPE:TAIEX';
+  
+  // 3. 台灣個股 (如 2330.TW -> TPE:2330)
+  if (s.endsWith('.TW')) {
+    return 'TPE:' + s.replace('.TW', '');
+  }
+  
+  // 4. 純數字代碼 (如台股代碼 2330 -> TPE:2330)
+  if (/^\d+$/.test(s)) {
+    return 'TPE:' + s;
+  }
+  
+  // 5. 美股個股直接回傳
+  return s;
+}
+
+// 處理前端發送的 GET 請求
+function doGet(e) {
+  setup();
+  
+  const action = e.parameter.action;
+  
+  // 1. 處理取得即時報價的 API 請求 (使用 Google Finance 引擎，帶有鎖與快取機制以解決併發與效能問題)
+  if (action === 'getQuotes') {
+    const symbolsStr = e.parameter.symbols || '';
+    const symbols = symbolsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    const includeHistory = e.parameter.includeHistory !== 'false';
+    
+    const results = {};
+    if (symbols.length === 0) {
+      return ContentService.createTextOutput(JSON.stringify({ quotes: {} }))
+                           .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    const cache = CacheService.getScriptCache();
+    const missingSymbols = [];
+    
+    // 優先從 CacheService 讀取緩存的資料 (價格 10 秒，歷史 2 小時)
+    symbols.forEach(s => {
+      const priceCached = cache.get('quote_price_' + s);
+      const histCached = includeHistory ? cache.get('quote_hist_' + s) : null;
+      
+      if (priceCached && (!includeHistory || histCached)) {
+        try {
+          const pObj = JSON.parse(priceCached);
+          const hObj = histCached ? JSON.parse(histCached) : [];
+          results[s] = {
+            status: 'success',
+            price: pObj.price,
+            change: pObj.change,
+            changePercent: pObj.changePercent,
+            longName: pObj.longName,
+            volumeSpike: pObj.volumeSpike,
+            history: hObj
+          };
+        } catch (err) {
+          missingSymbols.push(s);
+        }
+      } else {
+        missingSymbols.push(s);
+      }
+    });
+    
+    // 如果有缺失的標的，才去寫入試算表進行 GOOGLEFINANCE 運算
+    if (missingSymbols.length > 0) {
+      const lock = LockService.getScriptLock();
+      try {
+        // 等待最長 15 秒以取得腳本鎖，避免多個網頁籤/使用者併發導致覆寫 cacheSheet
+        lock.waitLock(15000);
+        
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        let cacheSheet = ss.getSheetByName('__Quotes_Cache__');
+        if (!cacheSheet) {
+          cacheSheet = ss.insertSheet('__Quotes_Cache__');
+        }
+        
+        // 重設與配置快取工作表
+        cacheSheet.clear();
+        cacheSheet.getRange(1, 1, 1, 8).setValues([['Symbol', 'Price', 'Change', 'ChangePct', 'Name', 'History', 'Volume', 'VolumeAvg20']]);
+        
+        // 寫入規格化代碼至 Column A
+        const mappedSymbols = missingSymbols.map(s => [mapSymbolToGoogleFinance(s)]);
+        cacheSheet.getRange(2, 1, missingSymbols.length, 1).setValues(mappedSymbols);
+        
+        // 寫入 Google Finance 計算公式至 Column B 至 H
+        const formulas = [];
+        for (let i = 0; i < missingSymbols.length; i++) {
+          const rowIdx = i + 2;
+          formulas.push([
+            `=GOOGLEFINANCE(A${rowIdx})`,
+            `=GOOGLEFINANCE(A${rowIdx}, "change")`,
+            `=GOOGLEFINANCE(A${rowIdx}, "changepct")`,
+            `=GOOGLEFINANCE(A${rowIdx}, "name")`,
+            includeHistory ? `=JOIN(";", INDEX(GOOGLEFINANCE(A${rowIdx}, "close", TODAY()-30, TODAY()), 0, 2))` : "",
+            `=GOOGLEFINANCE(A${rowIdx}, "volume")`,
+            includeHistory ? `=AVERAGE(INDEX(GOOGLEFINANCE(A${rowIdx}, "volume", TODAY()-30, TODAY()), 0, 2))` : ""
+          ]);
+        }
+        cacheSheet.getRange(2, 2, missingSymbols.length, 7).setFormulas(formulas);
+        
+        // 輪詢等待公式在 Google 伺服器端計算完畢 (最多嘗試 15 次，每次 500ms，以解決個股加載慢的問題)
+        let values = [];
+        const dataRange = cacheSheet.getRange(2, 1, missingSymbols.length, 8);
+        for (let attempt = 0; attempt < 15; attempt++) {
+          SpreadsheetApp.flush();
+          values = dataRange.getValues();
+          
+          let hasLoading = false;
+          for (let i = 0; i < values.length; i++) {
+            const val = String(values[i][1]); // 價格
+            const histVal = String(values[i][5]); // 歷史走勢
+            
+            const isHistLoading = includeHistory && (histVal === "" || histVal.toUpperCase().includes("LOADING"));
+            
+            // 空白或包含 loading 代表仍在計算中，需要等待；若為 #N/A 代表計算完成且不支援該欄位
+            if (val === "" || val.toUpperCase().includes("LOADING") || isHistLoading) {
+              hasLoading = true;
+              break;
+            }
+          }
+          if (!hasLoading) {
+            break;
+          }
+          Utilities.sleep(500);
+        }
+        
+        // 解析並建立快取
+        const toCache = {};
+        for (let i = 0; i < missingSymbols.length; i++) {
+          const origSym = missingSymbols[i];
+          const rowValues = values[i];
+          
+          let rawPriceStr = String(rowValues[1]).trim();
+          // 支援歐式小數點 (123,45) 格式與千分位逗號清理
+          if (rawPriceStr.includes(',') && !rawPriceStr.includes('.')) {
+            rawPriceStr = rawPriceStr.replace(/,/g, '.');
+          } else {
+            rawPriceStr = rawPriceStr.replace(/,/g, '');
+          }
+          rawPriceStr = rawPriceStr.replace(/[^0-9.-]/g, '');
+          const priceVal = parseFloat(rawPriceStr);
+          
+          if (isNaN(priceVal) || priceVal <= 0) {
+            results[origSym] = { status: 'error', message: 'Price loading failed' };
+            continue;
+          }
+          
+          const name = rowValues[4] || origSym;
+          
+          // 解析歷史資料
+          let historyArr = [];
+          if (includeHistory) {
+            const historyStr = String(rowValues[5] || '');
+            historyArr = historyStr.split(';').map(s => {
+              let cleaned = s.trim().replace(/,/g, '.');
+              return parseFloat(cleaned);
+            }).filter(p => !isNaN(p) && p > 0);
+          } else {
+            const histCached = cache.get('quote_hist_' + origSym);
+            if (histCached) {
+              try { historyArr = JSON.parse(histCached); } catch (e) {}
+            }
+          }
+          
+          let rawChange = String(rowValues[2] || '').trim().replace(/,/g, '.').replace(/[^0-9.-]/g, '');
+          let change = parseFloat(rawChange);
+          
+          let rawChangePercent = String(rowValues[3] || '').trim().replace(/,/g, '.').replace(/[^0-9.-]/g, '');
+          let changePercent = parseFloat(rawChangePercent);
+          
+          // 外匯或部分商品不原生支援 change，則以 30 天歷史收盤價的前一天價格做計算
+          if ((isNaN(change) || change === 0) && historyArr.length >= 2) {
+            const prevPrice = historyArr[historyArr.length - 2];
+            change = priceVal - prevPrice;
+            changePercent = (change / prevPrice) * 100;
+          }
+          
+          // 爆量檢測 (本日成交量 > 2.5倍 的 20日均量)
+          let rawVolume = String(rowValues[6] || '').trim().replace(/,/g, '').replace(/[^0-9.-]/g, '');
+          const volume = parseFloat(rawVolume) || 0;
+          
+          let rawVolumeAvg = String(rowValues[7] || '').trim().replace(/,/g, '').replace(/[^0-9.-]/g, '');
+          const volumeAvg = parseFloat(rawVolumeAvg) || 0;
+          const volumeSpike = volumeAvg > 0 && volume > 2.5 * volumeAvg;
+          
+          const quoteObj = {
+            status: 'success',
+            price: priceVal,
+            change: isNaN(change) ? 0 : change,
+            changePercent: isNaN(changePercent) ? 0 : changePercent,
+            longName: name,
+            history: historyArr,
+            volumeSpike: volumeSpike
+          };
+          
+          results[origSym] = quoteObj;
+          
+          // 快取價格與基本欄位 (10秒效期)
+          toCache['quote_price_' + origSym] = JSON.stringify({
+            price: priceVal,
+            change: isNaN(change) ? 0 : change,
+            changePercent: isNaN(changePercent) ? 0 : changePercent,
+            longName: name,
+            volumeSpike: volumeSpike
+          });
+          
+          // 快取歷史收盤價 (2小時效期)
+          if (includeHistory && historyArr.length > 0) {
+            cache.put('quote_hist_' + origSym, JSON.stringify(historyArr), 7200);
+          }
+        }
+        
+        if (Object.keys(toCache).length > 0) {
+          cache.putAll(toCache, 10);
+        }
+        
+      } catch (err) {
+        // 若發生錯誤，為防阻斷，仍對未成功的標的填入錯誤狀態
+        missingSymbols.forEach(s => {
+          if (!results[s]) {
+            results[s] = { status: 'error', message: 'Exception: ' + err.toString() };
+          }
+        });
+      } finally {
+        lock.releaseLock();
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ quotes: results }))
+                         .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  // 2. 預設邏輯：讀取或建立帳號自選股
+  const username = e.parameter.username;
+  if (!username) {
+    return ContentService.createTextOutput(JSON.stringify({ error: 'No username or action provided' }))
+                         .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  
+  // 預設四個獨立區塊的標的與空倉
+  const defaultWatchlist = {
+    watchlist: ['AAPL', 'TSLA', 'NVDA'],
+    crypto: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'],
+    macro: ['^GSPC', '^IXIC', '^SOX'],
+    forex: ['TWD=X', 'JPY=X', 'EURUSD=X'],
+    portfolio: {}
+  };
+
+  // 尋找使用者
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === username) {
+      let watchlistVal = data[i][1];
+      let parsed;
+      try {
+        parsed = JSON.parse(watchlistVal || '{}');
+      } catch(e) {
+        parsed = {};
+      }
+      
+      // 相容性檢查：若資料是舊版陣列，自動升級為新版物件格式
+      if (Array.isArray(parsed)) {
+        parsed = {
+          watchlist: parsed,
+          crypto: defaultWatchlist.crypto,
+          macro: defaultWatchlist.macro,
+          forex: defaultWatchlist.forex,
+          portfolio: {}
+        };
+        sheet.getRange(i + 1, 2).setValue(JSON.stringify(parsed));
+      } else {
+        parsed.watchlist = parsed.watchlist || defaultWatchlist.watchlist;
+        parsed.crypto = parsed.crypto || defaultWatchlist.crypto;
+        parsed.macro = parsed.macro || defaultWatchlist.macro;
+        parsed.forex = parsed.forex || defaultWatchlist.forex;
+        parsed.portfolio = parsed.portfolio || {};
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: 'success', 
+        watchlist: parsed 
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  
+  // 如果是全新使用者，建立預設監控清單
+  sheet.appendRow([username, JSON.stringify(defaultWatchlist)]);
+  return ContentService.createTextOutput(JSON.stringify({ 
+    status: 'created', 
+    watchlist: defaultWatchlist 
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+// 處理前端發送的 POST 請求 (更新自選清單與虛擬持倉)
+function doPost(e) {
+  setup();
+  const params = JSON.parse(e.postData.contents);
+  const username = params.username;
+  const watchlist = params.watchlist;
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === username) {
+      sheet.getRange(i + 1, 2).setValue(JSON.stringify(watchlist));
+      return ContentService.createTextOutput(JSON.stringify({ status: 'updated' }))
+                           .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ error: 'User not found' }))
+                       .setMimeType(ContentService.MimeType.JSON);
+}
