@@ -20,6 +20,9 @@
     
     <!-- Chart.js for High-end Data Visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    
 
     <style>
         /* 核心設計系統與 HSL 色彩配置 (彭博/Web3 交易終端風格) */
@@ -184,7 +187,7 @@
         .header h2 { 
             font-size: 20px; 
             font-weight: 700; 
-            background: linear-gradient(135deg, #fff 30%, var(--text-muted) 100%);
+            background: linear-gradient(135deg, var(--text-main) 30%, var(--text-muted) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -879,6 +882,18 @@
            RWD Mobile Responsiveness (max-width: 768px)
            ========================================== */
         @media (max-width: 768px) {
+        #portfolio-summary-boxes {
+            grid-template-columns: 1fr !important;
+        }
+        .news-item {
+            font-size: 0.7rem !important;
+            padding: 6px 10px !important;
+        }
+        .news-item span {
+            margin-right: 4px !important;
+            line-height: 1.2 !important;
+        }
+
             /* Header and Navigation */
             .header { flex-direction: column; align-items: flex-start; gap: 12px; }
             .header-left { width: 100%; }
@@ -986,7 +1001,108 @@
             .modal-close { position: absolute; top: 12px; right: 15px; }
         }
     
-    </style>
+    
+        /* ================= QUANT MODEL CSS ================= */
+        #quant-tab {
+            --q-bg-dark: #0f172a; --q-bg-panel: #1e293b; --q-text-main: #f8fafc; --q-text-sub: #94a3b8;
+            --q-accent-blue: #3b82f6; --q-accent-green: #10b981; --q-accent-red: #ef4444; --q-accent-yellow: #f59e0b;
+            --q-border: #334155; --q-risk-bg: #450a0a;
+            color: var(--q-text-main);
+            padding: 15px;
+        }
+        
+        .q-header {
+            background: var(--q-bg-panel); padding: 20px; border-radius: 12px;
+            display: flex; gap: 15px; align-items: flex-end; border: 1px solid var(--q-border);
+            margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .q-input-group { display: flex; flex-direction: column; gap: 5px; }
+        .q-input-group label { font-size: 0.85rem; color: var(--q-text-sub); }
+        .q-input-group input { background: #0b1120; border: 1px solid #475569; color: white; padding: 10px; border-radius: 6px; }
+        #inpApiKey { width: 280px; letter-spacing: 2px; color: #facc15; font-family: monospace; }
+        
+        .q-btn {
+            background: var(--q-accent-blue); color: white; border: none; padding: 11px 25px;
+            border-radius: 6px; cursor: pointer; font-weight: 600; height: 42px; width: 220px;
+        }
+        .q-btn:disabled { background: #475569; cursor: not-allowed; }
+
+        .macro-container {
+            display: none; grid-template-columns: 2fr 1fr; gap: 20px;
+            background: rgba(15, 23, 42, 0.8); border: 1px solid var(--q-accent-blue); border-radius: 12px;
+            padding: 20px; margin-bottom: 20px; height: auto; overflow: visible;
+        }
+        .matrix-box { background: var(--q-bg-panel); border-radius: 8px; border: 1px solid var(--q-border); overflow: hidden; }
+        .matrix-header { background: #334155; padding: 10px 15px; font-weight: bold; color: var(--q-accent-yellow); display: flex; justify-content: space-between; align-items: center; }
+        .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .matrix-table th { text-align: left; padding: 8px 15px; color: var(--q-text-sub); border-bottom: 1px solid var(--q-border); }
+        .matrix-table td { padding: 8px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .score-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: bold; }
+        .tag-pos { background: rgba(16, 185, 129, 0.2); color: var(--q-accent-green); }
+        .tag-neg { background: rgba(239, 68, 68, 0.2); color: var(--q-accent-red); }
+        .tag-neu { background: rgba(148, 163, 184, 0.2); color: var(--q-text-sub); }
+
+        .macro-summary { display: flex; flex-direction: column; justify-content: space-between; }
+        .impact-box { background: rgba(59, 130, 246, 0.1); border: 1px solid var(--q-accent-blue); padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 10px; }
+        .impact-score { font-size: 2.5rem; font-weight: 800; line-height: 1; margin: 5px 0; }
+        .formula-text { font-size: 0.8rem; color: var(--q-text-sub); line-height: 1.4; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; }
+
+        .q-grid-container { display: grid; grid-template-columns: 450px 1fr; gap: 20px; opacity: 0; transition: opacity 0.5s; margin-bottom: 40px; }
+        .report-card { background: var(--q-bg-panel); border-radius: 12px; border: 1px solid var(--q-border); padding: 20px; display: flex; flex-direction: column; gap: 15px; height: auto; }
+
+        .total-score-box { text-align: center; padding-bottom: 15px; border-bottom: 1px solid var(--q-border); }
+        .score-display { font-size: 5rem; font-weight: 800; line-height: 1.2; margin: 10px 0; color: #f8fafc; text-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+        .verdict { font-size: 1.2rem; font-weight: bold; padding: 5px 15px; border-radius: 20px; display: inline-block; }
+
+        .metric-card { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px; }
+        .metric-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .metric-title { font-size: 1rem; font-weight: bold; color: #e2e8f0; }
+        
+        .metric-score-box { background: #0f172a; border: 1px solid #475569; padding: 2px 10px; border-radius: 6px; font-family: monospace; font-weight: bold; font-size: 1.1rem; color: #facc15; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; }
+        .metric-score-box:hover { background: #334155; border-color: var(--q-accent-yellow); transform: scale(1.05); }
+        .metric-score-box::after { content: 'ℹ️'; font-size: 0.7rem; opacity: 0.7; }
+
+        .bar-bg { height: 6px; background: #334155; border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+        .bar-fill { height: 100%; width: 0%; transition: width 0.8s ease-out; }
+        .metric-status { font-size: 0.9rem; font-weight: bold; margin-bottom: 4px; color: #f8fafc; }
+        .metric-logic { font-size: 0.8rem; color: #94a3b8; line-height: 1.4; }
+
+        .charts-area { display: flex; flex-direction: column; gap: 15px; }
+        .q-chart-box { background: var(--q-bg-panel); padding: 15px; border-radius: 12px; border: 1px solid var(--q-border); position: relative; }
+        #chartMainBox { height: 500px; } .sub-chart { height: 300px; }
+        .loading { color: var(--q-accent-blue); display: none; margin-left: 10px; }
+
+        .q-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .q-modal-content { background: #1e293b; border: 1px solid var(--q-accent-blue); width: 500px; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); position: relative; }
+        .q-modal-close { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #94a3b8; }
+        .q-modal-title { font-size: 1.4rem; font-weight: bold; color: white; margin-bottom: 5px; }
+        .q-modal-weight { display: inline-block; background: var(--q-accent-blue); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 15px; }
+        .q-formula-list { list-style: none; padding: 0; margin: 0; font-size: 0.95rem; color: #cbd5e1; }
+        .q-formula-list li { margin-bottom: 10px; padding-left: 15px; border-left: 3px solid #475569; }
+
+        /* Quant Model RWD */
+        @media (max-width: 768px) {
+            .q-grid-container { grid-template-columns: 1fr; }
+            .macro-container { grid-template-columns: 1fr; display: flex !important; flex-direction: column; }
+            .macro-container > div[style*="display:grid"] { grid-template-columns: 1fr !important; }
+            .q-input-group { width: 100%; }
+            .q-input-group input { width: 100% !important; }
+            .q-btn { width: 100%; }
+            #stockInfoPanel > div > div { flex-direction: column; align-items: flex-start !important; gap: 8px; }
+            #stockInfoPanel > div > div > div[style*="margin-left: 30px"] { margin-left: 0 !important; flex-wrap: wrap; }
+            #riskManagementPanel > div > div[style*="justify-content: space-between"] { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .q-modal-content { width: 90vw; }
+            .matrix-table { display: block; overflow-x: auto; white-space: nowrap; }
+        }
+    
+</style>
+
+    <!-- Efficient Frontier Scripts -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.2.1/math.min.js"></script>
 </head>
 <body>
 
@@ -1028,11 +1144,14 @@
 
         <!-- 功能分頁按鈕 (Tab Navigation System) -->
         <div class="nav-tabs">
-            <div class="nav-tab active" onclick="switchTab('market')">市場監控 (Watchlist)</div>
-            <div class="nav-tab" onclick="switchTab('portfolio')">持倉與資產分析 (Portfolio)</div>
-            <div class="nav-tab" onclick="switchTab('insights')">總經與板塊深度分析 (Insights)</div>
-            <div class="nav-tab" onclick="switchTab('calendar')">總經財經日曆 (Calendar)</div>
-            <div class="nav-tab" onclick="switchTab('settings')">系統設定 (Settings)</div>
+            <div class="nav-tab active" onclick="switchTab('market')"><div style="line-height:1.2; text-align:center;">市場監控<br><span style="font-size:0.85em; opacity:0.8;">Watchlist</span></div></div>
+            <div class="nav-tab" onclick="switchTab('portfolio')"><div style="line-height:1.2; text-align:center;">持倉與資產分析<br><span style="font-size:0.85em; opacity:0.8;">Portfolio</span></div></div>
+            <div class="nav-tab" onclick="switchTab('insights')"><div style="line-height:1.2; text-align:center;">總經與板塊深度分析<br><span style="font-size:0.85em; opacity:0.8;">Insights</span></div></div>
+            <div class="nav-tab" onclick="switchTab('calendar')"><div style="line-height:1.2; text-align:center;">總經財經日曆<br><span style="font-size:0.85em; opacity:0.8;">Calendar</span></div></div>
+            <div class="nav-tab" onclick="switchTab('quant')"><div style="line-height:1.2; text-align:center;">多因子量化<br><span style="font-size:0.85em; opacity:0.8;">Quant Model</span></div></div>
+            <div class="nav-tab" onclick="switchTab('efficient')"><div style="line-height:1.2; text-align:center;">投資組合效率前緣<br><span style="font-size:0.85em; opacity:0.8;">Efficient Frontier</span></div></div>
+            <div class="nav-tab" onclick="switchTab('pair')"><div style="line-height:1.2; text-align:center;">量化配對交易<br><span style="font-size:0.85em; opacity:0.8;">Pairs Trading</span></div></div>
+            <div class="nav-tab" onclick="switchTab('settings')"><div style="line-height:1.2; text-align:center;">系統設定<br><span style="font-size:0.85em; opacity:0.8;">Settings</span></div></div>
         </div>
 
         <!-- 頁籤一：市場監控 (Market Watch) -->
@@ -1047,10 +1166,7 @@
                     </div>
                 </div>
                 <div class="grid" id="macro-grid" ondragover="allowDrop(event)"></div>
-                <div class="add-target-container" draggable="false">
-                    <input type="text" id="new-macro-input" placeholder="代碼 (例: ^GSPC, ^SOX, ^TNX)" style="text-transform: uppercase;" draggable="false">
-                    <button onclick="addTarget('macro')" draggable="false">新增</button>
-                </div>
+                
             </div>
 
             <!-- 匯率監控區塊 -->
@@ -1062,10 +1178,7 @@
                     </div>
                 </div>
                 <div class="grid" id="forex-grid" ondragover="allowDrop(event)"></div>
-                <div class="add-target-container" draggable="false">
-                    <input type="text" id="new-forex-input" placeholder="代碼 (例: JPY=X, TWD=X, EURUSD=X)" style="text-transform: uppercase;" draggable="false">
-                    <button onclick="addTarget('forex')" draggable="false">新增</button>
-                </div>
+                
             </div>
 
             <!-- 自選股區塊 -->
@@ -1100,12 +1213,14 @@
         </div>
 
         <!-- 頁籤五：總經與板塊深度分析 (Insights Page) -->
-        <div id="insights-tab" class="tab-content">
+        
+    
+    <div id="insights-tab" class="tab-content">
             
             <!-- 1. 金融相關重大即時新聞 -->
             <div class="market-section">
                 <div class="section-header">
-                    <h2 class="section-title">📰 全球金融即時新聞 (Live News Feed)</h2>
+                    <h2 class="section-title" contenteditable="true" onblur="saveCustomTitle(this.parentNode.parentNode.id, this.innerText)" >📰 全球金融即時新聞 (Live News Feed)</h2>
                     <div class="marquee-container">
                         <div class="marquee-content">
                             <!-- 第一組 -->
@@ -1150,7 +1265,7 @@
                     <div class="section-header">
                         <h2 class="section-title">🔥 全球行業板塊輪動熱力圖 (Sector Rotation) <span style="font-size: 13px; color: var(--text-muted); font-weight: normal; margin-left: 10px;">(資料日期: 2026-06-14)</span></h2>
                     </div>
-                    <div id="sector-heatmap" style="display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 80px; gap: 8px;">
+                    <div id="sector-heatmap" style="display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: 80px; gap: 8px;">
                         <!-- Tech -->
                         <div style="grid-column: span 2; grid-row: span 2; background: rgba(34,197,94,0.35); border: 1px solid var(--up-color); border-radius: 6px; padding: 12px; display:flex; flex-direction: column; justify-content: space-between;">
                             <div><span style="font-weight:bold; color:var(--text-main); font-size: 16px;">資訊科技 (XLK)</span><div style="font-size:11px; color:var(--text-muted); margin-top:2px;">市值: $18.5T | AI 伺服器/軟體</div></div>
@@ -1213,14 +1328,36 @@
                             <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">必選消費 (XLP)</span></div>
                             <div style="text-align: right;"><span style="color:var(--up-color); font-size: 14px; font-weight: bold;">+0.35%</span></div>
                         </div>
+                        
+                        <!-- New Sectors -->
+                        <div style="grid-column: span 2; grid-row: span 1; background: rgba(34,197,94,0.45); border: 1px solid var(--up-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">半導體與設備 (SMH)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--up-color); font-size: 16px; font-weight: bold;">+4.12%</span></div>
+                        </div>
+                        <div style="grid-column: span 1; grid-row: span 1; background: rgba(239,68,68,0.3); border: 1px solid var(--down-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">生技醫療 (XBI)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--down-color); font-size: 14px; font-weight: bold;">-1.85%</span></div>
+                        </div>
+                        <div style="grid-column: span 1; grid-row: span 1; background: rgba(34,197,94,0.25); border: 1px solid var(--up-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">航太與國防 (ITA)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--up-color); font-size: 14px; font-weight: bold;">+1.45%</span></div>
+                        </div>
+                        <div style="grid-column: span 1; grid-row: span 1; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">區域銀行 (KRE)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--text-muted); font-size: 14px; font-weight: bold;">-0.05%</span></div>
+                        </div>
+                        <div style="grid-column: span 1; grid-row: span 1; background: rgba(34,197,94,0.15); border: 1px solid var(--up-color); border-radius: 6px; padding: 10px; display:flex; flex-direction: column; justify-content: space-between;">
+                            <div><span style="font-weight:bold; color:var(--text-main); font-size: 12px;">零售業 (XRT)</span></div>
+                            <div style="text-align: right;"><span style="color:var(--up-color); font-size: 14px; font-weight: bold;">+0.80%</span></div>
+                        </div>
                     </div>
-                    <div style="margin-top:10px; font-size:11px; color:var(--text-muted);">* 區塊大小依市值權重排版，包含美股 11 大板塊與台股核心產業。背景顏色深淺代表單日資金淨流入與漲跌幅動能。</div>
+                    <div style="margin-top:10px; font-size:11px; color:var(--text-muted);">* 區塊大小依市值權重排版，包含美股核心板塊、次產業與台股核心產業。背景顏色深淺代表單日資金淨流入與漲跌幅動能。</div>
                 </div>
 
                 <!-- 3. 加密貨幣鏈上指標 -->
                 <div class="market-section">
                     <div class="section-header">
-                        <h2 class="section-title">⛓️ 加密貨幣鏈上指標與籌碼分布 (Crypto On-chain)</h2>
+                        <h2 class="section-title" contenteditable="true" onblur="saveCustomTitle(this.parentNode.parentNode.id, this.innerText)" >⛓️ 加密貨幣鏈上指標與籌碼分布 (Crypto On-chain)</h2>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
@@ -1263,6 +1400,52 @@
                                 <div style="color:var(--text-muted); font-size:11px; margin-top:2px;">(估值處於中期健康階段)</div>
                             </div>
                         </div>
+                        
+                        <!-- 新增的 Crypto 指標 -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <div>
+                                <div style="color:var(--text-main); font-size:13px; font-weight:600;">全網合約未平倉量 (Total Open Interest)</div>
+                                <div style="color:var(--text-muted); font-size:11px; margin-top:4px;">評估市場槓桿水平與波動潛力，突破前高易引發清算。</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="color:var(--accent-color); font-weight:bold; font-size:16px;">$35.2B</span>
+                                <div style="color:var(--accent-color); font-size:11px; margin-top:2px;">(槓桿率處於高位，警惕插針)</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <div>
+                                <div style="color:var(--text-main); font-size:13px; font-weight:600;">穩定幣總市值餘額 (Stablecoin Supply)</div>
+                                <div style="color:var(--text-muted); font-size:11px; margin-top:4px;">代表加密市場的潛在購買力與流動性水庫。</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="color:var(--up-color); font-weight:bold; font-size:16px;">$156.8B</span>
+                                <div style="color:var(--up-color); font-size:11px; margin-top:2px;">(資金持續淨流入中)</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <div>
+                                <div style="color:var(--text-main); font-size:13px; font-weight:600;">比特幣算力 (Network Hashrate)</div>
+                                <div style="color:var(--text-muted); font-size:11px; margin-top:4px;">反映礦工投入的安全成本與挖礦難度預期。</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="color:var(--text-main); font-weight:bold; font-size:16px;">654 EH/s</span>
+                                <div style="color:var(--text-muted); font-size:11px; margin-top:2px;">(歷史新高，基本面強勁)</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <div>
+                                <div style="color:var(--text-main); font-size:13px; font-weight:600;">NUPL (淨未實現盈虧比)</div>
+                                <div style="color:var(--text-muted); font-size:11px; margin-top:4px;">評估全網投資者盈利狀態，> 0.75 進入極度狂熱。</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="color:var(--text-main); font-weight:bold; font-size:16px;">0.58</span>
+                                <div style="color:var(--text-muted); font-size:11px; margin-top:2px;">(信仰/牛市加速期)</div>
+                            </div>
+                        </div>
+                        
                     </div>
                 </div>
             </div>
@@ -1272,7 +1455,7 @@
                 <!-- 4. 收益率曲線倒掛 -->
                 <div class="market-section">
                     <div class="section-header">
-                        <h2 class="section-title">📊 國債收益率曲線與利差監控 (Yield Curve Tracker)</h2>
+                        <h2 class="section-title" contenteditable="true" onblur="saveCustomTitle(this.parentNode.parentNode.id, this.innerText)" >📊 國債收益率曲線與利差監控 (Yield Curve Tracker)</h2>
                     </div>
                     <div style="display: flex; justify-content: space-around; margin-bottom: 15px; text-align: center;">
                         <div style="background: var(--up-bg); padding: 10px 20px; border-radius: 6px; border: 1px solid rgba(34, 197, 94, 0.3);">
@@ -1292,7 +1475,7 @@
                 <!-- 5. FedWatch -->
                 <div class="market-section">
                     <div class="section-header">
-                        <h2 class="section-title">🏦 央行利率預測 (FedWatch Rate Probability)</h2>
+                        <h2 class="section-title" contenteditable="true" onblur="saveCustomTitle(this.parentNode.parentNode.id, this.innerText)" >🏦 央行利率預測 (FedWatch Rate Probability)</h2>
                     </div>
                     <div style="font-size: 13px; color: var(--text-main); margin-bottom: 10px;">目標 FOMC 會議: <span style="font-weight:bold; color:var(--accent-color);">2026年6月17日</span> | 當前基準利率: <span style="font-weight:bold;">3.50-3.75%</span></div>
                     <div style="position: relative; height: 200px;">
@@ -1305,7 +1488,7 @@
             <!-- 6. 融資融券與空頭 -->
             <div class="market-section">
                 <div class="section-header">
-                    <h2 class="section-title">📉 台股市場信用交易餘額監控 (Taiwan Market Margin & Short Balance)</h2>
+                    <h2 class="section-title" contenteditable="true" onblur="saveCustomTitle(this.parentNode.parentNode.id, this.innerText)" >📉 台股市場信用交易餘額監控 (Taiwan Market Margin & Short Balance)</h2>
                 </div>
                 <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">資料日期: 2026-06-14 | 單位: 新台幣 (億元) / 張</div>
                 <div class="portfolio-table-wrapper">
@@ -1353,7 +1536,7 @@
             <div style="display:flex; flex-direction:column; gap:20px; padding:4px 0;">
 
                 <!-- 摘要卡片列 -->
-                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px;">
+                <div id="portfolio-summary-boxes" style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px;">
                     <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:18px; text-align:center;">
                         <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">持倉總市值</div>
                         <div id="portfolio-total-val" style="font-size:22px; font-weight:700; color:var(--text-main);">$0.00</div>
@@ -1427,7 +1610,21 @@
         <div id="calendar-tab" class="tab-content">
             <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:20px;">
                 <div style="font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:16px;">📅 本週總經數據財經日曆 (TradingView)</div>
-                <div id="calendar-widget-container" style="height:620px; width:100%; border-radius:8px; overflow:hidden; background:var(--input-bg); display:flex; align-items:center; justify-content:center;">
+                
+                <!-- 鎖定表頭 (Custom Sticky Header) -->
+                <div style="display: flex; justify-content: space-between; padding: 12px 16px; background: var(--panel-bg); border: 1px solid var(--border-color); border-bottom: none; border-radius: 8px 8px 0 0; font-size: 13px; font-weight: 600; color: var(--text-muted);">
+                    <div style="display: flex; gap: 10px; flex: 1;">
+                        <span style="width: 45px; text-align: center;">時間</span>
+                        <span style="padding-left: 10px;">國家 / 指標事件名稱</span>
+                    </div>
+                    <div style="display: flex; gap: 10px; text-align: right; justify-content: flex-end;">
+                        <span style="width: 65px;">實際值</span>
+                        <span style="width: 65px;">預測值</span>
+                        <span style="width: 65px;">前值</span>
+                    </div>
+                </div>
+                
+                <div id="calendar-widget-container" style="height:620px; width:100%; border-radius:0 0 8px 8px; overflow:hidden; background:var(--input-bg); display:flex; align-items:center; justify-content:center;">
                     <div style="color:var(--text-muted); font-size:14px;">📅 點選此頁籤後載入行事曆...</div>
                 </div>
                 <div style="margin-top:8px; font-size:11px; color:var(--text-muted); text-align:right;">* 資料由 TradingView 提供｜包含美國、台灣、歐洲等主要央行及經濟數據發布時程</div>
@@ -1437,6 +1634,362 @@
         <!-- ═══════════════════════════════════════════════════
              頁籤四：系統設定 (Settings)
         ═══════════════════════════════════════════════════ -->
+        
+    <!-- ================= QUANT MODEL TAB ================= -->
+    <div id="quant-tab" class="tab-content">
+        <div class="q-modal-overlay" id="scoreModal" onclick="closeQModal(event)">
+            <div class="q-modal-content">
+                <span class="q-modal-close" onclick="document.getElementById('scoreModal').style.display='none'">&times;</span>
+                <div class="q-modal-title" id="mTitle">指標名稱</div>
+                <div class="q-modal-weight" id="mWeight">權重: 20%</div>
+                <ul class="q-formula-list" id="mFormula"></ul>
+            </div>
+        </div>
+
+        <div class="q-header">
+            <div class="q-input-group">
+                <label>股票代號</label>
+                <input type="text" id="inpSymbol" value="TSLA" style="width: 100px;">
+            </div>
+            <div class="q-input-group">
+                <label>年限</label>
+                <input type="number" id="inpYears" value="1" min="1" max="5" style="width: 80px;">
+            </div>
+            <div class="q-input-group">
+                <label>API Key</label>
+                <input type="password" id="inpApiKey" value="e9e9c1790b11411abfb50f990984fbf1" oncopy="return false" oncut="return false">
+            </div>
+            <button class="q-btn" onclick="startQuantSystem()" id="btnStart">RUN MODEL</button>
+            <div class="loading" id="loadingMsg">跑一下.. 很快</div>
+        </div>
+
+        <div id="stockInfoPanel" style="width: 100%; margin-bottom: 20px; display: none;">
+            <div style="background: var(--q-bg-panel); border: 1px solid #334155; border-radius: 12px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <div style="display: flex; align-items: baseline; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                    <div style="font-size: 1.8rem; font-weight: bold; color: var(--q-text-main);" id="infoPrice">--</div>
+                    <div style="font-size: 0.9rem; color: var(--q-text-sub); margin-left: 8px;">(<span id="infoDateMain">--</span> 價格)</div>
+                    
+                    <div style="display: flex; gap: 15px; font-size: 0.85rem; margin-left: 30px;">
+                        <div style="color: var(--q-text-sub);">日: <span id="chgDay">--</span></div>
+                        <div style="color: var(--q-text-sub);">週: <span id="chgWeek">--</span></div>
+                        <div style="color: var(--q-text-sub);">月: <span id="chgMonth">--</span></div>
+                        <div style="color: var(--q-text-sub);">季: <span id="chgQuarter">--</span></div>
+                        <div style="color: var(--q-text-sub);">年: <span id="chgYear">--</span></div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 15px; font-size: 0.85rem; color: var(--q-text-sub); align-items: center;">
+                    <div>開: <span id="infoOpen" style="color: var(--q-text-main);">--</span></div>
+                    <div>高: <span id="infoHigh" style="color: var(--q-text-main);">--</span></div>
+                    <div>低: <span id="infoLow" style="color: var(--q-text-main);">--</span></div>
+                    <div>收: <span id="infoClose" style="color: var(--q-text-main);">--</span></div>
+                    <div>量: <span id="infoVol" style="color: var(--q-text-main);">--</span></div>
+                    <div style="grid-column: span 2;">52週範圍: <span id="info52Range" style="color: var(--q-text-main);">--</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="q-grid-container" id="mainLayout">
+            <div class="report-card">
+                <div class="total-score-box">
+                    <div style="color:var(--q-text-sub); font-size:0.9rem; letter-spacing:1px; text-transform:uppercase;">Alpha Strategy Score</div>
+                    <div class="score-display" id="finalScore">--</div>
+                    <div class="verdict" id="finalVerdict">--</div>
+                </div>
+                <div id="metricsContainer"></div>
+            </div>
+
+            <div class="charts-area">
+                <div class="q-chart-box" id="chartMainBox"><canvas id="cMain"></canvas></div>
+                <div class="q-chart-box sub-chart"><canvas id="cKD"></canvas></div>
+                <div class="q-chart-box sub-chart"><canvas id="cRSI"></canvas></div>
+                <div class="q-chart-box sub-chart"><canvas id="cMACD"></canvas></div>
+                <div class="q-chart-box sub-chart"><canvas id="cVolat"></canvas></div>
+            </div>
+        </div>
+
+        <div class="macro-container" id="macroPanel" style="display:none; grid-template-columns: 1fr; gap: 30px; margin-top:50px; border-top:1px solid #334155; padding-top:30px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+                <div class="matrix-box">
+                    <div class="matrix-header">
+                        <span>宏觀多空矩陣 (Macro Matrix)</span>
+                        <span style="font-size:0.8rem; opacity:0.8">Data Source: SPY & VIX</span>
+                    </div>
+                    <table class="matrix-table">
+                        <thead><tr><th width="35%">量化檢測因子 (Factors)</th><th width="20%">目前數值</th><th width="30%">模型判定</th><th width="15%">權重修正</th></tr></thead>
+                        <tbody id="macroTableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="macro-summary">
+                    <div class="impact-box">
+                        <div style="font-size:1rem; color:var(--q-accent-blue); font-weight:bold;">總體經濟風險係數 (Macro Risk Alpha)</div>
+                        <div class="impact-score" id="impactVal">0</div>
+                        <div style="font-size:0.85rem; opacity:0.8">此係數代表系統性風險對個股期望值的修正幅度</div>
+                    </div>
+                    <div class="formula-box" style="flex-grow:1; display:flex; flex-direction:column;">
+                        <div style="font-weight:bold; margin-bottom:10px; color:#cbd5e1; border-bottom:1px solid #475569; padding-bottom:5px;">📝 量化模型評分機制詳解 (Quantitative Scoring Methodology)：</div>
+                        <div class="formula-text" style="font-size:0.85rem; line-height:1.7; color:#94a3b8; overflow-y:auto; max-height:300px;">
+                            <p style="margin:0 0 8px 0;">本系統採用<b>多因子量化模型 (Multi-Factor Model)</b>，針對市場趨勢、波動率與動能進行加權評估。基準分為 0 分，正值代表順風（Tailwind），負值代表逆風（Headwind）。</p>
+                            
+                            <strong style="color:#e2e8f0;">1. 趨勢因子 (Multi-Timeframe Trend Factor)：</strong>
+                            <ul style="margin:5px 0 10px 0; padding-left:20px;">
+                                <li><b>長線趨勢 (Weight 15%)：</b>檢測 60MA 與 200MA 關係。黃金交叉且價格在年線上為強勢 (+15)；跌破年線視為長線走空，給予 <b>-15分</b> 懲罰。</li>
+                                <li><b>中長線趨勢 (Weight 10%)：</b>檢測 20MA 與 60MA 關係。多頭排列（20>60）代表中期動能向上 (+10)；反之若 20MA 跌破 60MA 則扣 <b>-10分</b>。</li>
+                                <li><b>短線趨勢 (Weight 5%)：</b>檢測 5MA 與 20MA 關係。5MA 在 20MA 之上為短線噴發 (+5)；若跌破則視為短線回檔 <b>-5分</b>。</li>
+                            </ul>
+
+                            <strong style="color:#e2e8f0;">2. 波動率風險因子 (Volatility Risk Factor)：</strong>
+                            <ul style="margin:5px 0 10px 0; padding-left:20px;">
+                                <li><b>VIX 絕對水位 (Absolute Level)：</b>採用級距式扣分模型。VIX>20 開始扣分，>30 視為高度恐慌 (-8分)，>35 視為崩盤前兆 (-12分)。</li>
+                                <li><b>布林通道壓力測試 (Bollinger Stress Test)：</b>當 VIX 突破布林上軌 (Upper Band)，代表發生 2個標準差 (2σ) 以上的極端恐慌事件，觸發 <b>-15分</b> 的熔斷機制。</li>
+                                <li><b>歷史波動率異常 (HV Z-Score)：</b>計算過去 200日波動率的標準分數。若 Z-Score > 2.5，代表市場處於統計學上的極端不穩定狀態。</li>
+                            </ul>
+
+                            <strong style="color:#e2e8f0;">3. 動能因子 (Momentum Factor)：</strong>
+                            <ul style="margin:5px 0 0 0; padding-left:20px;">
+                                <li><b>恐慌動能 (VIX Momentum)：</b>透過 VIX 5日線與 20日線的交叉關係，判斷恐慌情緒是在「加速升溫」還是「降溫冷卻」。</li>
+                                <li><b>短線乖離 (Short-term BIAS)：</b>檢測 SPY 與月線的乖離，過大則視為過熱 (0分)，適中則視為強勢 (+3分)。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+                <div class="q-chart-box" style="min-height:400px !important; padding:0; overflow:hidden; border-radius:12px; border:1px solid #334155;">
+                    <div id="tv_chart_spy" style="height:100%; width:100%;"></div>
+                </div>
+                <div class="q-chart-box" style="min-height:400px !important; padding:0; overflow:hidden; border-radius:12px; border:1px solid #334155;">
+                    <div id="tv_chart_vix" style="height:100%; width:100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="riskManagementPanel" style="width: 100%; margin-bottom: 20px; display: none;">
+            <div style="background: var(--q-bg-panel); border: 1px solid #334155; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; margin-bottom: 15px;">
+                    <div style="font-size: 1.1rem; font-weight: bold; color: var(--q-text-main); display: flex; align-items: center; gap: 8px;">
+                        Volatility-Adjusted Risk Model <span style="font-size: 0.8rem; color: var(--q-text-sub); font-weight: normal;">(for reference)</span>
+                    </div>
+                    <button onclick="showRiskFormula()" style="cursor: pointer; font-size: 0.85rem; background: rgba(59, 130, 246, 0.1); color: var(--q-accent-blue); padding: 5px 15px; border-radius: 20px; border: 1px solid rgba(59, 130, 246, 0.3); transition: all 0.2s hover:background:rgba(59,130,246,0.2);">
+                        模型計算說明
+                    </button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 20px;">
+                    <div class="risk-item">
+                        <div style="color: var(--q-text-sub); font-size: 0.75rem; margin-bottom: 4px;">20日平均波幅 (ATR)</div>
+                        <div id="rkATR" style="font-size: 1.25rem; font-weight: bold; color: var(--q-text-main);">--</div>
+                    </div>
+                    <div class="risk-item">
+                        <div style="color: var(--q-text-sub); font-size: 0.75rem; margin-bottom: 4px;">初始停損位 (Initial SL)</div>
+                        <div id="rkInitialSL" style="font-size: 1.25rem; font-weight: bold; color: var(--q-accent-red);">--</div>
+                    </div>
+                    <div class="risk-item">
+                        <div style="color: var(--q-text-sub); font-size: 0.75rem; margin-bottom: 4px;">移動止盈位 (Trailing)</div>
+                        <div id="rkTrailingStop" style="font-size: 1.25rem; font-weight: bold; color: var(--q-accent-yellow);">--</div>
+                    </div>
+                    <div class="risk-item">
+                        <div style="color: var(--q-text-sub); font-size: 0.75rem; margin-bottom: 4px;">獲利目標 (TP1 / TP2)</div>
+                        <div id="rkTPGoal" style="font-size: 1.15rem; font-weight: bold; color: var(--q-accent-green);">--</div>
+                    </div>
+                    <div class="risk-item">
+                        <div style="color: var(--q-text-sub); font-size: 0.75rem; margin-bottom: 4px;">單日 VaR 風險 (95%)</div>
+                        <div id="rkVaR" style="font-size: 1.25rem; font-weight: bold; color: var(--q-accent-red);">--</div>
+                    </div>
+                    <div class="risk-item">
+                        <div style="color: var(--q-text-sub); font-size: 0.75rem; margin-bottom: 4px;">建議倉位 ($100風險)</div>
+                        <div id="rkPosition" style="font-size: 1.15rem; font-weight: bold; color: var(--q-text-main);">--</div>
+                    </div>
+                </div>
+                
+                <div id="riskWarning" style="margin-top: 20px; padding: 12px; background: rgba(30, 41, 59, 0.5); border-radius: 8px; font-size: 0.85rem; color: var(--q-text-sub); line-height: 1.6; border: 1px dashed #475569;">
+                    -- 待系統分析完成後顯示即時風險建議 --
+                </div>
+            </div>
+        </div>
+    </div>
+    
+        
+    <!-- ================= EFFICIENT FRONTIER TAB ================= -->
+    <div id="efficient-tab" class="tab-content">
+        
+        <div class="q-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
+            <div style="font-size:1.2rem; font-weight:bold; color:var(--accent-color); margin-bottom:5px;">Portfolio Analytics (效率前緣與風險模型)</div>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                <div class="q-input-group" style="flex-grow:1;">
+                    <label>資產代碼 (Tickers, 逗號分隔)</label>
+                    <input type="text" id="ef_tickers" value="NVDA,TSM,RKLB,BTC/USD" placeholder="例如: AAPL, TSLA, SPY">
+                </div>
+                <div class="q-input-group" style="width: 150px;">
+                    <label>回測期間</label>
+                    <select id="ef_lookback" style="background: #0b1120; border: 1px solid #475569; color: white; padding: 10px; border-radius: 6px;">
+                        <option value="252">1 年</option>
+                        <option value="504">2 年</option>
+                        <option value="756" selected>3 年</option>
+                        <option value="1008">4 年</option>
+                        <option value="1260">5 年</option>
+                    </select>
+                </div>
+                <div class="q-input-group" style="width: 120px;">
+                    <label>無風險利率 (%)</label>
+                    <input type="number" id="ef_rfRate" value="4.0" step="0.1">
+                </div>
+                <div class="q-input-group" style="width: 150px;">
+                    <label>蒙地卡羅次數</label>
+                    <input type="number" id="ef_simCount" value="5000" min="1000" max="50000" step="1000">
+                </div>
+                <button class="q-btn" onclick="ef_startAnalysis()" id="ef_btnStart" style="width: 150px; height: 42px;">執行分析</button>
+            </div>
+            <div class="loading" id="ef_loading" style="display:none; color:var(--accent-yellow); margin-top:5px;">運算中，請稍候...</div>
+        </div>
+
+        <div class="market-section">
+            <h2 class="section-title">效率前緣與資本配置線 (Efficient Frontier & CAL)</h2>
+            <div id="ef_weights_display" style="display:none; background:var(--card-bg); border:1px solid var(--border-color); padding:15px; border-radius:8px; margin-bottom:15px; overflow-x:auto;"></div>
+            <div id="ef_chart_frontier" style="width:100%; height:400px;"></div>
+            <div style="font-size:13px; color:var(--text-muted); margin-top:15px; line-height:1.6;">
+                <strong>核心概念：</strong>圖表上的點代表隨機模擬的資產配置權重。<br>
+                <span style="color:#ef4444; font-weight:bold;">★ Max Sharpe：</span>承擔每一單位風險能換取最多報酬的組合（最佳性價比）。<br>
+                <span style="color:#3b82f6; font-weight:bold;">★ Min Volatility：</span>波動風險最低的組合。<br>
+                <strong>資本配置線 (CAL)：</strong>從無風險利率延伸至 Max Sharpe 點的切線，代表結合無風險資產與風險投資組合的最佳理論連線。
+            </div>
+        </div>
+
+        <div class="market-section">
+            <h2 class="section-title">風險貢獻分析 (Risk Contribution)</h2>
+            <div id="ef_chart_risk" style="width:100%; height:350px;"></div>
+            <div style="font-size:13px; color:var(--text-muted); margin-top:10px;">
+                * 模擬在等權重 (Equal Weight) 配置下，各資產對總投資組合波動率的實際貢獻比例。有助於落實風險平價 (Risk Parity)。
+            </div>
+        </div>
+
+        <div class="market-section">
+            <h2 class="section-title">資產相關性熱圖 (Correlation Matrix)</h2>
+            <div id="ef_chart_corr" style="width:100%; height:350px;"></div>
+            <div style="font-size:13px; color:var(--text-muted); margin-top:10px;">
+                * 顯示資產間的連動程度。數值越接近 1 代表同漲同跌；越接近 -1 代表避險效果越好。
+            </div>
+        </div>
+
+        <div class="market-section">
+            <h2 class="section-title">蒙地卡羅未來路徑模擬 (Monte Carlo)</h2>
+            <div id="ef_chart_mc" style="width:100%; height:350px;"></div>
+            <div style="font-size:13px; color:var(--text-muted); margin-top:10px;">
+                * 利用幾何布朗運動 (GBM) 模擬未來 252 交易日的股價隨機路徑分佈 (固定亂數種子以利重現)。
+            </div>
+        </div>
+
+        <div class="market-section">
+            <h2 class="section-title">風險價值與極端風險 (VaR & CVaR)</h2>
+            <div id="ef_chart_var" style="width:100%; height:350px;"></div>
+            <div style="font-size:13px; color:var(--text-muted); margin-top:10px;">
+                * <strong>VaR (風險價值)：</strong>在 95% 信心水準下的最大可能損失臨界點。<br>
+                * <strong>CVaR (預期缺口)：</strong>若發生 5% 的極端虧損，平均會損失的幅度。
+            </div>
+        </div>
+
+        <div class="market-section">
+            <h2 class="section-title">歷史最大回撤 (Maximum Drawdown)</h2>
+            <div id="ef_chart_dd" style="width:100%; height:300px;"></div>
+        </div>
+
+        <div class="market-section">
+            <h2 class="section-title">凱利公式最佳槓桿比例 (Kelly Criterion)</h2>
+            <div id="ef_chart_kelly" style="width:100%; height:300px;"></div>
+            <div style="font-size:13px; color:var(--text-muted); margin-top:10px;">
+                * 根據各資產的預期報酬與波動率，計算出能使資產長期複利成長最快的理論最佳投入比例。實務上建議減半使用 (Half-Kelly)。
+            </div>
+        </div>
+
+    </div>
+    
+        
+    <!-- ================= PAIRS TRADING TAB ================= -->
+    <div id="pair-tab" class="tab-content">
+        
+        <div class="q-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
+            <div style="font-size:1.2rem; font-weight:bold; color:var(--accent-color); margin-bottom:5px;">Cointegration Analyzer (量化配對與均值回歸)</div>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                <div class="q-input-group">
+                    <label>資產 Y (被解釋變數 / Long)</label>
+                    <input type="text" id="pt_symbolY" value="AAPL" style="width: 140px; color:#58a6ff; font-weight:bold;">
+                </div>
+                <div class="q-input-group">
+                    <label>資產 X (解釋變數 / Hedge)</label>
+                    <input type="text" id="pt_symbolX" value="MSFT" style="width: 140px; color:#d2a8ff; font-weight:bold;">
+                </div>
+                <div class="q-input-group">
+                    <label>K棒週期</label>
+                    <select id="pt_interval" style="background: #0b1120; border: 1px solid #475569; color: white; padding: 10px; border-radius: 6px; width: 140px;">
+                        <option value="1day">日線</option>
+                        <option value="1h">小時線</option>
+                        <option value="5min">5 分K</option>
+                    </select>
+                </div>
+                <div class="q-input-group">
+                    <label>回測樣本數</label>
+                    <input type="number" id="pt_outputsize" value="200" style="width: 120px;">
+                </div>
+                <button class="q-btn" onclick="pt_runAnalysis()" id="pt_runBtn" style="width: 150px; height: 42px;">執行量化分析</button>
+            </div>
+            <div class="loading" id="pt_loader" style="display:none; color:var(--accent-yellow); margin-top:5px;">計算協整模型中...</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;">
+            <div style="background:var(--card-bg); border:1px solid var(--border-color); padding:15px; border-radius:8px;">
+                <div style="color:var(--text-muted); font-size:12px; margin-bottom:5px;">Z-Score (價差標準化)</div>
+                <div id="pt_val_zscore" style="font-size:24px; font-weight:bold; font-family:monospace;">--</div>
+                <div id="pt_badge_signal" style="display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:bold; margin-top:5px; background:#30363d; color:#8b949e;">等待分析</div>
+            </div>
+            <div style="background:var(--card-bg); border:1px solid var(--border-color); padding:15px; border-radius:8px;">
+                <div style="color:var(--text-muted); font-size:12px; margin-bottom:5px;">Hedge Ratio (避險比率 β)</div>
+                <div id="pt_val_beta" style="font-size:24px; font-weight:bold; font-family:monospace;">--</div>
+                <div style="font-size:11px; margin-top:5px; color:var(--text-muted);">做空 <span id="pt_txt_beta_amt">--</span> 單位 <span class="pt_dy_x" style="color:#d2a8ff; font-weight:bold;">X</span></div>
+            </div>
+            <div style="background:var(--card-bg); border:1px solid var(--border-color); padding:15px; border-radius:8px;">
+                <div style="color:var(--text-muted); font-size:12px; margin-bottom:5px;">Correlation (相關係數)</div>
+                <div id="pt_val_corr" style="font-size:24px; font-weight:bold; font-family:monospace;">--</div>
+                <div id="pt_txt_corr_desc" style="font-size:11px; margin-top:5px;">強度評估</div>
+            </div>
+            <div style="background:var(--card-bg); border:1px solid var(--border-color); padding:15px; border-radius:8px;">
+                <div style="color:var(--text-muted); font-size:12px; margin-bottom:5px;">Half-Life (半衰期)</div>
+                <div id="pt_val_halflife" style="font-size:24px; font-weight:bold; font-family:monospace;">--</div>
+                <div style="font-size:11px; margin-top:5px; color:var(--text-muted);">預期 <span id="pt_txt_hl_bars">--</span> K棒收斂</div>
+            </div>
+            <div style="background:var(--card-bg); border:1px solid var(--border-color); padding:15px; border-radius:8px;">
+                <div style="color:var(--text-muted); font-size:12px; margin-bottom:5px;">Hurst 指數 (平穩性)</div>
+                <div id="pt_val_hurst" style="font-size:24px; font-weight:bold; font-family:monospace;">--</div>
+                <div id="pt_txt_hurst_desc" style="font-size:11px; margin-top:5px;">檢測序列性質</div>
+            </div>
+        </div>
+
+        <div class="market-section">
+            <h2 class="section-title">標準化價格走勢 (Normalized Prices)</h2>
+            <div id="pt_chart_main" style="width:100%; height:350px;"></div>
+        </div>
+
+        <div class="market-section">
+            <h2 class="section-title">價差標準化 Z-Score (Spread)</h2>
+            <div id="pt_chart_spread" style="width:100%; height:350px;"></div>
+        </div>
+
+        <div class="market-section">
+            <h2 class="section-title">量化模型說明 (Cointegration Methodology)</h2>
+            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); padding:20px; border-radius:8px; line-height:1.7;">
+                <p><strong>1. Cointegration Model：</strong>假設 <span class="pt_dy_y" style="color:#58a6ff; font-weight:bold;">Y</span> 與 <span class="pt_dy_x" style="color:#d2a8ff; font-weight:bold;">X</span> 之間存在長期線性均衡關係。即便隨機波動，兩者價差應保持平穩。透過做多一邊、放空 $\beta$ 倍的另一邊，即可消除市場風險 (Market Neutral)。</p>
+                <p><strong>2. Z-Score 訊號：</strong>
+                <br>• <span style="color:#ef4444; font-weight:bold;">$Z > 2.0$</span>：<span class="pt_dy_y" style="color:#58a6ff; font-weight:bold;">Y</span> 相對過貴。策略：做空 <span class="pt_dy_y" style="color:#58a6ff; font-weight:bold;">Y</span> + 做多 <span class="pt_dy_x" style="color:#d2a8ff; font-weight:bold;">X</span>。
+                <br>• <span style="color:#2ea043; font-weight:bold;">$Z < -2.0$</span>：<span class="pt_dy_y" style="color:#58a6ff; font-weight:bold;">Y</span> 相對便宜。策略：做多 <span class="pt_dy_y" style="color:#58a6ff; font-weight:bold;">Y</span> + 做空 <span class="pt_dy_x" style="color:#d2a8ff; font-weight:bold;">X</span>。
+                <br>• <strong>$Z = 0$</strong>：價差回歸均衡，平倉獲利。</p>
+                <p><strong>3. Half-Life & Hurst：</strong>
+                <br>• <strong>Half-Life</strong>：價差回歸平均值一半所需的預期 K 棒數。太長 (>50) 資金成本過高，不宜交易。
+                <br>• <strong>Hurst 指數</strong>：$< 0.5$ 代表具均值回歸特性；$> 0.5$ 代表趨勢型（不可逆勢配對）。</p>
+            </div>
+        </div>
+    </div>
+    
         <div id="settings-tab" class="tab-content">
             <div style="display:flex; flex-direction:column; gap:20px; max-width:700px; padding:4px 0;">
 
@@ -1603,9 +2156,15 @@
         // 系統初始化與登入
         // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
+            updateCategoryDropdown();
+            loadCustomGroups();
             initSettings();
             const savedUser = localStorage.getItem('market_user');
             if (savedUser) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                document.getElementById('user-greeting').innerText = `${savedUser} 您好，載入中...`;
+                document.getElementById('username-input').value = savedUser;
                 login(savedUser);
             }
             
@@ -1644,14 +2203,24 @@
                 
                 currentUser = username;
                 
-                if (data.watchlist) {
+                                if (data.watchlist) {
                     watchlists = {
                         watchlist: data.watchlist.watchlist || [],
                         crypto: data.watchlist.crypto || [],
                         macro: data.watchlist.macro || [],
                         forex: data.watchlist.forex || [],
-                        portfolio: data.watchlist.portfolio || {}
+                        portfolio: data.watchlist.portfolio || {},
+                        settings: data.watchlist.settings || {}
                     };
+                    
+                    if (watchlists.settings.theme) {
+                        applyTheme(watchlists.settings.theme, false);
+                    }
+                    if (watchlists.settings.colorRule) {
+                        applyColorRule(watchlists.settings.colorRule);
+                        const radio = document.querySelector(`input[name="color-rule"][value="${watchlists.settings.colorRule}"]`);
+                        if (radio) radio.checked = true;
+                    }
                 }
                 
                 localStorage.setItem('market_user', username);
@@ -1764,11 +2333,13 @@
             script.async = true;
             script.innerHTML = JSON.stringify({
                 colorTheme: document.documentElement.style.getPropertyValue('--bg-color').includes('255') ? 'light' : 'dark',
-                isMaximized: true,
+                isTransparent: false,
+                displayMode: 'regular',
                 width: '100%',
                 height: '600',
                 locale: 'zh_TW',
-                importanceFilter: '-1,0,1'
+                importanceFilter: '1',
+                countryFilter: 'us,tw'
             });
             widgetWrapper.appendChild(script);
 
@@ -2039,6 +2610,40 @@
 
         // 行情監控卡片 (高密度簡約設計，支援 HTML5 Drag & Drop)
         function createCardHTML(symbol, category, isDeletable = true) {
+            const symbolMap = {
+                'SPY': 'SPY (美國)',
+                'EWJ': 'EWJ (日本)',
+                'EWY': 'EWY (韓國)',
+                'EWT': 'EWT (台灣)',
+                'EWH': 'EWH (香港)',
+                'MCHI': 'MCHI (中國)',
+                'EWU': 'EWU (英國)',
+                'EWQ': 'EWQ (法國)',
+                'EWG': 'EWG (德國)',
+                'EWC': 'EWC (加拿大)',
+                'EWA': 'EWA (澳洲)',
+                'INDA': 'INDA (印度)',
+                'EWZ': 'EWZ (巴西)',
+                'EWW': 'EWW (墨西哥)',
+                'EWS': 'EWS (新加坡)',
+                'EWI': 'EWI (義大利)',
+                'EWP': 'EWP (西班牙)',
+                'EWL': 'EWL (瑞士)',
+                'EWN': 'EWN (荷蘭)',
+                'VNM': 'VNM (越南)',
+                'EIDO': 'EIDO (印尼)',
+                'EWM': 'EWM (馬來西亞)',
+                'THD': 'THD (泰國)',
+                'USDTWD=X': '美金/台幣',
+                'JPYTWD=X': '日圓/台幣',
+                'USDJPY=X': '美金/日圓',
+                'USDHKD=X': '美金/港幣',
+                'USDKRW=X': '美金/韓圜',
+                'USDEUR=X': '美金/歐元',
+                'USDGBP=X': '美金/英鎊'
+            };
+            const displayName = symbolMap[symbol] || symbol;
+            
             const cached = cachedQuotes[symbol] || { 
                 price: 'Loading...', 
                 change: '0.00', 
@@ -2113,6 +2718,19 @@
                 `;
             }
             
+            // Inverse forex rate logic
+            let invertedHtml = '';
+            if (category === 'forex' && cached.price && cached.price !== 'Loading...') {
+                const p = parseFloat(cached.price.toString().replace(/,/g, ''));
+                if (p > 0) {
+                    const invRate = (1 / p).toFixed(4);
+                    let base = symbol.substring(0, 3);
+                    let target = symbol.substring(3, 6);
+                    let invSymbol = target + '/' + base;
+                    invertedHtml = `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${invSymbol}: ${invRate}</div>`;
+                }
+            }
+            
             return `
                 <div class="card ${bbClass}" 
                      id="card-${category}-${cleanSymbol}" 
@@ -2124,10 +2742,19 @@
                      ondrop="dropCard(event, '${symbol}', '${category}')">
                     ${delBtn}
                     <div class="card-top">
-                        <div class="card-symbol-grp">
-                            <span class="card-symbol">${symbol}</span>
-                            ${spikeTag}
-                        </div>
+                        ${category === 'macro' ? 
+                            `<div class="card-symbol-grp">
+                                <span class="card-symbol" style="font-size: 14px;">${displayName}</span>
+                                ${spikeTag}
+                            </div>
+                            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${symbol}</div>` 
+                            : 
+                            `<div class="card-symbol-grp">
+                                <span class="card-symbol">${symbol}</span>
+                                ${spikeTag}
+                            </div>`
+                        }
+                        ${invertedHtml}
                         <div class="card-sparkline" id="sparkline-${category}-${cleanSymbol}">
                             ${sparklineHTML}
                         </div>
@@ -2151,6 +2778,11 @@
         }
 
         function renderGrid(category) {
+            if (category === 'macro') {
+                watchlists['macro'] = ['SPY', 'EWJ', 'EWY', 'EWT', 'EWH', 'MCHI', 'EWU', 'EWQ', 'EWG', 'EWC', 'EWA', 'INDA', 'EWZ', 'EWW', 'EWS', 'EWI', 'EWP', 'EWL', 'EWN', 'VNM', 'EIDO', 'EWM', 'THD'];
+            } else if (category === 'forex') {
+                watchlists['forex'] = ['USDTWD=X', 'JPYTWD=X', 'USDJPY=X', 'USDHKD=X', 'USDKRW=X', 'USDEUR=X', 'USDGBP=X'];
+            }
             const grid = document.getElementById(`${category}-grid`);
             if (watchlists[category].length === 0) {
                 grid.innerHTML = `
@@ -2329,7 +2961,7 @@
             const pollDot = document.getElementById('market-status-dot');
             pollDot.classList.add('pulse');
             
-            const symbols = [...watchlists.macro, ...watchlists.forex, ...watchlists.watchlist];
+            const symbols = Object.keys(watchlists).filter(k=>k!=="portfolio" && k!=="crypto").reduce((arr, k) => arr.concat(watchlists[k]), []);
             if (symbols.length === 0) {
                 pollDot.classList.remove('pulse');
                 pollDot.className = 'status-dot';
@@ -2592,7 +3224,7 @@
             
             select.innerHTML = '<option value="">-- 選擇標的 --</option>';
             // 根據需求，虛擬持倉只需顯示自選股 (watchlist) 標的，加上目前持倉已存在的標的以確保編輯時不漏掉
-            const allSymbols = [...watchlists.watchlist];
+            const allSymbols = Object.keys(watchlists).filter(k=>k!=="portfolio").reduce((arr, k) => arr.concat(watchlists[k]), []);
             if (watchlists.portfolio) {
                 allSymbols.push(...Object.keys(watchlists.portfolio));
             }
@@ -3360,13 +3992,19 @@
             if (radio) radio.checked = true;
         }
 
-        function applyTheme(themeName) {
+        function applyTheme(themeName, doSync=true) {
             const config = themeConfigs[themeName] || themeConfigs.default;
             Object.keys(config).forEach(key => {
                 document.documentElement.style.setProperty(key, config[key]);
             });
             
             localStorage.setItem('theme_style', themeName);
+            
+            if (doSync && typeof watchlists !== 'undefined') {
+                watchlists.settings = watchlists.settings || {};
+                watchlists.settings.theme = themeName;
+                if (typeof syncWatchlists === 'function') syncWatchlists();
+            }
             
             document.querySelectorAll('.theme-card').forEach(card => {
                 card.classList.remove('active');
@@ -3381,11 +4019,16 @@
             applyColorRule(value);
             localStorage.setItem('color_rule', value);
             
-            if (currentUser) {
-                renderGrid('watchlist');
-                renderGrid('crypto');
-                renderGrid('macro');
-                renderGrid('forex');
+            if (currentUser && typeof watchlists !== 'undefined') {
+                watchlists.settings = watchlists.settings || {};
+                watchlists.settings.colorRule = value;
+                if (typeof syncWatchlists === 'function') syncWatchlists();
+                
+                for(let category in watchlists) {
+                    if(category !== 'portfolio' && category !== 'customGroups' && category !== 'settings') {
+                        renderGrid(category);
+                    }
+                }
                 updatePortfolioSection();
             }
         }
@@ -3505,6 +4148,1198 @@
                 });
             }
         }
+    
+// ================= QUANT MODEL JS =================
+const q_calcAvg = (d, n) => { let r=[]; for(let i=0;i<d.length;i++){ if(i<n-1){r.push(null);continue;} let s=0; for(let j=0;j<n;j++)s+=d[i-j]; r.push(s/n); } return r; };
+const q_calcEMA = (d, n) => { let k=2/(n+1), r=new Array(d.length).fill(null), s=0; for(let i=0;i<n;i++)s+=d[i]; r[n-1]=s/n; for(let i=n;i<d.length;i++)r[i]=d[i]*k+r[i-1]*(1-k); return r; };
+const q_calcBollinger = (d, n=20) => { const sma=q_calcAvg(d, n), u=[], l=[]; for(let i=0;i<d.length;i++){ if(!sma[i]){u.push(null);l.push(null);continue;} let ss=0; for(let j=0;j<n;j++)ss+=Math.pow(d[i-j]-sma[i],2); let std=Math.sqrt(ss/n); u.push(sma[i]+std*2); l.push(sma[i]-std*2); } return {upper:u, lower:l}; };
+const q_calcRSI = (d, n=14) => { let r=new Array(d.length).fill(null), g=[], l=[]; for(let i=1;i<d.length;i++){ let df=d[i]-d[i-1]; g.push(df>0?df:0); l.push(df<0?Math.abs(df):0); } for(let i=n;i<d.length;i++){ let ag=g.slice(i-n,i).reduce((a,b)=>a+b)/n, al=l.slice(i-n,i).reduce((a,b)=>a+b)/n; r[i]=al===0?100:100-(100/(1+ag/al)); } return r; };
+const q_calcMACD = (d) => { const e12=q_calcEMA(d,12), e26=q_calcEMA(d,26), dif=d.map((v,i)=>(e12[i]&&e26[i])?e12[i]-e26[i]:null); let vd=dif.filter(x=>x!==null), vs=q_calcEMA(vd,9), sig=new Array(dif.length-vs.length).fill(null).concat(vs), h=dif.map((v,i)=>(v!==null&&sig[i]!==null)?v-sig[i]:null); return {dif,sig,hist:h}; };
+const q_calcKD = (c, h, l, n=9) => { let K=[], D=[], k=50, d=50; for(let i=0;i<c.length;i++){ if(i<n-1){K.push(null);D.push(null);continue;} let mx=-Infinity, mn=Infinity; for(let j=0;j<n;j++){ mx=Math.max(mx,h[i-j]); mn=Math.min(mn,l[i-j]); } let rsv=mx===mn?50:((c[i]-mn)/(mx-mn))*100; k=(2/3)*k+(1/3)*rsv; d=(2/3)*d+(1/3)*k; K.push(k); D.push(d); } return {K,D}; };
+const q_calcATR = (h, l, c, n=14) => { let tr=[h[0]-l[0]]; for(let i=1;i<h.length;i++) tr.push(Math.max(h[i]-l[i], Math.abs(h[i]-c[i-1]), Math.abs(l[i]-c[i-1]))); let atr=new Array(h.length).fill(null), s=0; for(let i=0;i<n;i++)s+=tr[i]; atr[n-1]=s/n; for(let i=n;i<h.length;i++)atr[i]=(atr[i-1]*(n-1)+tr[i])/n; return atr; };
+const q_calcFib = (h, l) => { const mx=Math.max(...h), mn=Math.min(...l), d=mx-mn; return {f618:mx-d*0.618, f500:mx-d*0.5, f382:mx-d*0.382}; };
+
+let q_charts = {};
+let q_countdown = 0;
+
+async function q_getYahooVIX() {
+    const targetUrl = "https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=1y";
+    const proxies = [
+        (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+    ];
+
+    const parseYahooData = (data) => {
+        if (!data.chart || !data.chart.result || data.chart.result.length === 0) throw new Error("Yahoo API 回傳格式錯誤");
+        const result = data.chart.result[0];
+        const timestamps = result.timestamp;
+        const quotes = result.indicators.quote[0].close;
+        
+        if (!timestamps || !quotes) throw new Error("無 VIX 數據");
+
+        let formattedData = [];
+        for (let i = 0; i < timestamps.length; i++) {
+            if (quotes[i] != null) {
+                let date = new Date(timestamps[i] * 1000);
+                let dateStr = date.toISOString().split('T')[0];
+                formattedData.push({ datetime: dateStr, close: quotes[i] });
+            }
+        }
+        return { values: formattedData.reverse() }; 
+    };
+
+    for (let i = 0; i < proxies.length; i++) {
+        try {
+            const proxyUrl = proxies[i](targetUrl);
+            const res = await fetch(proxyUrl);
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            return parseYahooData(await res.json());
+        } catch (e) {
+            if (i === proxies.length - 1) throw new Error("所有 VIX 來源皆無法連線，請稍後再試。");
+        }
+    }
+}
+
+async function startQuantSystem() {
+    const apiKey = document.getElementById('inpApiKey').value.trim();
+    const symbol = document.getElementById('inpSymbol').value.toUpperCase();
+    let years = parseFloat(document.getElementById('inpYears').value) || 1;
+    if(years > 5) years = 5;
+    const fetchYears = years + 1;
+    const size = Math.ceil(fetchYears * 260);
+ 
+    const btn = document.getElementById('btnStart');
+    const loader = document.getElementById('loadingMsg');
+   
+    btn.disabled = true;
+    loader.style.display = 'inline';
+    document.getElementById('mainLayout').style.opacity = '0.3';
+    document.getElementById('macroPanel').style.display = 'none';
+   
+    if(document.getElementById('riskManagementPanel')) document.getElementById('riskManagementPanel').style.display = 'none';
+    if(document.getElementById('stockInfoPanel')) document.getElementById('stockInfoPanel').style.display = 'none';
+ 
+    try {
+        const pStock = fetch(`https://api.twelvedata.com/time_series?symbol=${symbol}&interval=1day&outputsize=${size}&apikey=${apiKey}`).then(r=>r.json());
+        const pSpy = fetch(`https://api.twelvedata.com/time_series?symbol=SPY&interval=1day&outputsize=400&apikey=${apiKey}`).then(r=>r.json());
+      
+        let vixData = null;
+        try { vixData = await q_getYahooVIX(); } catch (vixErr) { console.warn("VIX 失敗，使用備援模式"); }
+ 
+        const [stockData, spyData] = await Promise.all([pStock, pSpy]);
+        if(stockData.status === 'error') throw new Error("API 錯誤: " + stockData.message);
+ 
+        const raw = stockData.values.reverse();
+        const C = raw.map(x=>parseFloat(x.close)), H = raw.map(x=>parseFloat(x.high)), L = raw.map(x=>parseFloat(x.low)), V = raw.map(x=>parseFloat(x.volume)), T = raw.map(x=>x.datetime);
+        const idx = C.length - 1;
+        const curPrice = C[idx];
+ 
+        const getChg = (pastIdx) => pastIdx >= 0 ? ((curPrice - C[pastIdx]) / C[pastIdx] * 100).toFixed(2) : "N/A";
+        const fmtChg = (id, val) => {
+            const el = document.getElementById(id);
+            if(!el) return;
+            const num = parseFloat(val);
+            if(isNaN(num)) { el.innerText = "--"; return; }
+            el.innerText = (num > 0 ? "+" : "") + val + "%";
+            el.style.color = num >= 0 ? "var(--q-accent-green)" : "var(--q-accent-red)";
+        };
+ 
+        if(document.getElementById('stockInfoPanel')) {
+            document.getElementById('infoPrice').innerText = `$ ${curPrice.toFixed(2)}`;
+            const dObj = new Date(T[idx]);
+            document.getElementById('infoDateMain').innerText = (dObj.getMonth() + 1) + "月" + dObj.getDate() + "日";
+
+            fmtChg('chgDay', getChg(idx - 1));
+            fmtChg('chgWeek', getChg(idx - 5));
+            fmtChg('chgMonth', getChg(idx - 21));
+            fmtChg('chgQuarter', getChg(idx - 63));
+            fmtChg('chgYear', getChg(idx - 252));
+ 
+            document.getElementById('infoOpen').innerText = raw[idx].open;
+            document.getElementById('infoHigh').innerText = raw[idx].high;
+            document.getElementById('infoLow').innerText = raw[idx].low;
+            document.getElementById('infoClose').innerText = raw[idx].close;
+            document.getElementById('infoVol').innerText = (V[idx] / 1000000).toFixed(2) + "M";
+ 
+            const lastYearH = Math.max(...H.slice(Math.max(0, idx - 252)));
+            const lastYearL = Math.min(...L.slice(Math.max(0, idx - 252)));
+            document.getElementById('info52Range').innerText = `${lastYearL.toFixed(2)} - ${lastYearH.toFixed(2)}`;
+            document.getElementById('stockInfoPanel').style.display = 'block';
+        }
+ 
+        const sma5=q_calcAvg(C,5), sma20=q_calcAvg(C,20), sma60=q_calcAvg(C,60), sma200=q_calcAvg(C,200);
+        const bb=q_calcBollinger(C,20), rsi=q_calcRSI(C,14), macd=q_calcMACD(C), kd=q_calcKD(C,H,L,9), atr=q_calcATR(H,L,C,14), fib=q_calcFib(H,L);
+ 
+        const hvSeries = new Array(C.length).fill(0);
+        const hvWindow = 252;
+        for (let i = hvWindow; i < C.length; i++) {
+            let returns = [];
+            for (let j = i - hvWindow + 1; j <= i; j++) { returns.push(Math.log(C[j] / C[j - 1])); }
+            let mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+            let variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (returns.length - 1);
+            hvSeries[i] = Math.sqrt(variance * 252) * 100;
+        }
+ 
+        const macroAnalysis = q_analyzeMacroConditions(spyData, vixData || { current: 20, history: [] });
+        q_updateMacroUI(macroAnalysis);
+        
+        // RWD adjustment for macroPanel
+        if (window.innerWidth <= 768) {
+            document.getElementById('macroPanel').style.display = 'flex';
+        } else {
+            document.getElementById('macroPanel').style.display = 'grid';
+        }
+        
+        q_loadTradingViewWidgets();
+ 
+        let scores = {};
+        let sL = 50; if(sma200[idx]) sL = 50 + (((curPrice-sma200[idx])/sma200[idx])*60) + (((sma60[idx]-sma200[idx])/sma200[idx])*90);
+        scores.trendLong = q_clamp(Math.round(sL));
+        let sM = 50; if(sma60[idx]) sM = 50 + (((curPrice-sma60[idx])/sma60[idx])*100) + (((sma20[idx]-sma60[idx])/sma60[idx])*150);
+        scores.trendMid = q_clamp(Math.round(sM));
+        let sS = 50; if(sma20[idx]) sS = 50 + (((curPrice-sma20[idx])/sma20[idx])*150) + (((sma5[idx]-sma20[idx])/sma20[idx])*250);
+        scores.trendShort = q_clamp(Math.round(sS));
+ 
+        let pb=(curPrice-bb.lower[idx])/(bb.upper[idx]-bb.lower[idx]); scores.pos=q_clamp(pb<0?100:(pb>1?0:100-(pb*100)));
+        let vS=50, vR=V[idx]/q_calcAvg(V,20)[idx]; if(C[idx]>C[idx-1])vS+=(vR>1?(vR-1)*20:-(1-vR)*20); else vS+=(vR>1?-(vR-1)*20:(1-vR)*10); scores.vol=q_clamp(vS);
+        let rV=rsi[idx], rS=rV<30?80+(30-rV):(rV>70?20-(rV-70):50+(50-rV)); scores.rsi=q_clamp(rS);
+        let kV=kd.K[idx], dV=kd.D[idx], kS=kV<20?80+(20-kV):(kV>80?20-(kV-80):50+(50-kV)); if(kV>dV && kd.K[idx-1]<=kd.D[idx-1])kS+=15; if(kV<dV && kd.K[idx-1]>=kd.D[idx-1])kS-=15; scores.kd=q_clamp(kS);
+        let mH=macd.hist[idx], pH=macd.hist[idx-1], mS=mH>0?(mH>pH?70:55):(mH>pH?50:30); scores.macd=q_clamp(mS);
+ 
+        const curHV = hvSeries[idx], hvHistory = hvSeries.slice(Math.max(0, idx - 252), idx + 1).filter(v => v > 0);
+        const hvMean = hvHistory.reduce((a, b) => a + b, 0) / hvHistory.length;
+        const hvSD = Math.sqrt(hvHistory.reduce((a, b) => a + Math.pow(b - hvMean, 2), 0) / hvHistory.length);
+        let sHV = 60; if (hvSD > 0) {
+            const z = (curHV - hvMean) / hvSD;
+            if (z >= 0) sHV = 60 - (Math.min(z, 1)*15) - (Math.max(0,Math.min(z-1,1))*10) - (Math.max(0,z-2)*10);
+            else { const az = Math.abs(z); sHV = 60 + (Math.min(az, 1)*15) + (Math.max(0,Math.min(az-1,1))*10) + (Math.max(0,az-2)*10); }
+        }
+        scores.hv = q_clamp(Math.round(sHV));
+ 
+        let rawTotal = (scores.trendLong*0.13) + (scores.trendMid*0.09) + (scores.trendShort*0.05) + (scores.pos*0.20) + (scores.vol*0.15) + (scores.rsi*0.08) + (scores.kd*0.08) + (scores.macd*0.08) + (scores.hv*0.14);
+        let finalScore = q_clamp(Math.round(rawTotal + macroAnalysis.totalImpact));
+        document.getElementById('finalScore').innerText = finalScore;
+ 
+        const elVerdict = document.getElementById('finalVerdict');
+        if(finalScore>=80) { elVerdict.innerText="🔥 強力買進"; elVerdict.style.color="#10b981"; document.getElementById('finalScore').style.color="#10b981"; }
+        else if(finalScore>=70) { elVerdict.innerText="✅ 偏多操作"; elVerdict.style.color="#3b82f6"; document.getElementById('finalScore').style.color="#3b82f6"; }
+        else if(finalScore>=60) { elVerdict.innerText="👀 觀望盤整"; elVerdict.style.color="#f59e0b"; document.getElementById('finalScore').style.color="#f59e0b"; }
+        else { elVerdict.innerText="⛔ 偏空操作"; elVerdict.style.color="#ef4444"; document.getElementById('finalScore').style.color="#ef4444"; }
+ 
+        const cATR = atr[idx], isBullish = finalScore >= 60;
+        const initialSL = isBullish ? (curPrice - 2.5 * cATR) : (curPrice + 2.5 * cATR);
+        const trailingStop = isBullish ? (curPrice - 1.5 * cATR) : (curPrice + 1.5 * cATR);
+        const riskAmount = Math.abs(curPrice - initialSL);
+        const tp1 = isBullish ? (curPrice + 2.0 * riskAmount) : (curPrice - 2.0 * riskAmount);
+        const tp2 = isBullish ? (curPrice + 4.0 * riskAmount) : (curPrice - 4.0 * riskAmount);
+        const rrRatio = (Math.abs(tp1 - curPrice) / riskAmount).toFixed(2);
+        const dailyVaR = (curPrice * (curHV / 100) * 1.65 / Math.sqrt(252)).toFixed(2);
+ 
+        const rkPanel = document.getElementById('riskManagementPanel');
+        if(rkPanel) {
+            document.getElementById('rkATR').innerText = cATR.toFixed(2);
+            document.getElementById('rkInitialSL').innerText = initialSL.toFixed(2);
+            document.getElementById('rkTrailingStop').innerText = trailingStop.toFixed(2);
+            document.getElementById('rkTPGoal').innerText = `${tp1.toFixed(2)} / ${tp2.toFixed(2)}`;
+            document.getElementById('rkVaR').innerText = `$ ${dailyVaR}`;
+            document.getElementById('rkPosition').innerText = `${Math.floor(100 / riskAmount)} 股`;
+
+            window.currentRiskDetail = `
+                <li style="margin-bottom:10px;"><b>● 預期盈虧比 (R/R Ratio)：</b> <span style="color:var(--q-accent-blue); font-weight:bold;">1 : ${rrRatio}</span><br>
+                基於第一止盈目標(TP1)與初始停損距離之比值。高於 1.5 代表具備優質獲利潛力。</li>
+                <li style="margin-bottom:10px;"><b>● 20日平均波幅 (ATR)：</b> 衡量個股每日真實波動範圍。計算包含跳空缺口，能更精準反映當前市場的隨機噪音水平。</li>
+                <li style="margin-bottom:10px;"><b>● 初始停損 (Initial SL)：</b> 採用 <span style="color:var(--q-accent-red)">2.5×ATR</span> 模型。該位階旨在給予股價足夠的「呼吸空間」，避開 95% 以上的隨機噪音波動。</li>
+                <li style="margin-bottom:10px;"><b>● 移動止盈 (Trailing)：</b> 採用 <span style="color:var(--q-accent-yellow)">1.5×ATR</span> 追蹤。隨價格有利波動而上移，用於鎖定利潤並平衡回撤。</li>
+                <li style="margin-bottom:10px;"><b>● 年化 VaR (95% 置信度)：</b> 估計極端情況下的單日潛在跌幅。公式：Price × (HV/100) × 1.65 / √252。</li>
+                <li style="margin-bottom:10px;"><b>● 倉位建議：</b> 採用固定風險百分比模型。確保單筆失敗的損失嚴格控制在總資產的預期百分比內。</li>
+            `;
+            const elWarning = document.getElementById('riskWarning');
+            const hvZScore = (curHV - hvMean) / hvSD;
+            if (hvZScore > 1.5) {
+                elWarning.innerText = "⚠️ 極高波動警告：當前個股歷史波動率異常升高，建議將停損距離拉寬至 3.5×ATR 並將倉位減半，提防非理性洗盤。";
+                elWarning.style.background = "rgba(239, 68, 68, 0.2)";
+                elWarning.style.color = "#fca5a5";
+            } else if (hvZScore < -1.0) {
+                elWarning.innerText = "ℹ️ 波動壓縮提醒：個股波動處於歷史低位，可能正待突破，可採用較窄的停損(2.0×ATR)以提高勝率。";
+                elWarning.style.background = "rgba(16, 185, 129, 0.1)";
+                elWarning.style.color = "#a7f3d0";
+            } else {
+                elWarning.innerText = "✅ 波動正常：個股當前波動符合歷史平均，建議遵循標準 ATR 風險模型。";
+                elWarning.style.background = "rgba(30, 41, 59, 0.5)";
+                elWarning.style.color = "var(--q-text-sub)";
+            }
+            rkPanel.style.display = 'block';
+        }
+
+        q_updateMetricsUI(scores, { price: curPrice, prevPrice: C[idx-1], ma5: sma5[idx], ma20: sma20[idx], ma60: sma60[idx], ma200: sma200[idx], volR: vR, rsiV: rV, kdV: {k:kd.K[idx], d:kd.D[idx]}, macdH: macd.hist[idx], hv: curHV, hvMean: hvMean, hvSD: hvSD });
+      
+        const showCount = Math.ceil(years * 260);
+        const sliceStart = C.length - showCount;
+        q_drawCharts(T.slice(sliceStart), C.slice(sliceStart), V.slice(sliceStart), sma5.slice(sliceStart), sma20.slice(sliceStart), sma60.slice(sliceStart), sma200.slice(sliceStart), {upper:bb.upper.slice(sliceStart), lower:bb.lower.slice(sliceStart)}, rsi.slice(sliceStart), {dif:macd.dif.slice(sliceStart), sig:macd.sig.slice(sliceStart), hist:macd.hist.slice(sliceStart)}, {K:kd.K.slice(sliceStart), D:kd.D.slice(sliceStart)}, fib, hvSeries.slice(sliceStart), hvMean, hvSD);
+      
+        document.getElementById('mainLayout').style.opacity = '1';
+        q_startCooldown(15);
+    } catch (e) { alert("系統錯誤: " + e.message); console.error(e); btn.disabled = false; }
+    finally { loader.style.display = 'none'; } 
+}
+
+function q_loadTradingViewWidgets() {
+    document.getElementById('tv_chart_spy').innerHTML = '';
+    document.getElementById('tv_chart_vix').innerHTML = '';
+    new TradingView.widget({
+        "width": "100%", "height": "100%", "symbol": "AMEX:SPY", "interval": "D", "timezone": "Etc/UTC", "theme": "dark", "style": "1", "locale": "zh_TW", "toolbar_bg": "#f1f3f6", "enable_publishing": false, "hide_top_toolbar": false, "allow_symbol_change": false, "container_id": "tv_chart_spy", "studies": ["MASimple@tv-basicstudies", "MASimple@tv-basicstudies"] 
+    });
+    new TradingView.widget({
+        "width": "100%", "height": "100%", "symbol": "VIXY", "interval": "D", "timezone": "Etc/UTC", "theme": "dark", "style": "2", "locale": "zh_TW", "toolbar_bg": "#f1f3f6", "enable_publishing": false, "hide_top_toolbar": false, "allow_symbol_change": false, "container_id": "tv_chart_vix", "studies": ["BollingerBands@tv-basicstudies"] 
+    });
+}
+
+function showFormula(type) {
+    const modal = document.getElementById('scoreModal');
+    const title = document.getElementById('mTitle');
+    const weight = document.getElementById('mWeight');
+    const list = document.getElementById('mFormula');
+    
+    list.innerHTML = '';
+    modal.style.display = 'flex';
+
+    if(type === 'TrendLong') {
+        title.innerText = "長線趨勢 (Trend Long)"; weight.innerText = "權重: 13%";
+        list.innerHTML = `<li><b>保守線性公式：</b>Score = 50 + (價格乖離率 × 60) + (均線乖離率 × 90)</li><li><b>價格乖離：</b>計算 股價 對比 200MA (年線) 的偏離百分比。</li><li><b>結構乖離：</b>計算 60MA (季線) 對比 200MA 的偏離百分比。</li><li><b>評分特性：</b>需股價偏離年線約 ±35% 才會觸及極端 0/100 分，提供極其細膩的長線強弱變化。</li>`;
+    } else if(type === 'TrendMid') {
+        title.innerText = "中長線趨勢 (Trend Mid)"; weight.innerText = "權重: 9%";
+        list.innerHTML = `<li><b>中性線性公式：</b>Score = 50 + (價格乖離率 × 100) + (均線乖離率 × 150)</li><li><b>價格乖離：</b>計算 股價 對比 60MA (季線) 的偏離百分比。</li><li><b>結構乖離：</b>計算 20MA (月線) 對比 60MA 的偏離百分比。</li><li><b>評分特性：</b>需中期乖離達約 ±25% 才會觸及極端分，精準捕捉中期波段的動能增減。</li>`;
+    } else if(type === 'TrendShort') {
+        title.innerText = "短線趨勢 (Trend Short)"; weight.innerText = "權重: 5%";
+        list.innerHTML = `<li><b>敏銳線性公式：</b>Score = 50 + (價格乖離率 × 150) + (均線乖離率 × 250)</li><li><b>價格乖離：</b>計算 股價 對比 20MA (月線) 的偏離百分比。</li><li><b>結構乖離：</b>計算 5MA (週線) 對比 20MA 的偏離百分比。</li><li><b>評分特性：</b>反映短線熱度，需乖離達約 ±15% 才會觸及極值，避免頻繁出現 0/100 分。</li>`;
+    } else if(type === 'Pos') {
+        title.innerText = "價格位階 (Position)"; weight.innerText = "權重: 20%";
+        list.innerHTML = `<li><b>公式：</b>使用布林通道 %B 指標</li><li><b>便宜：</b>接近通道下緣分數高 (破底給 100分)</li><li><b>昂貴：</b>接近通道上緣分數低 (突破給 0分)</li><li><b>線性計算：</b>Score = 100 - (%B × 100)</li>`;
+    } else if(type === 'Vol') {
+        title.innerText = "量價分析 (Volume)"; weight.innerText = "權重: 15%";
+        list.innerHTML = `<li><b>基礎分 (50分)</b></li><li><b>價漲量增：</b>成交量 > 均量，大幅加分 (+20分)</li><li><b>價漲量縮：</b>量價背離，扣分 (-20分)</li><li><b>價跌量縮：</b>惜售整理，小加分 (+10分)</li><li><b>價跌量增：</b>恐慌拋售，重扣分 (-20分)</li>`;
+    } else if(type === 'RSI') {
+        title.innerText = "RSI 動能"; weight.innerText = "權重: 8%";
+        list.innerHTML = `<li><b>超賣區 (<30)：</b>視為反彈機會，分數提高 (最高 80+30=110)</li><li><b>超買區 (>70)：</b>視為過熱風險，分數降低 (最低 20-30=-10)</li><li><b>中性區 (30-70)：</b>線性遞減，越低分越高</li>`;
+    } else if(type === 'KD') {
+        title.innerText = "KD 指標"; weight.innerText = "權重: 8%";
+        list.innerHTML = `<li><b>基礎分：</b>類似 RSI，低檔鈍化給高分，高檔鈍化給低分</li><li><b>黃金交叉：</b>K > D 且昨日 K < D (+15分)</li><li><b>死亡交叉：</b>K < D 且昨日 K > D (-15分)</li>`;
+    } else if(type === 'MACD') {
+        title.innerText = "MACD 趨勢"; weight.innerText = "權重: 8%";
+        list.innerHTML = `<li><b>多頭增強：</b>紅柱且變長 (70分)</li><li><b>多頭減弱：</b>紅柱但變短 (55分)</li><li><b>空頭收斂：</b>綠柱但變短 (50分)</li><li><b>空頭增強：</b>綠柱且變長 (30分)</li>`;
+    } else if(type === 'HV') {
+        title.innerText = "歷史波動度 (Annual HV)"; weight.innerText = "權重: 14%";
+        list.innerHTML = `<li><b>基準分 (60分)：</b>當前年化波動度等於過去一年平均值時。</li><li><b>波動風險：</b>波動增加則扣分，波動減少則加分（穩定度越高分數越高）。</li><li><b>精確級距：</b><ul><li>±1 標準差：調整 15 分</li><li>±2 標準差：調整 25 分</li><li>±3 標準差：調整 35 分</li></ul></li><li><b>目的：</b>評估價格穩定度，過高的波動通常與趨勢末端或恐慌性殺盤相關。</li>`;
+    }
+}
+
+function closeQModal(e) { if(e.target.id === 'scoreModal') e.target.style.display = 'none'; }
+
+function q_updateMetricsUI(s, d) {
+    const fmt = (v) => (v !== undefined && v !== null) ? v.toFixed(2) : "N/A";
+    const fmtM = (v) => (v !== undefined && v !== null) ? v.toFixed(4) : "N/A";
+
+    const trendDist = (d.price && d.ma200) ? ((d.price - d.ma200) / d.ma200 * 100).toFixed(2) : "0.00";
+    let trendLongText = "";
+    if(s.trendLong >= 65) trendLongText = `目前股價穩定運行於年線之上 ${trendDist}%。長線趨勢極度穩固且季線已展現強大助漲力。這顯示長線資金籌碼已進入鎖碼階段，適合波段持有。`;
+    else if(s.trendLong >= 40) trendLongText = `股價與年線處於低乖離狀態，呈現「糾結築底」或「高位橫盤」特徵。分數越接近 50 代表趨勢越中性，需等待股價帶量脫離年線區域以確認新一輪長線方向。`;
+    else trendLongText = `股價目前處於年線之下 ${Math.abs(trendDist)}%。保守公式下出現低分代表長期下行趨勢沈重，均線呈現標準空頭排列。任何技術性反彈皆應視為解套賣壓區。`;
+
+    let trendMidText = "";
+    if(s.trendMid >= 65) trendMidText = `月線與季線結構良好，乖離穩定擴張，代表中期動能正處於爆發成長期。季線目前提供強大剛性支撐，是波段操作者獲利最豐厚的階段。`;
+    else if(s.trendMid >= 40) trendMidText = `中期動能進入沉澱期，月線與季線距離縮減，股價進行橫向換手整理。代表市場對中期方向產生分歧，若分數持續往 50 靠攏，操作宜縮小頭寸。`;
+    else trendMidText = `月線低於季線且乖離加大，中期趨勢呈現疲軟格局。這顯示中期籌碼鬆動，主力資金撤離明顯，季線已由支撐轉為強大壓力帶。`;
+
+    let trendShortText = "";
+    if(s.trendShort >= 65) trendShortText = `5日線與月線形成強勢攻擊角，短線動能極速噴發。顯示股價正處於極強勢的熱點行情中，市場情緒亢奮，有利於極短線價差操作。`;
+    else if(s.trendShort >= 40) trendShortText = `短線波動趨於收斂，5日線與月線頻繁交織，屬於典型的「震盪洗盤」格局。市場正在消化短線獲利回吐賣壓或累積上攻動能。`;
+    else trendShortText = `5日線跌破月線並呈下彎，短線動能大幅衰竭。這反映了市場短線獲利了結壓力沈重，股價正進行必要的回檔修正。`;
+
+    const pb = (100 - s.pos) / 100;
+    let posText = "";
+    if(pb > 1.0) posText = `布林通道 %B 值達 ${(pb*100).toFixed(0)}%，股價突破上軌。此為極強勢的「軋空行情」，但也伴隨乖離過大風險。`;
+    else if(pb > 0.8) posText = `股價運行於中軌與上軌間的「強勢整理區」。操作宜沿 20MA 順勢操作，只要不破中軌，多頭動能延續。`;
+    else if(pb < 0) posText = `布林通道 %B 為負，股價跌破下軌。市場出現非理性「恐慌拋售」，隨時可能出現「報復性反彈」。`;
+    else if(pb < 0.2) posText = `股價位於下軌附近，位階便宜但走勢疲弱。此區屬「左側交易」觀察區，需等待長紅 K 棒表態止跌。`;
+    else posText = `股價位於布林通道中性區間，方向未明。建議減少進出，等待突破上軌或回測下軌有撐後再行佈局。`;
+
+    let volText = "";
+    const vRatio = (d.volR || 0).toFixed(2);
+    if(d.price > d.prevPrice) { 
+        if(d.volR > 1.2) volText = `呈現「價漲量增」健康格局，成交量為均量 ${vRatio} 倍。主力資金積極換手，攻擊意願強。`;
+        else if(d.volR < 0.8) volText = `呈現「價漲量縮」背離。追價意願不足或主力鎖碼，若後續無法補量，需提防多頭力竭的拉回風險。`;
+        else volText = `價漲且量能溫和，屬於穩健推升格局，籌碼未失控，有利趨勢延續。`;
+    } else {
+        if(d.volR > 1.2) volText = `呈現「價跌量增」，成交量放大至 ${vRatio} 倍。顯示出現恐慌性停損或獲利了結賣壓，底部恐難浮現。`;
+        else volText = `呈現「價跌量縮」，賣壓逐漸衰竭，市場出現惜售心理。若後續能出現量增紅K，有機會形成短期底部。`;
+    }
+
+    let rsiText = "";
+    const rsiVal = (d.rsiV || 0).toFixed(1);
+    if(d.rsiV >= 75) rsiText = `RSI(${rsiVal}) 進入「過熱區」。若股價創高但 RSI 未創高(背離)，為強烈回檔訊號。`;
+    else if(d.rsiV <= 25) rsiText = `RSI(${rsiVal}) 進入「超賣區」。市場情緒極度悲觀，隨時可能出現技術性反彈，不宜追空。`;
+    else if(d.rsiV >= 50) rsiText = `RSI(${rsiVal}) 位於多方攻擊區 (50-75)。動能充沛且未過熱，是舒適的持股區間。`;
+    else rsiText = `RSI(${rsiVal}) 位於空方抵抗區 (<50)。反彈力道疲弱，反彈至 50 附近若無法突破皆是減碼時機。`;
+
+    let kdText = "";
+    const kVal = (d.kdV.k || 0).toFixed(1);
+    if(d.kdV.k > d.kdV.d) kdText = `KD 黃金交叉 (K=${kVal} > D)。短線動能轉強。若在 20 以下低檔區準確度高；若在 80 以上可能為誘多。`;
+    else kdText = `KD 死亡交叉 (K=${kVal} < D)。短線轉弱修正。若在 80 以上高檔區應立即停利；若在 20 以下需觀察底部背離。`;
+
+    let macdText = "";
+    const osc = fmtM(d.macdH);
+    if(d.macdH > 0) macdText = `MACD 柱狀體正值(${osc})，多頭控盤。若紅柱持續放大，代表處於主升段攻擊；若紅柱縮短，顯示漲勢趨緩。`;
+    else macdText = `MACD 柱狀體負值(${osc})，空頭控盤。若綠柱持續放大，代表急殺段，不可接刀；若綠柱收斂，醞釀止跌。`;
+
+    let hvText = "";
+    const hvVal = (d.hv || 0).toFixed(2);
+    const z = (d.hv - d.hvMean) / d.hvSD;
+    if (z > 1.5) hvText = `當前年化波動度為 ${hvVal}%，遠高於平均值。市場目前處於「極端不穩定」狀態，價格波動劇烈且風險放大。`;
+    else if (z < -1.5) hvText = `當前年化波動度為 ${hvVal}%，處於極低位階。市場表現「異常穩定」，通常是蓄勢待發或極度安全的信號。`;
+    else hvText = `當前波動度 ${hvVal}% 接近歷史平均 (${d.hvMean.toFixed(2)}%)。市場情緒穩定，屬於健康的價格波動範圍。`;
+
+    const createMetric = (key, title, score, status, logic) => `
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-title">${title}</span>
+                <div class="metric-score-box" onclick="showFormula('${key}')">${score} 分</div>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${score}%; background:${score>=70?'#10b981':(score<=30?'#ef4444':'#f59e0b')}"></div></div>
+            <div class="metric-status" style="color:${score>=70?'#10b981':(score<=30?'#ef4444':'#f59e0b')}">➤ 狀態：${status}</div>
+            <div class="metric-logic" style="margin-top:5px; padding-top:5px; border-top:1px dashed #334155; font-size:0.85rem; color:#cbd5e1; line-height:1.6;">${logic}</div>
+        </div>`;
+    
+    const html = 
+        createMetric("TrendLong", "長線趨勢 (15%)", s.trendLong, s.trendLong>=65?"長線強勢":s.trendLong<=35?"長線疲弱":"長線整理", trendLongText) +
+        createMetric("TrendMid", "中長線趨勢 (10%)", s.trendMid, s.trendMid>=65?"中期強勢":s.trendMid<=35?"中期疲弱":"中期整理", trendMidText) +
+        createMetric("TrendShort", "短線趨勢 (5%)", s.trendShort, s.trendShort>=65?"短線噴發":s.trendShort<=35?"短線修正":"短線震盪", trendShortText) +
+        createMetric("Pos", "價格位階 (Position)", s.pos, s.pos>=80?"相對便宜":s.pos<=20?"相對昂貴":"合理區間", posText) +
+        createMetric("Vol", "量價分析 (Volume)", s.vol, d.volR > 1 ? "量能放大" : "量能萎縮", volText) +
+        createMetric("RSI", "RSI 動能強弱", s.rsi, d.rsiV > 70 ? "過熱區" : d.rsiV < 30 ? "超賣區" : "中性區", rsiText) +
+        createMetric("KD", "KD 隨機指標", s.kd, d.kdV.k > d.kdV.d ? "黃金交叉" : "死亡交叉", kdText) +
+        createMetric("MACD", "MACD 趨勢指標", s.macd, d.macdH > 0 ? "多方控盤" : "空方控盤", macdText) +
+        createMetric("HV", "歷史波動度 (10%)", s.hv, z > 1 ? "波動放大" : z < -1 ? "波動收斂" : "穩定區間", hvText);
+
+    document.getElementById('metricsContainer').innerHTML = html;
+}
+
+function q_analyzeMacroConditions(spyData, vixData) {
+    let details = []; let totalImpact = 0;
+    const calcHV = (prices, window=20) => {
+        let logReturns = [];
+        for(let i=1; i<prices.length; i++) logReturns.push(Math.log(prices[i]/prices[i-1]));
+        let hvs = [];
+        for(let i=window; i<logReturns.length; i++) {
+            let slice = logReturns.slice(i-window, i);
+            let mean = slice.reduce((a,b)=>a+b,0)/window;
+            let sqDiff = slice.map(x => Math.pow(x-mean, 2)).reduce((a,b)=>a+b,0);
+            hvs.push(Math.sqrt(sqDiff/window) * Math.sqrt(252) * 100);
+        }
+        return hvs;
+    };
+    const calcZScore = (cur, hist) => {
+        const mean = hist.reduce((a,b)=>a+b,0)/hist.length;
+        const sqDiff = hist.map(x=>Math.pow(x-mean,2)).reduce((a,b)=>a+b,0);
+        const std = Math.sqrt(sqDiff/hist.length);
+        return (cur - mean) / std;
+    };
+    const getRaw = (d) => [...d.values].reverse().map(x=>parseFloat(x.close));
+    const getBB = (d, n=20) => { const sma=q_calcAvg(d,n), idx=d.length-1; let ss=0; for(let i=0;i<n;i++)ss+=Math.pow(d[idx-i]-sma[idx],2); const std=Math.sqrt(ss/n); return {mid:sma[idx], upper:sma[idx]+2*std}; };
+
+    if(spyData.values) {
+        const raw = getRaw(spyData);
+        const idx = raw.length-1, p = raw[idx];
+        const ma20 = q_calcAvg(raw,20)[idx], ma60 = q_calcAvg(raw,60)[idx], ma200 = q_calcAvg(raw,200)[idx];
+        const hvSeries = calcHV(raw, 20);
+        const curHV = hvSeries[hvSeries.length-1];
+        const hvZ = calcZScore(curHV, hvSeries.slice(-200));
+
+        const bias200 = ((p - ma200)/ma200)*100;
+        let r1 = {name:`長期趨勢 (年線乖離 ${bias200.toFixed(1)}%)`, val:p.toFixed(2)};
+        if(bias200 > 5) { r1.status="強勢多頭"; r1.score=5; r1.class="tag-pos"; }
+        else if(bias200 > 0) { r1.status="多頭支撐"; r1.score=2; r1.class="tag-pos"; }
+        else if(bias200 > -5) { r1.status="轉弱修正"; r1.score=-5; r1.class="tag-neg"; }
+        else { r1.status="深不見底"; r1.score=-15; r1.class="tag-neg"; }
+        details.push(r1); totalImpact += r1.score;
+
+        const bias20 = ((p - ma20)/ma20)*100;
+        let r2 = {name:`短線熱度 (月線乖離 ${bias20.toFixed(1)}%)`, val:bias20 > 0 ? "月線之上" : "月線之下"};
+        if(bias20 > 3) { r2.status="短線過熱"; r2.score=0; r2.class="tag-neu"; }
+        else if(bias20 > 0) { r2.status="短多強勢"; r2.score=3; r2.class="tag-pos"; }
+        else { r2.status="短線整理"; r2.score=-2; r2.class="tag-neu"; }
+        details.push(r2); totalImpact += r2.score;
+
+        let r3 = {name:"中期架構 (60MA vs 200MA)", val: ma60>ma200 ? "多頭排列" : "空頭排列"};
+        if(ma60 > ma200) { r3.status="助漲格局"; r3.score=3; r3.class="tag-pos"; }
+        else { r3.status="助跌格局"; r3.score=-5; r3.class="tag-neg"; }
+        details.push(r3); totalImpact += r3.score;
+
+        let r4 = {name:`市場波動 (Z-Score ${hvZ.toFixed(1)})`, val:`HV:${curHV.toFixed(1)}%`};
+        if(hvZ > 2.5) { r4.status="極端恐慌"; r4.score=-8; r4.class="tag-neg"; }
+        else if(hvZ > 1.5) { r4.status="波動異常"; r4.score=-4; r4.class="tag-neg"; }
+        else { r4.status="波動正常"; r4.score=2; r4.class="tag-pos"; }
+        details.push(r4); totalImpact += r4.score;
+    }
+
+    if(vixData.values) {
+        const raw = getRaw(vixData);
+        const idx = raw.length-1, v = raw[idx];
+        const ma5 = q_calcAvg(raw, 5)[idx], ma20 = q_calcAvg(raw, 20)[idx];
+        const bb = getBB(raw, 20);
+
+        let r5 = {name:"恐慌水位 (VIX Level)", val:v.toFixed(2)};
+        if(v > 35) { r5.status="崩盤恐慌 (>35)"; r5.score=-12; r5.class="tag-neg"; }
+        else if(v > 25) { r5.status="高度恐慌 (>25)"; r5.score=-8; r5.class="tag-neg"; }
+        else if(v > 20) { r5.status="避險升溫 (>20)"; r5.score=-4; r5.class="tag-neg"; }
+        else if(v < 15) { r5.status="樂觀平穩 (<15)"; r5.score=2; r5.class="tag-pos"; }
+        else { r5.status="正常波動"; r5.score=0; r5.class="tag-neu"; }
+        details.push(r5); totalImpact += r5.score;
+
+        let r6 = {name:"恐慌動能 (VIX 5MA vs 20MA)", val: ma5.toFixed(2) + (ma5>ma20?" > ":" < ") + ma20.toFixed(2)};
+        if(ma5 > ma20) { r6.status="⚠️ 加速升溫"; r6.score=-5; r6.class="tag-neg"; }
+        else { r6.status="✅ 情緒降溫"; r6.score=3; r6.class="tag-pos"; }
+        details.push(r6); totalImpact += r6.score;
+
+        let r7 = {name:"崩盤預警 (VIX BB Break)", val: v>bb.upper ? "突破上軌" : "區間內"};
+        if(v > bb.upper) { r7.status="系統性崩盤"; r7.score=-15; r7.class="tag-neg"; }
+        else { r7.status="未突破"; r7.score=0; r7.class="tag-neu"; }
+        details.push(r7); totalImpact += r7.score;
+    }
+
+    return { details, totalImpact };
+}
+
+function q_updateMacroUI(res) {
+    const tbody = document.getElementById('macroTableBody'); 
+    tbody.innerHTML = '';
+    res.details.forEach(i => {
+        let color = i.score > 0 ? '#10b981' : (i.score < 0 ? '#ef4444' : '#cbd5e1');
+        let sign = i.score > 0 ? '+' : '';
+        tbody.innerHTML += `<tr><td style="padding:10px;">${i.name}</td><td style="font-family:monospace; color:#e2e8f0;">${i.val}</td><td><span class="score-tag ${i.class}" style="font-size:0.8rem;">${i.status}</span></td><td style="font-weight:bold; color:${color}; text-align:right; padding-right:15px;">${sign}${i.score}</td></tr>`;
+    });
+    
+    const total = res.totalImpact;
+    const impBox = document.getElementById('impactVal');
+    impBox.innerText = (total > 0 ? "+" : "") + total;
+    impBox.style.color = total > 0 ? "#10b981" : (total < 0 ? "#ef4444" : "#cbd5e1");
+}
+
+function q_drawCharts(L, P, V, MA5, MA20, MA60, MA200, BB, RSI, MACD, KD, FIB, HV, hvMean, hvSD) {
+    Object.values(q_charts).forEach(c => c?.destroy());
+   
+    const syncScale = (chart) => {
+        const min = chart.scales.x.min;
+        const max = chart.scales.x.max;
+        [q_charts.main, q_charts.kd, q_charts.rsi, q_charts.macd, q_charts.hv].forEach(c => {
+            if (c && c !== chart) {
+                c.options.scales.x.min = min; c.options.scales.x.max = max; c.update('none');
+            }
+        });
+    };
+
+    const commonOpt = {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: { x: { display: false }, y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } } },
+        plugins: {
+            legend: { labels: { color: '#cbd5e1' } },
+            zoom: {
+                pan: { enabled: true, mode: 'x', onPan: ({chart}) => syncScale(chart) },
+                zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x', onZoom: ({chart}) => syncScale(chart) }
+            }
+        }
+    };
+
+    const maxV = Math.max(...V);
+   
+    q_charts.main = new Chart(document.getElementById('cMain'), {
+        type: 'line',
+        data: {
+            labels: L,
+            datasets: [
+                {label:'Price', data:P, borderColor:'#fff', borderWidth:2, pointRadius:0, yAxisID:'y', order:1},
+                {label:'MA5', data:MA5, borderColor:'#e879f9', borderWidth:1, pointRadius:0, yAxisID:'y', order:2},
+                {label:'MA20', data:MA20, borderColor:'#22d3ee', borderWidth:1, pointRadius:0, yAxisID:'y', order:2},
+                {label:'MA60', data:MA60, borderColor:'#3b82f6', borderWidth:1, pointRadius:0, yAxisID:'y', order:2},
+                {label:'MA200', data:MA200, borderColor:'#f59e0b', borderWidth:2, pointRadius:0, yAxisID:'y', order:3},
+                {label:'BB U', data:BB.upper, borderColor:'rgba(16,185,129,0.4)', borderWidth:1, pointRadius:0, fill:false, yAxisID:'y', order:4},
+                {label:'BB L', data:BB.lower, borderColor:'rgba(16,185,129,0.4)', borderWidth:1, pointRadius:0, fill:false, yAxisID:'y', order:5},
+                {type:'bar', label:'Vol', data:V, backgroundColor:'rgba(255,255,255,0.1)', yAxisID:'y1', order:6}
+            ]
+        },
+        options: {
+            ...commonOpt,
+            scales: {
+                x: { ticks: { color: '#94a3b8', maxTicksLimit: 12 }, grid: { color: '#334155' }, display: true },
+                y: { position: 'left', grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                y1: { position: 'right', min: 0, max: maxV*4, display: false }
+            },
+            plugins: {
+                ...commonOpt.plugins,
+                annotation: {
+                    annotations: {
+                        f6:{type:'line',yMin:FIB.f618,yMax:FIB.f618,borderColor:'rgba(16,185,129,0.6)',borderDash:[4,4],borderWidth:1,label:{display:true,content:'Fib .618',position:'end',color:'#10b981',font:{size:10}}},
+                        f5:{type:'line',yMin:FIB.f500,yMax:FIB.f500,borderColor:'rgba(245,158,11,0.6)',borderDash:[4,4],borderWidth:1,label:{display:true,content:'Fib .5',position:'end',color:'#f59e0b',font:{size:10}}}
+                    }
+                }
+            }
+        }
+    });
+   
+    q_charts.kd = new Chart(document.getElementById('cKD'), {
+        type: 'line',
+        data: { labels:L, datasets:[{label:'K',data:KD.K,borderColor:'#facc15',pointRadius:0},{label:'D',data:KD.D,borderColor:'#a855f7',pointRadius:0}] },
+        options: {
+            ...commonOpt,
+            plugins: {
+                ...commonOpt.plugins,
+                annotation: {annotations:{l1:{type:'line',yMin:80,yMax:80,borderColor:'red',borderDash:[2,2]},l2:{type:'line',yMin:20,yMax:20,borderColor:'green',borderDash:[2,2]}}}
+            }
+        }
+    });
+
+    q_charts.rsi = new Chart(document.getElementById('cRSI'), {
+        type: 'line',
+        data: { labels:L, datasets:[{label:'RSI',data:RSI,borderColor:'#38bdf8',pointRadius:0}] },
+        options: {
+            ...commonOpt,
+            scales:{...commonOpt.scales, y:{min:0,max:100,grid:{color:'#334155'},ticks:{color:'#94a3b8'}}},
+            plugins: {
+                ...commonOpt.plugins,
+                annotation: {annotations:{l1:{type:'line',yMin:70,yMax:70,borderColor:'red',borderDash:[2,2]},l2:{type:'line',yMin:30,yMax:30,borderColor:'green',borderDash:[2,2]}}}
+            }
+        }
+    });
+
+    q_charts.macd = new Chart(document.getElementById('cMACD'), {
+        type: 'bar',
+        data: {
+            labels:L,
+            datasets:[
+                {type:'line',label:'DIF',data:MACD.dif,borderColor:'#3b82f6',pointRadius:0},
+                {type:'line',label:'Sig',data:MACD.sig,borderColor:'#f59e0b',pointRadius:0},
+                {label:'Hist',data:MACD.hist,backgroundColor:c=>c.raw>=0?'#10b981':'#ef4444'}
+            ]
+        },
+        options: commonOpt
+    });
+
+    const hvFiltered = HV.filter(v => v > 0);
+    const hvMin = Math.min(...hvFiltered);
+    const hvMax = Math.max(...hvFiltered);
+    const yMin = Math.max(0, Math.min(hvMin, hvMean - 3 * hvSD) * 0.9);
+    const yMax = Math.max(hvMax, hvMean + 3 * hvSD) * 1.1;
+
+    q_charts.hv = new Chart(document.getElementById('cVolat'), {
+        type: 'line',
+        data: { labels: L, datasets: [{ label: '年化歷史波動度 (HV %)', data: HV, borderColor: '#a855f7', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.1 }] },
+        options: {
+            ...commonOpt,
+            scales: { ...commonOpt.scales, y: { beginAtZero: false, min: yMin, max: yMax, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } } },
+            plugins: {
+                ...commonOpt.plugins,
+                title: { display: true, text: '年度歷史波動度 (帶統計標準差線)', color: '#94a3b8' },
+                annotation: {
+                    annotations: {
+                        m: { type: 'line', yMin: hvMean, yMax: hvMean, borderColor: '#cbd5e1', borderWidth: 1, label: { display: true, content: 'Mean', position: 'start', color: '#cbd5e1', font: { size: 9 } } },
+                        p1: { type: 'line', yMin: hvMean + hvSD, yMax: hvMean + hvSD, borderColor: '#10b981', borderDash: [5, 5], borderWidth: 1, label: { display: true, content: '+1σ', position: 'end', color: '#10b981', font: { size: 9 } } },
+                        m1: { type: 'line', yMin: hvMean - hvSD, yMax: hvMean - hvSD, borderColor: '#10b981', borderDash: [5, 5], borderWidth: 1, label: { display: true, content: '-1σ', position: 'end', color: '#10b981', font: { size: 9 } } },
+                        p2: { type: 'line', yMin: hvMean + 2 * hvSD, yMax: hvMean + 2 * hvSD, borderColor: '#f59e0b', borderDash: [5, 5], borderWidth: 1, label: { display: true, content: '+2σ', position: 'end', color: '#f59e0b', font: { size: 9 } } },
+                        m2: { type: 'line', yMin: hvMean - 2 * hvSD, yMax: hvMean - 2 * hvSD, borderColor: '#f59e0b', borderDash: [5, 5], borderWidth: 1, label: { display: true, content: '-2σ', position: 'end', color: '#f59e0b', font: { size: 9 } } },
+                        p3: { type: 'line', yMin: hvMean + 3 * hvSD, yMax: hvMean + 3 * hvSD, borderColor: '#ef4444', borderDash: [5, 5], borderWidth: 1, label: { display: true, content: '+3σ', position: 'end', color: '#ef4444', font: { size: 9 } } },
+                        m3: { type: 'line', yMin: hvMean - 3 * hvSD, yMax: hvMean - 3 * hvSD, borderColor: '#ef4444', borderDash: [5, 5], borderWidth: 1, label: { display: true, content: '-3σ', position: 'end', color: '#ef4444', font: { size: 9 } } }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function q_clamp(n) { return Math.min(100, Math.max(0, Math.round(n))); }
+function q_startCooldown(sec) { q_countdown = sec; const btn = document.getElementById('btnStart'); const timer = setInterval(() => { btn.innerText = `冷卻中 (${q_countdown}s)`; q_countdown--; if(q_countdown < 0) { clearInterval(timer); btn.innerText="RUN MODEL"; btn.disabled=false; } }, 1000); } 
+function showRiskFormula() {
+    const modal = document.getElementById('scoreModal');
+    document.getElementById('mTitle').innerText = "風險控管模型說明";
+    document.getElementById('mWeight').innerText = "Volatility-Adjusted Model";
+    document.getElementById('mFormula').innerHTML = window.currentRiskDetail || "<li>請先執行模型分析以計算當前個股數據。</li>";
+    modal.style.display = 'flex';
+}
+// ===================================================
+
+
+        // Custom Groups & Editable Titles
+        function saveCustomTitle(sectionId, newTitle) {
+            let titles = JSON.parse(localStorage.getItem('custom_titles') || '{}');
+            titles[sectionId] = newTitle.trim();
+            localStorage.setItem('custom_titles', JSON.stringify(titles));
+        }
+
+        function restoreCustomTitles() {
+            let titles = JSON.parse(localStorage.getItem('custom_titles') || '{}');
+            for(let id in titles) {
+                let el = document.querySelector('#' + id + ' .section-title');
+                if(el) { el.innerText = titles[id]; }
+            }
+        }
+
+        let customGroupCount = 0;
+        function addCustomGroup() {
+            let customGroupsData = JSON.parse(localStorage.getItem('custom_groups_data') || '[]');
+            let id = 'section-custom-' + Date.now();
+            let title = '✏️ 新自選群組 (點擊修改名稱)';
+            customGroupsData.push({ id: id, title: title, symbols: [] });
+            localStorage.setItem('custom_groups_data', JSON.stringify(customGroupsData));
+            
+            // Register in watchlists
+            let category = id.replace('section-', '');
+            watchlists[category] = [];
+            
+            renderCustomGroup(id, title); updateCategoryDropdown(); if(typeof saveWatchlists === "function") saveWatchlists();
+        }
+
+        function renderCustomGroup(id, title) {
+            let category = id.replace('section-', '');
+            let html = `
+                <div class="market-section" id="${id}" draggable="true" ondragstart="dragSection(event, '${id}')" ondragover="allowDrop(event)" ondrop="dropSection(event, '${id}')">
+                    <div class="section-header">
+                        <h2 class="section-title" contenteditable="true" onblur="saveCustomTitle('${id}', this.innerText); updateCustomGroupTitle('${id}', this.innerText)">${title}</h2>
+                        <button class="remove-btn" onclick="removeCustomGroup('${id}')" style="margin-left: 15px; padding:5px 12px; font-size:0.85rem; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid #ef4444; border-radius:6px; cursor:pointer; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.background='#ef4444'; this.style.color='white'" onmouseout="this.style.background='rgba(239,68,68,0.15)'; this.style.color='#ef4444'">刪除群組</button>
+                    </div>
+                    <div class="grid" id="${category}-grid" ondragover="allowDrop(event)">
+                        <div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px; font-size: 12px;">無監控標的，請在下方輸入新增</div>
+                    </div>
+                </div>
+            `;
+            // Insert before the add button div
+            let btnDiv = document.querySelector('button[onclick="addCustomGroup()"]').parentNode;
+            btnDiv.insertAdjacentHTML('beforebegin', html);
+        }
+
+        function updateCustomGroupTitle(id, newTitle) {
+            let customGroupsData = JSON.parse(localStorage.getItem('custom_groups_data') || '[]');
+            let group = customGroupsData.find(g => g.id === id);
+            if(group) {
+                group.title = newTitle;
+                localStorage.setItem('custom_groups_data', JSON.stringify(customGroupsData));
+            }
+        }
+
+        function removeCustomGroup(id) {
+            if(!confirm("確定要刪除這個自選股群組嗎？")) return;
+            let customGroupsData = JSON.parse(localStorage.getItem('custom_groups_data') || '[]');
+            customGroupsData = customGroupsData.filter(g => g.id !== id);
+            localStorage.setItem('custom_groups_data', JSON.stringify(customGroupsData));
+            
+            let category = id.replace('section-', '');
+            delete watchlists[category];
+            
+            let el = document.getElementById(id);
+            if(el) el.remove(); updateCategoryDropdown(); if(typeof saveWatchlists === "function") saveWatchlists();
+        }
+
+        function loadCustomGroups() {
+            let customGroupsData = JSON.parse(localStorage.getItem('custom_groups_data') || '[]');
+            customGroupsData.forEach(g => {
+                let category = g.id.replace('section-', '');
+                watchlists[category] = g.symbols || [];
+                renderCustomGroup(g.id, g.title);
+                renderGrid(category);
+            });
+            restoreCustomTitles();
+        }
+    
+
+        function updateCategoryDropdown() {
+            let sel = document.getElementById('symbol-category');
+            if(!sel) return;
+            // keep standard ones
+            let standardOptions = `
+                <option value="watchlist">台/美股自選</option>
+                <option value="macro">總經/商品</option>
+                <option value="crypto">加密貨幣</option>
+                <option value="forex">外匯</option>
+            `;
+            let customGroupsData = JSON.parse(localStorage.getItem('custom_groups_data') || '[]');
+            let customOptions = customGroupsData.map(g => `<option value="${g.id.replace('section-', '')}">${g.title}</option>`).join('');
+            sel.innerHTML = standardOptions + customOptions;
+        }
+    
+
+    // ================= EFFICIENT FRONTIER LOGIC =================
+    let ef_seededRandom;
+    function ef_initSeed(seed) {
+        return function() {
+            var t = seed += 0x6D2B79F5;
+            t = Math.imul(t ^ t >>> 15, t | 1);
+            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        }
+    }
+
+    const ef_state = {
+        tickers: [],
+        apiKey: "",
+        rawPrices: {},
+        returns: {},
+        dates: [],
+        stats: {}
+    };
+
+    async function ef_startAnalysis() {
+        ef_seededRandom = ef_initSeed(12345);
+        ef_state.apiKey = document.getElementById('inpApiKey').value.trim(); // 借用 Quant 頁籤的 API key
+        const tickersRaw = document.getElementById('ef_tickers').value;
+        ef_state.tickers = tickersRaw.split(',').map(t => t.trim().toUpperCase()).filter(t => t.length > 0);
+        
+        if (!ef_state.apiKey) {
+            alert("請先在上方 (或 Quant 頁籤) 輸入 Twelve Data API Key");
+            return;
+        }
+
+        const loader = document.getElementById('ef_loading');
+        const btn = document.getElementById('ef_btnStart');
+        loader.style.display = 'block';
+        btn.disabled = true;
+
+        try {
+            ef_state.rawPrices = {};
+            ef_state.dates = [];
+            ef_state.returns = {};
+
+            const limit = document.getElementById('ef_lookback').value;
+
+            for (const ticker of ef_state.tickers) {
+                await ef_fetchTickerData(ticker, ef_state.apiKey, limit);
+                await new Promise(r => setTimeout(r, 1000)); 
+            }
+
+            ef_alignData();
+            ef_calculateStats();
+            ef_renderCharts();
+            
+            showToast("效率前緣模型計算完成！");
+
+        } catch (err) {
+            alert("發生錯誤: " + err.message);
+            console.error(err);
+        } finally {
+            loader.style.display = 'none';
+            btn.disabled = false;
+        }
+    }
+
+    async function ef_fetchTickerData(ticker, apiKey, limit) {
+        const url = `https://api.twelvedata.com/time_series?symbol=${ticker}&interval=1day&outputsize=${limit}&apikey=${apiKey}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.status === "error") throw new Error(`API Error for ${ticker}: ${data.message}`);
+        if (!data.values || data.values.length === 0) throw new Error(`無資料: ${ticker}`);
+
+        const sortedData = data.values.reverse();
+        ef_state.rawPrices[ticker] = sortedData.map(d => parseFloat(d.close));
+        if (ef_state.dates.length === 0) ef_state.dates = sortedData.map(d => d.datetime);
+    }
+
+    function ef_alignData() {
+        let minLen = Infinity;
+        ef_state.tickers.forEach(t => {
+            if (ef_state.rawPrices[t].length < minLen) minLen = ef_state.rawPrices[t].length;
+        });
+        ef_state.returns = {};
+        ef_state.tickers.forEach(t => {
+            ef_state.rawPrices[t] = ef_state.rawPrices[t].slice(ef_state.rawPrices[t].length - minLen);
+            ef_state.returns[t] = [];
+            for(let i = 1; i < ef_state.rawPrices[t].length; i++) {
+                ef_state.returns[t].push(Math.log(ef_state.rawPrices[t][i] / ef_state.rawPrices[t][i-1]));
+            }
+        });
+        ef_state.dates = ef_state.dates.slice(ef_state.dates.length - minLen + 1);
+    }
+
+    function ef_calculateStats() {
+        ef_state.stats.means = [];
+        ef_state.stats.stdDevs = [];
+        ef_state.stats.covMatrix = [];
+        ef_state.stats.corrMatrix = [];
+        
+        const n = ef_state.tickers.length;
+        const len = ef_state.returns[ef_state.tickers[0]].length;
+
+        ef_state.tickers.forEach(t => {
+            const arr = ef_state.returns[t];
+            const sum = arr.reduce((a,b)=>a+b, 0);
+            const mean = sum / len;
+            const variance = arr.reduce((a,b)=>a + Math.pow(b-mean, 2), 0) / (len-1);
+            ef_state.stats.means.push(mean);
+            ef_state.stats.stdDevs.push(Math.sqrt(variance));
+        });
+
+        for(let i=0; i<n; i++) {
+            ef_state.stats.covMatrix[i] = [];
+            ef_state.stats.corrMatrix[i] = [];
+            for(let j=0; j<n; j++) {
+                let sumProd = 0;
+                for(let k=0; k<len; k++) {
+                    sumProd += (ef_state.returns[ef_state.tickers[i]][k] - ef_state.stats.means[i]) * (ef_state.returns[ef_state.tickers[j]][k] - ef_state.stats.means[j]);
+                }
+                const cov = sumProd / (len-1);
+                ef_state.stats.covMatrix[i][j] = cov;
+                ef_state.stats.corrMatrix[i][j] = cov / (ef_state.stats.stdDevs[i] * ef_state.stats.stdDevs[j]);
+            }
+        }
+    }
+
+    // --- Chart Theme ---
+    const ef_layoutOpt = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#94a3b8' },
+        margin: { t: 40, l: 50, r: 20, b: 40 },
+        xaxis: { gridcolor: '#334155', zerolinecolor: '#475569' },
+        yaxis: { gridcolor: '#334155', zerolinecolor: '#475569' }
+    };
+
+    function ef_renderCharts() {
+        ef_renderEfficientFrontier();
+        ef_renderRiskContribution();
+        ef_renderCorrelation();
+        ef_renderMonteCarlo();
+        ef_renderVaRAndCVaR();
+        ef_renderDrawdown();
+        ef_renderKelly();
+        if(window.MathJax) MathJax.typesetPromise();
+    }
+
+    function ef_renderEfficientFrontier() {
+        const sims = parseInt(document.getElementById('ef_simCount').value) || 5000;
+        const rf = parseFloat(document.getElementById('ef_rfRate').value) / 100 || 0.04;
+
+        const x = [], y = [], c = [], allW = [];
+        let maxSharpe = -Infinity, bestPt = {}, bestW = [];
+        let minVar = Infinity, minVarPt = {}, minVarW = [];
+
+        for(let i=0; i<sims; i++) {
+            let w = ef_state.tickers.map(() => ef_seededRandom());
+            let sumW = w.reduce((a,b)=>a+b,0);
+            w = w.map(v => v/sumW);
+
+            let ret = 0;
+            for(let j=0; j<w.length; j++) ret += w[j] * ef_state.stats.means[j];
+            ret *= 252;
+
+            let vari = 0;
+            for(let r=0; r<w.length; r++) {
+                for(let k=0; k<w.length; k++) {
+                    vari += w[r] * w[k] * ef_state.stats.covMatrix[r][k];
+                }
+            }
+            let vol = Math.sqrt(vari * 252);
+            let sharpe = (ret - rf) / vol;
+
+            x.push(vol); y.push(ret); c.push(sharpe); allW.push(w);
+
+            if(sharpe > maxSharpe) { maxSharpe = sharpe; bestPt = {x:vol, y:ret}; bestW = w; }
+            if(vol < minVar) { minVar = vol; minVarPt = {x:vol, y:ret}; minVarW = w; }
+        }
+
+        const calX = [0, bestPt.x * 2.5];
+        const calY = [rf, rf + maxSharpe * calX[1]];
+
+        const weightContainer = document.getElementById('ef_weights_display');
+        let tableHTML = `<table style="width:100%; text-align:left; border-collapse:collapse; font-size:13px;">
+            <tr style="border-bottom:1px solid #334155;"><th style="padding:5px;">Asset</th><th style="padding:5px; color:#ef4444;">Max Sharpe</th><th style="padding:5px; color:#3b82f6;">Min Volatility</th></tr>`;
+        ef_state.tickers.forEach((t, i) => {
+            tableHTML += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:5px;">${t}</td><td style="padding:5px; color:#ef4444;">${(bestW[i]*100).toFixed(1)}%</td><td style="padding:5px; color:#3b82f6;">${(minVarW[i]*100).toFixed(1)}%</td></tr>`;
+        });
+        tableHTML += `<tr><td style="padding:5px; font-weight:bold;">Return/Vol</td><td style="padding:5px;">${(bestPt.y*100).toFixed(1)}% / ${(bestPt.x*100).toFixed(1)}%</td><td style="padding:5px;">${(minVarPt.y*100).toFixed(1)}% / ${(minVarPt.x*100).toFixed(1)}%</td></tr></table>`;
+        weightContainer.innerHTML = tableHTML;
+        weightContainer.style.display = 'block';
+
+        const t1 = { x: x, y: y, mode: 'markers', marker: { color: c, colorscale: 'Viridis', size: 3, showscale: true }, type: 'scatter', customdata: allW, hovertemplate: 'Ret: %{y:.2%}<br>Vol: %{x:.2%}<br>Sharpe: %{marker.color:.2f}<extra></extra>' };
+        const tCAL = { x: calX, y: calY, mode: 'lines', line: { color: 'rgba(239, 68, 68, 0.6)', width: 2, dash: 'dash' }, name: 'CAL' };
+        const tMax = { x: [bestPt.x], y: [bestPt.y], mode: 'markers', marker: { color: '#ef4444', size: 14, symbol: 'star' }, name: 'Max Sharpe' };
+        const tMin = { x: [minVarPt.x], y: [minVarPt.y], mode: 'markers', marker: { color: '#3b82f6', size: 14, symbol: 'star' }, name: 'Min Vol' };
+
+        Plotly.newPlot('ef_chart_frontier', [t1, tCAL, tMax, tMin], { ...ef_layoutOpt, hovermode: 'closest', showlegend: false, xaxis: { ...ef_layoutOpt.xaxis, tickformat: '.1%', title:'Volatility' }, yaxis: { ...ef_layoutOpt.yaxis, tickformat: '.1%', title:'Return' } });
+    }
+
+    function ef_renderRiskContribution() {
+        const n = ef_state.tickers.length;
+        const w = Array(n).fill(1/n);
+        const cov = ef_state.stats.covMatrix;
+        
+        let portVar = 0;
+        for(let i=0; i<n; i++) for(let j=0; j<n; j++) portVar += w[i] * w[j] * cov[i][j];
+        const portVol = Math.sqrt(portVar);
+
+        const riskContribPct = [];
+        for(let i=0; i<n; i++) {
+            let cov_w = 0;
+            for(let j=0; j<n; j++) cov_w += cov[i][j] * w[j];
+            riskContribPct.push((w[i] * cov_w / portVol) / portVol);
+        }
+
+        Plotly.newPlot('ef_chart_risk', [
+            { x: ef_state.tickers, y: w, name: 'Capital Weight', type: 'bar', marker: {color: '#475569'} },
+            { x: ef_state.tickers, y: riskContribPct, name: 'Risk Contrib', type: 'bar', marker: {color: '#ef4444'} }
+        ], { ...ef_layoutOpt, barmode: 'group', yaxis: { ...ef_layoutOpt.yaxis, tickformat: '.1%' } });
+    }
+
+    function ef_renderCorrelation() {
+        Plotly.newPlot('ef_chart_corr', [{
+            z: ef_state.stats.corrMatrix, x: ef_state.tickers, y: ef_state.tickers, type: 'heatmap', colorscale: 'RdBu', zmin: -1, zmax: 1, textauto: '.2f'
+        }], ef_layoutOpt);
+    }
+
+    function ef_renderMonteCarlo() {
+        const traces = [];
+        let avgMu = ef_state.stats.means.reduce((a,b)=>a+b,0)/ef_state.tickers.length;
+        let avgVol = ef_state.stats.stdDevs.reduce((a,b)=>a+b,0)/ef_state.tickers.length;
+        
+        for(let i=0; i<50; i++) {
+            let p = [100];
+            for(let d=1; d<252; d++) {
+                let shock = (ef_seededRandom()+ef_seededRandom()+ef_seededRandom()+ef_seededRandom() - 2); 
+                p.push(p[d-1] * (1 + avgMu + avgVol * shock));
+            }
+            traces.push({ y: p, type: 'scatter', mode: 'lines', line: {width:1, color:'#3b82f6', opacity:0.2}, showlegend: false });
+        }
+        Plotly.newPlot('ef_chart_mc', traces, ef_layoutOpt);
+    }
+
+    function ef_renderVaRAndCVaR() {
+        let portRets = [];
+        const len = ef_state.returns[ef_state.tickers[0]].length;
+        const w = 1 / ef_state.tickers.length;
+        for(let i=0; i<len; i++) {
+            let r = 0; ef_state.tickers.forEach(t => r += ef_state.returns[t][i] * w);
+            portRets.push(r);
+        }
+        portRets.sort((a,b)=>a-b);
+        const cutoff = Math.floor(len*0.05);
+        const var95 = portRets[cutoff];
+        const cvar95 = portRets.slice(0, cutoff+1).reduce((a,b)=>a+b,0) / (cutoff+1);
+        
+        const layout = { ...ef_layoutOpt, showlegend: false, xaxis: { ...ef_layoutOpt.xaxis, tickformat: '.1%' },
+            shapes: [
+                { type: 'line', x0: var95, x1: var95, y0:0, y1:1, yref:'paper', line: {color:'#ef4444', dash:'dot', width:2} },
+                { type: 'line', x0: cvar95, x1: cvar95, y0:0, y1:1, yref:'paper', line: {color:'#f59e0b', dash:'dash', width:2} }
+            ]
+        };
+        Plotly.newPlot('ef_chart_var', [{ x: portRets, type: 'histogram', marker: {color: '#475569'} }], layout);
+    }
+
+    function ef_renderDrawdown() {
+        let index = [100], dd = [], peak = -Infinity;
+        const len = ef_state.returns[ef_state.tickers[0]].length;
+        const w = 1 / ef_state.tickers.length;
+        for(let i=0; i<len; i++) {
+            let r = 0; ef_state.tickers.forEach(t => r += ef_state.returns[t][i] * w);
+            index.push(index[i] * (1+r));
+            if(index[i] > peak) peak = index[i];
+            dd.push((index[i] - peak)/peak);
+        }
+        Plotly.newPlot('ef_chart_dd', [{ x: ef_state.dates, y: dd, fill: 'tozeroy', type: 'scatter', line: {color: '#ef4444'} }], { ...ef_layoutOpt, yaxis: { ...ef_layoutOpt.yaxis, tickformat: '.1%' } });
+    }
+
+    function ef_renderKelly() {
+        const kellys = ef_state.tickers.map((t, i) => Math.max(0, Math.min(4, ef_state.stats.means[i] / Math.pow(ef_state.stats.stdDevs[i], 2))));
+        Plotly.newPlot('ef_chart_kelly', [{ x: ef_state.tickers, y: kellys, type: 'bar', marker: {color: '#10b981'} }], ef_layoutOpt);
+    }
+    
+    
+    // ================= PAIRS TRADING LOGIC =================
+    function pt_updateSymbolNames(symY, symX) {
+        document.querySelectorAll('.pt_dy_y').forEach(el => el.innerText = symY);
+        document.querySelectorAll('.pt_dy_x').forEach(el => el.innerText = symX);
+    }
+
+    async function pt_runAnalysis() {
+        const apiKey = document.getElementById('inpApiKey').value.trim(); // 共用 Quant API
+        const symY = document.getElementById('pt_symbolY').value.toUpperCase();
+        const symX = document.getElementById('pt_symbolX').value.toUpperCase();
+        const interval = document.getElementById('pt_interval').value;
+        const size = document.getElementById('pt_outputsize').value;
+        const loader = document.getElementById('pt_loader');
+        const btn = document.getElementById('pt_runBtn');
+
+        if(!apiKey) { alert("請先在上方 (或 Quant 頁籤) 輸入 Twelve Data API Key"); return; }
+
+        try {
+            btn.disabled = true;
+            loader.style.display = 'block';
+            pt_updateSymbolNames(symY, symX);
+
+            const dataY = await pt_fetchStockData(symY, interval, size, apiKey);
+            const dataX = await pt_fetchStockData(symX, interval, size, apiKey);
+
+            const aligned = pt_alignData(dataY, dataX);
+            if (aligned.dates.length < 30) throw new Error("重疊數據不足 30 筆，無法分析");
+
+            const results = pt_performQuantAnalysis(aligned.pricesY, aligned.pricesX);
+
+            pt_updateDashboard(results, symY, symX);
+            pt_plotCharts(aligned.dates, aligned.pricesY, aligned.pricesX, results.zScores, symY, symX);
+
+            if (window.MathJax) MathJax.typesetPromise();
+            
+            showToast("配對量化模型計算完成！");
+        } catch (err) {
+            console.error(err);
+            alert("錯誤: " + err.message);
+        } finally {
+            btn.disabled = false;
+            loader.style.display = 'none';
+        }
+    }
+
+    async function pt_fetchStockData(symbol, interval, size, apiKey) {
+        const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&outputsize=${size}&apikey=${apiKey}&format=json`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if(data.status === 'error') throw new Error(data.message);
+        return data.values.reverse().map(d => ({ date: d.datetime, close: parseFloat(d.close) }));
+    }
+
+    function pt_alignData(dY, dX) {
+        const mapX = new Map(dX.map(i => [i.date, i.close]));
+        const dates = [], pY = [], pX = [];
+        dY.forEach(item => {
+            if(mapX.has(item.date)) {
+                dates.push(item.date);
+                pY.push(item.close);
+                pX.push(mapX.get(item.date));
+            }
+        });
+        return { dates, pricesY: pY, pricesX: pX };
+    }
+
+    function pt_performQuantAnalysis(pricesY, pricesX) {
+        const logY = pricesY.map(Math.log);
+        const logX = pricesX.map(Math.log);
+        const n = logY.length;
+
+        const meanY = math.mean(logY);
+        const meanX = math.mean(logX);
+        
+        let num = 0, den = 0, numCorr = 0, denCorrY = 0, denCorrX = 0;
+        for(let i=0; i<n; i++) {
+            const dy = logY[i] - meanY;
+            const dx = logX[i] - meanX;
+            num += dy * dx; den += dx * dx;
+            numCorr += dy * dx; denCorrY += dy * dy; denCorrX += dx * dx;
+        }
+        
+        const beta = num / den;
+        const alpha = meanY - beta * meanX;
+        const correlation = numCorr / Math.sqrt(denCorrY * denCorrX);
+
+        const spread = logY.map((y, i) => y - (alpha + beta * logX[i]));
+        const spreadMean = math.mean(spread);
+        const spreadStd = math.std(spread);
+        const zScores = spread.map(s => (s - spreadMean) / spreadStd);
+
+        let sumXY_hl = 0, sumXX_hl = 0;
+        for(let i=1; i<n; i++) {
+            const dy = spread[i] - spread[i-1];
+            const x = spread[i-1] - spreadMean;
+            sumXY_hl += dy * x; sumXX_hl += x * x;
+        }
+        const theta = -(sumXY_hl / sumXX_hl); 
+        const halfLife = (theta > 0) ? (Math.log(2) / theta) : 999;
+        const hurst = pt_calculateHurst(spread);
+
+        return { beta, alpha, correlation, zScores, currentZ: zScores[n-1], halfLife, hurst, spreadMean, spreadStd };
+    }
+
+    function pt_calculateHurst(series) {
+        const n = series.length;
+        if (n < 100) return 0.5; 
+        const mean = math.mean(series);
+        const y = series.map(x => x - mean);
+        const cumsum = [];
+        let sum = 0;
+        for(let v of y) { sum += v; cumsum.push(sum); }
+        const R = Math.max(...cumsum) - Math.min(...cumsum);
+        const S = math.std(series);
+        return Math.log(R/S) / Math.log(n);
+    }
+
+    function pt_updateDashboard(res, symY, symX) {
+        const z = res.currentZ;
+        const zEl = document.getElementById('pt_val_zscore');
+        const badge = document.getElementById('pt_badge_signal');
+        
+        zEl.innerText = z.toFixed(2);
+        if (z > 2.0) {
+            zEl.style.color = '#ef4444';
+            badge.style.background = 'rgba(239, 68, 68, 0.2)';
+            badge.style.color = '#ef4444';
+            badge.innerText = `SHORT ${symY} / LONG ${symX}`;
+        } else if (z < -2.0) {
+            zEl.style.color = '#10b981';
+            badge.style.background = 'rgba(16, 185, 129, 0.2)';
+            badge.style.color = '#10b981';
+            badge.innerText = `LONG ${symY} / SHORT ${symX}`;
+        } else {
+            zEl.style.color = '#c9d1d9';
+            badge.style.background = '#334155';
+            badge.style.color = '#94a3b8';
+            badge.innerText = 'NEUTRAL (觀望)';
+        }
+
+        document.getElementById('pt_val_beta').innerText = res.beta.toFixed(3);
+        document.getElementById('pt_txt_beta_amt').innerText = res.beta.toFixed(3);
+
+        const corr = res.correlation;
+        document.getElementById('pt_val_corr').innerText = corr.toFixed(3);
+        const corrDesc = document.getElementById('pt_txt_corr_desc');
+        if(corr > 0.8) { corrDesc.innerText = "高相關 (Excellent)"; corrDesc.style.color = "#10b981"; }
+        else if(corr > 0.5) { corrDesc.innerText = "中度相關 (Moderate)"; corrDesc.style.color = "#f59e0b"; }
+        else { corrDesc.innerText = "低相關 (Weak) - 風險高"; corrDesc.style.color = "#ef4444"; }
+
+        document.getElementById('pt_val_halflife').innerText = res.halfLife.toFixed(1);
+        document.getElementById('pt_txt_hl_bars').innerText = res.halfLife.toFixed(1);
+
+        const h = res.hurst;
+        const hEl = document.getElementById('pt_val_hurst');
+        const hDesc = document.getElementById('pt_txt_hurst_desc');
+        hEl.innerText = h.toFixed(3);
+        
+        if(h < 0.5) { hDesc.innerText = "均值回歸 (適合交易)"; hDesc.style.color = "#10b981"; }
+        else if (h > 0.55) { hDesc.innerText = "趨勢型 (不適合)"; hDesc.style.color = "#ef4444"; }
+        else { hDesc.innerText = "隨機漫步 (Random)"; hDesc.style.color = "#94a3b8"; }
+    }
+
+    const pt_layoutOpt = {
+        paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#94a3b8' },
+        margin: { t: 40, l: 50, r: 20, b: 40 },
+        xaxis: { gridcolor: '#334155', zerolinecolor: '#475569' },
+        yaxis: { gridcolor: '#334155', zerolinecolor: '#475569' }
+    };
+
+    function pt_plotCharts(dates, pY, pX, zScores, symY, symX) {
+        const normY = pY.map(p => (p / pY[0]) * 100);
+        const normX = pX.map(p => (p / pX[0]) * 100);
+        
+        const traceY = { x: dates, y: normY, name: symY, type: 'scatter', line: { color: '#58a6ff' } };
+        const traceX = { x: dates, y: normX, name: symX, type: 'scatter', line: { color: '#d2a8ff' } };
+
+        Plotly.newPlot('pt_chart_main', [traceY, traceX], { ...pt_layoutOpt, legend: { orientation: 'h', y: 1.1 } });
+
+        const traceZ = { x: dates, y: zScores, name: 'Z-Score', type: 'scatter', line: { color: '#e2e8f0', width: 1.5 } };
+        const layoutZ = { ...pt_layoutOpt, yaxis: { ...pt_layoutOpt.yaxis, title: 'Sigma (σ)' },
+            shapes: [
+                { type: 'line', x0: 0, x1: 1, xref: 'paper', y0: 2, y1: 2, line: { color: '#ef4444', width: 1, dash: 'dot' } },
+                { type: 'line', x0: 0, x1: 1, xref: 'paper', y0: -2, y1: -2, line: { color: '#10b981', width: 1, dash: 'dot' } },
+                { type: 'line', x0: 0, x1: 1, xref: 'paper', y0: 0, y1: 0, line: { color: '#64748b', width: 2 } }
+            ]
+        };
+        Plotly.newPlot('pt_chart_spread', [traceZ], layoutZ);
+    }
+    
     </script>
 </body>
 </html>
