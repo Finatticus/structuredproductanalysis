@@ -3020,9 +3020,12 @@
         // ==========================================
         // Binance WebSocket (加密貨幣實時串流)
         // ==========================================
+        let cryptoWSList = [];
+        
         function connectCryptoWS() {
-            if (cryptoWS) {
-                cryptoWS.close();
+            if (cryptoWSList && cryptoWSList.length > 0) {
+                cryptoWSList.forEach(ws => ws.close());
+                cryptoWSList = [];
             }
             
             const cryptoList = watchlists.crypto;
@@ -3033,38 +3036,41 @@
                 return;
             }
             
-            const streams = cryptoList.map(sym => {
-                let s = sym.toUpperCase();
-                if (!s.endsWith('USDT')) s = s + 'USDT';
-                return s.toLowerCase() + '@ticker';
-            }).join('/');
-            
             statusDot.className = 'status-dot active pulse';
             
-            cryptoWS = new WebSocket(`wss://fstream.binance.com/ws/${streams}`);
-            
-            cryptoWS.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                const rawSymbol = data.s; 
-                const currentPrice = parseFloat(data.c);
-                const priceChange = parseFloat(data.p);
-                const priceChangePct = parseFloat(data.P);
-                const currentVolume = parseFloat(data.v); 
-                const isUp = priceChange >= 0;
+            cryptoList.forEach(sym => {
+                let s = sym.toUpperCase();
+                if (!s.endsWith('USDT')) s = s + 'USDT';
+                const streamName = s.toLowerCase() + '@ticker';
                 
-                const matchedSymbol = cryptoList.find(s => {
-                    const u = s.toUpperCase();
-                    return u === rawSymbol || u + 'USDT' === rawSymbol;
-                });
+                const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${streamName}`);
                 
-                if (matchedSymbol) {
-                    const decimals = currentPrice > 1000 ? 2 : 4;
-                    const formattedPrice = currentPrice.toLocaleString('en-US', {
-                        minimumFractionDigits: decimals, 
-                        maximumFractionDigits: decimals
+                ws.onmessage = (event) => {
+                    const parsed = JSON.parse(event.data);
+                    const data = parsed.data ? parsed.data : parsed;
+                    
+                    if (!data || !data.s) return;
+                    
+                    const rawSymbol = data.s; 
+                    const currentPrice = parseFloat(data.c);
+                    const priceChange = parseFloat(data.p);
+                    const priceChangePct = parseFloat(data.P);
+                    const currentVolume = parseFloat(data.v); 
+                    const isUp = priceChange >= 0;
+                    
+                    const matchedSymbol = cryptoList.find(s => {
+                        const u = s.toUpperCase();
+                        return u === rawSymbol || u + 'USDT' === rawSymbol;
                     });
-                    const formattedChange = (isUp ? '+' : '') + priceChange.toFixed(decimals);
-                    const formattedPct = (isUp ? '+' : '') + priceChangePct.toFixed(2) + '%';
+                    
+                    if (matchedSymbol) {
+                        const decimals = currentPrice > 1000 ? 2 : 4;
+                        const formattedPrice = currentPrice.toLocaleString('en-US', {
+                            minimumFractionDigits: decimals, 
+                            maximumFractionDigits: decimals
+                        });
+                        const formattedChange = (isUp ? '+' : '') + priceChange.toFixed(decimals);
+                        const formattedPct = (isUp ? '+' : '') + priceChangePct.toFixed(2) + '%';
                     
                     const avgVol = cryptoAvgVolume20[matchedSymbol] || 0;
                     const isVolumeSpike = avgVol > 0 && currentVolume > 2.5 * avgVol;
@@ -3084,15 +3090,77 @@
                 }
             };
             
-            cryptoWS.onerror = (e) => {
-                console.error("Binance WS error", e);
-                statusDot.className = 'status-dot error';
+            ws.onerror = (e) => {
+                console.error(`Binance WS error for ${sym}`, e);
             };
             
-            cryptoWS.onclose = () => {
-                statusDot.className = 'status-dot inactive';
+            ws.onclose = () => {
+                // If all websockets close, turn dot inactive? Just handle individual logs.
             };
+            
+            cryptoWSList.push(ws);
+        });
+    }
+
+    // ==========================================
+    // 虛擬貨幣與合約代幣的 REST 備援輪詢 (每 3 秒更新未被 WS 涵蓋的代碼)
+    // ==========================================
+    async function pollCryptoFutures() {
+        const cryptoList = watchlists.crypto;
+        if (!cryptoList || cryptoList.length === 0) return;
+        
+        try {
+            const res = await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr');
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            cryptoList.forEach(sym => {
+                let s = sym.toUpperCase();
+                if (!s.endsWith('USDT')) s = s + 'USDT';
+                
+                // 尋找對應的資料
+                const ticker = data.find(t => t.symbol === s);
+                if (ticker) {
+                    const currentPrice = parseFloat(ticker.lastPrice);
+                    const priceChange = parseFloat(ticker.priceChange);
+                    const priceChangePct = parseFloat(ticker.priceChangePercent);
+                    const currentVolume = parseFloat(ticker.volume);
+                    const isUp = priceChange >= 0;
+                    
+                    const decimals = currentPrice > 1000 ? 2 : 4;
+                    const formattedPrice = currentPrice.toLocaleString('en-US', {
+                        minimumFractionDigits: decimals, 
+                        maximumFractionDigits: decimals
+                    });
+                    const formattedChange = (isUp ? '+' : '') + priceChange.toFixed(decimals);
+                    const formattedPct = (isUp ? '+' : '') + priceChangePct.toFixed(2) + '%';
+                    
+                    const avgVol = cryptoAvgVolume20[sym] || 0;
+                    const isVolumeSpike = avgVol > 0 && currentVolume > 2.5 * avgVol;
+                    
+                    if (!cachedQuotes[sym]) {
+                        cachedQuotes[sym] = { history: [] };
+                    }
+                    
+                    // 為了避免和 WebSocket 衝突，如果 WebSocket 剛更新過，這裡就不強行刷新，或是直接覆蓋也無妨，因為數值幾乎同步
+                    cachedQuotes[sym].price = formattedPrice;
+                    cachedQuotes[sym].change = formattedChange;
+                    cachedQuotes[sym].changePercent = formattedPct;
+                    cachedQuotes[sym].isUp = isUp;
+                    cachedQuotes[sym].volumeSpike = isVolumeSpike;
+                    
+                    updateCardDOM(sym, formattedPrice, formattedChange, formattedPct, isUp);
+                }
+            });
+            updatePortfolioSection();
+        } catch (e) {
+            console.error("Crypto polling error:", e);
         }
+    }
+    
+    // 每 3 秒啟動一次合約備援輪詢，確保 MU, TSM, NVDA 也能高速跳動
+    setInterval(pollCryptoFutures, 3000);
+
 
         // ==========================================
         // HTML5 Drag & Drop (自訂介面排列順序)
@@ -3528,8 +3596,15 @@
             const sym = symbol.toUpperCase().trim();
             
             if (category === 'crypto') {
-                if (sym.endsWith('USDT')) return `BINANCE:${sym}`;
-                return `BINANCE:${sym}USDT`;
+                let s = sym.endsWith('USDT') ? sym : sym + 'USDT';
+                
+                // 美股合約與特定代碼在 TradingView 上的幣安合約代碼格式為 BINANCE:XXXUSDTPERP
+                const futuresOnly = ['MUUSDT', 'NVDAUSDT', 'TSMUSDT', 'SPCXUSDT', 'TSLAUSDT', 'AAPLUSDT'];
+                if (futuresOnly.includes(s)) {
+                    return `BINANCE:${s}PERP`;
+                }
+                
+                return `BINANCE:${s}`;
             }
             
             if (category === 'forex') {
