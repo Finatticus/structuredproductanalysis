@@ -51,6 +51,7 @@ function doPost(e) {
         sheet.getRange(lastRow + 1, 1, newRows.length, 9).setValues(newRows);
       }
       return ContentService.createTextOutput(JSON.stringify({"status": "success"})).setMimeType(ContentService.MimeType.JSON);
+      
     } else if (action === "getData") {
       var rows = sheet.getDataRange().getValues();
       var words = [];

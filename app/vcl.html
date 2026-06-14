@@ -172,71 +172,117 @@
                 
                 <button class="btn-primary" id="btn-login" onclick="login()" style="width:100%; padding:18px; font-size:18px;">
                     <i class="fas fa-sign-in-alt"></i> 登入 / 註冊
-                </button>
-            </div>
-        </section>
+                
+</section>
 
         <!-- 新增單字頁面 -->
-        <section id="sec-add">
-            <!-- 主要功能：新增單字 -->
-            <div class="card" style="border: 2px solid var(--primary-light); box-shadow: 0 8px 24px rgba(0,0,0,0.06);">
-                <h2 style="font-size:18px; margin-bottom:20px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                    <i class="fas fa-pen-nib" style="color:var(--primary);"></i> 新增英文單字
-                    <div style="flex:1;"></div>
-                    <label class="btn-icon-small" style="cursor:pointer; background:var(--primary-light); color:var(--primary); margin:0;" title="拍照辨識單字">
-                        <i class="fas fa-camera"></i>
-                        <input type="file" accept="image/*" capture="environment" id="ocr-upload" style="display:none;" onchange="handleOCR(event)">
-                    </label>
-                </h2>
-                
-                <div class="input-group">
-                    <label>儲存至單字本</label>
-                    <div class="input-wrapper">
-                        <select id="active-book-select"></select>
-                        <i class="fas fa-chevron-down select-icon"></i>
-                    </div>
+                <section id="sec-add">
+            <!-- 模式切換器 -->
+            <div style="display:flex; background:var(--bg-color); padding:4px; border-radius:12px; margin-bottom:20px; border:1px solid var(--border);">
+                <div id="seg-manual" onclick="switchAddMode('manual')" style="flex:1; text-align:center; padding:10px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; color:var(--primary); background:var(--card-bg); box-shadow:0 2px 8px rgba(0,0,0,0.05); transition:all 0.3s;">
+                    <i class="fas fa-edit"></i> 手動新增
                 </div>
+                <div id="seg-trans" onclick="switchAddMode('trans')" style="flex:1; text-align:center; padding:10px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; color:var(--text-muted); background:transparent; transition:all 0.3s;">
+                    <i class="fas fa-language"></i> 智慧翻譯
+                </div>
+            </div>
 
-                <div class="input-group">
-                    <label>英文單字</label>
-                    <input type="text" id="word-en" placeholder="(輸入完自動翻譯)" autocomplete="off">
-                </div>
-                
-                <div class="input-group">
-                    <label>中文意思</label>
-                    <input type="text" id="word-zh" placeholder="(自動翻譯後可修改)" autocomplete="off">
-                </div>
-                
-                <div class="input-group">
-                    <label>詞性標籤 (自動判斷或手動調整)</label>
-                    <div class="input-wrapper">
-                        <select id="word-pos">
-                            <option value="">(無)</option>
-                            <option value="n.">名詞 (n.)</option>
-                            <option value="v.">動詞 (v.)</option>
-                            <option value="adj.">形容詞 (adj.)</option>
-                            <option value="adv.">副詞 (adv.)</option>
-                            <option value="prep.">介系詞 (prep.)</option>
-                            <option value="conj.">連接詞 (conj.)</option>
-                            <option value="phr.">片語 (phr.)</option>
-                        </select>
-                        <i class="fas fa-chevron-down select-icon"></i>
+            <!-- 手動新增模式 -->
+            <div id="add-mode-manual">
+                <div class="card" style="border: 2px solid var(--primary-light); box-shadow: 0 8px 24px rgba(0,0,0,0.06);">
+                    <h2 style="font-size:18px; margin-bottom:20px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-pen-nib" style="color:var(--primary);"></i> 新增英文單字
+                        <div style="flex:1;"></div>
+                        <label class="btn-icon-small" style="cursor:pointer; background:var(--primary-light); color:var(--primary); margin:0;" title="拍照辨識單字">
+                            <i class="fas fa-camera"></i>
+                            <input type="file" accept="image/*" capture="environment" id="ocr-upload" style="display:none;" onchange="handleOCR(event)">
+                        </label>
+                    </h2>
+                    
+                    <div class="input-group">
+                        <label>儲存至單字本</label>
+                        <div class="input-wrapper">
+                            <select id="active-book-select"></select>
+                            <i class="fas fa-chevron-down select-icon"></i>
+                        </div>
                     </div>
-                </div>
 
-                <div class="input-group">
-                    <label>備註 (選填)</label>
-                    <textarea id="word-notes" placeholder="寫些例句或需要提醒自己的重點..."></textarea>
+                    <div class="input-group">
+                        <label>英文單字</label>
+                        <input type="text" id="word-en" placeholder="(輸入完自動翻譯)" autocomplete="off">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>中文意思</label>
+                        <input type="text" id="word-zh" placeholder="(自動翻譯後可修改)" autocomplete="off">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>詞性標籤 (自動判斷或手動調整)</label>
+                        <div class="input-wrapper">
+                            <select id="word-pos">
+                                <option value="">(無)</option>
+                                <option value="n.">名詞 (n.)</option>
+                                <option value="v.">動詞 (v.)</option>
+                                <option value="adj.">形容詞 (adj.)</option>
+                                <option value="adv.">副詞 (adv.)</option>
+                                <option value="prep.">介系詞 (prep.)</option>
+                                <option value="conj.">連接詞 (conj.)</option>
+                                <option value="phr.">片語 (phr.)</option>
+                            </select>
+                            <i class="fas fa-chevron-down select-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>備註 (選填)</label>
+                        <textarea id="word-notes" placeholder="寫些例句或需要提醒自己的重點..."></textarea>
+                    </div>
+                    
+                    <button class="btn-primary" id="btn-save" onclick="saveWord()" style="width: 100%; padding:18px; font-size:18px; margin-top:8px;">
+                        <i class="fas fa-check-circle"></i> 儲存單字
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 智慧翻譯模式 -->
+            <div id="add-mode-trans" class="card" style="display:none; border: 2px solid var(--primary-light); box-shadow: 0 8px 24px rgba(0,0,0,0.06);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h2 style="font-size:18px; margin-bottom:20px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-language" style="color:var(--primary);"></i> 翻譯與擷取
+                    </h2>
+                </div>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">輸入單字或句子進行雙向翻譯。點擊結果中的英文單字，即可快速加入單字本！</p>
+                
+                <div style="display:flex; gap:12px; margin-bottom:12px;">
+                    <select id="trans-dir" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg-color); font-size:14px; font-weight:600; color:var(--text-main);">
+                        <option value="zh2en">🇹🇼 中文 ➔ 🇬🇧 英文</option>
+                        <option value="en2zh">🇬🇧 英文 ➔ 🇹🇼 中文</option>
+                        <option value="auto">🤖 自動偵測 ➔ 🇹🇼 中文</option>
+                    </select>
                 </div>
                 
-                <button class="btn-primary" id="btn-save" onclick="saveWord()" style="width: 100%; padding:18px; font-size:18px; margin-top:8px;">
-                    <i class="fas fa-check-circle"></i> 儲存單字
+                <textarea id="trans-input" placeholder="請輸入要翻譯的文字..." style="width:100%; height:100px; padding:16px; border-radius:12px; border:1px solid var(--border); background:var(--bg-color); color:var(--text-main); font-size:15px; margin-bottom:12px; resize:vertical; font-family:inherit;"></textarea>
+                
+                <button class="btn-primary" id="btn-trans" onclick="doTranslation()" style="width:100%; padding:14px; font-size:16px; border-radius:10px; margin-bottom:16px;">
+                    <i class="fas fa-exchange-alt"></i> 開始翻譯
                 </button>
+                
+                <div id="trans-result-card" style="display:none; background:var(--bg-color); padding:16px; border-radius:12px; border:1px solid var(--border);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                        <h4 style="font-size:13px; color:var(--text-muted); font-weight:700;">翻譯結果：</h4>
+                        <button class="btn-icon-small" id="btn-trans-tts" onclick="playTransTTS()" style="background:var(--primary-light); color:var(--primary); margin:0;" title="朗讀英文">
+                            <i class="fas fa-volume-up"></i>
+                        </button>
+                    </div>
+                    <div id="trans-output" style="font-size:16px; color:var(--text-main); line-height:1.6; font-weight:500; white-space:pre-wrap;">
+                        <!-- 結果放這裡 -->
+                    </div>
+                </div>
             </div>
         </section>
 
-        <!-- 單字本列表頁面 -->
-        <section id="sec-books">
+<section id="sec-books">
             <!-- SRS 視覺化橫幅按鈕 -->
             <div class="card" onclick="startDueFlashcards()" style="cursor:pointer; background:linear-gradient(135deg, var(--warning), #D97706); color:white; padding:20px; display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; border:none; box-shadow:0 8px 24px rgba(245, 158, 11, 0.25);">
                 <div>
@@ -359,9 +405,8 @@
             <div class="fc-controls srs-controls" id="srs-controls">
                 <button class="btn-srs btn-forget" onclick="answerSRS('forget')">忘記<br><small>10 分鐘後</small></button>
                 <button class="btn-srs btn-hard" onclick="answerSRS('hard')">困難<br><small>1 天後</small></button>
-                <button class="btn-srs btn-easy" onclick="answerSRS('easy')">簡單<br><small>4 天後</small></button>
-            </div>
-        </section>
+                <button class="btn-srs btn-easy" onclick="answerSRS('easy')">簡單<br><small>4 天後</small>
+</section>
 
         <!-- 探索與設定頁面 -->
         <section id="sec-settings">
@@ -427,6 +472,8 @@
                 <div id="news-container" style="display:none; margin-top:20px;"></div>
             </div>
 
+            
+            
             <!-- 3. 系統偏好設定 -->
             <div class="card" style="border:1px dashed var(--border); box-shadow:none;">
                 <h3 style="margin-bottom:20px; font-size:16px; color:var(--text-main); font-weight:800;"><i class="fas fa-cog"></i> 系統設定</h3>
@@ -519,7 +566,8 @@
         </div>
     </div>
 
-        <!-- 浮動新增單字面板 -->
+
+    <!-- 浮動新增單字面板 -->
         <div id="news-mini-add" style="display:none; position:fixed; bottom:0; left:0; width:100%; background:var(--card-bg); border-top:1px solid var(--border); box-shadow:0 -10px 40px rgba(0,0,0,0.15); padding:20px; z-index:2010; border-radius:24px 24px 0 0;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <h4 style="font-size:16px; font-weight:800; color:var(--text-main); margin:0;"><i class="fas fa-bolt text-primary"></i> 快速新增單字</h4>
@@ -599,7 +647,7 @@
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxGOO-m_5VrvEu2aEVwgwPZOP_vzjmjyCgBXbyD14vDT9tT_1ghfVK0s8F2milf3tM/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxZnho6z3o9XdT-47SlXjPJCYWkXZInMJKCCm7PMxJPKu9ZY7YdNf3q3gZlSP2y-zo/exec";
 
         const THEMES = {
             "default": { "--bg-color": "#F8FAFC", "--card-bg": "#FFFFFF", "--text-main": "#0F172A", "--text-muted": "#64748B", "--primary": "#4F46E5", "--primary-hover": "#4338CA", "--primary-light": "#E0E7FF", "--border": "#E2E8F0", "--nav-bg": "rgba(255, 255, 255, 0.85)" },
@@ -932,6 +980,136 @@
             }
         }
 
+
+
+        
+        // Translation Logic
+        let lastTransEnglish = "";
+
+        const makeTransClickable = (text) => {
+            return text.split(/(\s+)/).map(w => {
+                if(w.trim() === '') return w;
+                return `<span class="clickable-word" onclick="addTransWord(this)">${w}</span>`;
+            }).join('');
+        };
+
+        async function addTransWord(el) {
+            let word = el.innerText.trim().replace(/[^a-zA-Z]/g, '');
+            if (!word) return;
+            
+            document.querySelectorAll('.clickable-word').forEach(e => e.style.background = 'none');
+            el.style.background = 'var(--warning)';
+            
+            playTTS(word);
+            
+            document.getElementById("news-mini-add").style.display = "block";
+            const enInput = document.getElementById("news-mini-en");
+            const zhInput = document.getElementById("news-mini-zh");
+            const bookSelect = document.getElementById("news-mini-book");
+            
+            enInput.value = word.toLowerCase();
+            zhInput.value = "翻譯中...";
+            document.getElementById("news-mini-notes").value = "來自智慧翻譯助手";
+            document.getElementById("news-mini-pos").value = "";
+            
+            bookSelect.innerHTML = "";
+            books.forEach(b => bookSelect.add(new Option(b, b)));
+            bookSelect.value = document.getElementById("active-book-select").value || books[0];
+            
+            try {
+                const zh = await translateText(word.toLowerCase());
+                zhInput.value = zh;
+            } catch(e) {
+                zhInput.value = "";
+            }
+        }
+
+        async function doTranslation() {
+            const input = document.getElementById('trans-input').value.trim();
+            if (!input) return;
+            
+            const dir = document.getElementById('trans-dir').value;
+            const btn = document.getElementById('btn-trans');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 翻譯中...';
+            btn.disabled = true;
+            
+            try {
+                let sl = dir === 'auto' ? 'auto' : (dir === 'en2zh' ? 'en' : 'zh-TW');
+                let tl = dir === 'zh2en' ? 'en' : 'zh-TW';
+                
+                const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(input)}`);
+                const data = await res.json();
+                
+                let translatedText = data[0].map(item => item[0]).join('');
+                
+                const resultCard = document.getElementById('trans-result-card');
+                const outputEl = document.getElementById('trans-output');
+                const ttsBtn = document.getElementById('btn-trans-tts');
+                
+                resultCard.style.display = 'block';
+                
+                // If it's en2zh or auto and output is Chinese, the english text is the input.
+                // If it's zh2en, the english text is the output.
+                if (tl === 'zh-TW') {
+                    // Output is Chinese, Input was English
+                    lastTransEnglish = input;
+                    outputEl.innerHTML = `<div style="margin-bottom:12px; font-size:1em; color:var(--text-main);">${translatedText}</div>` + 
+                                         `<div style="padding-top:12px; border-top:1px dashed var(--border); font-size:0.9em;">` + 
+                                         `<strong style="color:var(--text-muted);">英文原文 (點擊單字可加入)：</strong><br><br>` + 
+                                         makeTransClickable(input) + `</div>`;
+                    ttsBtn.style.display = 'block';
+                } else {
+                    // Output is English, Input was Chinese
+                    lastTransEnglish = translatedText;
+                    outputEl.innerHTML = `<div style="margin-bottom:8px; font-size:0.9em; color:var(--text-muted);">英文翻譯 (點擊單字可加入)：</div>` + makeTransClickable(translatedText);
+                    ttsBtn.style.display = 'block';
+                }
+                
+            } catch (err) {
+                showToast("翻譯失敗，請檢查網路", "error");
+            } finally {
+                btn.innerHTML = '<i class="fas fa-exchange-alt"></i> 開始翻譯';
+                btn.disabled = false;
+            }
+        }
+        
+        function playTransTTS() {
+            if (lastTransEnglish) {
+                playTTS(lastTransEnglish);
+            }
+        }
+
+        
+        function switchAddMode(mode) {
+            const manualBtn = document.getElementById('seg-manual');
+            const transBtn = document.getElementById('seg-trans');
+            const manualCard = document.getElementById('add-mode-manual');
+            const transCard = document.getElementById('add-mode-trans');
+            
+            if (mode === 'manual') {
+                manualBtn.style.color = 'var(--primary)';
+                manualBtn.style.background = 'var(--card-bg)';
+                manualBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+                
+                transBtn.style.color = 'var(--text-muted)';
+                transBtn.style.background = 'transparent';
+                transBtn.style.boxShadow = 'none';
+                
+                manualCard.style.display = 'block';
+                transCard.style.display = 'none';
+            } else {
+                transBtn.style.color = 'var(--primary)';
+                transBtn.style.background = 'var(--card-bg)';
+                transBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+                
+                manualBtn.style.color = 'var(--text-muted)';
+                manualBtn.style.background = 'transparent';
+                manualBtn.style.boxShadow = 'none';
+                
+                manualCard.style.display = 'none';
+                transCard.style.display = 'block';
+            }
+        }
 
         // OCR Logic
         let selectedOCRWords = new Set();
