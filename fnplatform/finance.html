@@ -2426,7 +2426,7 @@
         // ==========================================
         async function validateCryptoSymbol(symbol) {
             try {
-                const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+                const res = await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`);
                 return res.ok;
             } catch (e) {
                 return false;
@@ -2814,7 +2814,7 @@
                 cleanSym = cleanSym + 'USDT';
             }
             try {
-                const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${cleanSym}&interval=1d&limit=30`);
+                const res = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${cleanSym}&interval=1d&limit=30`);
                 if (res.ok) {
                     const data = await res.json();
                     const history = data.map(item => parseFloat(item[4]));
@@ -3041,7 +3041,7 @@
             
             statusDot.className = 'status-dot active pulse';
             
-            cryptoWS = new WebSocket(`wss://stream.binance.com:9443/ws/${streams}`);
+            cryptoWS = new WebSocket(`wss://fstream.binance.com/ws/${streams}`);
             
             cryptoWS.onmessage = (event) => {
                 const data = JSON.parse(event.data);
