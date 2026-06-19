@@ -419,7 +419,7 @@
             <div class="card" style="border: 2px solid var(--primary-light); box-shadow: 0 8px 24px rgba(0,0,0,0.06);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <h2 style="font-size:18px; color:var(--text-main); display:flex; align-items:center; gap:8px; margin:0;">
-                        <i class="fas fa-book" style="color:var(--primary);"></i> 智慧字典查詢
+                        <i class="fas fa-book" style="color:var(--primary);"></i> 字典查詢
                     </h2>
                 </div>
                 <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">輸入單字進行即時查詢。支援原音發音、例句與即時翻譯，並可快速加到單字本中。</p>
@@ -518,9 +518,22 @@
                 <div id="news-container" style="display:none; margin-top:20px;"></div>
             </div>
 
-            
-            
-            <!-- 3. 系統偏好設定 -->
+
+
+            <div class="card" onclick="openTopicPackerModal()" style="cursor:pointer; margin-bottom:24px; border-left:4px solid #10B981;">
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <div style="width:48px; height:48px; border-radius:12px; background:rgba(16, 185, 129, 0.1); color:#10B981; display:flex; justify-content:center; align-items:center; font-size:24px;">
+                        <i class="fas fa-box-open"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <h4 style="font-size:16px; font-weight:700; color:var(--text-main); margin:0 0 4px 0;">主題單字包一鍵生成</h4>
+                        <p style="font-size:12px; color:var(--text-muted); margin:0; line-height:1.4;">想學某個領域的單字？輸入關鍵字，AI 瞬間生成 20 個必備單字並打包成群組。</p>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:var(--border);"></i>
+                </div>
+            </div>
+
+            <!-- 4. 系統偏好設定 -->
             <div class="card" style="border:1px dashed var(--border); box-shadow:none;">
                 <h3 style="margin-bottom:20px; font-size:16px; color:var(--text-main); font-weight:800;"><i class="fas fa-cog"></i> 系統設定</h3>
                 
@@ -631,6 +644,31 @@
                 <textarea id="custom-edit-content" rows="10" placeholder="請貼上英文文章內容..." style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); font-family:inherit; font-size:14px; resize:vertical;"></textarea>
             </div>
             <button class="btn-primary" onclick="saveCustomArticle()" style="width:100%; padding:14px; font-size:15px; border-radius:12px; margin-top:8px;"><i class="fas fa-save"></i> 儲存文章</button>
+        </div>
+    </div>
+
+
+
+    <!-- 模態框：主題單字包一鍵生成 -->
+    <div id="topic-packer-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-color); z-index:2000; overflow-y:auto; padding-bottom:100px;">
+        <button class="btn-icon-small" onclick="closeTopicPackerModal()" style="position:absolute; top:16px; right:16px; width:32px; height:32px; background:var(--border); z-index:10;"><i class="fas fa-times"></i></button>
+        <div style="padding:40px 20px 20px; max-width:600px; margin:0 auto;">
+            <div style="text-align:center; margin-bottom:24px;">
+                <h3 style="font-size:20px; font-weight:800; color:var(--text-main); margin:0;">主題單字包一鍵生成</h3>
+                <div style="width:40px; height:4px; background:#10B981; border-radius:2px; margin:8px auto 0;"></div>
+            </div>
+            <div class="input-group" style="margin-bottom:12px;">
+                <label style="font-size:13px; margin-bottom:4px;">請輸入想學習的領域或關鍵字</label>
+                <input type="text" id="topic-packer-keyword" placeholder="例如：區塊鏈、咖啡廳菜單、醫學專有名詞" style="padding:10px 12px; font-size:14px; border-radius:8px; border:1px solid var(--border);">
+            </div>
+            <div class="input-group" style="margin-bottom:16px;">
+                <label style="font-size:13px; margin-bottom:4px;">生成數量 (1~50)</label>
+                <input type="number" id="topic-packer-count" value="20" min="1" max="50" style="padding:10px 12px; font-size:14px; border-radius:8px; border:1px solid var(--border);">
+            </div>
+            <button class="btn-primary" onclick="generateTopicWordPack()" id="topic-packer-btn" style="width:100%; padding:14px; font-size:15px; border-radius:12px; margin-bottom:16px; background:#10B981; box-shadow:0 4px 14px rgba(16,185,129,0.3); border:none;"><i class="fas fa-magic"></i> AI 瞬間生成單字包</button>
+            <div id="topic-packer-result" style="display:none; padding:16px; border-radius:12px; background:rgba(16, 185, 129, 0.1); border:1px solid rgba(16, 185, 129, 0.2);">
+                <p style="font-size:13px; color:var(--text-main); text-align:center; margin:0; font-weight:600;"><i class="fas fa-check-circle" style="color:#10B981;"></i> 模擬生成成功！在真實環境中，此處將自動寫入 20 個單字到您的單字本中。</p>
+            </div>
         </div>
     </div>
 
@@ -762,7 +800,7 @@
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwZf5jX1vGtzzkZOq55-lgjnPCPTJ2YchGm5IBu1zsgINlFVol7nw16qh4_eE8v3-s/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwjKFs7fEJgM6p3jpkn81VIlL4TlqFAzm7yK_VabhjRw2esh0PvPdye0oasYgk9/exec";
 
         const THEMES = {
             "default": { "--bg-color": "#F8FAFC", "--card-bg": "#FFFFFF", "--text-main": "#0F172A", "--text-muted": "#64748B", "--primary": "#4F46E5", "--primary-hover": "#4338CA", "--primary-light": "#E0E7FF", "--border": "#E2E8F0", "--nav-bg": "rgba(255, 255, 255, 0.85)" },
@@ -1769,7 +1807,7 @@
         }
 
         async function addNewsWord(el) {
-            const word = el.innerText.replace(/[^a-zA-Z\-]/g, '');
+            const word = el.getAttribute('data-word') || el.innerText.replace(/[^a-zA-Z\-]/g, '');
             if(!word) return;
             
             // 播放讀音
@@ -1782,7 +1820,7 @@
             
             enInput.value = word.toLowerCase();
             zhInput.value = "翻譯中...";
-            document.getElementById("news-mini-notes").value = "來自新聞閱讀";
+            document.getElementById("news-mini-notes").value = "";
             document.getElementById("news-mini-pos").value = "";
             
             bookSelect.innerHTML = "";
@@ -1965,15 +2003,17 @@
                 
                 const [res, gRes] = await Promise.all([resPromise, gResPromise].map(p => p.catch(e => null)));
                 
-                if(!res || !res.ok) {
-                    if (res && res.status === 404) throw new Error(`找不到單字「${word}」，請確認拼字是否正確。`);
-                    throw new Error("字典伺服器連線錯誤，請稍後再試。");
+                let entry = null;
+                if (res && res.ok) {
+                    try {
+                        const data = await res.json();
+                        if (data && data.length > 0) entry = data[0];
+                    } catch(e) {}
                 }
                 
-                const data = await res.json();
-                if(!data || data.length === 0) throw new Error(`找不到單字「${word}」。`);
-                
-                const entry = data[0];
+                if (!entry && (!gRes || !gRes.ok)) {
+                    throw new Error(`找不到單字「${word}」，請確認拼字是否正確或稍後再試。`);
+                }
                 
                 let googleDictHtml = "";
                 let basicTranslation = "";
@@ -2028,26 +2068,27 @@
                     }
                 } catch(e) {}
                 
-                if (!basicTranslation) {
+                if (!basicTranslation && entry) {
                     try { basicTranslation = await translateText(entry.word); } catch(e) {}
                 }
                 
                 let audioUrl = "";
-                if(entry.phonetics && entry.phonetics.length > 0) {
+                if(entry && entry.phonetics && entry.phonetics.length > 0) {
                     const phoneticWithAudio = entry.phonetics.find(p => p.audio);
                     if(phoneticWithAudio) audioUrl = phoneticWithAudio.audio;
                 }
-                const phoneticText = entry.phonetic || (entry.phonetics && entry.phonetics.length > 0 ? entry.phonetics[0].text : "");
+                const phoneticText = entry ? (entry.phonetic || (entry.phonetics && entry.phonetics.length > 0 ? entry.phonetics[0].text : "")) : "";
                 
+                const displayWord = entry ? entry.word : word;
                 let html = `<div style="margin-bottom:16px;">
                     <div style="display:flex; align-items:center; gap:12px;">
-                        <h3 class="hw dhw" style="font-size:28px; font-weight:800; color:var(--primary); cursor:pointer; border-bottom:2px dashed var(--primary); margin:0;" title="點擊儲存單字" onclick="addWordFromDict()">${entry.word}</h3>
-                        ${audioUrl ? `<button class="btn-icon-small" onclick="new Audio('${audioUrl}').play()" style="background:var(--primary-light); color:var(--primary);"><i class="fas fa-volume-up"></i></button>` : `<button class="btn-icon-small" onclick="playTTS('${entry.word.replace(/'/g, "\\'")}')" style="background:var(--primary-light); color:var(--primary);"><i class="fas fa-volume-up"></i></button>`}
+                        <h3 class="hw dhw" style="font-size:28px; font-weight:800; color:var(--primary); cursor:pointer; border-bottom:2px dashed var(--primary); margin:0;" title="點擊儲存單字" onclick="addWordFromDict()">${displayWord}</h3>
+                        ${audioUrl ? `<button class="btn-icon-small" onclick="new Audio('${audioUrl}').play()" style="background:var(--primary-light); color:var(--primary);"><i class="fas fa-volume-up"></i></button>` : `<button class="btn-icon-small" onclick="playTTS('${displayWord.replace(/'/g, "\\'")}')" style="background:var(--primary-light); color:var(--primary);"><i class="fas fa-volume-up"></i></button>`}
                     </div>
                     ${phoneticText ? `<div class="pron" style="font-family:monospace; color:var(--text-muted); margin-top:4px; font-size:16px;">${phoneticText}</div>` : ''}
                 </div>`;
                 
-                window.currentDictWord = entry.word;
+                window.currentDictWord = displayWord;
                 window.currentDictTrans = basicTranslation; 
                 window.currentDictPos = "";
                 
@@ -2058,7 +2099,7 @@
                     html += googleDictHtml;
                 }
                 
-                if (entry.meanings && entry.meanings.length > 0) {
+                if (entry && entry.meanings && entry.meanings.length > 0) {
                     window.currentDictPos = entry.meanings[0].partOfSpeech;
                     
                     html += `<div style="border-top:1px solid var(--border); padding-top:16px;">`;
@@ -2093,7 +2134,7 @@
                 }
                 
                 // Fetch Word Variations (Word Family)
-                const variations = await getWordVariations(entry.word);
+                const variations = await getWordVariations(displayWord);
                 window.currentDictVariations = "";
                 
                 if (variations.length > 0) {
@@ -2453,10 +2494,13 @@
                 const gResP = fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&dt=bd&dt=ex&q=${encodeURIComponent(wordEn)}`);
                 const [res, gRes] = await Promise.all([resP, gResP].map(p => p.catch(() => null)));
 
-                if (!res || !res.ok) throw new Error(`找不到「${wordEn}」`);
-                const data = await res.json();
-                if (!data || !data.length) throw new Error(`找不到「${wordEn}」`);
-                const entry = data[0];
+                let entry = null;
+                if (res && res.ok) {
+                    try {
+                        const data = await res.json();
+                        if (data && data.length > 0) entry = data[0];
+                    } catch(e) {}
+                }
 
                 let googleDictHtml = '';
                 let basicTranslation = '';
@@ -2495,12 +2539,18 @@
                     }
                 } catch(e) {}
 
-                let audioUrl = '';
-                if (entry.phonetics) { const pa = entry.phonetics.find(p => p.audio); if (pa) audioUrl = pa.audio; }
-                const phoneticText = entry.phonetic || (entry.phonetics && entry.phonetics[0] ? entry.phonetics[0].text : '');
+                if (!entry && (!gRes || !gRes.ok)) throw new Error(`找不到「${wordEn}」`);
 
+                let audioUrl = '';
+                let phoneticText = '';
+                if (entry) {
+                    if (entry.phonetics) { const pa = entry.phonetics.find(p => p.audio); if (pa) audioUrl = pa.audio; }
+                    phoneticText = entry.phonetic || (entry.phonetics && entry.phonetics[0] ? entry.phonetics[0].text : '');
+                }
+
+                const displayWord = entry ? entry.word : wordEn;
                 let html = `<div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">`;
-                html += `<span style="font-size:22px; font-weight:800; color:var(--primary);">${entry.word}</span>`;
+                html += `<span style="font-size:22px; font-weight:800; color:var(--primary);">${displayWord}</span>`;
                 if (phoneticText) html += `<span style="font-family:monospace; font-size:13px; color:var(--text-muted);">${phoneticText}</span>`;
                 if (audioUrl) html += `<button class="btn-icon-small" onclick="new Audio('${audioUrl}').play()" style="background:var(--primary-light); color:var(--primary);"><i class="fas fa-volume-up"></i></button>`;
                 html += `</div>`;
@@ -2508,7 +2558,7 @@
                 if (basicTranslation && !googleDictHtml) html += `<div style="font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:14px;">${basicTranslation}</div>`;
                 html += googleDictHtml;
 
-                if (entry.meanings && entry.meanings.length > 0) {
+                if (entry && entry.meanings && entry.meanings.length > 0) {
                     html += `<div style="border-top:1px solid var(--border); padding-top:14px;">`;
                     for (let i = 0; i < Math.min(entry.meanings.length, 3); i++) {
                         const meaning = entry.meanings[i];
@@ -2524,7 +2574,7 @@
                 }
 
                 // Word Family
-                const variations = await getWordVariations(entry.word);
+                const variations = await getWordVariations(displayWord);
                 if (variations.length > 0) {
                     html += `<div style="margin-top:16px; padding-top:14px; border-top:1px dashed var(--border);"><div style="font-size:13px; font-weight:700; color:var(--text-main); margin-bottom:10px;"><i class="fas fa-sitemap" style="color:var(--primary);"></i> 延伸詞性與變化形式 (Word Family)</div><div style="display:flex; flex-direction:column; gap:6px;">`;
                     variations.forEach((vWord, vi) => {
@@ -2792,6 +2842,56 @@
                 document.getElementById("custom-edit-paras").value = 1;
                 sel.value = "未分類";
             }
+        }
+
+
+
+        function openTopicPackerModal() { 
+            document.getElementById('topic-packer-modal').style.display = 'block'; 
+            document.getElementById('topic-packer-result').style.display = 'none'; 
+            document.getElementById('topic-packer-keyword').value = ''; 
+        }
+        function closeTopicPackerModal() { document.getElementById('topic-packer-modal').style.display = 'none'; }
+
+        async function generateTopicWordPack() {
+            const kw = document.getElementById('topic-packer-keyword').value.trim();
+            if(!kw) return showToast('請輸入領域關鍵字', 'error');
+            let count = parseInt(document.getElementById('topic-packer-count').value);
+            if(isNaN(count) || count < 1) count = 1;
+            if(count > 50) count = 50;
+
+            const btn = document.getElementById('topic-packer-btn');
+            const origHTML = btn.innerHTML;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> AI 正在為您搜集 ${count} 個「${kw}」單字...`;
+            btn.disabled = true;
+
+            const prompt = `Please generate exactly ${count} essential English vocabulary words related to the topic: "${kw}". Return ONLY a valid JSON array of objects with 'en' and 'zh' keys representing the English word and its Traditional Chinese translation. Example: [{"en": "apple", "zh": "蘋果"}, {"en": "banana", "zh": "香蕉"}]`;
+            const history = [{"role": "user", "parts": [{"text": prompt}]}];
+            
+            try {
+                const res = await safeGASFetch({ action: "gemini", username: currentUser, history: history });
+                if (res && res.status === "success") {
+                    let text = res.text.replace(/```json/gi, '').replace(/```/g, '').trim();
+                    let words = [];
+                    try { words = JSON.parse(text); } catch(e) { }
+                    
+                    const resDiv = document.getElementById('topic-packer-result');
+                    resDiv.style.display = 'block';
+                    resDiv.innerHTML = `
+                        <p style="font-size:13px; color:var(--text-main); margin-bottom:12px; font-weight:600;"><i class="fas fa-check-circle" style="color:#10B981;"></i> 成功生成 ${words.length} 個單字！點選即可加入單字本：</p>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            ${words.map(w => `<span class="word" data-word="${w.en}" style="background:var(--bg-card); padding:8px 14px; border-radius:16px; border:1px solid var(--border); cursor:pointer; font-size:15px; color:var(--text-main); font-weight:700; box-shadow:0 2px 4px rgba(0,0,0,0.05);" onclick="addNewsWord(this)">${w.en} <span style="font-size:13px; color:var(--text-muted); margin-left:4px; font-weight:normal;">/ ${w.zh}</span></span>`).join('')}
+                        </div>
+                    `;
+                } else {
+                    showToast('生成失敗：' + (res ? res.message : '網路錯誤'), 'error');
+                }
+            } catch (e) {
+                showToast('發生錯誤', 'error');
+            }
+
+            btn.innerHTML = origHTML;
+            btn.disabled = false;
         }
 
         function closeCustomEditModal() {
@@ -3088,6 +3188,8 @@
         function initPushNotification() {
             if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
             if (Notification.permission === 'default') {
+                if (localStorage.getItem('notificationAsked')) return;
+                localStorage.setItem('notificationAsked', '1');
                 Notification.requestPermission().then(perm => {
                     if (perm === 'granted') scheduleDailyNotification();
                 });
