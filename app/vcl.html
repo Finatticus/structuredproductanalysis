@@ -100,10 +100,11 @@
         .fc-play { position: absolute; top: 24px; right: 24px; }
 
         .fc-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .srs-controls { grid-template-columns: 1fr 1fr 1fr; gap: 12px; display: none; }
-        .btn-srs { border: none; border-radius: 16px; padding: 14px 10px; color: white; cursor: pointer; font-weight: 700; font-size: 16px; }
-        .btn-srs small { font-size: 12px; font-weight: 500; opacity: 0.9; display:block; }
-        .btn-forget { background: var(--danger); } .btn-hard { background: var(--warning); } .btn-easy { background: var(--success); }
+        .srs-controls { grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; display: none; }
+        .btn-srs { border: none; border-radius: 16px; padding: 14px 8px; color: white; cursor: pointer; font-weight: 700; font-size: 15px; transition: transform 0.1s; }
+        .btn-srs:active { transform: scale(0.96); }
+        .btn-srs small { font-size: 11px; font-weight: 500; opacity: 0.9; display:block; }
+        .btn-forget { background: var(--danger); } .btn-hard { background: var(--warning); } .btn-easy { background: var(--success); } .btn-familiar { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
 
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: var(--nav-bg); backdrop-filter: blur(24px); display: none; justify-content: space-around; padding: 14px 0 calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); z-index: 100; }
         .nav-item { text-decoration: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; font-size: 12px; font-weight: 600; gap: 6px; width: 80px; }
@@ -295,12 +296,15 @@
             </div>
 
             <!-- 次要操作按鈕 -->
-            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
-                <button class="btn-outline" id="btn-sync" onclick="fetchData()" style="flex: 1; padding: 14px; font-size: 15px; border-color:var(--primary-light); color:var(--primary); background:var(--card-bg);">
+            <div style="display: flex; gap: 10px; margin-bottom: 24px; flex-wrap:wrap;">
+                <button class="btn-outline" id="btn-sync" onclick="fetchData()" style="flex: 1; min-width:120px; padding: 14px; font-size: 15px; border-color:var(--primary-light); color:var(--primary); background:var(--card-bg);">
                     <i class="fas fa-sync-alt"></i> 同步資料
                 </button>
-                <button class="btn-outline" onclick="startAllFlashcards()" style="flex: 1; padding: 14px; font-size: 15px; border-color:var(--primary-light); color:var(--primary); background:var(--card-bg);">
+                <button class="btn-outline" onclick="startAllFlashcards()" style="flex: 1; min-width:120px; padding: 14px; font-size: 15px; border-color:var(--primary-light); color:var(--primary); background:var(--card-bg);">
                     <i class="fas fa-layer-group"></i> 複習全部
+                </button>
+                <button class="btn-outline" id="btn-compact-toggle" onclick="toggleCompactView()" style="flex: 1; min-width:120px; padding: 14px; font-size: 15px; border-color:var(--primary-light); color:var(--primary); background:var(--card-bg);" title="切換單字本顯示模式">
+                    <i class="fas fa-list"></i> 緊湊模式
                 </button>
             </div>
             
@@ -405,8 +409,47 @@
             <div class="fc-controls srs-controls" id="srs-controls">
                 <button class="btn-srs btn-forget" onclick="answerSRS('forget')">忘記<br><small>10 分鐘後</small></button>
                 <button class="btn-srs btn-hard" onclick="answerSRS('hard')">困難<br><small>1 天後</small></button>
-                <button class="btn-srs btn-easy" onclick="answerSRS('easy')">簡單<br><small>4 天後</small>
-</section>
+                <button class="btn-srs btn-easy" onclick="answerSRS('easy')">簡單<br><small>4 天後</small></button>
+                <button class="btn-srs btn-familiar" onclick="answerSRS('familiar')">熟悉<br><small>~兩週後</small></button>
+            </div>
+        </section>
+
+        <!-- 字典頁面 -->
+        <section id="sec-dict">
+            <div class="card" style="border: 2px solid var(--primary-light); box-shadow: 0 8px 24px rgba(0,0,0,0.06);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h2 style="font-size:18px; color:var(--text-main); display:flex; align-items:center; gap:8px; margin:0;">
+                        <i class="fas fa-book" style="color:var(--primary);"></i> 智慧字典查詢
+                    </h2>
+                </div>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">輸入單字進行即時查詢。支援原音發音、例句與即時翻譯，並可快速加到單字本中。</p>
+                
+                <div class="input-group" style="margin-bottom:0;">
+                    <div style="display:flex; gap:12px;">
+                        <input type="text" id="dict-search-input" placeholder="輸入英文單字..." onkeypress="if(event.key==='Enter') searchDictionary()" style="flex:1;">
+                        <button class="btn-primary" onclick="searchDictionary()" id="btn-dict-search" style="width:auto; padding:16px 20px;"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+                <div id="dict-history-bar" style="display:none; margin-top:14px;">
+                    <div style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px;"><i class="fas fa-history"></i> 最近查詢</div>
+                    <div id="dict-history-tags" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                </div>
+                <div id="dict-result-container" style="display:none; margin-top:20px;">
+                    <div id="dict-error-msg" style="display:none; color:var(--danger); text-align:center; padding:16px; background:rgba(239, 68, 68, 0.1); border-radius:12px; font-weight:600; font-size:14px; line-height:1.5;"></div>
+                    <div id="dict-content" style="background:var(--bg-color); padding:20px; border-radius:12px; border:1px solid var(--border); overflow-x:hidden; color:var(--text-main); font-size:15px; line-height:1.6;"></div>
+                    <button class="btn-primary" id="btn-dict-add" onclick="addWordFromDict()" style="width:100%; margin-top:16px; padding:16px; font-size:16px;"><i class="fas fa-plus-circle"></i> 儲存至單字本</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 自定義文章列表頁面 -->
+        <section id="sec-custom">
+            <div class="card" style="margin-bottom:16px;">
+                <h2 style="font-size:18px; color:var(--text-main); margin-bottom:12px;"><i class="fas fa-file-alt" style="color:var(--primary);"></i> 自定義文章閱讀</h2>
+                <button class="btn-primary" onclick="openCustomEditModal()" style="width:100%;"><i class="fas fa-plus"></i> 新增文章</button>
+            </div>
+            <div id="custom-articles-list"></div>
+        </section>
 
         <!-- 探索與設定頁面 -->
         <section id="sec-settings">
@@ -533,8 +576,57 @@
     <nav class="bottom-nav">
         <a href="#" onclick="switchTab('sec-add'); return false;" class="nav-item active" id="nav-add"><i class="fas fa-plus-circle"></i><span>新增</span></a>
         <a href="#" onclick="switchTab('sec-books'); return false;" class="nav-item" id="nav-books"><i class="fas fa-layer-group"></i><span>單字本</span></a>
+        <a href="#" onclick="switchTab('sec-dict'); return false;" class="nav-item" id="nav-dict"><i class="fas fa-book"></i><span>字典</span></a>
+        <a href="#" onclick="switchTab('sec-custom'); return false;" class="nav-item" id="nav-custom"><i class="fas fa-file-alt"></i><span>自定義</span></a>
         <a href="#" onclick="switchTab('sec-settings'); return false;" class="nav-item" id="nav-settings"><i class="fas fa-compass"></i><span>探索</span></a>
     </nav>
+
+    <!-- 新增/編輯自定義文章 Modal -->
+    <div id="custom-edit-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-color); z-index:2000; overflow-y:auto; padding-bottom:100px;">
+        <div style="position:sticky; top:0; background:rgba(255,255,255,0.85); backdrop-filter:blur(16px); padding:16px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); z-index:10;">
+            <h3 style="font-size:18px; font-weight:800; color:var(--text-main);" id="custom-edit-title-h3">新增自定義文章</h3>
+            <button class="btn-icon-small" onclick="closeCustomEditModal()" style="background:var(--border);"><i class="fas fa-times"></i></button>
+        </div>
+        <div style="padding:24px 20px; max-width:600px; margin:0 auto;">
+            <input type="hidden" id="custom-edit-id">
+            <div class="input-group">
+                <label>文章標題</label>
+                <input type="text" id="custom-edit-title" placeholder="請輸入標題">
+            </div>
+            <div class="input-group">
+                <label>段落合併設定 (幾個段落一起翻譯)</label>
+                <select id="custom-edit-paras">
+                    <option value="1">1 段</option>
+                    <option value="2">2 段</option>
+                    <option value="3">3 段</option>
+                    <option value="4">4 段</option>
+                    <option value="5">5 段</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>文章內容</label>
+                <textarea id="custom-edit-content" rows="12" placeholder="請貼上英文文章內容..." style="width:100%; padding:12px; border-radius:12px; border:2px solid var(--border); font-family:inherit; font-size:15px; resize:vertical;"></textarea>
+            </div>
+            <button class="btn-primary" onclick="saveCustomArticle()" style="width:100%; margin-top:16px;">儲存文章</button>
+        </div>
+    </div>
+
+    <!-- 自定義文章閱讀 Modal -->
+    <div id="custom-reader-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-color); z-index:2000; overflow-y:auto; padding-bottom:100px;">
+        <div style="position:sticky; top:0; background:rgba(255,255,255,0.85); backdrop-filter:blur(16px); padding:16px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); z-index:10;">
+            <div style="display:flex; gap:10px; flex:1;">
+                <button class="btn-icon-small" id="custom-prev-btn" onclick="openPrevCustomArticle()" style="background:var(--primary-light); color:var(--primary);"><i class="fas fa-chevron-left"></i></button>
+                <button class="btn-icon-small" id="custom-next-btn" onclick="openNextCustomArticle()" style="background:var(--primary-light); color:var(--primary);"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <h3 style="font-size:16px; font-weight:800; color:var(--text-main); text-align:center; flex:2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:0 10px;" id="custom-reader-title-display">文章標題</h3>
+            <div style="flex:1; display:flex; justify-content:flex-end;">
+                <button class="btn-icon-small" onclick="closeCustomReaderModal()" style="background:var(--border);"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div id="custom-reader-content" style="padding:24px 20px; max-width:600px; margin:0 auto; line-height:1.8;">
+            <div id="custom-reader-full"></div>
+        </div>
+    </div>
 
     <!-- 全螢幕新聞閱讀 Modal -->
     <div id="news-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-color); z-index:2000; overflow-y:auto; padding-bottom:100px;">
@@ -647,7 +739,7 @@
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxZnho6z3o9XdT-47SlXjPJCYWkXZInMJKCCm7PMxJPKu9ZY7YdNf3q3gZlSP2y-zo/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycby6y2JkqPk6HKNNcHrE9LVY029vXsQ_sYaQ5a_aoohNfGij3Ii0XYul5XgWF-tQnSQ/exec";
 
         const THEMES = {
             "default": { "--bg-color": "#F8FAFC", "--card-bg": "#FFFFFF", "--text-main": "#0F172A", "--text-muted": "#64748B", "--primary": "#4F46E5", "--primary-hover": "#4338CA", "--primary-light": "#E0E7FF", "--border": "#E2E8F0", "--nav-bg": "rgba(255, 255, 255, 0.85)" },
@@ -716,7 +808,9 @@
             document.querySelector(".bottom-nav").style.display = "flex";
             loadLocalBooks(); updateBookDropdowns(); 
             switchTab('sec-add'); 
-            fetchData(); 
+            fetchData();
+            initPushNotification();
+            renderDictHistory();
         }
 
         async function login() {
@@ -830,6 +924,10 @@
                 const nav = document.getElementById("nav-books"); if(nav) nav.classList.add("active"); 
                 document.getElementById("header-title").innerText = "單字本總覽"; 
                 updateDueCount(); renderBooksList(); 
+            }
+            if(tabId === 'sec-dict') {
+                const nav = document.getElementById("nav-dict"); if(nav) nav.classList.add("active");
+                document.getElementById("header-title").innerText = "字典查詢";
             }
             if(tabId === 'sec-settings') {
                 const nav = document.getElementById("nav-settings"); if(nav) nav.classList.add("active");
@@ -1754,6 +1852,314 @@
             }
         }
 
+        // ================= 字典查詢邏輯 =================
+        async function getWordVariations(word) {
+            if (word.length <= 3) return [];
+            
+            const strippingSuffixes = ['ability', 'ibility', 'ation', 'ition', 'ment', 'ness', 'ably', 'ibly', 'able', 'ible', 'ive', 'ous', 'ful', 'ing', 'ed', 'ly', 'es', 's', 'er', 'est', 'ic', 'al', 'y', 'e'];
+            let root = word;
+            for(let suf of strippingSuffixes) {
+                if(word.endsWith(suf) && word.length - suf.length >= 3) {
+                    root = word.slice(0, -suf.length);
+                    break;
+                }
+            }
+            if (root === word && word.length > 4) root = word.slice(0, -2);
+            
+            try {
+                const res = await fetch(`https://api.datamuse.com/words?sp=${root}*&max=50`);
+                if (!res.ok) return [];
+                const data = await res.json();
+                
+                const validAdditionSuffixes = ['s', 'es', 'd', 'ed', 'ing', 'er', 'est', 'ly', 'ally', 'ment', 'ness', 'ity', 'bility', 'ibility', 'ability', 'tion', 'sion', 'ation', 'ition', 'able', 'ible', 'ably', 'ibly', 'ive', 'itive', 'ative', 'ous', 'eous', 'ious', 'ful', 'less', 'ic', 'ical', 'al', 'ize', 'ise', 'ify', 'en', 'e', 'y', 'ance', 'ence', 'ancy', 'ency', 'ant', 'ent', 'ary', 'ery', 'ory'];
+                
+                let candidates = [];
+                for (let d of data) {
+                    const w = d.word;
+                    if (w === word || w.includes(' ') || w.includes('-')) continue;
+                    if (!w.startsWith(root)) continue;
+                    
+                    const remainder = w.slice(root.length);
+                    let isValid = false;
+                    
+                    if (remainder === '' || validAdditionSuffixes.includes(remainder)) {
+                        isValid = true;
+                    } else if (validAdditionSuffixes.some(s => remainder.endsWith(s))) {
+                        if (Math.abs(w.length - word.length) <= 6) isValid = true;
+                    }
+                    
+                    if (w.startsWith(word) && validAdditionSuffixes.includes(w.slice(word.length))) {
+                        isValid = true;
+                    }
+                    
+                    if (isValid) candidates.push(w);
+                }
+                
+                const uniqueVars = [];
+                for (let w of candidates) {
+                    if (w.endsWith('s') && uniqueVars.includes(w.slice(0, -1))) continue;
+                    if (w.endsWith('ed') && uniqueVars.includes(w.slice(0, -2))) continue;
+                    uniqueVars.push(w);
+                }
+                
+                return uniqueVars.slice(0, 6);
+                
+            } catch(e) {
+                return [];
+            }
+        }
+
+        async function searchDictionary() {
+            const word = document.getElementById('dict-search-input').value.trim().toLowerCase();
+            if(!word) return;
+            
+            const btn = document.getElementById('btn-dict-search');
+            const origHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+            
+            const container = document.getElementById('dict-result-container');
+            const errorMsg = document.getElementById('dict-error-msg');
+            const content = document.getElementById('dict-content');
+            const addBtn = document.getElementById('btn-dict-add');
+            
+            container.style.display = 'block';
+            errorMsg.style.display = 'none';
+            content.style.display = 'block';
+            content.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> 正在檢索開源字典與多重語意資料...</div>';
+            addBtn.style.display = 'none';
+            
+            try {
+                const translationTasks = [];
+                
+                const resPromise = fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+                const gResPromise = fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&dt=bd&dt=ex&q=${encodeURIComponent(word)}`);
+                
+                const [res, gRes] = await Promise.all([resPromise, gResPromise].map(p => p.catch(e => null)));
+                
+                if(!res || !res.ok) {
+                    if (res && res.status === 404) throw new Error(`找不到單字「${word}」，請確認拼字是否正確。`);
+                    throw new Error("字典伺服器連線錯誤，請稍後再試。");
+                }
+                
+                const data = await res.json();
+                if(!data || data.length === 0) throw new Error(`找不到單字「${word}」。`);
+                
+                const entry = data[0];
+                
+                let googleDictHtml = "";
+                let basicTranslation = "";
+                let googleExamples = [];
+                try {
+                    if (gRes && gRes.ok) {
+                        const gData = await gRes.json();
+                        if (gData[0] && gData[0][0]) basicTranslation = gData[0][0][0];
+                        
+                        for (let item of gData) {
+                            if (Array.isArray(item) && item.length === 1 && Array.isArray(item[0])) {
+                                if (item[0].length > 0 && Array.isArray(item[0][0]) && typeof item[0][0][0] === 'string' && item[0][0][0].includes('<b>')) {
+                                    googleExamples = item[0].map(ex => ex[0]);
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (gData[1] || googleExamples.length > 0) {
+                            googleDictHtml += `<div style="background:var(--primary-light); padding:16px; border-radius:12px; margin-bottom:20px;">`;
+                            googleDictHtml += `<div style="font-size:13px; font-weight:700; color:var(--primary); margin-bottom:12px;"><i class="fas fa-layer-group"></i> 多重語意與精準翻譯</div>`;
+                            
+                            if (gData[1]) {
+                                gData[1].forEach(posGroup => {
+                                    const pos = posGroup[0]; 
+                                    const terms = posGroup[1]; 
+                                    googleDictHtml += `<div style="margin-top:8px; display:flex; align-items:baseline; gap:8px;">`;
+                                    googleDictHtml += `<span style="font-size:12px; font-weight:800; color:white; background:var(--primary); padding:2px 6px; border-radius:4px; text-transform:uppercase; min-width:40px; text-align:center;">${pos.substring(0,4)}</span>`;
+                                    googleDictHtml += `<span style="font-size:15px; font-weight:700; color:var(--text-main); line-height:1.4;">${terms.join('、')}</span>`;
+                                    googleDictHtml += `</div>`;
+                                });
+                            }
+                            
+                            if (googleExamples.length > 0) {
+                                googleDictHtml += `<div style="margin-top:16px; padding-top:12px; border-top:1px dashed rgba(26, 115, 232, 0.3); opacity:0.95;">`;
+                                googleDictHtml += `<div style="font-size:12px; font-weight:700; color:var(--primary); margin-bottom:8px;"><i class="fas fa-quote-left"></i> 實用例句</div>`;
+                                const displayEx = googleExamples.slice(0, 3);
+                                for(let k=0; k<displayEx.length; k++) {
+                                    const exText = displayEx[k];
+                                    const exId = `gex-trans-${k}`;
+                                    googleDictHtml += `<div style="margin-bottom:12px; padding-left:10px; border-left:3px solid var(--primary);">`;
+                                    googleDictHtml += `<div style="font-size:14px; color:var(--text-main); font-style:italic;">${exText}</div>`;
+                                    googleDictHtml += `<div id="${exId}" style="font-size:13px; color:var(--text-muted); margin-top:4px;"><i class="fas fa-circle-notch fa-spin"></i> 翻譯中...</div>`;
+                                    googleDictHtml += `</div>`;
+                                    translationTasks.push({ id: exId, text: exText.replace(/<\/?b>/g, '') });
+                                }
+                                googleDictHtml += `</div>`;
+                            }
+                            
+                            googleDictHtml += `</div>`;
+                        }
+                    }
+                } catch(e) {}
+                
+                if (!basicTranslation) {
+                    try { basicTranslation = await translateText(entry.word); } catch(e) {}
+                }
+                
+                let audioUrl = "";
+                if(entry.phonetics && entry.phonetics.length > 0) {
+                    const phoneticWithAudio = entry.phonetics.find(p => p.audio);
+                    if(phoneticWithAudio) audioUrl = phoneticWithAudio.audio;
+                }
+                const phoneticText = entry.phonetic || (entry.phonetics && entry.phonetics.length > 0 ? entry.phonetics[0].text : "");
+                
+                let html = `<div style="margin-bottom:16px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <h3 class="hw dhw" style="font-size:28px; font-weight:800; color:var(--primary); cursor:pointer; border-bottom:2px dashed var(--primary); margin:0;" title="點擊儲存單字" onclick="addWordFromDict()">${entry.word}</h3>
+                        ${audioUrl ? `<button class="btn-icon-small" onclick="new Audio('${audioUrl}').play()" style="background:var(--primary-light); color:var(--primary);"><i class="fas fa-volume-up"></i></button>` : `<button class="btn-icon-small" onclick="playTTS('${entry.word.replace(/'/g, "\\'")}')" style="background:var(--primary-light); color:var(--primary);"><i class="fas fa-volume-up"></i></button>`}
+                    </div>
+                    ${phoneticText ? `<div class="pron" style="font-family:monospace; color:var(--text-muted); margin-top:4px; font-size:16px;">${phoneticText}</div>` : ''}
+                </div>`;
+                
+                window.currentDictWord = entry.word;
+                window.currentDictTrans = basicTranslation; 
+                window.currentDictPos = "";
+                
+                if (basicTranslation && !googleDictHtml) {
+                    html += `<div class="trans" style="font-size:18px; font-weight:700; color:var(--text-main); margin-bottom:20px;"><i class="fas fa-language" style="color:var(--text-muted);"></i> ${basicTranslation}</div>`;
+                }
+                if (googleDictHtml) {
+                    html += googleDictHtml;
+                }
+                
+                if (entry.meanings && entry.meanings.length > 0) {
+                    window.currentDictPos = entry.meanings[0].partOfSpeech;
+                    
+                    html += `<div style="border-top:1px solid var(--border); padding-top:16px;">`;
+                    for(let i=0; i<entry.meanings.length; i++) {
+                        const meaning = entry.meanings[i];
+                        html += `<div style="margin-bottom:20px;">`;
+                        html += `<div class="pos" style="font-weight:800; color:white; background:var(--primary); display:inline-block; padding:4px 10px; border-radius:8px; font-size:13px; text-transform:uppercase; margin-bottom:12px;">${meaning.partOfSpeech}</div>`;
+                        
+                        const defs = meaning.definitions.slice(0, 3);
+                        for(let j=0; j<defs.length; j++) {
+                            const def = defs[j];
+                            html += `<div class="def-body" style="margin-bottom:12px; padding-left:12px; border-left:3px solid var(--primary-light);">`;
+                            html += `<div class="def" style="font-weight:600; color:var(--text-main); font-size:15px; line-height:1.5;">${j+1}. ${def.definition}</div>`;
+                            
+                            const transId = `def-trans-${i}-${j}`;
+                            html += `<div id="${transId}" style="font-size:14px; color:var(--text-muted); margin-top:4px;"><i class="fas fa-circle-notch fa-spin"></i> 翻譯中...</div>`;
+                            
+                            translationTasks.push({ id: transId, text: def.definition });
+                            
+                            if (def.example) {
+                                html += `<div class="eg" style="font-style:italic; color:var(--text-muted); margin-top:8px; background:var(--bg-color); padding:10px 14px; border-radius:8px;">"${def.example}"</div>`;
+                            }
+                            html += `</div>`;
+                        }
+                        
+                        if (meaning.synonyms && meaning.synonyms.length > 0) {
+                            html += `<div style="font-size:13px; color:var(--text-muted); margin-top:12px; font-weight:600;">同義詞: <span style="font-weight:400;">${meaning.synonyms.slice(0, 5).join(', ')}</span></div>`;
+                        }
+                        html += `</div>`;
+                    }
+                    html += `</div>`;
+                }
+                
+                // Fetch Word Variations (Word Family)
+                const variations = await getWordVariations(entry.word);
+                window.currentDictVariations = "";
+                
+                if (variations.length > 0) {
+                    html += `<div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border);">`;
+                    html += `<div style="font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:12px;"><i class="fas fa-sitemap" style="color:var(--primary);"></i> 延伸詞性與變化形式 (Word Family)</div>`;
+                    html += `<div style="display:flex; flex-direction:column; gap:8px;">`;
+                    
+                    for (let i = 0; i < variations.length; i++) {
+                        const vWord = variations[i];
+                        const vTransId = `var-trans-${i}`;
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); padding:8px 12px; border-radius:8px; border:1px solid var(--border);">`;
+                        html += `<span style="font-weight:600; color:var(--text-main);">${vWord}</span>`;
+                        html += `<span id="${vTransId}" style="font-size:14px; color:var(--text-muted); font-weight:500;"><i class="fas fa-circle-notch fa-spin"></i></span>`;
+                        html += `</div>`;
+                    }
+                    html += `</div></div>`;
+                }
+                
+                content.innerHTML = html;
+                addBtn.style.display = 'block';
+                saveDictHistory(word);
+                
+                // Execute translations sequentially to prevent rate limiting and ensure DOM is ready
+                for (let task of translationTasks) {
+                    try {
+                        const zhDef = await translateText(task.text);
+                        const el = document.getElementById(task.id);
+                        if(el) el.innerHTML = `<span style="color:var(--text-muted); font-weight:500;">${zhDef}</span>`;
+                    } catch(e) {
+                        const el = document.getElementById(task.id);
+                        if(el) el.style.display = 'none';
+                    }
+                }
+                
+                let notesLines = [];
+                if (variations.length > 0) {
+                    for (let i = 0; i < variations.length; i++) {
+                        const vWord = variations[i];
+                        const vTransId = `var-trans-${i}`;
+                        try {
+                            const zhTrans = await translateText(vWord);
+                            const el = document.getElementById(vTransId);
+                            if(el) el.innerText = zhTrans;
+                            notesLines.push(`${vWord}: ${zhTrans}`);
+                        } catch(e) {
+                            const el = document.getElementById(vTransId);
+                            if(el) el.innerText = "無";
+                            notesLines.push(`${vWord}: 無`);
+                        }
+                    }
+                }
+                window.currentDictVariations = notesLines.join("\\n");
+                
+            } catch(e) {
+                content.style.display = 'none';
+                errorMsg.style.display = 'block';
+                errorMsg.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${e.message}`;
+            } finally {
+                btn.innerHTML = origHtml;
+                btn.disabled = false;
+            }
+        }
+
+        function addWordFromDict() {
+            if(!window.currentDictWord) return;
+            
+            document.getElementById("news-mini-add").style.display = "block";
+            const enInput = document.getElementById("news-mini-en");
+            const zhInput = document.getElementById("news-mini-zh");
+            const bookSelect = document.getElementById("news-mini-book");
+            const posSelect = document.getElementById("news-mini-pos");
+            
+            enInput.value = window.currentDictWord;
+            zhInput.value = window.currentDictTrans || "";
+            document.getElementById("news-mini-notes").value = window.currentDictVariations || "";
+            
+            let mappedPos = "";
+            if(window.currentDictPos) {
+                if(window.currentDictPos.includes('noun')) mappedPos = 'n.';
+                else if(window.currentDictPos.includes('verb')) mappedPos = 'v.';
+                else if(window.currentDictPos.includes('adjective')) mappedPos = 'adj.';
+                else if(window.currentDictPos.includes('adverb')) mappedPos = 'adv.';
+                else if(window.currentDictPos.includes('prep')) mappedPos = 'prep.';
+                else if(window.currentDictPos.includes('conj')) mappedPos = 'conj.';
+            }
+            posSelect.value = mappedPos;
+            
+            bookSelect.innerHTML = "";
+            books.forEach(b => bookSelect.add(new Option(b, b)));
+            bookSelect.value = document.getElementById("active-book-select").value || books[0];
+            
+            if(!zhInput.value) autoTranslateMini();
+        }
+
         // ================= 閃卡與 SRS 邏輯 =================
         function startAllFlashcards() {
             if (allWords.length === 0) { showToast("目前沒有單字！", "error"); return; }
@@ -1882,6 +2288,21 @@
             if (rating === 'forget') { interval = 0; easeFactor = Math.max(1.3, easeFactor - 0.2); }
             else if (rating === 'hard') { interval = interval === 0 ? 1 : interval * 1.2; easeFactor = Math.max(1.3, easeFactor - 0.15); }
             else if (rating === 'easy') { interval = interval === 0 ? 4 : interval * easeFactor; easeFactor += 0.15; }
+            else if (rating === 'familiar') {
+                // 隨機設定 10-15 天後複習
+                const randomDays = 10 + Math.random() * 5;
+                interval = randomDays;
+                easeFactor = Math.min(3.0, easeFactor + 0.1);
+                word.interval = interval; word.easeFactor = easeFactor;
+                word.nextReviewTime = now + (randomDays * 86400000);
+                const daysStr = randomDays.toFixed(1);
+                showToast(`✅ 已設定 ${daysStr} 天後複習`);
+                fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "updateSRS", username: currentUser, book: word.book, english: word.english, nextReviewTime: word.nextReviewTime, interval: word.interval, easeFactor: word.easeFactor }) }).catch(() => {});
+                flashcards.splice(currentFcIndex, 1);
+                if (flashcards.length === 0) { showToast("🎉 恭喜！今日複習任務完成！"); exitFlashcard(); }
+                else { if (currentFcIndex >= flashcards.length) currentFcIndex = 0; renderFlashcard(); }
+                return;
+            }
             
             word.interval = interval; word.easeFactor = easeFactor;
             word.nextReviewTime = rating === 'forget' ? now + 600000 : now + (interval * 86400000);
@@ -1894,6 +2315,273 @@
             flashcards.splice(currentFcIndex, 1);
             if (flashcards.length === 0) { showToast("🎉 恭喜！今日複習任務完成！"); exitFlashcard(); } 
             else { if (currentFcIndex >= flashcards.length) currentFcIndex = 0; renderFlashcard(); }
+        }
+
+        // ================= 緊湊模式 =================
+        let isCompactView = false;
+        function toggleCompactView() {
+            isCompactView = !isCompactView;
+            const btn = document.getElementById('btn-compact-toggle');
+            if (isCompactView) {
+                btn.innerHTML = '<i class="fas fa-th-large"></i> 卡片模式';
+                btn.style.background = 'var(--primary-light)';
+            } else {
+                btn.innerHTML = '<i class="fas fa-list"></i> 緊湊模式';
+                btn.style.background = '';
+            }
+            if (document.getElementById('sec-books').classList.contains('active')) renderBooksList();
+            if (document.getElementById('sec-words').classList.contains('active')) openBook(currentViewBook);
+        }
+
+        const _origRenderBooksList = renderBooksList;
+        function renderBooksList() {
+            const list = document.getElementById("books-list"); list.innerHTML = "";
+            if (books.length === 0) return list.innerHTML = `<div class="empty-state"><p>尚無單字本</p></div>`;
+            books.forEach(book => {
+                const count = allWords.filter(w => w.book === book).length;
+                if (isCompactView) {
+                    const div = document.createElement("div");
+                    div.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer;";
+                    div.innerHTML = `<span style="font-weight:600; font-size:15px;">${book}</span><span style="font-size:13px; color:var(--text-muted); font-weight:700;">${count} 字 <i class="fas fa-chevron-right" style="color:var(--border); font-size:11px;"></i></span>`;
+                    div.onclick = () => openBook(book); list.appendChild(div);
+                } else {
+                    const div = document.createElement("div"); div.className = "list-item book-item";
+                    div.innerHTML = `<div style="display:flex; align-items:center;"><div class="book-icon-wrapper"><i class="fas fa-book"></i></div><span style="font-weight:700; font-size:17px;">${book}</span></div><div style="display:flex; align-items:center; gap:10px; color:var(--text-muted);"><span style="font-size:13px; background:var(--bg-color); padding:6px 12px; border-radius:12px; font-weight:700;">${count} 字</span><i class="fas fa-chevron-right" style="color:var(--border);"></i></div>`;
+                    div.onclick = () => openBook(book); list.appendChild(div);
+                }
+            });
+        }
+
+        const _origOpenBook = openBook;
+        function openBook(bookName) {
+            currentViewBook = bookName; document.getElementById("header-title").innerText = bookName;
+            const list = document.getElementById("words-list"); list.innerHTML = "";
+            const bookWords = allWords.filter(w => w.book === bookName);
+            if(bookWords.length === 0) {
+                list.innerHTML = `<div class="empty-state"><i class="fas fa-box-open"></i><p>尚無單字</p></div>`; switchTab('sec-words'); return;
+            }
+            if (isCompactView) {
+                const table = document.createElement('div');
+                table.style.cssText = 'border:1px solid var(--border); border-radius:12px; overflow:hidden;';
+                bookWords.forEach((w, idx) => {
+                    const safeEn = w.english.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    const posHtml = w.pos ? `<span style="font-size:11px; background:var(--primary-light); color:var(--primary); padding:2px 6px; border-radius:4px; font-weight:700; margin-left:6px;">${w.pos}</span>` : '';
+                    const phonId = `ph-c-${idx}`;
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--border);';
+                    row.innerHTML = `<div style="display:flex; align-items:center; gap:0; min-width:0; overflow:hidden;"><span style="font-weight:700; color:var(--primary); font-size:15px; white-space:nowrap;">${w.english}</span><span id="${phonId}" style="font-family:monospace; font-size:11px; color:var(--text-muted); font-weight:400; white-space:nowrap; margin-left:5px;"></span>${posHtml}</div><div style="display:flex; align-items:center; gap:8px; flex-shrink:0;"><span style="font-size:14px; color:var(--text-muted); white-space:nowrap;">${w.chinese}</span><button class="btn-icon-small" onclick="playTTS('${safeEn}')"><i class="fas fa-volume-up"></i></button><button class="btn-icon-small" onclick="openEditModal('${currentViewBook}','${safeEn}')" style="color:var(--primary);"><i class="fas fa-edit"></i></button><button class="btn-icon-small text-danger" onclick="deleteWord('${safeEn}')"><i class="fas fa-trash-alt"></i></button></div>`;
+                    table.appendChild(row);
+                    fetchAndShowPhonetic(w.english, phonId);
+                });
+                list.appendChild(table);
+            } else {
+                bookWords.forEach((w, idx) => {
+                    const div = document.createElement("div"); div.className = "word-card";
+                    const safeEnglish = w.english.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    let posHtml = w.pos ? `<span class="pos-tag pos-${w.pos.replace('.', '')}">${w.pos}</span>` : '';
+                    const phonId = `ph-d-${idx}`;
+                    div.innerHTML = `<div class="word-card-header"><div style="display:flex; align-items:baseline; flex-wrap:wrap; gap:4px;"><div class="word-en">${w.english}</div>${posHtml}<span id="${phonId}" style="font-family:monospace; font-size:12px; color:var(--text-muted); font-weight:400; align-self:flex-end;"></span></div><div class="word-actions"><button class="btn-icon-small" onclick="playTTS('${safeEnglish}')"><i class="fas fa-volume-up"></i></button><button class="btn-icon-small" onclick="openEditModal('${currentViewBook}', '${safeEnglish}')" style="color:var(--primary);"><i class="fas fa-edit"></i></button><button class="btn-icon-small text-danger" onclick="deleteWord('${safeEnglish}')"><i class="fas fa-trash-alt"></i></button></div></div><div class="word-zh">${w.chinese}</div>${w.notes ? `<div class="word-notes"><i class="fas fa-lightbulb" style="color:var(--primary); margin-right:6px;"></i> ${w.notes}</div>` : ''}<button class="btn-expand" onclick="expandWordDict('wd-${idx}', '${safeEnglish}')"><i class="fas fa-book"></i> 字典內容</button><div id="expand-wd-${idx}" class="expand-card"></div>`;
+                    list.appendChild(div);
+                    fetchAndShowPhonetic(w.english, phonId);
+                });
+            }
+            switchTab('sec-words');
+        }
+
+        // Cache phonetics to avoid duplicate fetches
+        const phoneticCache = {};
+        async function fetchAndShowPhonetic(word, elId) {
+            if (phoneticCache[word] !== undefined) {
+                const el = document.getElementById(elId);
+                if (el && phoneticCache[word]) el.innerText = phoneticCache[word];
+                return;
+            }
+            try {
+                const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+                if (!res.ok) { phoneticCache[word] = ''; return; }
+                const data = await res.json();
+                const entry = data[0];
+                // Try every phonetic entry to find a non-empty text
+                let phonetic = entry.phonetic || '';
+                if (!phonetic && entry.phonetics) {
+                    const found = entry.phonetics.find(p => p.text && p.text.trim());
+                    if (found) phonetic = found.text;
+                }
+                phoneticCache[word] = phonetic || '';
+                const el = document.getElementById(elId);
+                if (el && phonetic) el.innerText = phonetic;
+            } catch(e) { phoneticCache[word] = ''; }
+        }
+
+        async function expandWordDict(elementId, wordEn) {
+            const container = document.getElementById(`expand-${elementId}`);
+            if (container.style.display === 'block') { container.style.display = 'none'; return; }
+            container.style.display = 'block';
+            container.innerHTML = '<div style="text-align:center; padding:16px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> 查詢字典中...</div>';
+
+            const localTasks = [];
+            try {
+                const resP = fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(wordEn)}`);
+                const gResP = fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&dt=bd&dt=ex&q=${encodeURIComponent(wordEn)}`);
+                const [res, gRes] = await Promise.all([resP, gResP].map(p => p.catch(() => null)));
+
+                if (!res || !res.ok) throw new Error(`找不到「${wordEn}」`);
+                const data = await res.json();
+                if (!data || !data.length) throw new Error(`找不到「${wordEn}」`);
+                const entry = data[0];
+
+                let googleDictHtml = '';
+                let basicTranslation = '';
+                let googleExamples = [];
+                try {
+                    if (gRes && gRes.ok) {
+                        const gData = await gRes.json();
+                        if (gData[0] && gData[0][0]) basicTranslation = gData[0][0][0];
+                        for (let item of gData) {
+                            if (Array.isArray(item) && item.length === 1 && Array.isArray(item[0])) {
+                                if (item[0].length > 0 && Array.isArray(item[0][0]) && typeof item[0][0][0] === 'string' && item[0][0][0].includes('<b>')) {
+                                    googleExamples = item[0].map(ex => ex[0]); break;
+                                }
+                            }
+                        }
+                        if (gData[1] || googleExamples.length > 0) {
+                            googleDictHtml += `<div style="background:var(--primary-light); padding:14px; border-radius:10px; margin-bottom:16px;">`;
+                            googleDictHtml += `<div style="font-size:12px; font-weight:700; color:var(--primary); margin-bottom:10px;"><i class="fas fa-layer-group"></i> 多重語意</div>`;
+                            if (gData[1]) {
+                                gData[1].forEach(posGroup => {
+                                    const pos = posGroup[0]; const terms = posGroup[1];
+                                    googleDictHtml += `<div style="display:flex; align-items:baseline; gap:8px; margin-top:6px;"><span style="font-size:11px; font-weight:800; color:white; background:var(--primary); padding:2px 5px; border-radius:4px; text-transform:uppercase;">${pos.substring(0,4)}</span><span style="font-size:14px; font-weight:700; color:var(--text-main);">${terms.join('、')}</span></div>`;
+                                });
+                            }
+                            if (googleExamples.length > 0) {
+                                googleDictHtml += `<div style="margin-top:12px; padding-top:10px; border-top:1px dashed rgba(26,115,232,0.3);"><div style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:6px;"><i class="fas fa-quote-left"></i> 實用例句</div>`;
+                                googleExamples.slice(0, 2).forEach((exText, k) => {
+                                    const exId = `wdex-${elementId}-${k}`;
+                                    googleDictHtml += `<div style="margin-bottom:8px; padding-left:8px; border-left:3px solid var(--primary);"><div style="font-size:13px; color:var(--text-main); font-style:italic;">${exText}</div><div id="${exId}" style="font-size:12px; color:var(--text-muted); margin-top:2px;"><i class="fas fa-circle-notch fa-spin"></i></div></div>`;
+                                    localTasks.push({ id: exId, text: exText.replace(/<\/?b>/g, '') });
+                                });
+                                googleDictHtml += `</div>`;
+                            }
+                            googleDictHtml += `</div>`;
+                        }
+                    }
+                } catch(e) {}
+
+                let audioUrl = '';
+                if (entry.phonetics) { const pa = entry.phonetics.find(p => p.audio); if (pa) audioUrl = pa.audio; }
+                const phoneticText = entry.phonetic || (entry.phonetics && entry.phonetics[0] ? entry.phonetics[0].text : '');
+
+                let html = `<div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">`;
+                html += `<span style="font-size:22px; font-weight:800; color:var(--primary);">${entry.word}</span>`;
+                if (phoneticText) html += `<span style="font-family:monospace; font-size:13px; color:var(--text-muted);">${phoneticText}</span>`;
+                if (audioUrl) html += `<button class="btn-icon-small" onclick="new Audio('${audioUrl}').play()" style="background:var(--primary-light); color:var(--primary);"><i class="fas fa-volume-up"></i></button>`;
+                html += `</div>`;
+
+                if (basicTranslation && !googleDictHtml) html += `<div style="font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:14px;">${basicTranslation}</div>`;
+                html += googleDictHtml;
+
+                if (entry.meanings && entry.meanings.length > 0) {
+                    html += `<div style="border-top:1px solid var(--border); padding-top:14px;">`;
+                    for (let i = 0; i < Math.min(entry.meanings.length, 3); i++) {
+                        const meaning = entry.meanings[i];
+                        html += `<div style="margin-bottom:16px;"><div style="font-weight:800; color:white; background:var(--primary); display:inline-block; padding:3px 8px; border-radius:6px; font-size:12px; text-transform:uppercase; margin-bottom:8px;">${meaning.partOfSpeech}</div>`;
+                        meaning.definitions.slice(0, 2).forEach((def, j) => {
+                            const tId = `wddef-${elementId}-${i}-${j}`;
+                            html += `<div style="margin-bottom:8px; padding-left:10px; border-left:3px solid var(--primary-light);"><div style="font-weight:600; color:var(--text-main); font-size:14px;">${j+1}. ${def.definition}</div><div id="${tId}" style="font-size:13px; color:var(--text-muted); margin-top:2px;"><i class="fas fa-circle-notch fa-spin"></i></div>${def.example ? `<div style="font-style:italic; color:var(--text-muted); font-size:13px; margin-top:4px; background:var(--bg-color); padding:6px 10px; border-radius:6px;">&ldquo;${def.example}&rdquo;</div>` : ''}</div>`;
+                            localTasks.push({ id: tId, text: def.definition });
+                        });
+                        html += `</div>`;
+                    }
+                    html += `</div>`;
+                }
+
+                // Word Family
+                const variations = await getWordVariations(entry.word);
+                if (variations.length > 0) {
+                    html += `<div style="margin-top:16px; padding-top:14px; border-top:1px dashed var(--border);"><div style="font-size:13px; font-weight:700; color:var(--text-main); margin-bottom:10px;"><i class="fas fa-sitemap" style="color:var(--primary);"></i> 延伸詞性與變化形式 (Word Family)</div><div style="display:flex; flex-direction:column; gap:6px;">`;
+                    variations.forEach((vWord, vi) => {
+                        const vId = `wdvar-${elementId}-${vi}`;
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); padding:6px 10px; border-radius:8px; border:1px solid var(--border);"><span style="font-weight:600; color:var(--text-main); font-size:14px;">${vWord}</span><span id="${vId}" style="font-size:13px; color:var(--text-muted);"><i class="fas fa-circle-notch fa-spin"></i></span></div>`;
+                        localTasks.push({ id: vId, text: vWord });
+                    });
+                    html += `</div></div>`;
+                }
+
+                container.innerHTML = html;
+
+                for (let task of localTasks) {
+                    try {
+                        const zh = await translateText(task.text);
+                        const el = document.getElementById(task.id);
+                        if (el) el.innerText = zh;
+                    } catch(e) {
+                        const el = document.getElementById(task.id);
+                        if (el) el.style.display = 'none';
+                    }
+                }
+            } catch(e) {
+                container.innerHTML = `<div style="color:var(--danger); font-size:14px; padding:8px;"><i class="fas fa-exclamation-triangle"></i> ${e.message}</div>`;
+            }
+        }
+
+        // ================= 字典搜尋歷史 =================
+        let dictSearchHistory = JSON.parse(localStorage.getItem('dictSearchHistory') || '[]');
+        function renderDictHistory() {
+            const bar = document.getElementById('dict-history-bar');
+            const tags = document.getElementById('dict-history-tags');
+            if (!dictSearchHistory.length) { bar.style.display = 'none'; return; }
+            bar.style.display = 'block';
+            tags.innerHTML = '';
+            dictSearchHistory.forEach(w => {
+                const tag = document.createElement('button');
+                tag.style.cssText = 'background:var(--primary-light); color:var(--primary); border:none; border-radius:20px; padding:5px 12px; font-size:13px; font-weight:700; cursor:pointer;';
+                tag.innerText = w;
+                tag.onclick = () => { document.getElementById('dict-search-input').value = w; searchDictionary(); };
+                tags.appendChild(tag);
+            });
+        }
+        function saveDictHistory(word) {
+            dictSearchHistory = [word, ...dictSearchHistory.filter(w => w !== word)].slice(0, 10);
+            localStorage.setItem('dictSearchHistory', JSON.stringify(dictSearchHistory));
+            renderDictHistory();
+        }
+
+        // ================= 推播通知 =================
+        function initPushNotification() {
+            if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+            if (Notification.permission === 'default') {
+                Notification.requestPermission().then(perm => {
+                    if (perm === 'granted') scheduleDailyNotification();
+                });
+            } else if (Notification.permission === 'granted') {
+                scheduleDailyNotification();
+            }
+        }
+        function scheduleDailyNotification() {
+            const checkAndNotify = () => {
+                const now = new Date();
+                const msUntil6pm = (() => {
+                    const target = new Date();
+                    target.setHours(18, 0, 0, 0);
+                    if (target <= now) target.setDate(target.getDate() + 1);
+                    return target - now;
+                })();
+                setTimeout(() => {
+                    const dueCount = allWords.filter(w => !w.nextReviewTime || w.nextReviewTime <= Date.now()).length;
+                    if (dueCount > 0 && Notification.permission === 'granted') {
+                        const n = new Notification('📚 Vocab Pro 複習提醒', {
+                            body: `今天有 ${dueCount} 個單字需要 SRS 複習！趕快打開 App 來複習吧。`,
+                            icon: '/favicon.ico',
+                            badge: '/favicon.ico',
+                            tag: 'vocab-srs-reminder',
+                            renotify: true
+                        });
+                        n.onclick = () => { window.focus(); switchTab('sec-books'); n.close(); };
+                    }
+                    checkAndNotify();
+                }, msUntil6pm);
+            };
+            checkAndNotify();
         }
     </script>
 </body>
