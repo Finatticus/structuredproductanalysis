@@ -929,6 +929,11 @@
                 const nav = document.getElementById("nav-dict"); if(nav) nav.classList.add("active");
                 document.getElementById("header-title").innerText = "字典查詢";
             }
+            if(tabId === 'sec-custom') {
+                const nav = document.getElementById("nav-custom"); if(nav) nav.classList.add("active");
+                document.getElementById("header-title").innerText = "自定義閱讀";
+                renderCustomArticles();
+            }
             if(tabId === 'sec-settings') {
                 const nav = document.getElementById("nav-settings"); if(nav) nav.classList.add("active");
                 document.getElementById("header-title").innerText = "探索與設定";
@@ -2523,6 +2528,226 @@
                 container.innerHTML = `<div style="color:var(--danger); font-size:14px; padding:8px;"><i class="fas fa-exclamation-triangle"></i> ${e.message}</div>`;
             }
         }
+
+        // ================= 自定義文章功能 =================
+        function loadCustomArticles() {
+            const saved = localStorage.getItem(`customArticles_${currentUser}`);
+            return saved ? JSON.parse(saved) : [];
+        }
+        
+        function saveCustomArticlesToStorage(articles) {
+            localStorage.setItem(`customArticles_${currentUser}`, JSON.stringify(articles));
+        }
+
+        function renderCustomArticles() {
+            const list = document.getElementById("custom-articles-list");
+            if (!list) return;
+            const articles = loadCustomArticles();
+            list.innerHTML = "";
+            if (articles.length === 0) {
+                list.innerHTML = `<div class="empty-state"><i class="fas fa-file-alt"></i><p>尚無自定義文章</p></div>`;
+                return;
+            }
+            
+            articles.forEach((art, idx) => {
+                const div = document.createElement("div");
+                div.className = "card";
+                div.style.marginBottom = "12px";
+                div.style.padding = "16px";
+                div.style.borderLeft = "4px solid var(--primary)";
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="flex:1; cursor:pointer; min-width:0;" onclick="openCustomReaderModal(${idx})">
+                            <h3 style="font-size:16px; font-weight:800; color:var(--text-main); margin-bottom:6px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${art.title}</h3>
+                            <div style="font-size:12px; color:var(--text-muted);">${new Date(art.created).toLocaleString()}</div>
+                        </div>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <button class="btn-icon-small" onclick="openCustomEditModal(${idx})" style="color:var(--primary);"><i class="fas fa-edit"></i></button>
+                            <button class="btn-icon-small text-danger" onclick="deleteCustomArticle(${idx})"><i class="fas fa-trash-alt"></i></button>
+                            <div style="display:flex; flex-direction:column; gap:2px;">
+                                <button class="btn-icon-small" onclick="moveCustomArticle(${idx}, -1)" ${idx===0 ? 'disabled style="opacity:0.3;"' : ''}><i class="fas fa-caret-up"></i></button>
+                                <button class="btn-icon-small" onclick="moveCustomArticle(${idx}, 1)" ${idx===articles.length-1 ? 'disabled style="opacity:0.3;"' : ''}><i class="fas fa-caret-down"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function openCustomEditModal(index = -1) {
+            document.getElementById("custom-edit-modal").style.display = "flex";
+            if (index >= 0) {
+                const articles = loadCustomArticles();
+                const art = articles[index];
+                document.getElementById("custom-edit-id").value = index;
+                document.getElementById("custom-edit-title-h3").innerText = "編輯自定義文章";
+                document.getElementById("custom-edit-title").value = art.title;
+                document.getElementById("custom-edit-content").value = art.content;
+                document.getElementById("custom-edit-paras").value = art.parasPerBlock || 1;
+            } else {
+                document.getElementById("custom-edit-id").value = "";
+                document.getElementById("custom-edit-title-h3").innerText = "新增自定義文章";
+                document.getElementById("custom-edit-title").value = "";
+                document.getElementById("custom-edit-content").value = "";
+                document.getElementById("custom-edit-paras").value = 1;
+            }
+        }
+
+        function closeCustomEditModal() {
+            document.getElementById("custom-edit-modal").style.display = "none";
+        }
+
+        function saveCustomArticle() {
+            const title = document.getElementById("custom-edit-title").value.trim();
+            const content = document.getElementById("custom-edit-content").value.trim();
+            const paras = parseInt(document.getElementById("custom-edit-paras").value) || 1;
+            const indexStr = document.getElementById("custom-edit-id").value;
+            
+            if (!title || !content) { showToast("請輸入標題和內容", "error"); return; }
+            
+            const articles = loadCustomArticles();
+            if (indexStr !== "") {
+                const idx = parseInt(indexStr);
+                articles[idx].title = title;
+                articles[idx].content = content;
+                articles[idx].parasPerBlock = paras;
+            } else {
+                articles.unshift({
+                    title: title,
+                    content: content,
+                    parasPerBlock: paras,
+                    created: Date.now()
+                });
+            }
+            saveCustomArticlesToStorage(articles);
+            closeCustomEditModal();
+            renderCustomArticles();
+            showToast("文章已儲存", "success");
+        }
+
+        function deleteCustomArticle(index) {
+            if (!confirm("確定要刪除這篇文章嗎？")) return;
+            const articles = loadCustomArticles();
+            articles.splice(index, 1);
+            saveCustomArticlesToStorage(articles);
+            renderCustomArticles();
+        }
+
+        function moveCustomArticle(index, direction) {
+            const articles = loadCustomArticles();
+            if (index + direction < 0 || index + direction >= articles.length) return;
+            const temp = articles[index];
+            articles[index] = articles[index + direction];
+            articles[index + direction] = temp;
+            saveCustomArticlesToStorage(articles);
+            renderCustomArticles();
+        }
+
+        let currentCustomArticleIndex = -1;
+
+        async function openCustomReaderModal(index) {
+            const articles = loadCustomArticles();
+            if (index < 0 || index >= articles.length) return;
+            currentCustomArticleIndex = index;
+            const art = articles[index];
+            
+            document.getElementById("custom-reader-modal").style.display = "block";
+            document.getElementById("custom-reader-title-display").innerText = art.title;
+            const container = document.getElementById("custom-reader-full");
+            container.innerHTML = "";
+            
+            document.getElementById("custom-prev-btn").disabled = (index === 0);
+            document.getElementById("custom-prev-btn").style.opacity = (index === 0) ? '0.3' : '1';
+            document.getElementById("custom-next-btn").disabled = (index === articles.length - 1);
+            document.getElementById("custom-next-btn").style.opacity = (index === articles.length - 1) ? '0.3' : '1';
+            
+            const parasPerBlock = art.parasPerBlock || 1;
+            const rawParas = art.content.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+            
+            let allParagraphs = [];
+            for(let i = 0; i < rawParas.length; i += parasPerBlock) {
+                allParagraphs.push(rawParas.slice(i, i + parasPerBlock).join('\\n\\n').trim());
+            }
+            
+            for (let text of allParagraphs) {
+                const pContainer = document.createElement("div");
+                pContainer.style.marginBottom = "28px";
+                
+                const enEl = document.createElement("p");
+                enEl.style.fontSize = "1.15em";
+                enEl.style.color = "var(--text-main)";
+                enEl.style.lineHeight = "1.75";
+                enEl.style.marginBottom = "10px";
+                enEl.style.fontWeight = "500";
+                enEl.style.whiteSpace = "pre-wrap";
+                enEl.innerHTML = makeClickable(text);
+                pContainer.appendChild(enEl);
+                
+                const zhEl = document.createElement("p");
+                zhEl.style.fontSize = "1em";
+                zhEl.style.color = "var(--text-muted)";
+                zhEl.style.lineHeight = "1.75";
+                zhEl.style.fontWeight = "400";
+                zhEl.style.paddingLeft = "14px";
+                zhEl.style.borderLeft = "3px solid var(--primary-light)";
+                zhEl.style.marginBottom = "8px";
+                zhEl.style.whiteSpace = "pre-wrap";
+                zhEl.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 即時翻譯中...';
+                pContainer.appendChild(zhEl);
+                
+                const ttsBtn = document.createElement("button");
+                ttsBtn.innerHTML = '<i class="fas fa-volume-up"></i> 朗讀此段';
+                ttsBtn.style.background = "none";
+                ttsBtn.style.color = "var(--primary)";
+                ttsBtn.style.border = "1px solid var(--primary-light)";
+                ttsBtn.style.borderRadius = "20px";
+                ttsBtn.style.padding = "4px 12px";
+                ttsBtn.style.fontSize = "12px";
+                ttsBtn.style.fontWeight = "600";
+                ttsBtn.style.cursor = "pointer";
+                ttsBtn.style.display = "inline-flex";
+                ttsBtn.style.alignItems = "center";
+                ttsBtn.style.gap = "6px";
+                ttsBtn.style.marginLeft = "14px";
+                ttsBtn.style.marginTop = "4px";
+                ttsBtn.style.transition = "all 0.2s";
+                ttsBtn.onclick = () => playTTS(text);
+                pContainer.appendChild(ttsBtn);
+                
+                const ttsStopBtn = document.createElement("button");
+                ttsStopBtn.innerHTML = '<i class="fas fa-stop"></i> 中止';
+                ttsStopBtn.style.background = "none";
+                ttsStopBtn.style.color = "var(--danger)";
+                ttsStopBtn.style.border = "1px solid rgba(239, 68, 68, 0.3)";
+                ttsStopBtn.style.borderRadius = "20px";
+                ttsStopBtn.style.padding = "4px 12px";
+                ttsStopBtn.style.fontSize = "12px";
+                ttsStopBtn.style.fontWeight = "600";
+                ttsStopBtn.style.cursor = "pointer";
+                ttsStopBtn.style.display = "inline-flex";
+                ttsStopBtn.style.alignItems = "center";
+                ttsStopBtn.style.gap = "6px";
+                ttsStopBtn.style.marginLeft = "8px";
+                ttsStopBtn.style.marginTop = "4px";
+                ttsStopBtn.style.transition = "all 0.2s";
+                ttsStopBtn.onclick = () => window.speechSynthesis.cancel();
+                pContainer.appendChild(ttsStopBtn);
+                
+                container.appendChild(pContainer);
+                try { zhEl.innerText = await translateText(text); } 
+                catch(e) { zhEl.innerText = "(翻譯服務暫時忙碌)"; }
+            }
+        }
+
+        function closeCustomReaderModal() {
+            window.speechSynthesis.cancel();
+            document.getElementById("custom-reader-modal").style.display = "none";
+            closeNewsMini();
+        }
+
+        function openPrevCustomArticle() { openCustomReaderModal(currentCustomArticleIndex - 1); }
+        function openNextCustomArticle() { openCustomReaderModal(currentCustomArticleIndex + 1); }
 
         // ================= 字典搜尋歷史 =================
         let dictSearchHistory = JSON.parse(localStorage.getItem('dictSearchHistory') || '[]');
