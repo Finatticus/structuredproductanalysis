@@ -445,7 +445,10 @@
         <!-- 自定義文章列表頁面 -->
         <section id="sec-custom">
             <div class="card" style="margin-bottom:16px;">
-                <h2 style="font-size:18px; color:var(--text-main); margin-bottom:12px;"><i class="fas fa-file-alt" style="color:var(--primary);"></i> 自定義文章閱讀</h2>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h2 style="font-size:18px; color:var(--text-main); margin:0;"><i class="fas fa-file-alt" style="color:var(--primary);"></i> 自定義閱讀</h2>
+                    <button class="btn-secondary" onclick="manageCustomFolders()" style="padding: 6px 12px; font-size: 13px; border-radius: 12px; display: flex; align-items: center; gap: 6px; width: auto; height: auto;"><i class="fas fa-folder-cog"></i> 管理群組</button>
+                </div>
                 <button class="btn-primary" onclick="openCustomEditModal()" style="width:100%;"><i class="fas fa-plus"></i> 新增文章</button>
             </div>
             <div id="custom-articles-list"></div>
@@ -581,21 +584,36 @@
         <a href="#" onclick="switchTab('sec-settings'); return false;" class="nav-item" id="nav-settings"><i class="fas fa-compass"></i><span>探索</span></a>
     </nav>
 
+    <!-- 群組管理 Modal -->
+    <div id="folder-manage-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2100; justify-content:center; align-items:flex-end;">
+        <div style="background:var(--bg-color); width:100%; max-width:600px; max-height:80vh; border-radius:24px 24px 0 0; display:flex; flex-direction:column; animation:fadeIn 0.3s ease;">
+            <div style="padding:20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
+                <h3 style="font-size:18px; font-weight:800; color:var(--text-main); margin:0;">群組管理</h3>
+                <button class="btn-icon-small" onclick="closeFolderManageModal()" style="background:var(--border);"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="padding:20px; overflow-y:auto; flex:1;">
+                <button class="btn-primary" onclick="actionAddFolder()" style="width:100%; margin-bottom:20px;"><i class="fas fa-plus"></i> 新增空群組</button>
+                <div id="folder-manage-list"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- 新增/編輯自定義文章 Modal -->
     <div id="custom-edit-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-color); z-index:2000; overflow-y:auto; padding-bottom:100px;">
-        <div style="position:sticky; top:0; background:rgba(255,255,255,0.85); backdrop-filter:blur(16px); padding:16px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); z-index:10;">
-            <h3 style="font-size:18px; font-weight:800; color:var(--text-main);" id="custom-edit-title-h3">新增自定義文章</h3>
-            <button class="btn-icon-small" onclick="closeCustomEditModal()" style="background:var(--border);"><i class="fas fa-times"></i></button>
-        </div>
-        <div style="padding:24px 20px; max-width:600px; margin:0 auto;">
-            <input type="hidden" id="custom-edit-id">
-            <div class="input-group">
-                <label>文章標題</label>
-                <input type="text" id="custom-edit-title" placeholder="請輸入標題">
+        <button class="btn-icon-small" onclick="closeCustomEditModal()" style="position:absolute; top:16px; right:16px; width:32px; height:32px; background:var(--border); z-index:10;"><i class="fas fa-times"></i></button>
+        <div style="padding:40px 20px 20px; max-width:600px; margin:0 auto;">
+            <div style="text-align:center; margin-bottom:24px;">
+                <h3 style="font-size:20px; font-weight:800; color:var(--text-main); margin:0;" id="custom-edit-title-h3">新增文章</h3>
+                <div style="width:40px; height:4px; background:var(--primary); border-radius:2px; margin:8px auto 0;"></div>
             </div>
-            <div class="input-group">
-                <label>段落合併設定 (幾個段落一起翻譯)</label>
-                <select id="custom-edit-paras">
+            <input type="hidden" id="custom-edit-id">
+            <div class="input-group" style="margin-bottom:12px;">
+                <label style="font-size:13px; margin-bottom:4px;">文章標題</label>
+                <input type="text" id="custom-edit-title" placeholder="請輸入標題" style="padding:10px 12px; font-size:14px; border-radius:8px; border:1px solid var(--border);">
+            </div>
+            <div class="input-group" style="margin-bottom:12px;">
+                <label style="font-size:13px; margin-bottom:4px;">段落合併設定 (翻譯區塊大小)</label>
+                <select id="custom-edit-paras" style="padding:10px 12px; font-size:14px; border-radius:8px; border:1px solid var(--border);">
                     <option value="1">1 段</option>
                     <option value="2">2 段</option>
                     <option value="3">3 段</option>
@@ -603,11 +621,16 @@
                     <option value="5">5 段</option>
                 </select>
             </div>
-            <div class="input-group">
-                <label>文章內容</label>
-                <textarea id="custom-edit-content" rows="12" placeholder="請貼上英文文章內容..." style="width:100%; padding:12px; border-radius:12px; border:2px solid var(--border); font-family:inherit; font-size:15px; resize:vertical;"></textarea>
+            <div class="input-group" style="margin-bottom:12px;">
+                <label style="font-size:13px; margin-bottom:4px;">文章群組</label>
+                <select id="custom-edit-folder-select" onchange="if(this.value==='__NEW__'){document.getElementById('custom-edit-folder-new').style.display='block';}else{document.getElementById('custom-edit-folder-new').style.display='none';}" style="padding:10px 12px; font-size:14px; border-radius:8px; border:1px solid var(--border);"></select>
+                <input type="text" id="custom-edit-folder-new" placeholder="請輸入新群組名稱..." style="display:none; margin-top:8px; padding:10px 12px; font-size:14px; border-radius:8px; border:1px solid var(--border);">
             </div>
-            <button class="btn-primary" onclick="saveCustomArticle()" style="width:100%; margin-top:16px;">儲存文章</button>
+            <div class="input-group" style="margin-bottom:12px;">
+                <label style="font-size:13px; margin-bottom:4px;">文章內容</label>
+                <textarea id="custom-edit-content" rows="10" placeholder="請貼上英文文章內容..." style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); font-family:inherit; font-size:14px; resize:vertical;"></textarea>
+            </div>
+            <button class="btn-primary" onclick="saveCustomArticle()" style="width:100%; padding:14px; font-size:15px; border-radius:12px; margin-top:8px;"><i class="fas fa-save"></i> 儲存文章</button>
         </div>
     </div>
 
@@ -739,7 +762,7 @@
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycby6y2JkqPk6HKNNcHrE9LVY029vXsQ_sYaQ5a_aoohNfGij3Ii0XYul5XgWF-tQnSQ/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwZf5jX1vGtzzkZOq55-lgjnPCPTJ2YchGm5IBu1zsgINlFVol7nw16qh4_eE8v3-s/exec";
 
         const THEMES = {
             "default": { "--bg-color": "#F8FAFC", "--card-bg": "#FFFFFF", "--text-main": "#0F172A", "--text-muted": "#64748B", "--primary": "#4F46E5", "--primary-hover": "#4338CA", "--primary-light": "#E0E7FF", "--border": "#E2E8F0", "--nav-bg": "rgba(255, 255, 255, 0.85)" },
@@ -932,7 +955,7 @@
             if(tabId === 'sec-custom') {
                 const nav = document.getElementById("nav-custom"); if(nav) nav.classList.add("active");
                 document.getElementById("header-title").innerText = "自定義閱讀";
-                renderCustomArticles();
+                fetchCustomArticles();
             }
             if(tabId === 'sec-settings') {
                 const nav = document.getElementById("nav-settings"); if(nav) nav.classList.add("active");
@@ -1595,6 +1618,13 @@
         let currentNewsList = [];
         let currentNewsIndex = 0;
 
+        const makeClickable = (text) => {
+            return text.split(/(\s+)/).map(w => {
+                if(w.trim() === '') return w;
+                return `<span class="clickable-word" onclick="addNewsWord(this)">${w}</span>`;
+            }).join('');
+        };
+
         async function loadNews(isNext = false) {
             const category = document.getElementById("news-category").value;
             const btn = document.getElementById("btn-load-news");
@@ -1629,13 +1659,6 @@
                 const item = currentNewsList[currentNewsIndex];
                 document.getElementById("news-modal").style.display = "block";
                 document.getElementById("news-modal").scrollTop = 0; // Scroll to top for next article
-                
-                const makeClickable = (text) => {
-                    return text.split(/(\s+)/).map(w => {
-                        if(w.trim() === '') return w;
-                        return `<span class="clickable-word" onclick="addNewsWord(this)">${w}</span>`;
-                    }).join('');
-                };
                 
                 document.getElementById("news-modal-content").innerHTML = `
                     <h1 style="font-size:24px; font-weight:800; color:var(--text-main); margin-bottom:24px; line-height:1.4;">${makeClickable(item.webTitle)}</h1>
@@ -2530,67 +2553,244 @@
         }
 
         // ================= 自定義文章功能 =================
-        function loadCustomArticles() {
-            const saved = localStorage.getItem(`customArticles_${currentUser}`);
-            return saved ? JSON.parse(saved) : [];
+        let customArticles = [];
+
+        async function fetchCustomArticles() {
+            const list = document.getElementById("custom-articles-list");
+            if (list) list.innerHTML = '<div class="text-center" style="padding:20px; color:var(--primary);"><i class="fas fa-spinner fa-spin"></i> 載入中...</div>';
+            try {
+                const res = await safeGASFetch({ action: "getArticles", username: currentUser });
+                if (res.status === "success") {
+                    customArticles = res.data;
+                    renderCustomArticles();
+                } else {
+                    if (list) list.innerHTML = `<div class="text-danger text-center">載入失敗: ${res.message}</div>`;
+                }
+            } catch(e) {
+                if (list) list.innerHTML = `<div class="text-danger text-center">連線錯誤</div>`;
+            }
         }
-        
-        function saveCustomArticlesToStorage(articles) {
-            localStorage.setItem(`customArticles_${currentUser}`, JSON.stringify(articles));
+
+        function getCustomFolders() {
+            const articleFolders = customArticles.map(a => a.folder || "未分類");
+            const emptyFolders = JSON.parse(localStorage.getItem('userFolders_' + currentUser) || '[]');
+            const folders = [...new Set([...articleFolders, ...emptyFolders])];
+            
+            if (folders.includes("未分類")) {
+                folders.splice(folders.indexOf("未分類"), 1);
+                folders.unshift("未分類");
+            }
+            return folders.length > 0 ? folders : ["未分類"];
+        }
+
+        function manageCustomFolders() {
+            document.getElementById("folder-manage-modal").style.display = "flex";
+            renderFolderManageList();
+        }
+
+        function closeFolderManageModal() {
+            document.getElementById("folder-manage-modal").style.display = "none";
+        }
+
+        function renderFolderManageList() {
+            const list = document.getElementById("folder-manage-list");
+            list.innerHTML = "";
+            const folders = getCustomFolders().filter(f => f !== "未分類");
+            if (folders.length === 0) {
+                list.innerHTML = `<div class="empty-state" style="padding:20px; text-align:center;"><i class="fas fa-folder-open" style="font-size:32px; color:var(--text-muted); margin-bottom:12px;"></i><p style="color:var(--text-muted); font-size:14px;">目前沒有自訂群組</p></div>`;
+                return;
+            }
+
+            folders.forEach(folder => {
+                const item = document.createElement("div");
+                item.style = "display:flex; justify-content:space-between; align-items:center; padding:16px; border:1px solid var(--border); border-radius:12px; margin-bottom:10px; background:var(--bg-card);";
+                item.innerHTML = `
+                    <div style="font-weight:600; color:var(--text-main); font-size:16px;"><i class="fas fa-folder" style="color:var(--primary); margin-right:8px;"></i>${folder}</div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn-icon-small" onclick="actionRenameFolder('${folder}')" style="background:var(--border); color:var(--text-main);" title="重新命名"><i class="fas fa-pen"></i></button>
+                        <button class="btn-icon-small" onclick="actionDisbandFolder('${folder}')" style="background:rgba(245, 158, 11, 0.1); color:var(--warning);" title="解散群組 (文章移至「未分類」)"><i class="fas fa-box-open"></i></button>
+                        <button class="btn-icon-small" onclick="actionDeleteFolder('${folder}')" style="background:rgba(239, 68, 68, 0.1); color:var(--danger);" title="刪除整個群組與文章"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function actionAddFolder() {
+            const newName = prompt('請輸入新群組名稱：');
+            if (newName && newName.trim()) {
+                let empty = JSON.parse(localStorage.getItem('userFolders_' + currentUser) || '[]');
+                if (!empty.includes(newName.trim())) {
+                    empty.push(newName.trim());
+                    localStorage.setItem('userFolders_' + currentUser, JSON.stringify(empty));
+                    renderCustomArticles();
+                    renderFolderManageList();
+                    showToast("已建立空群組", "success");
+                }
+            }
+        }
+
+        const removeEmptyFolder = (folderName) => {
+            let empty = JSON.parse(localStorage.getItem('userFolders_' + currentUser) || '[]');
+            empty = empty.filter(f => f !== folderName);
+            localStorage.setItem('userFolders_' + currentUser, JSON.stringify(empty));
+        };
+
+        function actionRenameFolder(targetFolder) {
+            const newName = prompt(`請輸入「${targetFolder}」的新名稱：`);
+            if (newName && newName.trim()) {
+                customArticles.forEach(a => { if (a.folder === targetFolder) a.folder = newName.trim(); });
+                removeEmptyFolder(targetFolder);
+                let empty = JSON.parse(localStorage.getItem('userFolders_' + currentUser) || '[]');
+                if (!empty.includes(newName.trim())) empty.push(newName.trim());
+                localStorage.setItem('userFolders_' + currentUser, JSON.stringify(empty));
+                
+                safeGASFetch({ action: "updateArticleOrder", username: currentUser, articles: customArticles });
+                renderCustomArticles();
+                renderFolderManageList();
+                showToast("已重新命名");
+            }
+        }
+
+        function actionDisbandFolder(targetFolder) {
+            if (confirm(`確定要將「${targetFolder}」裡面的文章移至「未分類」嗎？`)) {
+                customArticles.forEach(a => { if (a.folder === targetFolder) a.folder = "未分類"; });
+                removeEmptyFolder(targetFolder);
+                safeGASFetch({ action: "updateArticleOrder", username: currentUser, articles: customArticles });
+                renderCustomArticles();
+                renderFolderManageList();
+                showToast("群組已解散");
+            }
+        }
+
+        function actionDeleteFolder(targetFolder) {
+            if (confirm(`警告：確定要刪除「${targetFolder}」及裡面的「所有文章」嗎？\n此操作無法復原！`)) {
+                customArticles = customArticles.filter(a => a.folder !== targetFolder);
+                removeEmptyFolder(targetFolder);
+                safeGASFetch({ action: "updateArticleOrder", username: currentUser, articles: customArticles });
+                renderCustomArticles();
+                renderFolderManageList();
+                showToast("已刪除群組與文章");
+            }
+        }
+
+        function toggleFolder(folder) {
+            let collapsedFolders = JSON.parse(localStorage.getItem('collapsedFolders_' + currentUser) || '{}');
+            collapsedFolders[folder] = !collapsedFolders[folder];
+            localStorage.setItem('collapsedFolders_' + currentUser, JSON.stringify(collapsedFolders));
+            renderCustomArticles();
         }
 
         function renderCustomArticles() {
             const list = document.getElementById("custom-articles-list");
             if (!list) return;
-            const articles = loadCustomArticles();
             list.innerHTML = "";
-            if (articles.length === 0) {
+            if (customArticles.length === 0) {
                 list.innerHTML = `<div class="empty-state"><i class="fas fa-file-alt"></i><p>尚無自定義文章</p></div>`;
                 return;
             }
             
-            articles.forEach((art, idx) => {
-                const div = document.createElement("div");
-                div.className = "card";
-                div.style.marginBottom = "12px";
-                div.style.padding = "16px";
-                div.style.borderLeft = "4px solid var(--primary)";
-                div.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div style="flex:1; cursor:pointer; min-width:0;" onclick="openCustomReaderModal(${idx})">
-                            <h3 style="font-size:16px; font-weight:800; color:var(--text-main); margin-bottom:6px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${art.title}</h3>
-                            <div style="font-size:12px; color:var(--text-muted);">${new Date(art.created).toLocaleString()}</div>
+            const folders = getCustomFolders();
+            let collapsedFolders = JSON.parse(localStorage.getItem('collapsedFolders_' + currentUser) || '{}');
+            folders.forEach(folder => {
+                const folderArts = customArticles.map((art, idx) => ({art, idx})).filter(x => (x.art.folder || "未分類") === folder);
+                if (folderArts.length === 0 && folder === "未分類" && folders.length > 1) return;
+
+                if (collapsedFolders[folder] === undefined) {
+                    collapsedFolders[folder] = true;
+                    localStorage.setItem('collapsedFolders_' + currentUser, JSON.stringify(collapsedFolders));
+                }
+                const isCollapsed = collapsedFolders[folder] === true;
+                const iconClass = isCollapsed ? "fa-chevron-right" : "fa-chevron-down";
+
+                if (folders.length > 1 || folder !== "未分類") {
+                    const fHeader = document.createElement("div");
+                    fHeader.style = "display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; margin-top:16px; border-bottom:2px solid var(--border); padding-bottom:8px; cursor:pointer;";
+                    fHeader.onclick = () => toggleFolder(folder);
+                    fHeader.innerHTML = `
+                        <div style="display:flex; align-items:center;">
+                            <i class="fas ${iconClass}" style="color:var(--text-muted); font-size:12px; width:16px;"></i>
+                            <h3 style="font-size:16px; font-weight:800; color:var(--text-main); margin:0; margin-left:4px;"><i class="fas fa-folder" style="color:var(--primary); margin-right:8px;"></i>${folder}</h3>
                         </div>
-                        <div style="display:flex; gap:6px; align-items:center;">
-                            <button class="btn-icon-small" onclick="openCustomEditModal(${idx})" style="color:var(--primary);"><i class="fas fa-edit"></i></button>
-                            <button class="btn-icon-small text-danger" onclick="deleteCustomArticle(${idx})"><i class="fas fa-trash-alt"></i></button>
-                            <div style="display:flex; flex-direction:column; gap:2px;">
-                                <button class="btn-icon-small" onclick="moveCustomArticle(${idx}, -1)" ${idx===0 ? 'disabled style="opacity:0.3;"' : ''}><i class="fas fa-caret-up"></i></button>
-                                <button class="btn-icon-small" onclick="moveCustomArticle(${idx}, 1)" ${idx===articles.length-1 ? 'disabled style="opacity:0.3;"' : ''}><i class="fas fa-caret-down"></i></button>
+                        <div style="font-size:12px; color:var(--text-muted);">${folderArts.length} 篇</div>
+                    `;
+                    list.appendChild(fHeader);
+                }
+                
+                if (!isCollapsed) {
+                    if (folderArts.length === 0 && folder !== "未分類") {
+                        const emptyState = document.createElement("div");
+                        emptyState.style = "color:var(--text-muted); font-size:12px; text-align:center; padding:12px; border:1px dashed var(--border); border-radius:8px; margin-bottom:16px;";
+                        emptyState.innerText = "這個群組目前沒有文章";
+                        list.appendChild(emptyState);
+                    }
+
+                    folderArts.forEach(item => {
+                        const idx = item.idx;
+                        const art = item.art;
+                        const div = document.createElement("div");
+                        div.className = "card";
+                        div.style.marginBottom = "12px";
+                        div.style.padding = "16px";
+                        div.style.borderLeft = "4px solid var(--primary)";
+                        div.innerHTML = `
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div style="flex:1; cursor:pointer; min-width:0;" onclick="openCustomReaderModal(${idx})">
+                                    <h3 style="font-size:16px; font-weight:800; color:var(--text-main); margin-bottom:6px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${art.title}</h3>
+                                    <div style="font-size:12px; color:var(--text-muted);">${new Date(art.created).toLocaleString()}</div>
+                                </div>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <button class="btn-icon-small" onclick="event.stopPropagation(); openCustomEditModal(${idx})" style="color:var(--primary);"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-icon-small text-danger" onclick="event.stopPropagation(); deleteCustomArticle(${idx})"><i class="fas fa-trash-alt"></i></button>
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <button class="btn-icon-small" onclick="event.stopPropagation(); moveCustomArticle(${idx}, -1)" ${idx===0 ? 'disabled style="opacity:0.3;"' : ''}><i class="fas fa-caret-up"></i></button>
+                                        <button class="btn-icon-small" onclick="event.stopPropagation(); moveCustomArticle(${idx}, 1)" ${idx===customArticles.length-1 ? 'disabled style="opacity:0.3;"' : ''}><i class="fas fa-caret-down"></i></button>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                `;
-                list.appendChild(div);
+                        `;
+                        list.appendChild(div);
+                    });
+                }
             });
         }
 
         function openCustomEditModal(index = -1) {
             document.getElementById("custom-edit-modal").style.display = "flex";
+            const sel = document.getElementById("custom-edit-folder-select");
+            sel.innerHTML = "";
+            getCustomFolders().forEach(f => {
+                const opt = document.createElement("option"); opt.value = f; opt.innerText = f; sel.appendChild(opt);
+            });
+            const newOpt = document.createElement("option"); newOpt.value = "__NEW__"; newOpt.innerText = "➕ 新增群組..."; sel.appendChild(newOpt);
+
+            const folderNewInput = document.getElementById("custom-edit-folder-new");
+            folderNewInput.style.display = "none";
+            folderNewInput.value = "";
+
             if (index >= 0) {
-                const articles = loadCustomArticles();
-                const art = articles[index];
+                const art = customArticles[index];
                 document.getElementById("custom-edit-id").value = index;
                 document.getElementById("custom-edit-title-h3").innerText = "編輯自定義文章";
                 document.getElementById("custom-edit-title").value = art.title;
                 document.getElementById("custom-edit-content").value = art.content;
                 document.getElementById("custom-edit-paras").value = art.parasPerBlock || 1;
+                
+                const fVal = art.folder || "未分類";
+                if (getCustomFolders().includes(fVal)) {
+                    sel.value = fVal;
+                } else {
+                    sel.value = "__NEW__";
+                    folderNewInput.style.display = "block";
+                    folderNewInput.value = fVal;
+                }
             } else {
                 document.getElementById("custom-edit-id").value = "";
                 document.getElementById("custom-edit-title-h3").innerText = "新增自定義文章";
                 document.getElementById("custom-edit-title").value = "";
                 document.getElementById("custom-edit-content").value = "";
                 document.getElementById("custom-edit-paras").value = 1;
+                sel.value = "未分類";
             }
         }
 
@@ -2598,59 +2798,89 @@
             document.getElementById("custom-edit-modal").style.display = "none";
         }
 
-        function saveCustomArticle() {
+        async function saveCustomArticle() {
             const title = document.getElementById("custom-edit-title").value.trim();
             const content = document.getElementById("custom-edit-content").value.trim();
             const paras = parseInt(document.getElementById("custom-edit-paras").value) || 1;
             const indexStr = document.getElementById("custom-edit-id").value;
             
+            const selVal = document.getElementById("custom-edit-folder-select").value;
+            let folder = selVal;
+            if (selVal === "__NEW__") {
+                folder = document.getElementById("custom-edit-folder-new").value.trim();
+                if (!folder) { showToast("請輸入新群組名稱", "error"); return; }
+                let empty = JSON.parse(localStorage.getItem('userFolders_' + currentUser) || '[]');
+                if (!empty.includes(folder)) empty.push(folder);
+                localStorage.setItem('userFolders_' + currentUser, JSON.stringify(empty));
+            }
+
             if (!title || !content) { showToast("請輸入標題和內容", "error"); return; }
             
-            const articles = loadCustomArticles();
+            let art = {};
             if (indexStr !== "") {
                 const idx = parseInt(indexStr);
-                articles[idx].title = title;
-                articles[idx].content = content;
-                articles[idx].parasPerBlock = paras;
+                if (customArticles[idx].content !== content || customArticles[idx].parasPerBlock !== paras) {
+                    customArticles[idx].translations = [];
+                }
+                customArticles[idx].title = title;
+                customArticles[idx].content = content;
+                customArticles[idx].parasPerBlock = paras;
+                customArticles[idx].folder = folder;
+                art = customArticles[idx];
             } else {
-                articles.unshift({
+                art = {
+                    id: Date.now().toString(),
                     title: title,
                     content: content,
                     parasPerBlock: paras,
-                    created: Date.now()
-                });
+                    created: Date.now(),
+                    bookmarkIndex: 0,
+                    translations: [],
+                    folder: folder
+                };
+                customArticles.unshift(art);
             }
-            saveCustomArticlesToStorage(articles);
             closeCustomEditModal();
             renderCustomArticles();
-            showToast("文章已儲存", "success");
+            showToast("儲存中...");
+            try {
+                if (indexStr !== "") {
+                    await safeGASFetch({ action: "saveArticle", username: currentUser, article: art });
+                } else {
+                    await safeGASFetch({ action: "updateArticleOrder", username: currentUser, articles: customArticles });
+                }
+                showToast("文章已儲存", "success");
+            } catch(e) { showToast("儲存失敗", "error"); }
         }
 
-        function deleteCustomArticle(index) {
+        async function deleteCustomArticle(index) {
             if (!confirm("確定要刪除這篇文章嗎？")) return;
-            const articles = loadCustomArticles();
-            articles.splice(index, 1);
-            saveCustomArticlesToStorage(articles);
+            const art = customArticles[index];
+            customArticles.splice(index, 1);
             renderCustomArticles();
+            try {
+                await safeGASFetch({ action: "deleteArticle", username: currentUser, id: art.id });
+                showToast("文章已刪除", "success");
+            } catch(e) {}
         }
 
-        function moveCustomArticle(index, direction) {
-            const articles = loadCustomArticles();
-            if (index + direction < 0 || index + direction >= articles.length) return;
-            const temp = articles[index];
-            articles[index] = articles[index + direction];
-            articles[index + direction] = temp;
-            saveCustomArticlesToStorage(articles);
+        async function moveCustomArticle(index, direction) {
+            if (index + direction < 0 || index + direction >= customArticles.length) return;
+            const temp = customArticles[index];
+            customArticles[index] = customArticles[index + direction];
+            customArticles[index + direction] = temp;
             renderCustomArticles();
+            try {
+                await safeGASFetch({ action: "updateArticleOrder", username: currentUser, articles: customArticles });
+            } catch(e) {}
         }
 
         let currentCustomArticleIndex = -1;
 
         async function openCustomReaderModal(index) {
-            const articles = loadCustomArticles();
-            if (index < 0 || index >= articles.length) return;
+            if (index < 0 || index >= customArticles.length) return;
             currentCustomArticleIndex = index;
-            const art = articles[index];
+            const art = customArticles[index];
             
             document.getElementById("custom-reader-modal").style.display = "block";
             document.getElementById("custom-reader-title-display").innerText = art.title;
@@ -2659,19 +2889,24 @@
             
             document.getElementById("custom-prev-btn").disabled = (index === 0);
             document.getElementById("custom-prev-btn").style.opacity = (index === 0) ? '0.3' : '1';
-            document.getElementById("custom-next-btn").disabled = (index === articles.length - 1);
-            document.getElementById("custom-next-btn").style.opacity = (index === articles.length - 1) ? '0.3' : '1';
+            document.getElementById("custom-next-btn").disabled = (index === customArticles.length - 1);
+            document.getElementById("custom-next-btn").style.opacity = (index === customArticles.length - 1) ? '0.3' : '1';
             
             const parasPerBlock = art.parasPerBlock || 1;
             const rawParas = art.content.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
             
             let allParagraphs = [];
             for(let i = 0; i < rawParas.length; i += parasPerBlock) {
-                allParagraphs.push(rawParas.slice(i, i + parasPerBlock).join('\\n\\n').trim());
+                allParagraphs.push(rawParas.slice(i, i + parasPerBlock).join('\n\n').trim());
             }
             
-            for (let text of allParagraphs) {
+            let newTranslationsFetched = false;
+            if (!art.translations) art.translations = [];
+            
+            for (let i = 0; i < allParagraphs.length; i++) {
+                let text = allParagraphs[i];
                 const pContainer = document.createElement("div");
+                pContainer.id = `custom-para-${i}`;
                 pContainer.style.marginBottom = "28px";
                 
                 const enEl = document.createElement("p");
@@ -2733,11 +2968,89 @@
                 ttsStopBtn.style.transition = "all 0.2s";
                 ttsStopBtn.onclick = () => window.speechSynthesis.cancel();
                 pContainer.appendChild(ttsStopBtn);
+
+                const bmkBtn = document.createElement("button");
+                bmkBtn.className = "bmk-btn";
+                bmkBtn.innerHTML = '<i class="fas fa-bookmark"></i> 標記為書籤';
+                
+                if (art.bookmarkIndex === i) {
+                    bmkBtn.style.background = "var(--primary-light)";
+                    bmkBtn.style.color = "var(--primary)";
+                    bmkBtn.style.border = "1px solid var(--primary)";
+                } else {
+                    bmkBtn.style.background = "none";
+                    bmkBtn.style.color = "var(--text-muted)";
+                    bmkBtn.style.border = "1px solid var(--border)";
+                }
+                
+                bmkBtn.style.borderRadius = "20px";
+                bmkBtn.style.padding = "4px 12px";
+                bmkBtn.style.fontSize = "12px";
+                bmkBtn.style.fontWeight = "600";
+                bmkBtn.style.cursor = "pointer";
+                bmkBtn.style.display = "inline-flex";
+                bmkBtn.style.alignItems = "center";
+                bmkBtn.style.gap = "6px";
+                bmkBtn.style.marginLeft = "8px";
+                bmkBtn.style.marginTop = "4px";
+                bmkBtn.style.transition = "all 0.2s";
+                bmkBtn.onclick = () => saveBookmark(i);
+                pContainer.appendChild(bmkBtn);
                 
                 container.appendChild(pContainer);
-                try { zhEl.innerText = await translateText(text); } 
-                catch(e) { zhEl.innerText = "(翻譯服務暫時忙碌)"; }
+                
+                if (art.translations[i]) {
+                    zhEl.innerText = art.translations[i];
+                } else {
+                    try { 
+                        const translated = await translateText(text); 
+                        zhEl.innerText = translated;
+                        art.translations[i] = translated;
+                        newTranslationsFetched = true;
+                    } catch(e) { 
+                        zhEl.innerText = "(翻譯服務暫時忙碌)"; 
+                    }
+                }
             }
+
+            if (newTranslationsFetched) {
+                safeGASFetch({ action: "saveArticle", username: currentUser, article: art }).catch(e => console.error("背景儲存翻譯失敗", e));
+            }
+
+            const bmkIdx = art.bookmarkIndex || 0;
+            if (bmkIdx > 0) {
+                setTimeout(() => {
+                    const bmkEl = document.getElementById(`custom-para-${bmkIdx}`);
+                    if (bmkEl) bmkEl.scrollIntoView({ behavior: 'smooth' });
+                }, 500);
+            } else {
+                document.getElementById("custom-reader-modal").scrollTop = 0;
+            }
+        }
+
+        async function saveBookmark(paraIndex) {
+            const art = customArticles[currentCustomArticleIndex];
+            art.bookmarkIndex = paraIndex;
+            
+            document.querySelectorAll(`[id^='custom-para-']`).forEach((el, idx) => {
+                const btn = el.querySelector('.bmk-btn');
+                if(btn) {
+                    if (idx === paraIndex) {
+                        btn.style.color = "var(--primary)";
+                        btn.style.borderColor = "var(--primary)";
+                        btn.style.background = "var(--primary-light)";
+                    } else {
+                        btn.style.color = "var(--text-muted)";
+                        btn.style.borderColor = "var(--border)";
+                        btn.style.background = "none";
+                    }
+                }
+            });
+            
+            showToast("已更新書籤位置", "success");
+            try {
+                await safeGASFetch({ action: "saveArticle", username: currentUser, article: art });
+            } catch(e) {}
         }
 
         function closeCustomReaderModal() {
