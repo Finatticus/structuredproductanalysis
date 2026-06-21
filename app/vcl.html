@@ -303,6 +303,9 @@
                 <button class="btn-outline" onclick="startAllFlashcards()" style="flex: 1; min-width:120px; padding: 14px; font-size: 15px; border-color:var(--primary-light); color:var(--primary); background:var(--card-bg);">
                     <i class="fas fa-layer-group"></i> 複習全部
                 </button>
+                <button class="btn-outline" onclick="openRadioSetup()" style="flex: 1; min-width:120px; padding: 14px; font-size: 15px; border-color:var(--primary-light); color:var(--primary); background:var(--card-bg);" title="單字循環播放">
+                    <i class="fas fa-headphones"></i> 循環播放
+                </button>
                 <button class="btn-outline" id="btn-compact-toggle" onclick="toggleCompactView()" style="flex: 1; min-width:120px; padding: 14px; font-size: 15px; border-color:var(--primary-light); color:var(--primary); background:var(--card-bg);" title="切換單字本顯示模式">
                     <i class="fas fa-list"></i> 緊湊模式
                 </button>
@@ -340,6 +343,88 @@
             </div>
         </section>
 
+        <!-- 造句任務清單 -->
+        <section id="sec-sentence-maker">
+            <div class="flashcard-header">
+                <button class="btn-outline" style="padding: 12px 18px; font-size: 15px;" onclick="switchTab('sec-words')">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+                <h2 style="font-size:18px; color:var(--text-main);">未造句單字</h2>
+            </div>
+            <div class="card" style="padding: 16px; overflow-x: auto;">
+                <table style="width:100%; border-collapse: collapse; font-size:14px; text-align:left;">
+                    <thead>
+                        <tr style="border-bottom:2px solid var(--border); color:var(--text-muted);">
+                            <th style="padding:8px; width:40%;">單字</th>
+                            <th style="padding:8px; width:40%;">中文</th>
+                            <th style="padding:8px; text-align:right; width:20%;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sentence-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 廣播設定頁面 -->
+        <section id="sec-radio-setup">
+            <div class="flashcard-header">
+                <button class="btn-outline" style="padding: 12px 18px; font-size: 15px;" onclick="switchTab('sec-books')">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+                <h2 style="font-size:18px; color:var(--text-main);">🎧 單字循環播放</h2>
+            </div>
+            
+            <div class="card" style="padding:20px;">
+                <h3 style="font-size:16px; margin-bottom:12px; color:var(--text-main); font-weight:700;">選擇要播放的單字本</h3>
+                <div id="radio-books-container" style="max-height: 250px; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 12px; padding: 16px; display:flex; flex-direction:column; gap:8px;">
+                    <!-- checkboxes injected by js -->
+                </div>
+                
+                <div class="input-group" style="margin-bottom: 24px;">
+                    <label style="font-size:14px; font-weight:700; color:var(--text-muted); margin-bottom:8px; display:block;">播放順序</label>
+                    <div style="display:flex; gap:12px;">
+                        <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border:2px solid var(--border); border-radius:12px; cursor:pointer; background:var(--bg-color);">
+                            <input type="radio" name="radio-order" value="sequential" checked style="transform:scale(1.2);"> 
+                            <span style="font-weight:600; color:var(--text-main);">照順序</span>
+                        </label>
+                        <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border:2px solid var(--border); border-radius:12px; cursor:pointer; background:var(--bg-color);">
+                            <input type="radio" name="radio-order" value="shuffle" style="transform:scale(1.2);"> 
+                            <span style="font-weight:600; color:var(--text-main);">隨機打亂</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <button class="btn-primary" style="width:100%; padding:14px; font-size:16px;" onclick="startRadioMode()">
+                    <i class="fas fa-play"></i> 開始循環播放
+                </button>
+            </div>
+        </section>
+
+        <!-- 廣播播放頁面 -->
+        <section id="sec-radio-player">
+            <div class="flashcard-header" style="justify-content: center; position: relative;">
+                <button class="btn-outline" style="position: absolute; left: 0; padding: 12px 18px; font-size: 15px;" onclick="stopRadioMode()">
+                    <i class="fas fa-arrow-left"></i> 退出
+                </button>
+                <h2 style="font-size:16px; color:var(--text-muted); font-weight:600;"><i class="fas fa-broadcast-tower" style="color:var(--primary); margin-right:6px;"></i> 廣播電台播放中</h2>
+            </div>
+            
+            <div class="card" style="padding: 50px 20px; text-align: center; margin-top: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+                <div id="radio-current-en" style="font-size: 46px; font-weight: 800; color: var(--primary); margin-bottom: 20px;">英文單字</div>
+                <div id="radio-current-zh" style="font-size: 26px; color: var(--text-main); margin-bottom: 28px; opacity: 0; transition: opacity 0.3s; font-weight: 700;">中文意思</div>
+                <div id="radio-current-ex" style="font-size: 18px; color: var(--text-muted); font-style: italic; opacity: 0; transition: opacity 0.3s; margin-bottom: 40px; background:var(--primary-light); padding:16px; border-radius:12px; display:inline-block; max-width:100%;">例句顯示處</div>
+                
+                <div style="display: flex; justify-content: center; gap: 20px;">
+                    <button id="radio-play-btn" class="btn-primary" style="width: 64px; height: 64px; border-radius: 32px; font-size: 22px; display: none;" onclick="resumeRadio()">
+                        <i class="fas fa-play" style="margin-left:4px;"></i>
+                    </button>
+                    <button id="radio-pause-btn" class="btn-outline" style="width: 64px; height: 64px; border-radius: 32px; font-size: 22px; border-color:var(--primary); color:var(--primary);" onclick="pauseRadio()">
+                        <i class="fas fa-pause"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
         <!-- 單字清單頁面 -->
         <section id="sec-words">
             <div class="flashcard-header">
@@ -347,6 +432,9 @@
                     <i class="fas fa-arrow-left"></i> 返回
                 </button>
                 <div class="flex-row">
+                    <button class="btn-outline" style="padding: 12px 16px; color:var(--primary);" onclick="switchTab('sec-sentence-maker'); renderSentenceMaker();" title="造句">
+                        <i class="fas fa-pen-nib"></i> 造句
+                    </button>
                     <button class="btn-outline text-danger" style="padding: 12px 16px;" onclick="deleteCurrentBook()" title="刪除此單字本">
                         <i class="fas fa-trash-alt"></i>
                     </button>
@@ -587,14 +675,123 @@
                 </div>
             </div>
         </section>
+
+        <!-- 遊戲主選單 -->
+        <section id="sec-games">
+            <div class="card" style="padding:24px; text-align:center; margin-bottom:16px; background:linear-gradient(135deg, #10B981, #059669); color:white; border:none;">
+                <h3 style="font-size:22px; font-weight:800; margin-bottom:8px;">🏃‍♂️ 單字跑酷大冒險</h3>
+                <p style="font-size:14px; opacity:0.9; margin-bottom:16px;">極限反應跳躍，用方向鍵選擇正確意思！</p>
+                <div style="font-size:15px; font-weight:700; margin-bottom:16px; background:rgba(0,0,0,0.2); padding:8px; border-radius:8px;">最高紀錄：<span id="score-runner-best" style="font-size:18px;">0</span> 字</div>
+                <button class="btn-primary" style="width:100%; padding:14px; font-size:16px; background:white; color:#059669;" onclick="openGameBookModal('runner')">開始冒險</button>
+            </div>
+            
+            <div class="card" style="padding:24px; text-align:center; background:linear-gradient(135deg, #EF4444, #B91C1C); color:white; border:none;">
+                <h3 style="font-size:22px; font-weight:800; margin-bottom:8px;">☄️ 星際雷射防禦戰</h3>
+                <p style="font-size:14px; opacity:0.9; margin-bottom:16px;">鍵盤狂敲防禦基地，享受爆炸快感！</p>
+                <div style="font-size:15px; font-weight:700; margin-bottom:16px; background:rgba(0,0,0,0.2); padding:8px; border-radius:8px;">最高紀錄：<span id="score-meteor-best" style="font-size:18px;">0</span> 字</div>
+                <button class="btn-primary" style="width:100%; padding:14px; font-size:16px; background:white; color:#B91C1C;" onclick="openGameBookModal('meteor')">發射雷射</button>
+            </div>
+        </section>
+        
+        <!-- 跑酷遊戲畫面 -->
+        <section id="sec-game-runner" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#87CEEB; z-index:3000; overflow:hidden;">
+            
+            <div style="position:absolute; top:20px; left:20px; z-index:3030;">
+                <button class="btn-outline" style="background:white; font-weight:800;" onclick="exitGameRunner()">退出</button>
+            </div>
+            <div style="position:absolute; top:20px; right:20px; font-size:24px; font-weight:900; color:white; text-shadow:2px 2px 0 #000; z-index:3030;">
+                得分: <span id="runner-score">0</span>
+            </div>
+            <div style="position:absolute; top:60px; right:20px; font-size:24px; z-index:3030;" id="runner-hp-display">❤️❤️❤️</div>
+            <div id="runner-question" style="position:absolute; top:12%; width:100%; text-align:center; font-size:42px; font-weight:900; color:#FFD700; text-shadow:3px 3px 0 #000; z-index:3030;"></div>
+            
+            <!-- 靜態選項面板 (解決動態看不清楚的問題) -->
+            <div style="position:absolute; top:28%; left:20px; display:flex; flex-direction:column; gap:12px; z-index:3030; background:rgba(0,0,0,0.6); padding:16px; border-radius:16px; border:2px solid rgba(255,255,255,0.3);">
+                <div style="font-size:14px; color:#AAA; font-weight:700; margin-bottom:4px;">即將到來的選項：</div>
+                <div style="font-weight:800; font-size:22px; color:#FFF; display:flex; align-items:center; gap:12px;">
+                    <div style="background:var(--primary); width:32px; height:32px; border-radius:50%; display:flex; justify-content:center; align-items:center;"><i class="fas fa-arrow-up"></i></div> 
+                    <span id="runner-static-0"></span>
+                </div>
+                <div style="font-weight:800; font-size:22px; color:#FFF; display:flex; align-items:center; gap:12px;">
+                    <div style="background:#555; width:32px; height:32px; border-radius:50%; display:flex; justify-content:center; align-items:center;"><i class="fas fa-minus"></i></div> 
+                    <span id="runner-static-1"></span>
+                </div>
+                <div style="font-weight:800; font-size:22px; color:#FFF; display:flex; align-items:center; gap:12px;">
+                    <div style="background:var(--primary); width:32px; height:32px; border-radius:50%; display:flex; justify-content:center; align-items:center;"><i class="fas fa-arrow-down"></i></div> 
+                    <span id="runner-static-2"></span>
+                </div>
+            </div>
+            <div id="runner-feedback" style="position:absolute; top:35%; left:50%; transform:translate(-50%, -50%) scale(0.8); font-size:48px; font-weight:900; text-align:center; z-index:3050; opacity:0; transition:opacity 0.2s, transform 0.2s; pointer-events:none;"></div>
+            
+            <div id="runner-world" style="position:absolute; bottom:0; width:100%; height:50%;">
+                <div style="position:absolute; bottom:0; width:100%; height:60px; background:#8B4513; border-top:10px solid #228B22;"></div>
+                <div id="runner-player" style="position:absolute; bottom:130px; left:50px; width:60px; height:60px; background:radial-gradient(circle, var(--primary) 0%, #047857 100%); border-radius:50%; box-shadow:0 0 20px rgba(16,185,129,0.5); border:3px solid #FFF; font-size:40px; line-height:60px; text-align:center; transition:bottom 0.15s, transform 0.3s, box-shadow 0.2s; z-index:3010;">🏃</div>
+                
+                <div id="runner-doors" style="position:absolute; left:100%; bottom:70px; display:flex; flex-direction:column; gap:20px; z-index:3010;">
+                    <div class="runner-door" id="runner-door-0" style="padding:10px 20px; background:rgba(255,255,255,0.95); border:4px solid #333; border-radius:12px; font-weight:900; font-size:24px; min-width:150px; text-align:center;">A</div>
+                    <div class="runner-door" id="runner-door-1" style="padding:10px 20px; background:rgba(255,255,255,0.95); border:4px solid #333; border-radius:12px; font-weight:900; font-size:24px; min-width:150px; text-align:center;">B</div>
+                    <div class="runner-door" id="runner-door-2" style="padding:10px 20px; background:rgba(255,255,255,0.95); border:4px solid #333; border-radius:12px; font-weight:900; font-size:24px; min-width:150px; text-align:center;">C</div>
+                </div>
+            </div>
+            <div style="position:absolute; bottom:30px; right:30px; display:flex; flex-direction:column; gap:20px; z-index:3040;">
+                <button style="width:70px; height:70px; border-radius:50%; font-size:30px; background:var(--primary); color:white; box-shadow:0 6px 15px rgba(0,0,0,0.4); border:4px solid white; display:flex; justify-content:center; align-items:center;" onclick="handleRunnerTouch('up');"><i class="fas fa-arrow-up"></i></button>
+                <button style="width:70px; height:70px; border-radius:50%; font-size:30px; background:var(--primary); color:white; box-shadow:0 6px 15px rgba(0,0,0,0.4); border:4px solid white; display:flex; justify-content:center; align-items:center;" onclick="handleRunnerTouch('down');"><i class="fas fa-arrow-down"></i></button>
+            </div>
+            
+            <div style="position:absolute; bottom:10px; left:20px; text-align:left; font-weight:800; color:rgba(255,255,255,0.7); z-index:3030;">鍵盤 ↑ ↓ 或 右側按鈕移動</div>
+        </section>
+
+        <!-- 星際雷射防禦戰 -->
+        <section id="sec-game-meteor" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#0B0B1A; z-index:3000; overflow:hidden;">
+            <div style="position:absolute; top:20px; left:20px; z-index:3020;">
+                <button class="btn-outline" style="background:rgba(255,255,255,0.2); color:white; font-weight:800;" onclick="exitGameMeteor()">退出</button>
+            </div>
+            <div style="position:absolute; top:20px; right:20px; font-size:24px; font-weight:900; color:#00FF41; text-shadow:0 0 10px #00FF41; z-index:3020;">
+                擊破: <span id="meteor-score">0</span>
+            </div>
+            
+            <div id="meteor-hp-bar" style="position:absolute; top:60px; right:20px; width:150px; height:20px; background:#333; border:2px solid #FFF; z-index:3020;">
+                <div id="meteor-hp-fill" style="width:100%; height:100%; background:#EF4444; transition:width 0.3s;"></div>
+            </div>
+            
+            <div id="meteor-container" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:3015;"></div>
+            
+            <!-- 基地區 -->
+            <div style="position:absolute; top:50%; width:100%; height:10px; background:#00FF41; box-shadow:0 0 20px #00FF41; z-index:3010;"></div>
+            <div style="position:absolute; top:45%; width:100%; display:flex; justify-content:center; z-index:3010;">
+                <div style="width:80px; height:50px; background:#444; border-radius:50% 50% 0 0; border:4px solid #888; position:relative;">
+                    <div id="meteor-base-turret" style="position:absolute; top:-20px; left:30px; width:12px; height:20px; background:#888;"></div>
+                </div>
+            </div>
+            
+            <div id="meteor-target-zh" style="position:absolute; top:55%; width:100%; text-align:center; font-size:36px; font-weight:900; color:#FFF; text-shadow:0 0 15px #FFF; z-index:3010;">目標鎖定中</div>
+            
+            <input type="text" id="meteor-input" style="position:absolute; bottom:-1000px; opacity:0;" autocomplete="off">
+        </section>
+
+        <!-- 遊戲單字本選擇 Modal -->
+        <div id="game-book-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:4000; justify-content:center; align-items:center;">
+            <div class="card" style="width:90%; max-width:400px; padding:24px; animation:fadeIn 0.3s ease;">
+                <h3 style="margin-bottom:16px; font-size:18px; color:var(--text-main); font-weight:800;">選擇單字本</h3>
+                <div id="game-books-container" style="max-height: 250px; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 12px; padding: 16px; display:flex; flex-direction:column; gap:8px;">
+                    <!-- checkboxes injected by js -->
+                </div>
+                <div style="display:flex; gap:12px;">
+                    <button class="btn-outline" style="flex:1;" onclick="document.getElementById('game-book-modal').style.display='none'">取消</button>
+                    <button class="btn-primary" style="flex:1;" onclick="confirmStartGame()">開始遊戲</button>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <nav class="bottom-nav">
         <a href="#" onclick="switchTab('sec-add'); return false;" class="nav-item active" id="nav-add"><i class="fas fa-plus-circle"></i><span>新增</span></a>
         <a href="#" onclick="switchTab('sec-books'); return false;" class="nav-item" id="nav-books"><i class="fas fa-layer-group"></i><span>單字本</span></a>
         <a href="#" onclick="switchTab('sec-dict'); return false;" class="nav-item" id="nav-dict"><i class="fas fa-book"></i><span>字典</span></a>
-        <a href="#" onclick="switchTab('sec-custom'); return false;" class="nav-item" id="nav-custom"><i class="fas fa-file-alt"></i><span>自定義</span></a>
-        <a href="#" onclick="switchTab('sec-settings'); return false;" class="nav-item" id="nav-settings"><i class="fas fa-compass"></i><span>探索</span></a>
+        <a href="#" onclick="switchTab('sec-games'); return false;" class="nav-item" id="nav-games"><i class="fas fa-gamepad"></i><span>遊戲</span></a>
+        <a href="#" onclick="switchTab('sec-custom'); return false;" class="nav-item" id="nav-custom"><i class="fas fa-file-alt"></i><span>閱讀</span></a>
+        <a href="#" onclick="switchTab('sec-settings'); return false;" class="nav-item" id="nav-settings"><i class="fas fa-cog"></i><span>設定</span></a>
     </nav>
 
     <!-- 群組管理 Modal -->
@@ -791,6 +988,10 @@
                 <label>備註</label>
                 <input type="text" id="edit-word-notes" placeholder="可留空">
             </div>
+            <div class="input-group">
+                <label>例句 (造句)</label>
+                <textarea id="edit-word-example" rows="2" placeholder="輸入例句" style="width:100%; padding:14px; border:2px solid var(--border); border-radius:12px; background:var(--bg-color); color:var(--text-main); font-size:15px; resize:vertical; outline:none; font-family:inherit;"></textarea>
+            </div>
             
             <div style="display:flex; gap:12px; margin-top:24px;">
                 <button class="btn-outline" style="flex:1; padding:14px;" onclick="document.getElementById('edit-word-modal').style.display='none'">取消</button>
@@ -800,7 +1001,7 @@
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwjKFs7fEJgM6p3jpkn81VIlL4TlqFAzm7yK_VabhjRw2esh0PvPdye0oasYgk9/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwFGjzsbWRmo4yVz5vuFzH4hrySyTVSiXgqbDbhm4XxRkzgohI-l4PSPC_Ib56uMw/exec";
 
         const THEMES = {
             "default": { "--bg-color": "#F8FAFC", "--card-bg": "#FFFFFF", "--text-main": "#0F172A", "--text-muted": "#64748B", "--primary": "#4F46E5", "--primary-hover": "#4338CA", "--primary-light": "#E0E7FF", "--border": "#E2E8F0", "--nav-bg": "rgba(255, 255, 255, 0.85)" },
@@ -870,6 +1071,7 @@
             loadLocalBooks(); updateBookDropdowns(); 
             switchTab('sec-add'); 
             fetchData();
+            fetchHighScores();
             initPushNotification();
             renderDictHistory();
         }
@@ -990,6 +1192,10 @@
                 const nav = document.getElementById("nav-dict"); if(nav) nav.classList.add("active");
                 document.getElementById("header-title").innerText = "字典查詢";
             }
+            if(tabId === 'sec-games') {
+                const nav = document.getElementById("nav-games"); if(nav) nav.classList.add("active");
+                document.getElementById("header-title").innerText = "單字遊戲中心";
+            }
             if(tabId === 'sec-custom') {
                 const nav = document.getElementById("nav-custom"); if(nav) nav.classList.add("active");
                 document.getElementById("header-title").innerText = "自定義閱讀";
@@ -997,7 +1203,7 @@
             }
             if(tabId === 'sec-settings') {
                 const nav = document.getElementById("nav-settings"); if(nav) nav.classList.add("active");
-                document.getElementById("header-title").innerText = "探索與設定";
+                document.getElementById("header-title").innerText = "系統設定";
                 updateStatistics();
             }
             if(tabId === 'sec-srs-list') { document.getElementById("header-title").innerText = "SRS 狀態"; }
@@ -1443,6 +1649,7 @@
             document.getElementById("edit-word-en").value = english;
             document.getElementById("edit-word-zh").value = word.chinese || "";
             document.getElementById("edit-word-notes").value = word.notes || "";
+            document.getElementById("edit-word-example").value = word.example || "";
             
             const posSel = document.getElementById("edit-word-pos");
             if(word.pos && Array.from(posSel.options).some(o => o.value === word.pos)) posSel.value = word.pos;
@@ -1457,6 +1664,7 @@
             const newZh = document.getElementById("edit-word-zh").value.trim();
             const newPos = document.getElementById("edit-word-pos").value;
             const newNotes = document.getElementById("edit-word-notes").value.trim();
+            const newExample = document.getElementById("edit-word-example").value.trim();
             
             if(!newZh) { showToast("請輸入中文意思", "error"); return; }
             
@@ -1466,10 +1674,12 @@
             const originalZh = word.chinese;
             const originalPos = word.pos;
             const originalNotes = word.notes;
+            const originalExample = word.example;
             
             word.chinese = newZh;
             word.pos = newPos;
             word.notes = newNotes;
+            word.example = newExample;
             
             document.getElementById("edit-word-modal").style.display = "none";
             openBook(oldBook);
@@ -1480,14 +1690,14 @@
                     body: JSON.stringify({ 
                         action: "editWord", username: currentUser, 
                         oldBook: oldBook, oldEnglish: oldEn,
-                        newChinese: newZh, newPos: newPos, newNotes: newNotes
+                        newChinese: newZh, newPos: newPos, newNotes: newNotes, newExample: newExample
                     }) 
                 });
                 const result = await response.json();
                 if (result.status === "success") showToast("單字已更新", "success"); 
                 else throw new Error(result.message);
             } catch(e) {
-                word.chinese = originalZh; word.pos = originalPos; word.notes = originalNotes;
+                word.chinese = originalZh; word.pos = originalPos; word.notes = originalNotes; word.example = originalExample;
                 openBook(oldBook);
                 showToast("更新失敗，請確認 GAS 後端已重新部署", "error");
             }
@@ -2293,13 +2503,15 @@
             const playBtn = document.getElementById("fc-play-btn");
 
             setTimeout(() => {
+                const exHtml = word.example ? `<div style="font-size:16px; color:var(--text-main); background:var(--primary-light); padding:10px 14px; border-radius:8px; margin-top:16px; text-align:left;"><i class="fas fa-quote-left" style="color:var(--primary); margin-right:8px;"></i>${word.example}</div>` : "";
+                
                 if (mode === "en-zh") {
                     qEl.innerHTML = `<h2 style="font-size:36px; font-weight:800; color:var(--text-main); margin-bottom:16px;">${word.english}</h2>`; 
-                    aEl.innerHTML = `<h3 style="font-size:26px; font-weight:700; color:var(--primary); margin-bottom:20px;">${word.chinese}</h3>`;
+                    aEl.innerHTML = `<h3 style="font-size:26px; font-weight:700; color:var(--primary); margin-bottom:20px;">${word.chinese}</h3>${exHtml}`;
                     currentFcWord = word.english; playBtn.style.display = "flex";
                 } else if (mode === "zh-en") {
                     qEl.innerHTML = `<h2 style="font-size:36px; font-weight:800; color:var(--text-main); margin-bottom:16px;">${word.chinese}</h2>`; 
-                    aEl.innerHTML = `<h3 style="font-size:26px; font-weight:700; color:var(--primary); margin-bottom:20px;">${word.english}</h3>`;
+                    aEl.innerHTML = `<h3 style="font-size:26px; font-weight:700; color:var(--primary); margin-bottom:20px;">${word.english}</h3>${exHtml}`;
                     currentFcWord = word.english; playBtn.style.display = "none";
                 } else if (mode === "dictation") {
                     const safeEn = word.english.replace(/'/g, "\\'");
@@ -2333,10 +2545,11 @@
                 const correct = currentFcWord.trim().toLowerCase();
                 const aEl = document.getElementById("fc-answer");
                 
+                const exHtml = flashcards[currentFcIndex].example ? `<div style="font-size:14px; color:var(--text-main); background:var(--primary-light); padding:8px 12px; border-radius:8px; margin-top:12px; text-align:left;"><i class="fas fa-quote-left" style="color:var(--primary); margin-right:6px;"></i>${flashcards[currentFcIndex].example}</div>` : "";
                 if (typed === correct) {
-                    aEl.innerHTML = `<div><i class="fas fa-check-circle" style="color:var(--success); font-size:48px; margin-bottom:16px;"></i><br><span style="font-size:32px; font-weight:800; color:var(--primary);">${currentFcWord}</span><br><span style="font-size:18px; color:var(--text-muted); margin-top:8px; display:block;">${flashcards[currentFcIndex].chinese}</span></div>`;
+                    aEl.innerHTML = `<div><i class="fas fa-check-circle" style="color:var(--success); font-size:48px; margin-bottom:16px;"></i><br><span style="font-size:32px; font-weight:800; color:var(--primary);">${currentFcWord}</span><br><span style="font-size:18px; color:var(--text-muted); margin-top:8px; display:block;">${flashcards[currentFcIndex].chinese}</span>${exHtml}</div>`;
                 } else {
-                    aEl.innerHTML = `<div><i class="fas fa-times-circle" style="color:var(--danger); font-size:48px; margin-bottom:16px;"></i><br><span style="font-size:16px; color:var(--text-muted);">你的拼寫：</span><span style="text-decoration:line-through; color:var(--danger); font-size:18px; margin-bottom:10px; display:block;">${typed || "(未輸入)"}</span><span style="font-size:14px; color:var(--text-muted);">正確解答：</span><br><span style="font-size:32px; font-weight:800; color:var(--primary);">${currentFcWord}</span><br><span style="font-size:18px; color:var(--text-muted); margin-top:8px; display:block;">${flashcards[currentFcIndex].chinese}</span></div>`;
+                    aEl.innerHTML = `<div><i class="fas fa-times-circle" style="color:var(--danger); font-size:48px; margin-bottom:16px;"></i><br><span style="font-size:16px; color:var(--text-muted);">你的拼寫：</span><span style="text-decoration:line-through; color:var(--danger); font-size:18px; margin-bottom:10px; display:block;">${typed || "(未輸入)"}</span><span style="font-size:14px; color:var(--text-muted);">正確解答：</span><br><span style="font-size:32px; font-weight:800; color:var(--primary);">${currentFcWord}</span><br><span style="font-size:18px; color:var(--text-muted); margin-top:8px; display:block;">${flashcards[currentFcIndex].chinese}</span>${exHtml}</div>`;
                 }
             }
             
@@ -2421,6 +2634,618 @@
             });
         }
 
+        // --- Radio Mode Logic ---
+        function speakWithOnEnd(text, lang, callback) {
+            if (!('speechSynthesis' in window)) {
+                setTimeout(callback, 1000);
+                return;
+            }
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = lang;
+            u.rate = 0.9;
+            u.onend = () => { if(radioPlaying) callback(); };
+            u.onerror = () => { if(radioPlaying) callback(); };
+            window.speechSynthesis.speak(u);
+        }
+
+        let radioWords = [];
+        let radioIndex = 0;
+        let radioPlaying = false;
+        let radioTimeout = null;
+
+        function openRadioSetup() {
+            const container = document.getElementById("radio-books-container");
+            container.innerHTML = `
+                <label style="display:flex; align-items:center; gap:12px; cursor:pointer; font-weight:800; font-size:16px; color:var(--primary);">
+                    <input type="checkbox" id="radio-check-all" checked onchange="toggleAllRadioBooks(this.checked)" style="transform:scale(1.3);"> 全部單字本
+                </label>
+                <hr style="border:0; border-top:1px solid var(--border); margin:4px 0;">
+            `;
+            
+            books.forEach(b => {
+                container.innerHTML += `
+                    <label style="display:flex; align-items:center; gap:12px; cursor:pointer; font-size:15px; color:var(--text-main);">
+                        <input type="checkbox" class="radio-book-check" value="${b}" checked style="transform:scale(1.3);" onchange="updateRadioCheckAll()"> ${b}
+                    </label>
+                `;
+            });
+            switchTab('sec-radio-setup');
+        }
+
+        function toggleAllRadioBooks(checked) {
+            document.querySelectorAll(".radio-book-check").forEach(cb => cb.checked = checked);
+        }
+
+        function updateRadioCheckAll() {
+            const allChecked = Array.from(document.querySelectorAll(".radio-book-check")).every(cb => cb.checked);
+            document.getElementById("radio-check-all").checked = allChecked;
+        }
+
+        function startRadioMode() {
+            const selectedBooks = Array.from(document.querySelectorAll(".radio-book-check:checked")).map(cb => cb.value);
+            if (selectedBooks.length === 0) { showToast("請至少選擇一本單字本", "error"); return; }
+            
+            radioWords = allWords.filter(w => selectedBooks.includes(w.book));
+            if (radioWords.length === 0) { showToast("選擇的單字本內沒有單字喔", "error"); return; }
+            
+            const orderOption = document.querySelector('input[name="radio-order"]:checked').value;
+            if (orderOption === "shuffle") {
+                radioWords = radioWords.sort(() => Math.random() - 0.5);
+            }
+            
+            radioIndex = 0;
+            radioPlaying = true;
+            document.getElementById("radio-play-btn").style.display = "none";
+            document.getElementById("radio-pause-btn").style.display = "block";
+            switchTab('sec-radio-player');
+            playRadioNext();
+        }
+
+        function stopRadioMode() {
+            radioPlaying = false;
+            clearTimeout(radioTimeout);
+            window.speechSynthesis.cancel();
+            switchTab('sec-books');
+        }
+
+        function pauseRadio() {
+            radioPlaying = false;
+            clearTimeout(radioTimeout);
+            window.speechSynthesis.cancel();
+            document.getElementById("radio-play-btn").style.display = "block";
+            document.getElementById("radio-pause-btn").style.display = "none";
+        }
+
+        function resumeRadio() {
+            radioPlaying = true;
+            document.getElementById("radio-play-btn").style.display = "none";
+            document.getElementById("radio-pause-btn").style.display = "block";
+            playRadioNext(); 
+        }
+
+        function playRadioNext() {
+            if (!radioPlaying) return;
+            
+            if (radioIndex >= radioWords.length) {
+                radioIndex = 0; // loop back to start
+            }
+            
+            const word = radioWords[radioIndex];
+            document.getElementById("radio-current-en").innerText = word.english;
+            document.getElementById("radio-current-zh").innerText = word.chinese;
+            document.getElementById("radio-current-zh").style.opacity = "0";
+            
+            const exHtml = word.example ? `<i class="fas fa-quote-left" style="margin-right:6px;"></i> ${word.example}` : "尚無例句";
+            document.getElementById("radio-current-ex").innerHTML = exHtml;
+            document.getElementById("radio-current-ex").style.opacity = "0";
+            
+            let step = 0;
+            
+            function nextStep() {
+                if (!radioPlaying) return;
+                step++;
+                
+                if (step === 1) {
+                    speakWithOnEnd(word.english, 'en-US', () => { radioTimeout = setTimeout(nextStep, 500); });
+                } else if (step === 2) {
+                    speakWithOnEnd(word.english, 'en-US', () => { radioTimeout = setTimeout(nextStep, 500); });
+                } else if (step === 3) {
+                    document.getElementById("radio-current-zh").style.opacity = "1";
+                    speakWithOnEnd(word.chinese, 'zh-TW', () => { radioTimeout = setTimeout(nextStep, 1000); });
+                } else if (step === 4) {
+                    if (word.example) {
+                        document.getElementById("radio-current-ex").style.opacity = "1";
+                        speakWithOnEnd(word.example, 'en-US', () => { radioTimeout = setTimeout(nextStep, 1000); });
+                    } else {
+                        nextStep(); 
+                    }
+                } else if (step === 5) {
+                    radioIndex++;
+                    radioTimeout = setTimeout(playRadioNext, 1000);
+                }
+            }
+            
+            nextStep();
+        }
+        // --- End Radio Mode Logic ---
+
+        // --- Games Logic ---
+        let highScores = { meteor: 0, runner: 0 };
+        let pendingGameType = null;
+        let gameWords = [];
+
+        function openGameBookModal(gameType) {
+            pendingGameType = gameType;
+            const container = document.getElementById("game-books-container");
+            container.innerHTML = "";
+            
+            container.innerHTML += `
+                <label style="display:flex; align-items:center; gap:8px; padding:8px; background:var(--bg-color); border-radius:8px; cursor:pointer;">
+                    <input type="checkbox" id="game-book-all" checked onchange="toggleAllGameBooks(this.checked)" style="transform:scale(1.2);">
+                    <span style="font-weight:700; color:var(--primary);">全選 / 全不選</span>
+                </label>
+                <hr style="border-top:1px solid var(--border); margin:4px 0;">
+            `;
+            
+            books.forEach(b => {
+                container.innerHTML += `
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:4px 8px;">
+                        <input type="checkbox" class="game-book-check" value="${b}" checked style="transform:scale(1.2);">
+                        <span style="color:var(--text-main); font-weight:600;">${b}</span>
+                    </label>
+                `;
+            });
+            document.getElementById('game-book-modal').style.display = 'flex';
+        }
+        
+        function toggleAllGameBooks(checked) {
+            document.querySelectorAll(".game-book-check").forEach(cb => cb.checked = checked);
+        }
+        
+        function confirmStartGame() {
+            const selectedBooks = Array.from(document.querySelectorAll(".game-book-check:checked")).map(cb => cb.value);
+            if (selectedBooks.length === 0) { showToast("請至少選擇一本單字本", "error"); return; }
+            
+            gameWords = allWords.filter(w => selectedBooks.includes(w.book));
+            if (gameWords.length === 0) { showToast("選擇的單字本內沒有單字喔", "error"); return; }
+            
+            document.getElementById('game-book-modal').style.display = 'none';
+            
+            if (pendingGameType === 'runner') {
+                if (gameWords.length < 3) { showToast("單字本不足3個字", "error"); return; }
+                startGameRunner();
+            } else if (pendingGameType === 'meteor') {
+                startGameMeteor();
+            }
+        }
+
+        async function fetchHighScores() {
+            try {
+                const res = await safeGASFetch({ action: "getScores", username: currentUser });
+                if (res.status === "success") {
+                    highScores.meteor = res.meteor || 0;
+                    highScores.runner = res.runner || 0;
+                    document.getElementById('score-meteor-best').innerText = highScores.meteor;
+                    document.getElementById('score-runner-best').innerText = highScores.runner;
+                }
+            } catch(e) {}
+        }
+        
+        async function saveHighScore(game, score) {
+            if (score > highScores[game]) {
+                highScores[game] = score;
+                document.getElementById('score-' + game + '-best').innerText = score;
+                safeGASFetch({ action: "saveScore", username: currentUser, game: game, score: score }); 
+            }
+        }
+
+        // GAME: RUNNER
+        let runnerActive = false;
+        let runnerScore = 0;
+        let runnerSpeed = 5;
+        let runnerDoorsX = 0;
+        let runnerSelectedDoor = 1; 
+        let runnerCurrentWord = null;
+        let runnerOptions = [];
+        let runnerAnimId = null;
+        let runnerHp = 3;
+        let runnerRemainingWords = [];
+        
+        function startGameRunner() {
+            document.getElementById('sec-game-runner').style.display = 'block';
+            runnerActive = true;
+            runnerScore = 0;
+            runnerHp = 3;
+            runnerRemainingWords = [...gameWords];
+            document.getElementById('runner-score').innerText = runnerScore;
+            document.getElementById('runner-hp-display').innerText = '❤️'.repeat(runnerHp);
+            spawnRunnerObstacle();
+            runnerLoop();
+            window.addEventListener('keydown', handleRunnerInput);
+        }
+        
+        function exitGameRunner() {
+            runnerActive = false;
+            cancelAnimationFrame(runnerAnimId);
+            window.removeEventListener('keydown', handleRunnerInput);
+            document.getElementById('sec-game-runner').style.display = 'none';
+            saveHighScore('runner', runnerScore);
+        }
+        
+        function handleRunnerInput(e) {
+            if (!runnerActive) return;
+            if (e.key === 'ArrowUp') {
+                runnerSelectedDoor = Math.max(0, runnerSelectedDoor - 1);
+                updateRunnerPlayerPos();
+            } else if (e.key === 'ArrowDown') {
+                runnerSelectedDoor = Math.min(2, runnerSelectedDoor + 1);
+                updateRunnerPlayerPos();
+            }
+        }
+
+        function handleRunnerTouch(dir) {
+            if (!runnerActive) return;
+            if (dir === 'up') runnerSelectedDoor = Math.max(0, runnerSelectedDoor - 1);
+            if (dir === 'down') runnerSelectedDoor = Math.min(2, runnerSelectedDoor + 1);
+            updateRunnerPlayerPos();
+        }
+        
+        function updateRunnerPlayerPos() {
+            const bottomPositions = [210, 140, 70]; 
+            document.getElementById('runner-player').style.bottom = bottomPositions[runnerSelectedDoor] + 'px';
+        }
+        
+        function spawnRunnerObstacle() {
+            if (runnerRemainingWords.length === 0) {
+                runnerActive = false;
+                alert(`恭喜通關！🎉\n\n您已經完成所選範圍的所有單字！\n您的總得分：${runnerScore}`);
+                exitGameRunner();
+                return;
+            }
+
+            runnerDoorsX = window.innerWidth;
+            
+            const randomIndex = Math.floor(Math.random() * runnerRemainingWords.length);
+            runnerCurrentWord = runnerRemainingWords.splice(randomIndex, 1)[0];
+            
+            let otherOptions = gameWords.filter(w => w.english !== runnerCurrentWord.english);
+            otherOptions.sort(() => Math.random() - 0.5);
+            let opt2 = otherOptions.length > 0 ? otherOptions[0] : runnerCurrentWord;
+            let opt3 = otherOptions.length > 1 ? otherOptions[1] : runnerCurrentWord;
+            
+            runnerOptions = [runnerCurrentWord, opt2, opt3].sort(() => Math.random() - 0.5);
+            
+            document.getElementById('runner-question').innerText = runnerCurrentWord.chinese;
+            
+            // Update moving doors
+            document.getElementById('runner-door-0').innerText = runnerOptions[0].english;
+            document.getElementById('runner-door-1').innerText = runnerOptions[1].english;
+            document.getElementById('runner-door-2').innerText = runnerOptions[2].english;
+            
+            // Update static panel
+            document.getElementById('runner-static-0').innerText = runnerOptions[0].english;
+            document.getElementById('runner-static-1').innerText = runnerOptions[1].english;
+            document.getElementById('runner-static-2').innerText = runnerOptions[2].english;
+            
+            // Speed logic: start at 3.5s, -0.1s per correct answer, min 1.5s
+            const durationSec = Math.max(1.5, 3.5 - runnerScore * 0.1);
+            runnerSpeed = window.innerWidth / (durationSec * 60);
+            
+            runnerSelectedDoor = 1;
+            updateRunnerPlayerPos();
+            const player = document.getElementById('runner-player');
+            player.style.transform = 'rotate(0deg)';
+            player.style.boxShadow = '0 0 20px rgba(16,185,129,0.5)';
+            player.innerText = '🏃';
+            
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(runnerCurrentWord.chinese);
+                u.lang = 'zh-TW';
+                window.speechSynthesis.speak(u);
+            }
+        }
+        
+        function runnerLoop() {
+            if (!runnerActive) return;
+            
+            runnerDoorsX -= runnerSpeed;
+            document.getElementById('runner-doors').style.left = runnerDoorsX + 'px';
+            
+            // 碰撞判定：當門的左邊緣(runnerDoorsX)碰觸到人物的右邊緣(left 50 + width 60 = 110)
+            if (runnerDoorsX <= 110 && runnerDoorsX > -100) {
+                // To ensure collision is handled only once per obstacle, we push runnerDoorsX out of bounds
+                const currentX = runnerDoorsX;
+                runnerDoorsX = -300; // force skip next collision check
+                
+                const player = document.getElementById('runner-player');
+                const feedback = document.getElementById('runner-feedback');
+                const englishWord = runnerCurrentWord.english;
+                
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance(englishWord);
+                    u.lang = 'en-US';
+                    window.speechSynthesis.speak(u);
+                }
+                
+                if (runnerOptions[runnerSelectedDoor].english === englishWord) {
+                    runnerScore++;
+                    document.getElementById('runner-score').innerText = runnerScore;
+                    
+                    player.style.transform = 'scale(1.5) rotate(360deg)';
+                    player.style.boxShadow = '0 0 40px #00FF41, 0 0 80px #00FF41';
+                    
+                    feedback.innerHTML = '<span style="color:#00FF41; text-shadow:0 0 20px #000;">✅ 正確！</span>';
+                    feedback.style.opacity = '1';
+                    feedback.style.transform = 'translate(-50%, -50%) scale(1.2)';
+                    
+                    setTimeout(() => {
+                        feedback.style.opacity = '0';
+                        feedback.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                    }, 800);
+                    
+                    setTimeout(spawnRunnerObstacle, 1000);
+                } else {
+                    runnerHp -= 1;
+                    document.getElementById('runner-hp-display').innerText = '❤️'.repeat(Math.max(0, runnerHp));
+                    
+                    player.style.transform = 'rotate(-45deg)';
+                    player.innerText = '😵';
+                    player.style.boxShadow = '0 0 40px #EF4444';
+                    
+                    feedback.innerHTML = `<span style="color:#EF4444; text-shadow:0 0 20px #000;">❌ 錯誤！</span><br><span style="font-size:32px; color:#FFF; background:rgba(0,0,0,0.8); padding:8px 16px; border-radius:12px; display:inline-block; margin-top:12px; letter-spacing:2px;">${englishWord}</span>`;
+                    feedback.style.opacity = '1';
+                    feedback.style.transform = 'translate(-50%, -50%) scale(1.2)';
+                    
+                    setTimeout(() => {
+                        feedback.style.opacity = '0';
+                        feedback.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                    }, 1200);
+                    
+                    if (runnerHp <= 0) {
+                        setTimeout(() => {
+                            runnerActive = false;
+                            alert(`遊戲結束！💥\n\n您的得分：${runnerScore}`);
+                            exitGameRunner();
+                            player.innerText = '🏃';
+                        }, 1500);
+                    } else {
+                        setTimeout(spawnRunnerObstacle, 1500);
+                    }
+                }
+            } else if (runnerDoorsX <= -100 && runnerActive) {
+                // Should not reach here normally, handled above
+            }
+            
+            if(runnerActive) runnerAnimId = requestAnimationFrame(runnerLoop);
+        }
+
+        // GAME: METEOR
+        let meteorActive = false;
+        let meteorScore = 0;
+        let meteorHp = 100;
+        let currentMeteor = null; 
+        let meteorAnimId = null;
+        
+        function startGameMeteor() {
+            document.getElementById('sec-game-meteor').style.display = 'block';
+            meteorActive = true;
+            meteorScore = 0;
+            meteorHp = 3;
+            document.getElementById('meteor-score').innerText = meteorScore;
+            document.getElementById('meteor-hp-fill').style.width = '100%';
+            
+            const input = document.getElementById('meteor-input');
+            input.value = "";
+            input.style.bottom = "10px"; // move up to focus
+            setTimeout(() => input.focus(), 100);
+            
+            spawnMeteor();
+            meteorLoop();
+        }
+        
+        function exitGameMeteor() {
+            meteorActive = false;
+            cancelAnimationFrame(meteorAnimId);
+            document.getElementById('sec-game-meteor').style.display = 'none';
+            document.getElementById('meteor-input').style.bottom = "-1000px";
+            document.getElementById('meteor-input').blur();
+            saveHighScore('meteor', meteorScore);
+        }
+        
+        function formatMeteorWord(wordStr) {
+            if (wordStr.length <= 2) return wordStr;
+            return wordStr[0] + '_'.repeat(wordStr.length - 2) + wordStr[wordStr.length - 1];
+        }
+
+        function spawnMeteor() {
+            const word = gameWords[Math.floor(Math.random() * gameWords.length)];
+            const container = document.getElementById('meteor-container');
+            container.innerHTML = "";
+            
+            const dom = document.createElement('div');
+            dom.style.cssText = `position:absolute; top:0; left:50%; transform:translateX(-50%); font-size:28px; font-weight:900; color:#FFF; background:radial-gradient(circle, #EF4444 0%, #7F1D1D 100%); padding:12px 24px; border-radius:24px; box-shadow:0 0 30px #EF4444; border:2px solid #FCA5A5; z-index:3005; transition: transform 0.2s, opacity 0.2s;`;
+            dom.innerHTML = `<span style="color:#FFF; letter-spacing:2px;">${formatMeteorWord(word.english)}</span>`;
+            container.appendChild(dom);
+            
+            const hitTarget = window.innerHeight * 0.45;
+            const durationSec = 5 + (word.english.length * 0.5); // base 5s + 0.5s per char
+            // speed reduces by a tiny fraction as score goes up, optional: Math.max(1, durationSec - meteorScore * 0.05)
+            const speed = hitTarget / (durationSec * 60); 
+
+            currentMeteor = {
+                wordObj: word,
+                dom: dom,
+                y: 0,
+                speed: speed
+            };
+            
+            document.getElementById('meteor-target-zh').innerText = word.chinese;
+            document.getElementById('meteor-input').value = "";
+            
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(word.chinese);
+                u.lang = 'zh-TW';
+                window.speechSynthesis.speak(u);
+            }
+        }
+        
+        document.getElementById('meteor-input').addEventListener('input', function(e) {
+            if (!meteorActive || !currentMeteor) return;
+            const typed = this.value.toLowerCase().trim();
+            const target = currentMeteor.wordObj.english.toLowerCase();
+            
+            if (target.startsWith(typed) && typed.length > 0) {
+                document.getElementById('meteor-base-turret').style.background = "#FFF";
+                setTimeout(() => {
+                    const turret = document.getElementById('meteor-base-turret');
+                    if(turret) turret.style.background = "#888";
+                }, 50);
+                
+                const remainingLength = target.length - typed.length;
+                let remainderStr = "";
+                if (remainingLength > 0) {
+                    if (remainingLength === 1) remainderStr = target[target.length - 1];
+                    else {
+                        const underscoresCount = Math.max(0, target.length - typed.length - 1);
+                        remainderStr = '_'.repeat(underscoresCount) + target[target.length - 1];
+                    }
+                }
+                
+                currentMeteor.dom.innerHTML = `<span style="color:#00FF41; text-shadow:0 0 15px #00FF41; letter-spacing:2px;">${currentMeteor.wordObj.english.substring(0, typed.length)}</span><span style="color:#FFF; letter-spacing:2px;">${remainderStr}</span>`;
+                
+                if (typed === target) {
+                    meteorScore++;
+                    document.getElementById('meteor-score').innerText = meteorScore;
+                    
+                    const laser = document.createElement('div');
+                    const baseTop = window.innerHeight * 0.45 - 20; 
+                    laser.style.cssText = `position:absolute; top:${currentMeteor.y + 20}px; left:50%; width:10px; height:${baseTop - currentMeteor.y}px; background:#00FF41; transform:translateX(-50%); box-shadow:0 0 20px #00FF41, 0 0 40px #FFF; z-index:3010; border-radius:5px;`;
+                    document.getElementById('meteor-container').appendChild(laser);
+                    setTimeout(() => laser.remove(), 100);
+
+                    currentMeteor.dom.style.background = 'radial-gradient(circle, #FFF 0%, #00FF41 50%, transparent 100%)';
+                    currentMeteor.dom.style.boxShadow = '0 0 50px #00FF41, 0 0 100px #FFF';
+                    currentMeteor.dom.style.transform = 'translateX(-50%) scale(1.5)';
+                    currentMeteor.dom.style.opacity = '0.9';
+                    currentMeteor.dom.innerHTML = `<span style="color:#000; font-weight:900; letter-spacing:2px;">${target}</span>`;
+                    
+                    if ('speechSynthesis' in window) {
+                        window.speechSynthesis.cancel();
+                        const u = new SpeechSynthesisUtterance(target);
+                        u.lang = 'en-US';
+                        window.speechSynthesis.speak(u);
+                    }
+                    
+                    const explodedDom = currentMeteor.dom;
+                    currentMeteor = null;
+                    this.value = "";
+                    
+                    setTimeout(() => {
+                        explodedDom.style.opacity = '0';
+                        setTimeout(() => explodedDom.remove(), 200);
+                        spawnMeteor();
+                    }, 1200);
+                }
+            } else if (!target.startsWith(typed)) {
+                const sec = document.getElementById('sec-game-meteor');
+                sec.style.background = "#300";
+                setTimeout(() => sec.style.background = "#0B0B1A", 100);
+                this.value = "";
+                currentMeteor.dom.innerHTML = `<span style="color:#FFF; letter-spacing:2px;">${formatMeteorWord(currentMeteor.wordObj.english)}</span>`;
+            }
+        });
+        
+        document.getElementById('sec-game-meteor').addEventListener('click', () => {
+            if(meteorActive) {
+                const input = document.getElementById('meteor-input');
+                input.style.bottom = "10px";
+                input.focus();
+            }
+        });
+        
+        function meteorLoop() {
+            if (!meteorActive) return;
+            
+            if (currentMeteor) {
+                currentMeteor.y += currentMeteor.speed;
+                currentMeteor.dom.style.top = currentMeteor.y + 'px';
+                
+                const hitTarget = window.innerHeight * 0.45; 
+                if (currentMeteor.y > hitTarget) {
+                    meteorHp -= 1;
+                    document.getElementById('meteor-hp-fill').style.width = (meteorHp * 33.33) + '%';
+                    
+                    document.getElementById('sec-game-meteor').style.transform = 'translate(20px, 20px)';
+                    setTimeout(() => document.getElementById('sec-game-meteor').style.transform = 'translate(-20px, -20px)', 50);
+                    setTimeout(() => document.getElementById('sec-game-meteor').style.transform = 'translate(0, 0)', 100);
+                    
+                    const englishWord = currentMeteor.wordObj.english;
+                    const failingDom = currentMeteor.dom;
+                    failingDom.innerHTML = `<span style="color:#FFF; letter-spacing:2px;">${englishWord}</span>`;
+                    failingDom.style.background = "radial-gradient(circle, #EF4444 0%, #990000 100%)";
+                    
+                    if ('speechSynthesis' in window) {
+                        window.speechSynthesis.cancel();
+                        const u = new SpeechSynthesisUtterance(englishWord);
+                        u.lang = 'en-US';
+                        window.speechSynthesis.speak(u);
+                    }
+                    
+                    currentMeteor = null; // stop processing
+                    document.getElementById('meteor-input').value = "";
+                    
+                    if (meteorHp <= 0) {
+                        setTimeout(() => {
+                            meteorActive = false;
+                            alert(`基地全毀！💥\n\n您的擊破數：${meteorScore}`);
+                            exitGameMeteor();
+                        }, 1500);
+                    } else {
+                        setTimeout(() => {
+                            failingDom.style.opacity = '0';
+                            setTimeout(() => failingDom.remove(), 200);
+                            spawnMeteor();
+                        }, 1200);
+                    }
+                }
+            }
+            
+            if(meteorActive) meteorAnimId = requestAnimationFrame(meteorLoop);
+        }
+
+        function renderSentenceMaker() {
+            let words = [];
+            if (currentViewBook === "ALL_BOOKS" || currentViewBook === "DUE_WORDS") {
+                words = allWords;
+            } else {
+                words = allWords.filter(w => w.book === currentViewBook);
+            }
+            const noExWords = words.filter(w => !w.example || w.example.trim() === "");
+            
+            const tbody = document.getElementById("sentence-table-body");
+            tbody.innerHTML = "";
+            if (noExWords.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="padding:16px; text-align:center; color:var(--text-muted);">太棒了！此單字本所有單字都已經有例句了。</td></tr>`;
+                return;
+            }
+            
+            noExWords.forEach(w => {
+                const tr = document.createElement("tr");
+                tr.style.borderBottom = "1px solid var(--border)";
+                tr.innerHTML = `
+                    <td style="padding:12px 8px; font-weight:700; color:var(--primary);">${w.english}</td>
+                    <td style="padding:12px 8px; color:var(--text-muted);">${w.chinese}</td>
+                    <td style="padding:12px 8px; text-align:right;">
+                        <button class="btn-primary" style="padding:6px 12px; font-size:13px; width:auto;" onclick="openEditModal('${w.book}', '${w.english.replace(/'/g, "\\'")}')"><i class="fas fa-pen"></i> 寫造句</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
         const _origOpenBook = openBook;
         function openBook(bookName) {
             currentViewBook = bookName; document.getElementById("header-title").innerText = bookName;
@@ -2449,7 +3274,7 @@
                     const safeEnglish = w.english.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     let posHtml = w.pos ? `<span class="pos-tag pos-${w.pos.replace('.', '')}">${w.pos}</span>` : '';
                     const phonId = `ph-d-${idx}`;
-                    div.innerHTML = `<div class="word-card-header"><div style="display:flex; align-items:baseline; flex-wrap:wrap; gap:4px;"><div class="word-en">${w.english}</div>${posHtml}<span id="${phonId}" style="font-family:monospace; font-size:12px; color:var(--text-muted); font-weight:400; align-self:flex-end;"></span></div><div class="word-actions"><button class="btn-icon-small" onclick="playTTS('${safeEnglish}')"><i class="fas fa-volume-up"></i></button><button class="btn-icon-small" onclick="openEditModal('${currentViewBook}', '${safeEnglish}')" style="color:var(--primary);"><i class="fas fa-edit"></i></button><button class="btn-icon-small text-danger" onclick="deleteWord('${safeEnglish}')"><i class="fas fa-trash-alt"></i></button></div></div><div class="word-zh">${w.chinese}</div>${w.notes ? `<div class="word-notes"><i class="fas fa-lightbulb" style="color:var(--primary); margin-right:6px;"></i> ${w.notes}</div>` : ''}<button class="btn-expand" onclick="expandWordDict('wd-${idx}', '${safeEnglish}')"><i class="fas fa-book"></i> 字典內容</button><div id="expand-wd-${idx}" class="expand-card"></div>`;
+                    div.innerHTML = `<div class="word-card-header"><div style="display:flex; align-items:baseline; flex-wrap:wrap; gap:4px;"><div class="word-en">${w.english}</div>${posHtml}<span id="${phonId}" style="font-family:monospace; font-size:12px; color:var(--text-muted); font-weight:400; align-self:flex-end;"></span></div><div class="word-actions"><button class="btn-icon-small" onclick="playTTS('${safeEnglish}')"><i class="fas fa-volume-up"></i></button><button class="btn-icon-small" onclick="openEditModal('${currentViewBook}', '${safeEnglish}')" style="color:var(--primary);"><i class="fas fa-edit"></i></button><button class="btn-icon-small text-danger" onclick="deleteWord('${safeEnglish}')"><i class="fas fa-trash-alt"></i></button></div></div><div class="word-zh">${w.chinese}</div>${w.notes ? `<div class="word-notes"><i class="fas fa-lightbulb" style="color:var(--primary); margin-right:6px;"></i> ${w.notes}</div>` : ''}${w.example ? `<div class="word-notes" style="background:var(--primary-light); color:var(--primary); margin-top:6px;"><i class="fas fa-quote-left" style="margin-right:6px;"></i> ${w.example}</div>` : ''}<button class="btn-expand" onclick="expandWordDict('wd-${idx}', '${safeEnglish}')"><i class="fas fa-book"></i> 字典內容</button><div id="expand-wd-${idx}" class="expand-card"></div>`;
                     list.appendChild(div);
                     fetchAndShowPhonetic(w.english, phonId);
                 });
