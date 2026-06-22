@@ -88,6 +88,11 @@
         .col-list li { padding: 8px 0; border-bottom: 1px solid var(--border); display:flex; align-items:center; gap:8px;}
         .col-list li:last-child { border-bottom: none; }
         .btn-expand { width: 100%; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-muted); font-size: 14px; padding: 10px; border-radius: 10px; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .manage-checkbox { width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer; flex-shrink:0; display:none; }
+        .manage-mode .manage-checkbox { display: block; }
+        .manage-mode .word-actions { display: none !important; }
 
         .flashcard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
         .fc-counter { background: var(--primary-light); color: var(--primary); padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 15px; }
@@ -190,9 +195,9 @@
 
             <!-- 手動新增模式 -->
             <div id="add-mode-manual">
-                <div class="card" style="border: 2px solid var(--primary-light); box-shadow: 0 8px 24px rgba(0,0,0,0.06);">
-                    <h2 style="font-size:18px; margin-bottom:20px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                        <i class="fas fa-pen-nib" style="color:var(--primary);"></i> 新增英文單字
+                <div class="card" style="border: 2px solid var(--primary-light); box-shadow: 0 8px 24px rgba(0,0,0,0.06); padding: 16px;">
+                    <h2 style="font-size:16px; margin-bottom:12px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-pen-nib" style="color:var(--primary);"></i> 新增字卡
                         <div style="flex:1;"></div>
                         <label class="btn-icon-small" style="cursor:pointer; background:var(--primary-light); color:var(--primary); margin:0;" title="拍照辨識單字">
                             <i class="fas fa-camera"></i>
@@ -200,47 +205,49 @@
                         </label>
                     </h2>
                     
-                    <div class="input-group">
-                        <label>儲存至單字本</label>
-                        <div class="input-wrapper">
-                            <select id="active-book-select"></select>
-                            <i class="fas fa-chevron-down select-icon"></i>
+                    <div style="display:flex; gap:12px; margin-bottom:12px;">
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">單字本</label>
+                            <div class="input-wrapper">
+                                <select id="active-book-select" style="padding:10px 12px; font-size:14px;"></select>
+                                <i class="fas fa-chevron-down select-icon"></i>
+                            </div>
+                        </div>
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">詞性</label>
+                            <div class="input-wrapper">
+                                <select id="word-pos" style="padding:10px 12px; font-size:14px;">
+                                    <option value="">(自動)</option>
+                                    <option value="n.">名詞</option>
+                                    <option value="v.">動詞</option>
+                                    <option value="adj.">形容詞</option>
+                                    <option value="adv.">副詞</option>
+                                    <option value="prep.">介系詞</option>
+                                    <option value="conj.">連接詞</option>
+                                    <option value="phr.">片語</option>
+                                </select>
+                                <i class="fas fa-chevron-down select-icon"></i>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="input-group">
-                        <label>英文單字</label>
-                        <input type="text" id="word-en" placeholder="(輸入完自動翻譯)" autocomplete="off">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label>中文意思</label>
-                        <input type="text" id="word-zh" placeholder="(自動翻譯後可修改)" autocomplete="off">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label>詞性標籤 (自動判斷或手動調整)</label>
-                        <div class="input-wrapper">
-                            <select id="word-pos">
-                                <option value="">(無)</option>
-                                <option value="n.">名詞 (n.)</option>
-                                <option value="v.">動詞 (v.)</option>
-                                <option value="adj.">形容詞 (adj.)</option>
-                                <option value="adv.">副詞 (adv.)</option>
-                                <option value="prep.">介系詞 (prep.)</option>
-                                <option value="conj.">連接詞 (conj.)</option>
-                                <option value="phr.">片語 (phr.)</option>
-                            </select>
-                            <i class="fas fa-chevron-down select-icon"></i>
+                    <div style="display:flex; gap:12px; margin-bottom:12px;">
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">英文</label>
+                            <input type="text" id="word-en" placeholder="輸入完自動翻譯" autocomplete="off" style="padding:10px 12px; font-size:14px; width:100%;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">中文</label>
+                            <input type="text" id="word-zh" placeholder="翻譯結果" autocomplete="off" style="padding:10px 12px; font-size:14px; width:100%;">
                         </div>
                     </div>
 
-                    <div class="input-group">
-                        <label>備註 (選填)</label>
-                        <textarea id="word-notes" placeholder="寫些例句或需要提醒自己的重點..."></textarea>
+                    <div style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">備註 (選填)</label>
+                        <input type="text" id="word-notes" placeholder="寫些例句或需要提醒自己的重點..." style="padding:10px 12px; font-size:14px; width:100%;">
                     </div>
                     
-                    <button class="btn-primary" id="btn-save" onclick="saveWord()" style="width: 100%; padding:18px; font-size:18px; margin-top:8px;">
+                    <button class="btn-primary" id="btn-save" onclick="saveWord()" style="width: 100%; padding:14px; font-size:16px; margin-top:4px;">
                         <i class="fas fa-check-circle"></i> 儲存單字
                     </button>
                 </div>
@@ -311,8 +318,9 @@
                 </button>
             </div>
             
-            <div class="text-center" style="margin-bottom:24px;">
-                <a href="#" onclick="openSrsList(); return false;" style="color:var(--text-muted); font-size:14px; text-decoration:underline; font-weight:600;"><i class="fas fa-calendar-check"></i> 查看 SRS 複習時間表確認</a>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; padding:0 8px;">
+                <a href="#" onclick="openSrsList(); return false;" style="color:var(--text-muted); font-size:14px; text-decoration:underline; font-weight:600;"><i class="fas fa-calendar-check"></i> 查看 SRS 時間表</a>
+                <button id="book-reorder-btn" class="btn-outline" onclick="toggleBookReorderMode()" style="padding:6px 12px; font-size:13px; color:var(--primary); font-weight:700;"><i class="fas fa-sort"></i> 調整順序</button>
             </div>
 
             <div class="card" style="padding: 16px 24px;">
@@ -428,24 +436,48 @@
         <!-- 單字清單頁面 -->
         <section id="sec-words">
             <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:24px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <button class="btn-outline" style="padding: 10px 16px; white-space: nowrap;" onclick="switchTab('sec-books')">
+                <div style="display:flex; gap:8px; align-items:center; overflow-x:auto; padding-bottom:4px;" class="hide-scrollbar">
+                    <button class="btn-outline" style="padding: 8px 14px; white-space: nowrap; flex-shrink:0;" onclick="switchTab('sec-books')">
                         <i class="fas fa-arrow-left"></i> 返回
                     </button>
-                    <button class="btn-outline text-danger" style="padding: 10px 16px; white-space: nowrap;" onclick="deleteCurrentBook()" title="刪除此單字本">
-                        <i class="fas fa-trash-alt"></i> 刪除本單字本
+                    <button id="manage-mode-btn" class="btn-outline" style="padding: 8px 14px; white-space: nowrap; color:var(--primary); flex-shrink:0; margin-left: auto;" onclick="toggleManageMode()">
+                        <i class="fas fa-tasks"></i> 
+                    </button>
+                    <button id="sort-order-btn" class="btn-outline" style="padding:8px 14px; font-size:13px; font-weight:700; white-space:nowrap; color:var(--primary); flex-shrink:0;" onclick="toggleWordSortOrder()">
+                        <i class="fas fa-clock"></i> 
+                    </button>
+                    <button class="tts-rate-btn btn-outline" style="padding: 8px 14px; font-size:13px; font-weight:700; white-space: nowrap; color:var(--primary); flex-shrink:0;" onclick="toggleTTSRate()" title="切換語速">
+                        <i class="fas fa-tachometer-alt"></i> 1x
+                    </button>
+                    <button class="btn-outline" style="padding: 8px 14px; white-space: nowrap; color:var(--primary); flex-shrink:0;" onclick="renameCurrentBook()" title="重新命名單字本">
+                        <i class="fas fa-edit"></i> 
+                    </button>
+                    <button class="btn-outline text-danger" style="padding: 8px 14px; white-space: nowrap; flex-shrink:0;" onclick="deleteCurrentBook()" title="刪除此單字本">
+                        <i class="fas fa-trash-alt"></i> 
                     </button>
                 </div>
                 <div style="display:flex; gap:12px;">
-                    <button class="btn-outline" style="padding: 14px; color:var(--primary); white-space: nowrap; flex: 1; font-weight:800; font-size:16px;" onclick="switchTab('sec-sentence-maker'); renderSentenceMaker();" title="造句">
+                    <button class="btn-outline" style="padding: 8px 14px; color:var(--primary); white-space: nowrap; flex: 1; font-weight:800; font-size:16px;" onclick="switchTab('sec-sentence-maker'); renderSentenceMaker();" title="造句">
                         <i class="fas fa-pen-nib"></i> 造句
                     </button>
-                    <button class="btn-primary" style="padding: 14px; white-space: nowrap; flex: 2; font-weight:800; font-size:16px;" onclick="startFlashcard()">
+                    <button class="btn-primary" style="padding: 8px 14px; white-space: nowrap; flex: 2; font-weight:800; font-size:16px;" onclick="startFlashcard()">
                         <i class="fas fa-play"></i> 開始背單字
                     </button>
                 </div>
             </div>
             <div id="words-list"></div>
+            
+            <!-- 批次管理懸浮操作列 -->
+            <div id="manage-action-bar" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--card-bg); border:1px solid var(--border); box-shadow:0 8px 32px rgba(0,0,0,0.2); padding:12px 24px; border-radius:30px; display:none; gap:16px; z-index:2000; align-items:center; white-space:nowrap;">
+                <span style="font-weight:700; color:var(--primary);">已選 <span id="manage-count">0</span> 字</span>
+                <div style="width:1px; height:20px; background:var(--border);"></div>
+                <button class="btn-primary" style="padding:8px 16px; font-size:14px; border-radius:20px;" onclick="moveSelectedWords()">
+                    <i class="fas fa-exchange-alt"></i> 搬移至...
+                </button>
+                <button class="btn-outline text-danger" style="padding:8px 16px; font-size:14px; border-radius:20px; background:var(--bg-color);" onclick="deleteSelectedWords()">
+                    <i class="fas fa-trash-alt"></i> 丟垃圾桶
+                </button>
+            </div>
         </section>
 
         <!-- 閃卡頁面 -->
@@ -1003,7 +1035,7 @@
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwFGjzsbWRmo4yVz5vuFzH4hrySyTVSiXgqbDbhm4XxRkzgohI-l4PSPC_Ib56uMw/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwResFElXIAqxOieyCa-E68jg0eQ9zoSbqiYr_nhXCul_kT7FmlH4xHucse8ZWWQZY/exec";
 
         const THEMES = {
             "default": { "--bg-color": "#F8FAFC", "--card-bg": "#FFFFFF", "--text-main": "#0F172A", "--text-muted": "#64748B", "--primary": "#4F46E5", "--primary-hover": "#4338CA", "--primary-light": "#E0E7FF", "--border": "#E2E8F0", "--nav-bg": "rgba(255, 255, 255, 0.85)" },
@@ -1030,6 +1062,9 @@
 
         let currentUser = null;
         let allWords = []; let books = ["預設單字本"]; let currentViewBook = "";
+        let ttsRate = 1.0;
+        let isManageMode = false;
+        let selectedWords = new Set();
         let flashcards = []; let currentFcIndex = 0; let currentFcWord = ""; let isShowingAnswer = false;
 
         const ROOTS_DICT = { "bio": "生命", "logy": "學問", "un": "不/否定", "pre": "在...之前", "post": "在...之後", "anti": "反對", "inter": "在...之間", "trans": "跨越", "sub": "在...之下", "re": "再次", "ex": "向外", "in": "向內", "con": "共同", "com": "共同", "pro": "向前", "tele": "遠處", "dict": "說話", "spect": "看", "ject": "投擲", "port": "攜帶", "tract": "拉", "struct": "建立", "micro": "微小", "macro": "巨大", "poly": "多個", "mono": "單一", "auto": "自動", "graph": "寫/畫", "meter": "測量", "phon": "聲音", "photo": "光", "therm": "熱", "hydr": "水", "chron": "時間", "phob": "恐懼", "phil": "喜愛", "anthrop": "人類", "path": "情感/疾病", "morph": "形態", "tion": "名詞字尾", "ment": "名詞字尾", "ness": "名詞字尾", "ity": "名詞字尾", "able": "能...的", "ible": "能...的", "ive": "傾向...的", "ous": "充滿...的", "ful": "充滿...的", "less": "無...的", "ly": "副詞結尾(地)", "ate": "使...", "ize": "使成為", "en": "動詞結尾(使)", "ify": "使...化", "dis": "相反/分離", "mis": "錯誤", "over": "過度", "under": "不足" };
@@ -1170,10 +1205,12 @@
             return foundRoots.filter(fr => !foundRoots.some(other => other.root !== fr.root && other.root.includes(fr.root)));
         }
 
-        function showToast(message, type = 'success') {
+        function showToast(message, type = 'success', duration = 3000) {
             const toast = document.getElementById('toast'); toast.className = `toast ${type}`;
             toast.innerHTML = type === 'success' ? `<i class="fas fa-check-circle"></i> <span>${message}</span>` : `<i class="fas fa-exclamation-triangle"></i> <span>${message}</span>`;
-            toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000);
+            toast.classList.add('show'); 
+            if (toast.timeoutId) clearTimeout(toast.timeoutId);
+            toast.timeoutId = setTimeout(() => toast.classList.remove('show'), duration);
         }
 
         function switchTab(tabId) {
@@ -1282,9 +1319,16 @@
             }
         }
 
+        function toggleTTSRate() {
+            ttsRate = ttsRate === 1.0 ? 0.75 : 1.0;
+            const btns = document.querySelectorAll('.tts-rate-btn');
+            btns.forEach(b => b.innerHTML = `<i class="fas fa-tachometer-alt"></i> ${ttsRate}x`);
+            showToast(`語音播放速度已切換為 ${ttsRate}x`, 'success', 2000);
+        }
+
         function playTTS(text) {
             if (!text) return;
-            const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'en-US'; utterance.rate = 0.9; window.speechSynthesis.speak(utterance);
+            const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'en-US'; utterance.rate = ttsRate; window.speechSynthesis.speak(utterance);
         }
 
 
@@ -1610,7 +1654,11 @@
 
         async function saveWord() {
             const book = document.getElementById("active-book-select").value;
-            const en = document.getElementById("word-en").value.trim();
+            let en = document.getElementById("word-en").value.trim();
+            // 自動標準化：若非首字母大寫+全大寫等專有名詞，轉為小寫
+            if (en.length > 0 && en === en.charAt(0).toUpperCase() + en.slice(1).toLowerCase() && !en.includes(' ')) {
+                en = en.toLowerCase();
+            }
             const zh = document.getElementById("word-zh").value.trim();
             const notes = document.getElementById("word-notes").value.trim();
             const pos = document.getElementById("word-pos").value;
@@ -1633,15 +1681,43 @@
         }
 
         async function deleteWord(english) {
-            if (!confirm(`確定要刪除「${english}」嗎？`)) return;
-            const originalWords = [...allWords]; allWords = allWords.filter(w => !(w.book === currentViewBook && w.english === english));
-            openBook(currentViewBook); updateDueCount();
-            
-            try {
-                const result = await safeGASFetch({ action: "deleteWord", username: currentUser, book: currentViewBook, english: english });
-                if (result.status === "success") showToast("已刪除"); else throw new Error(result.message);
-            } catch (error) { allWords = originalWords; openBook(currentViewBook); showToast("刪除失敗", "error"); }
+            const trashBook = "🗑️ 垃圾桶";
+            if (currentViewBook === trashBook) {
+                if (!confirm(`確定要永久刪除「${english}」嗎？`)) return;
+                const originalWords = [...allWords]; allWords = allWords.filter(w => !(w.book === currentViewBook && w.english === english));
+                openBook(currentViewBook); updateDueCount();
+                try {
+                    const result = await safeGASFetch({ action: "deleteWord", username: currentUser, book: currentViewBook, english: english });
+                    if (result.status === "success") showToast("已永久刪除"); else throw new Error(result.message);
+                } catch (error) { allWords = originalWords; openBook(currentViewBook); showToast("刪除失敗", "error"); }
+            } else {
+                if (!books.includes(trashBook)) {
+                    books.push(trashBook);
+                    localStorage.setItem(`vocabBooks_${currentUser}`, JSON.stringify(books));
+                    updateBookDropdowns();
+                }
+                const wordIdx = allWords.findIndex(w => w.book === currentViewBook && w.english === english);
+                if (wordIdx > -1) {
+                    const oldBook = currentViewBook;
+                    allWords[wordIdx].book = trashBook;
+                    openBook(currentViewBook); updateDueCount();
+                    showToast(`已移至垃圾桶 <button onclick="undoDeleteWord('${oldBook}', '${english.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" style="margin-left:12px; background:rgba(255,255,255,0.2); border:1px solid #FFF; color:#FFF; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:12px;">復原 (Undo)</button>`, "success", 5000);
+                    safeGASFetch({ action: "editWord", username: currentUser, oldBook: oldBook, oldEnglish: english, newBook: trashBook }).catch(e => console.error(e));
+                }
+            }
         }
+
+        window.undoDeleteWord = function(originalBook, english) {
+            const trashBook = "🗑️ 垃圾桶";
+            const wordIdx = allWords.findIndex(w => w.book === trashBook && w.english === english);
+            if (wordIdx > -1) {
+                allWords[wordIdx].book = originalBook;
+                if(currentViewBook === trashBook || currentViewBook === originalBook) openBook(currentViewBook);
+                updateDueCount();
+                showToast("已復原單字");
+                safeGASFetch({ action: "editWord", username: currentUser, oldBook: trashBook, oldEnglish: english, newBook: originalBook }).catch(e => console.error(e));
+            }
+        };
 
         function openEditModal(book, english) {
             const word = allWords.find(w => w.book === book && w.english === english);
@@ -1717,6 +1793,36 @@
             safeGASFetch({ action: "deleteBook", username: currentUser, book: bookToDelete }).catch(e => console.error(e));
         }
 
+        async function renameCurrentBook() {
+            if (currentViewBook === "預設單字本") {
+                showToast("預設單字本無法重新命名", "error");
+                return;
+            }
+            const newName = prompt(`請輸入單字本「${currentViewBook}」的新名稱：`, currentViewBook);
+            if (!newName) return;
+            const trimmedName = newName.trim();
+            if (trimmedName === "" || trimmedName === currentViewBook) return;
+            if (books.includes(trimmedName)) {
+                showToast("此名稱已被使用", "error");
+                return;
+            }
+            
+            const oldBook = currentViewBook;
+            books = books.map(b => b === oldBook ? trimmedName : b);
+            allWords = allWords.map(w => w.book === oldBook ? {...w, book: trimmedName} : w);
+            localStorage.setItem(`vocabBooks_${currentUser}`, JSON.stringify(books));
+            if (localStorage.getItem(`defaultBook_${currentUser}`) === oldBook) {
+                localStorage.setItem(`defaultBook_${currentUser}`, trimmedName);
+            }
+            
+            updateBookDropdowns();
+            updateDueCount();
+            openBook(trimmedName);
+            showToast("單字本名稱已更新");
+            
+            safeGASFetch({ action: "renameBook", username: currentUser, oldBook: oldBook, newBook: trimmedName }).catch(e => console.error(e));
+        }
+
         async function fetchData() {
             const btn = document.getElementById("btn-sync"); if (!btn) return;
             const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 同步中...'; btn.disabled = true;
@@ -1743,21 +1849,45 @@
             const list = document.getElementById("books-list"); list.innerHTML = "";
             if (books.length === 0) return list.innerHTML = `<div class="empty-state"><p>尚無單字本</p></div>`;
 
-            books.forEach(book => {
+            books.forEach((book, idx) => {
                 const count = allWords.filter(w => w.book === book).length;
                 const div = document.createElement("div"); div.className = "list-item book-item";
+                const upBtn = idx > 0 ? `<button class="btn-icon-small" onclick="event.stopPropagation(); moveBookUp('${book}')" style="padding:4px; font-size:12px;"><i class="fas fa-arrow-up"></i></button>` : `<div style="width:24px;"></div>`;
+                const downBtn = idx < books.length - 1 ? `<button class="btn-icon-small" onclick="event.stopPropagation(); moveBookDown('${book}')" style="padding:4px; font-size:12px;"><i class="fas fa-arrow-down"></i></button>` : `<div style="width:24px;"></div>`;
+
                 div.innerHTML = `
-                    <div style="display:flex; align-items:center;">
+                    <div style="display:flex; align-items:center; flex:1; min-width:0;">
                         <div class="book-icon-wrapper"><i class="fas fa-book"></i></div>
-                        <span style="font-weight:700; font-size:17px;">${book}</span>
+                        <span style="font-weight:700; font-size:17px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${book}</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:10px; color:var(--text-muted);">
+                    <div style="display:flex; align-items:center; gap:8px; color:var(--text-muted); flex-shrink:0;">
+                        <div style="display:flex; flex-direction:row; gap:2px;">
+                            ${upBtn}${downBtn}
+                        </div>
                         <span style="font-size:13px; background:var(--bg-color); padding:6px 12px; border-radius:12px; font-weight:700;">${count} 字</span>
-                        <i class="fas fa-chevron-right" style="color:var(--border);"></i>
+                        <i class="fas fa-chevron-right" style="color:var(--border); margin-left:4px;"></i>
                     </div>
                 `;
                 div.onclick = () => openBook(book); list.appendChild(div);
             });
+        }
+
+        function moveBookUp(bookName) {
+            const idx = books.indexOf(bookName);
+            if (idx > 0) {
+                [books[idx - 1], books[idx]] = [books[idx], books[idx - 1]];
+                localStorage.setItem(`vocabBooks_${currentUser}`, JSON.stringify(books));
+                updateBookDropdowns(); renderBooksList();
+            }
+        }
+
+        function moveBookDown(bookName) {
+            const idx = books.indexOf(bookName);
+            if (idx < books.length - 1 && idx > -1) {
+                [books[idx + 1], books[idx]] = [books[idx], books[idx + 1]];
+                localStorage.setItem(`vocabBooks_${currentUser}`, JSON.stringify(books));
+                updateBookDropdowns(); renderBooksList();
+            }
         }
 
         function openSrsList() {
@@ -1783,27 +1913,55 @@
             switchTab('sec-srs-list');
         }
 
-        function openBook(bookName) {
-            currentViewBook = bookName; document.getElementById("header-title").innerText = bookName;
-            const list = document.getElementById("words-list"); list.innerHTML = "";
-            
-            const bookWords = allWords.filter(w => w.book === bookName);
-            if(bookWords.length === 0) {
-                list.innerHTML = `<div class="empty-state"><i class="fas fa-box-open"></i><p>尚無單字</p></div>`; switchTab('sec-words'); return;
-            }
+        let wordSortOrder = 'desc'; // 預設：最新優先（由近到遠）
 
+        function toggleWordSortOrder() {
+            wordSortOrder = (wordSortOrder === 'desc') ? 'asc' : 'desc';
+            const btn = document.getElementById('sort-order-btn');
+            if (wordSortOrder === 'desc') {
+                btn.innerHTML = '<i class="fas fa-clock"></i> ';
+            } else {
+                btn.innerHTML = '<i class="fas fa-history"></i> ';
+            }
+            renderWordList();
+        }
+
+        function renderWordList() {
+            const list = document.getElementById("words-list"); list.innerHTML = "";
+            let bookWords = allWords.filter(w => w.book === currentViewBook);
+            if(bookWords.length === 0) {
+                list.innerHTML = `<div class="empty-state"><i class="fas fa-box-open"></i><p>尚無單字</p></div>`; return;
+            }
+            // 按 timestamp 排序，先記錄原始 index 作為無 timestamp 時的備用排序依據
+            bookWords = bookWords.map((w, i) => ({...w, _origIdx: i}));
+            bookWords.sort((a, b) => {
+                const parseTs = (ts) => {
+                    if (!ts) return -1;
+                    const t = new Date(ts).getTime();
+                    return isNaN(t) ? -1 : t;
+                };
+                const tA = parseTs(a.timestamp);
+                const tB = parseTs(b.timestamp);
+                // 若兩者都無法解析，維持原始順序
+                if (tA === -1 && tB === -1) return wordSortOrder === 'desc' ? b._origIdx - a._origIdx : a._origIdx - b._origIdx;
+                // 無 timestamp 的排最後（不管升降）
+                if (tA === -1) return 1;
+                if (tB === -1) return -1;
+                return wordSortOrder === 'desc' ? tB - tA : tA - tB;
+            });
             bookWords.forEach((w, idx) => {
                 const div = document.createElement("div"); div.className = "word-card";
                 const safeEnglish = w.english.replace(/'/g, "\\'").replace(/"/g, "&quot;");
                 let posHtml = w.pos ? `<span class="pos-tag pos-${w.pos.replace('.', '')}">${w.pos}</span>` : '';
-
+                const addedDate = w.timestamp ? new Date(w.timestamp).toLocaleDateString('zh-TW', {year:'numeric', month:'2-digit', day:'2-digit'}) : '';
                 div.innerHTML = `
                     <div class="word-card-header">
-                        <div style="display:flex; align-items:baseline;">
+                        <div style="display:flex; align-items:baseline; gap:8px;">
                             <div class="word-en">${w.english}</div>
                             ${posHtml}
                         </div>
                         <div class="word-actions">
+                            ${addedDate ? `<span style="font-size:11px; color:var(--text-muted); margin-right:4px;">${addedDate}</span>` : ''}
                             <button class="btn-icon-small" onclick="playTTS('${safeEnglish}')"><i class="fas fa-volume-up"></i></button>
                             <button class="btn-icon-small" onclick="openEditModal('${currentViewBook}', '${safeEnglish}')" style="color:var(--primary);"><i class="fas fa-edit"></i></button>
                             <button class="btn-icon-small text-danger" onclick="deleteWord('${safeEnglish}')"><i class="fas fa-trash-alt"></i></button>
@@ -1816,6 +1974,15 @@
                 `;
                 list.appendChild(div);
             });
+        }
+
+        function openBook(bookName) {
+            currentViewBook = bookName;
+            document.getElementById("header-title").innerText = bookName;
+            wordSortOrder = 'desc';
+            const btn = document.getElementById('sort-order-btn');
+            if (btn) btn.innerHTML = '<i class="fas fa-clock"></i> ';
+            renderWordList();
             switchTab('sec-words');
         }
 
@@ -2617,22 +2784,116 @@
             if (document.getElementById('sec-words').classList.contains('active')) openBook(currentViewBook);
         }
 
-        const _origRenderBooksList = renderBooksList;
+        let isBookReorderMode = false;
+        let dragSrcBook = null;
+        let dragTouchEl = null;
+
+        window.toggleBookReorderMode = function() {
+            isBookReorderMode = !isBookReorderMode;
+            const btn = document.getElementById("book-reorder-btn");
+            if (btn) btn.innerHTML = isBookReorderMode ? '<i class="fas fa-check"></i> 完成調整' : '<i class="fas fa-sort"></i> 調整順序';
+            renderBooksList();
+        };
+
+        function handleDragStart(e) {
+            dragSrcBook = this.dataset.book;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', dragSrcBook);
+            this.style.opacity = '0.5';
+        }
+        function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; }
+        function handleDragEnter(e) { this.style.background = 'var(--bg-color)'; }
+        function handleDragLeave(e) { this.style.background = ''; }
+        function handleDrop(e) {
+            e.stopPropagation();
+            this.style.background = '';
+            if (dragSrcBook && dragSrcBook !== this.dataset.book) swapBooks(dragSrcBook, this.dataset.book);
+            return false;
+        }
+        function handleDragEnd(e) { this.style.opacity = '1'; }
+
+        function handleTouchStart(e) {
+            if (e.target.closest('.drag-handle')) {
+                dragSrcBook = this.dataset.book;
+                dragTouchEl = this;
+                this.style.opacity = '0.5';
+                this.style.transform = 'scale(0.98)';
+                document.body.style.overflow = 'hidden'; // Prevent page scroll
+            }
+        }
+        function handleTouchMove(e) {
+            if (!dragTouchEl) return;
+            e.preventDefault(); 
+            const touch = e.targetTouches[0];
+            const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+            document.querySelectorAll('[data-book]').forEach(el => el.style.background = '');
+            if (targetEl) {
+                const bookEl = targetEl.closest('[data-book]');
+                if (bookEl && bookEl !== dragTouchEl) bookEl.style.background = 'var(--bg-color)';
+            }
+        }
+        function handleTouchEnd(e) {
+            if (!dragTouchEl) return;
+            dragTouchEl.style.opacity = '1';
+            dragTouchEl.style.transform = '';
+            document.body.style.overflow = '';
+            const touch = e.changedTouches[0];
+            const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+            document.querySelectorAll('[data-book]').forEach(el => el.style.background = '');
+            if (targetEl) {
+                const bookEl = targetEl.closest('[data-book]');
+                if (bookEl && bookEl.dataset.book !== dragSrcBook) swapBooks(dragSrcBook, bookEl.dataset.book);
+            }
+            dragTouchEl = null;
+        }
+
+        function swapBooks(srcBook, destBook) {
+            const srcIdx = books.indexOf(srcBook);
+            const destIdx = books.indexOf(destBook);
+            if (srcIdx > -1 && destIdx > -1) {
+                books.splice(srcIdx, 1);
+                books.splice(destIdx, 0, srcBook);
+                localStorage.setItem(`vocabBooks_${currentUser}`, JSON.stringify(books));
+                updateBookDropdowns(); renderBooksList();
+            }
+        }
+
         function renderBooksList() {
             const list = document.getElementById("books-list"); list.innerHTML = "";
             if (books.length === 0) return list.innerHTML = `<div class="empty-state"><p>尚無單字本</p></div>`;
-            books.forEach(book => {
+            books.forEach((book, idx) => {
                 const count = allWords.filter(w => w.book === book).length;
+                const dragHtml = isBookReorderMode ? `<div style="padding:0 12px 0 0; cursor:grab; color:var(--text-muted); font-size:18px;" class="drag-handle"><i class="fas fa-grip-lines"></i></div>` : '';
+
+                const div = document.createElement("div");
+                div.dataset.book = book;
+                
                 if (isCompactView) {
-                    const div = document.createElement("div");
-                    div.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer;";
-                    div.innerHTML = `<span style="font-weight:600; font-size:15px;">${book}</span><span style="font-size:13px; color:var(--text-muted); font-weight:700;">${count} 字 <i class="fas fa-chevron-right" style="color:var(--border); font-size:11px;"></i></span>`;
-                    div.onclick = () => openBook(book); list.appendChild(div);
+                    div.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--border); ${isBookReorderMode?'':'cursor:pointer;'}`;
+                    div.innerHTML = `<div style="display:flex; align-items:center; flex:1; min-width:0;">${dragHtml}<span style="font-weight:600; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${book}</span></div><div style="display:flex; align-items:center; gap:8px; color:var(--text-muted); flex-shrink:0;"><span style="font-size:13px; color:var(--text-muted); font-weight:700;">${count} 字 <i class="fas fa-chevron-right" style="color:var(--border); font-size:11px; margin-left:4px;"></i></span></div>`;
                 } else {
-                    const div = document.createElement("div"); div.className = "list-item book-item";
-                    div.innerHTML = `<div style="display:flex; align-items:center;"><div class="book-icon-wrapper"><i class="fas fa-book"></i></div><span style="font-weight:700; font-size:17px;">${book}</span></div><div style="display:flex; align-items:center; gap:10px; color:var(--text-muted);"><span style="font-size:13px; background:var(--bg-color); padding:6px 12px; border-radius:12px; font-weight:700;">${count} 字</span><i class="fas fa-chevron-right" style="color:var(--border);"></i></div>`;
-                    div.onclick = () => openBook(book); list.appendChild(div);
+                    div.className = "list-item book-item";
+                    div.style.display = "flex"; div.style.alignItems = "center"; div.style.padding = "12px 16px";
+                    if (!isBookReorderMode) div.style.cursor = "pointer";
+                    div.innerHTML = `<div style="display:flex; align-items:center; flex:1; min-width:0;">${dragHtml}<div class="book-icon-wrapper" style="${isBookReorderMode?'display:none;':''}"><i class="fas fa-book"></i></div><span style="font-weight:700; font-size:17px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${book}</span></div><div style="display:flex; align-items:center; gap:8px; color:var(--text-muted); flex-shrink:0;"><span style="font-size:13px; background:var(--bg-color); padding:6px 12px; border-radius:12px; font-weight:700;">${count} 字</span><i class="fas fa-chevron-right" style="color:var(--border); margin-left:4px;"></i></div>`;
                 }
+
+                if (!isBookReorderMode) {
+                    div.onclick = () => openBook(book);
+                } else {
+                    div.draggable = true;
+                    div.addEventListener('dragstart', handleDragStart);
+                    div.addEventListener('dragover', handleDragOver);
+                    div.addEventListener('dragenter', handleDragEnter);
+                    div.addEventListener('dragleave', handleDragLeave);
+                    div.addEventListener('drop', handleDrop);
+                    div.addEventListener('dragend', handleDragEnd);
+
+                    div.addEventListener('touchstart', handleTouchStart, {passive: false});
+                    div.addEventListener('touchmove', handleTouchMove, {passive: false});
+                    div.addEventListener('touchend', handleTouchEnd);
+                }
+                list.appendChild(div);
             });
         }
 
@@ -3250,12 +3511,28 @@
 
         const _origOpenBook = openBook;
         function openBook(bookName) {
-            currentViewBook = bookName; document.getElementById("header-title").innerText = bookName;
+            currentViewBook = bookName;
+            document.getElementById("header-title").innerText = bookName;
+            wordSortOrder = 'desc';
+            const btn = document.getElementById('sort-order-btn');
+            if (btn) btn.innerHTML = '<i class="fas fa-clock"></i> ';
+
             const list = document.getElementById("words-list"); list.innerHTML = "";
-            const bookWords = allWords.filter(w => w.book === bookName);
+            let bookWords = allWords.filter(w => w.book === bookName);
             if(bookWords.length === 0) {
                 list.innerHTML = `<div class="empty-state"><i class="fas fa-box-open"></i><p>尚無單字</p></div>`; switchTab('sec-words'); return;
             }
+
+            // 排序：最新優先（預設）
+            bookWords = bookWords.map((w, i) => ({...w, _origIdx: i}));
+            bookWords.sort((a, b) => {
+                const parseTs = (ts) => { if (!ts) return -1; const t = new Date(ts).getTime(); return isNaN(t) ? -1 : t; };
+                const tA = parseTs(a.timestamp), tB = parseTs(b.timestamp);
+                if (tA === -1 && tB === -1) return b._origIdx - a._origIdx;
+                if (tA === -1) return 1; if (tB === -1) return -1;
+                return tB - tA;
+            });
+
             if (isCompactView) {
                 const table = document.createElement('div');
                 table.style.cssText = 'border:1px solid var(--border); border-radius:12px; overflow:hidden;';
@@ -3263,9 +3540,26 @@
                     const safeEn = w.english.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     const posHtml = w.pos ? `<span style="font-size:11px; background:var(--primary-light); color:var(--primary); padding:2px 6px; border-radius:4px; font-weight:700; margin-left:6px;">${w.pos}</span>` : '';
                     const phonId = `ph-c-${idx}`;
+                    const addedDate = w.timestamp ? new Date(w.timestamp).toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}) : '';
                     const row = document.createElement('div');
-                    row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--border);';
-                    row.innerHTML = `<div style="display:flex; align-items:center; gap:0; min-width:0; overflow:hidden;"><span style="font-weight:700; color:var(--primary); font-size:15px; white-space:nowrap;">${w.english}</span><span id="${phonId}" style="font-family:monospace; font-size:11px; color:var(--text-muted); font-weight:400; white-space:nowrap; margin-left:5px;"></span>${posHtml}</div><div style="display:flex; align-items:center; gap:8px; flex-shrink:0;"><span style="font-size:14px; color:var(--text-muted); white-space:nowrap;">${w.chinese}</span><button class="btn-icon-small" onclick="playTTS('${safeEn}')"><i class="fas fa-volume-up"></i></button><button class="btn-icon-small" onclick="openEditModal('${currentViewBook}','${safeEn}')" style="color:var(--primary);"><i class="fas fa-edit"></i></button><button class="btn-icon-small text-danger" onclick="deleteWord('${safeEn}')"><i class="fas fa-trash-alt"></i></button></div>`;
+                    row.style.cssText = 'display:flex; flex-direction:column; padding:10px 14px; border-bottom:1px solid var(--border); gap:4px;';
+                    row.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                            <div style="display:flex; align-items:center; gap:4px; min-width:0; overflow:hidden; flex:1;">
+                                <input type="checkbox" class="manage-checkbox" onchange="toggleWordSelection('${safeEn}')" ${selectedWords.has(w.english) ? 'checked' : ''}>
+                                <span style="font-weight:700; color:var(--primary); font-size:15px; white-space:nowrap;">${w.english}</span>
+                                <span id="${phonId}" style="font-family:monospace; font-size:11px; color:var(--text-muted); font-weight:400; white-space:nowrap; margin-left:3px;"></span>
+                                ${posHtml}
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                                ${addedDate ? `<span style="font-size:11px; color:var(--text-muted); white-space:nowrap;">${addedDate}</span>` : ''}
+                                <button class="btn-icon-small" onclick="playTTS('${safeEn}')"><i class="fas fa-volume-up"></i></button>
+                                <button class="btn-icon-small" onclick="openEditModal('${currentViewBook}','${safeEn}')" style="color:var(--primary);"><i class="fas fa-edit"></i></button>
+                                <button class="btn-icon-small text-danger" onclick="deleteWord('${safeEn}')"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                        </div>
+                        <div style="font-size:14px; color:var(--text-muted); padding-left:2px;">${w.chinese}</div>
+                    `;
                     table.appendChild(row);
                     fetchAndShowPhonetic(w.english, phonId);
                 });
@@ -3276,12 +3570,94 @@
                     const safeEnglish = w.english.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     let posHtml = w.pos ? `<span class="pos-tag pos-${w.pos.replace('.', '')}">${w.pos}</span>` : '';
                     const phonId = `ph-d-${idx}`;
-                    div.innerHTML = `<div class="word-card-header"><div style="display:flex; align-items:baseline; flex-wrap:wrap; gap:4px;"><div class="word-en">${w.english}</div>${posHtml}<span id="${phonId}" style="font-family:monospace; font-size:12px; color:var(--text-muted); font-weight:400; align-self:flex-end;"></span></div><div class="word-actions"><button class="btn-icon-small" onclick="playTTS('${safeEnglish}')"><i class="fas fa-volume-up"></i></button><button class="btn-icon-small" onclick="openEditModal('${currentViewBook}', '${safeEnglish}')" style="color:var(--primary);"><i class="fas fa-edit"></i></button><button class="btn-icon-small text-danger" onclick="deleteWord('${safeEnglish}')"><i class="fas fa-trash-alt"></i></button></div></div><div class="word-zh">${w.chinese}</div>${w.notes ? `<div class="word-notes"><i class="fas fa-lightbulb" style="color:var(--primary); margin-right:6px;"></i> ${w.notes}</div>` : ''}${w.example ? `<div class="word-notes" style="background:var(--primary-light); color:var(--primary); margin-top:6px;"><i class="fas fa-quote-left" style="margin-right:6px;"></i> ${w.example}</div>` : ''}<button class="btn-expand" onclick="expandWordDict('wd-${idx}', '${safeEnglish}')"><i class="fas fa-book"></i> 字典內容</button><div id="expand-wd-${idx}" class="expand-card"></div>`;
+                    const addedDate = w.timestamp ? new Date(w.timestamp).toLocaleDateString('zh-TW', {year:'numeric', month:'2-digit', day:'2-digit'}) : '';
+                    div.innerHTML = `<div class="word-card-header"><div style="display:flex; align-items:baseline; flex-wrap:wrap; gap:4px;"><input type="checkbox" class="manage-checkbox" onchange="toggleWordSelection('${safeEnglish}')" ${selectedWords.has(w.english) ? 'checked' : ''}><div class="word-en">${w.english}</div>${posHtml}<span id="${phonId}" style="font-family:monospace; font-size:12px; color:var(--text-muted); font-weight:400; align-self:flex-end;"></span></div><div class="word-actions">${addedDate ? `<span style="font-size:11px; color:var(--text-muted); margin-right:4px;">${addedDate}</span>` : ''}<button class="btn-icon-small" onclick="playTTS('${safeEnglish}')"><i class="fas fa-volume-up"></i></button><button class="btn-icon-small" onclick="openEditModal('${currentViewBook}', '${safeEnglish}')" style="color:var(--primary);"><i class="fas fa-edit"></i></button><button class="btn-icon-small text-danger" onclick="deleteWord('${safeEnglish}')"><i class="fas fa-trash-alt"></i></button></div></div><div class="word-zh">${w.chinese}</div>${w.notes ? `<div class="word-notes"><i class="fas fa-lightbulb" style="color:var(--primary); margin-right:6px;"></i> ${w.notes}</div>` : ''}${w.example ? `<div class="word-notes" style="background:var(--primary-light); color:var(--primary); margin-top:6px;"><i class="fas fa-quote-left" style="margin-right:6px;"></i> ${w.example}</div>` : ''}<button class="btn-expand" onclick="expandWordDict('wd-${idx}', '${safeEnglish}')"><i class="fas fa-book"></i> 字典內容</button><div id="expand-wd-${idx}" class="expand-card"></div>`;
                     list.appendChild(div);
                     fetchAndShowPhonetic(w.english, phonId);
                 });
             }
+            if (isManageMode) list.classList.add('manage-mode');
+            else list.classList.remove('manage-mode');
             switchTab('sec-words');
+        }
+
+        function toggleManageMode() {
+            isManageMode = !isManageMode;
+            if (!isManageMode) selectedWords.clear();
+            const btn = document.getElementById("manage-mode-btn");
+            if (btn) btn.innerHTML = isManageMode ? '<i class="fas fa-times"></i> 取消管理' : '<i class="fas fa-tasks"></i> 批次管理';
+            document.getElementById("manage-action-bar").style.display = isManageMode ? "flex" : "none";
+            document.getElementById("manage-count").innerText = selectedWords.size;
+            openBook(currentViewBook);
+        }
+
+        function toggleWordSelection(english) {
+            if (selectedWords.has(english)) selectedWords.delete(english);
+            else selectedWords.add(english);
+            document.getElementById("manage-count").innerText = selectedWords.size;
+        }
+
+        async function moveSelectedWords() {
+            if (selectedWords.size === 0) return;
+            const targetBook = prompt("請輸入目標單字本名稱：\n\n您現有的單字本：" + books.join(", "));
+            if (!targetBook || targetBook.trim() === "") return;
+            const trimmedBook = targetBook.trim();
+            if (trimmedBook === currentViewBook) return;
+            
+            if (!books.includes(trimmedBook)) {
+                if (confirm(`單字本「${trimmedBook}」不存在，要建立新單字本嗎？`)) {
+                    books.push(trimmedBook);
+                    localStorage.setItem(`vocabBooks_${currentUser}`, JSON.stringify(books));
+                    updateBookDropdowns();
+                } else return;
+            }
+            
+            const wordsToMove = Array.from(selectedWords);
+            const oldBook = currentViewBook;
+            
+            wordsToMove.forEach(en => {
+                const w = allWords.find(wd => wd.book === oldBook && wd.english === en);
+                if (w) w.book = trimmedBook;
+            });
+            
+            const count = selectedWords.size;
+            toggleManageMode();
+            showToast(`已成功搬移 ${count} 個單字！`);
+            
+            safeGASFetch({ action: "batchMoveWords", username: currentUser, oldBook: oldBook, newBook: trimmedBook, words: wordsToMove }).catch(e => console.error(e));
+        }
+
+        async function deleteSelectedWords() {
+            if (selectedWords.size === 0) return;
+            const trashBook = "🗑️ 垃圾桶";
+            if (currentViewBook === trashBook) {
+                if(!confirm(`確定要永久刪除這 ${selectedWords.size} 個單字嗎？`)) return;
+                const wordsToDelete = Array.from(selectedWords);
+                allWords = allWords.filter(w => !(w.book === trashBook && wordsToDelete.includes(w.english)));
+                const count = selectedWords.size;
+                toggleManageMode();
+                showToast(`已永久刪除 ${count} 個單字`);
+                // No batchDelete yet, so we map them to batchMove to a completely nonexistent status, or just loop
+                wordsToDelete.forEach(en => {
+                    safeGASFetch({ action: "deleteWord", username: currentUser, book: trashBook, english: en });
+                });
+            } else {
+                if (!books.includes(trashBook)) {
+                    books.push(trashBook);
+                    localStorage.setItem(`vocabBooks_${currentUser}`, JSON.stringify(books));
+                    updateBookDropdowns();
+                }
+                const wordsToMove = Array.from(selectedWords);
+                const oldBook = currentViewBook;
+                wordsToMove.forEach(en => {
+                    const w = allWords.find(wd => wd.book === oldBook && wd.english === en);
+                    if (w) w.book = trashBook;
+                });
+                const count = selectedWords.size;
+                toggleManageMode();
+                showToast(`已將 ${count} 個單字移至垃圾桶`);
+                safeGASFetch({ action: "batchMoveWords", username: currentUser, oldBook: oldBook, newBook: trashBook, words: wordsToMove }).catch(e => console.error(e));
+            }
         }
 
         // Cache phonetics to avoid duplicate fetches
