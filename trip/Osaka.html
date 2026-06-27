@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🇯🇵 關西之旅 - 大阪‧京都‧神戶</title>
+    <style>
+        /* CSS RESET & CORE THEME VARIABLES */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        :root {
+            --primary: #d1495b; /* Traditional Japan Crimson / Torii Red */
+            --primary-light: #fdf2f4;
+            --secondary: #1f3a52; /* Deep Samurai Indigo */
+            --secondary-light: #edf2f7;
+            --accent: #d4af37; /* Kyoto Gold Leaf */
+            --dark: #2d3748;
+            --light-bg: #f7f5f0; /* Soft Tatami Washi Paper White */
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --shadow: 0 10px 30px rgba(0,0,0,0.04);
+            --radius: 12px;
+            --font: 'PingFang TC', 'Microsoft JhengHei', -apple-system, sans-serif;
+        }
+
+        body {
+            font-family: var(--font);
+            background-color: var(--light-bg);
+            color: var(--dark);
+            line-height: 1.7;
+            padding-bottom: 20px;
+        }
+
+        a {
+            color: var(--secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        a:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        /* HERO HEADER BLOCK */
+        .hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.12);
+        }
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            margin-bottom: 12px;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.4);
+        }
+        .hero p {
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            opacity: 0.95;
+            text-shadow: 1px 1px 5px rgba(0,0,0,0.4);
+        }
+
+        /* STICKY QUICK NAVIGATION - CENTERED ALIGNMENT */
+        .nav-bar {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.04);
+            display: flex;
+            justify-content: center; /* Centered buttons layout */
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 12px 15px;
+            border-bottom: 1px solid #e2e8f0;
+            -webkit-overflow-scrolling: touch;
+        }
+        .nav-link {
+            padding: 6px 14px;
+            margin: 0 5px;
+            border-radius: 20px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--dark);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: var(--primary);
+            color: white !important;
+            text-decoration: none;
+        }
+
+        /* MAIN CONTENT LAYOUT */
+        .container {
+            max-width: 1100px;
+            margin: 25px auto;
+            padding: 0 15px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--secondary);
+            margin: 35px 0 20px 0;
+            padding-bottom: 8px;
+            border-bottom: 3px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* REAL LIVE RATE WIDGET */
+        .rate-ticker-box {
+            background: linear-gradient(135deg, var(--secondary), #2d5272);
+            color: white;
+            padding: 18px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .rate-info-left h3 {
+            font-size: 1.15rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent);
+        }
+        .rate-info-left p {
+            font-size: 0.85rem;
+            opacity: 0.85;
+            margin-top: 4px;
+        }
+        .live-rate-display {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .live-rate-val {
+            font-family: monospace;
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #48bb78;
+        }
+        .rate-status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #48bb78;
+            border-radius: 50%;
+            display: inline-block;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+
+        /* METADATA INFO CARDS */
+        .meta-cards {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .meta-card {
+            background: var(--card-bg);
+            padding: 18px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border-left: 5px solid var(--secondary);
+        }
+        .meta-card h3 {
+            color: var(--secondary);
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        .meta-card ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .meta-card li {
+            margin-bottom: 8px;
+            font-size: 0.92rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .date-alert {
+            background: #fff5f5;
+            color: #c53030;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border: 1px solid #feb2b2;
+        }
+
+        /* TIMELINE DAY CARD LAYOUT */
+        .day-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            scroll-margin-top: 60px;
+        }
+        .day-header {
+            background: linear-gradient(135deg, var(--secondary), #2d5272);
+            color: white;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .day-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+        }
+        .day-hotel {
+            background: rgba(255,255,255,0.15);
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+        .day-body {
+            padding: 18px;
+        }
+        
+        /* FLOWING ITINERARY LINES */
+        .flow-path {
+            font-size: 0.98rem;
+            color: var(--dark);
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+        .flow-path .food-highlight {
+            color: #2b6cb0;
+            background-color: #ebf8ff;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .flow-path .booking-warn {
+            color: #e53e3e;
+            font-weight: bold;
+            font-size: 0.82rem;
+            background-color: #fff5f5;
+            padding: 1px 4px;
+            border-radius: 4px;
+            border: 1px solid #fed7d7;
+        }
+
+        /* PHOTO GALLERY GRID */
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .gallery-img {
+            width: 100%;
+            height: 110px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+        }
+
+        /* SPOILER INTERACTIVE ACCORDIONS */
+        details {
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-top: 10px;
+            border: 1px solid var(--border);
+        }
+        details summary {
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: var(--secondary);
+            cursor: pointer;
+        }
+        .details-content {
+            font-size: 0.9rem;
+            color: #4a5568;
+            line-height: 1.6;
+            white-space: pre-line;
+            margin-top: 10px;
+        }
+        .sub-timeline-item {
+            margin-bottom: 12px;
+            padding-left: 10px;
+            border-left: 2px solid #cbd5e0;
+        }
+        .sub-time {
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 0.88rem;
+        }
+
+        /* FLIGHTS & CAR CARDS */
+        .transport-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        .trans-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+            box-shadow: var(--shadow);
+        }
+        .trans-card h4 {
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        .ticket-detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+        .ticket-detail-table th, .ticket-detail-table td {
+            padding: 6px;
+            border: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        .ticket-detail-table th {
+            background-color: #f7fafc;
+            font-weight: 600;
+            color: var(--secondary);
+            width: 35%;
+        }
+
+        /* HOTEL CARDS SECTION */
+        .hotel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        .hotel-item-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .hotel-item-info {
+            padding: 15px;
+        }
+        .hotel-item-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--secondary);
+            margin-bottom: 4px;
+        }
+        .hotel-meta-text {
+            font-size: 0.82rem;
+            color: #718096;
+        }
+
+        /* MODAL BOX LIGHTBOX FOR IMAGES */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 5000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+        }
+        .lightbox img {
+            max-width: 100%;
+            max-height: 80%;
+            border-radius: 4px;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px 15px;
+            margin-top: 40px;
+            color: #a0aec0;
+            font-size: 0.8rem;
+            border-top: 1px solid var(--border);
+            background: #fff;
+        }
+
+        /* PHONE & MOBILE OPTIMIZATIONS MEDIA QUERIES */
+        @media (max-width: 600px) {
+            .hero { padding: 50px 15px; }
+            .hero h1 { font-size: 1.8rem; }
+            .hero p { font-size: 0.95rem; }
+            .nav-bar { justify-content: flex-start; /* Keeps swipeable workflow on narrow devices */ }
+            .rate-ticker-box { flex-direction: column; text-align: center; align-items: center; }
+            .live-rate-display { width: 100%; justify-content: center; }
+            .day-header { flex-direction: column; align-items: flex-start; gap: 4px; }
+            .day-hotel { align-self: flex-start; }
+            .image-gallery { grid-template-columns: repeat(2, 1fr); }
+            .gallery-img { height: 95px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HERO SECTION -->
+    <header class="hero">
+        <h1>🇯🇵 關西之旅</h1>
+        <p>大阪 ‧ 京都 ‧ 神戶 (2026/09/23 - 09/28)</p>
+    </header>
+
+    <!-- FLOATING DAY MENU NAVIGATION - CENTERED ALIGNED -->
+    <nav class="nav-bar">
+        <div class="nav-link active" onclick="scrollToId('rate-anchor')">即時匯率</div>
+        <div class="nav-link" onclick="scrollToId('day1')">9/23 神戶入境➔梅田</div>
+        <div class="nav-link" onclick="scrollToId('day2')">9/24 環球影城</div>
+        <div class="nav-link" onclick="scrollToId('day3')">9/25 京都散策</div>
+        <div class="nav-link" onclick="scrollToId('day4')">9/26 琵琶湖一日</div>
+        <div class="nav-link" onclick="scrollToId('day5')">9/27 神戶和牛</div>
+        <div class="nav-link" onclick="scrollToId('day6')">9/28 機場返程</div>
+        <div class="nav-link" onclick="scrollToId('flights')">機票憑證</div>
+        <div class="nav-link" onclick="scrollToId('hotels')">極選旅宿</div>
+    </nav>
+
+    <div class="container" id="rate-anchor">
+        
+        <!-- REAL-TIME LIVE RATE DISPLAY BOX FROM PUBLIC API -->
+        <div class="rate-ticker-box">
+            <div class="rate-info-left">
+                <h3>📊 JPY / TWD 即時匯率</h3>
+                <p>公開 API 每 60 秒自動請求外匯市場數據</p>
+            </div>
+            <div class="live-rate-display">
+                <span class="rate-status-dot"></span>
+                <span id="rate-ticker" class="live-rate-val">載入中...</span> <span style="font-size:0.85rem; font-weight:bold;">TWD</span>
+            </div>
+        </div>
+
+        <!-- DEADLINES AND CRITICAL TIMINGS -->
+        <div class="meta-cards">
+            <div class="meta-card">
+                <h3>⏳ 行前關鍵搶票與訂位時程提醒表</h3>
+                <ul>
+                    <li>🎯 <strong>07/01 前後：</strong><span class="date-alert">訂位</span> 京都經典水炊鍋【鳥彌三】與神戶【壽司吉すしきち】</li>
+                    <li>🎯 <strong>07/24 前後：</strong><span class="date-alert">開搶</span> 【日本環球影城 USJ 快速通關券 Express Pass】</li>
+                    <li>🎯 <strong>08/01 前後：</strong><span class="date-alert">訂位</span> 京都高人氣精緻板前早餐【朝食喜心 kyoto】</li>
+                    <li>🎯 <strong>08/23 前後：</strong><span class="date-alert">訂位</span> 高級虎河豚【玄品大阪梅田】與米其林串炸【北新地串かつ凡】</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- REGION CONSULAR DETAILS -->
+        <details style="margin-bottom:20px; border-left:5px solid var(--primary);">
+            <summary>🏢 台灣駐關西辦事處 ＆ 在地緊急急難求助資訊</summary>
+            <div class="details-content">
+                <strong>🇹🇼 台北駐大阪經濟文化辦事處</strong>
+                • <strong>館址：</strong>〒530-0005 大阪市北区中之島二丁目三番一八号 17樓及19樓 (Nakanoshima Festival Tower)
+                • <strong>辦事處一般諮詢電話：</strong>06-6227-8623
+                • <strong><span style="color:#e53e3e;">國人緊急急難救助專線：</span>090-8794-4568</strong> (日本境內直撥) / <strong>+81-90-8794-4568</strong> (國際漫遊)
+                <small style="color:#718096; display:block; margin-top:2px;">※ 緊急專線僅限車禍、重傷就醫、搶劫等危及生命安全之重大緊急危難事件使用。</small>
+
+                <strong>🇯🇵 日本當地公共緊急求助熱線</strong>
+                • <strong>🚓 警察局報案：</strong>直撥 <strong>110</strong> (免付費)
+                • <strong>🚒 火災、救護車叫車：</strong>直撥 <strong>119</strong> (免付費)
+            </div>
+        </details>
+
+        <!-- DAILY DETAILS SECTION -->
+        <h2 class="section-title">📅 行程細節與完整時間表</h2>
+
+        <!-- DAY 1 -->
+        <div class="day-card" id="day1">
+            <div class="day-header">
+                <div class="day-title">9/23 (三) 降落神戶機場 ‧ 大阪梅田附近玩</div>
+                <div class="day-hotel">🏨 住宿：Hearton Hotel Nishi Umeda</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    10:00 降落神戶機場 (UKB) → 前往西梅田飯店寄放行李 → <span class="food-highlight">12:30 午餐：玄品大阪梅田 (虎河豚生魚片紙火鍋)</span><span class="booking-warn">約8/23訂位</span> → 歷史古蹟大阪天滿宮 → 道頓堀逛街 → <span class="food-highlight">18:30 晚餐：串かつ凡 北新地 (奢華星級串炸 Omakase)</span><span class="booking-warn">約8/23訂位</span>。
+                </div>
+                <div class="image-gallery">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/B1ZgfUXHWe.png" alt="關西啟程意象">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/H1XiF-TMzl.png" alt="梅田交通動線">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/r1s0KW6MGx.png" alt="玄品河豚珍饈">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/HyMZqbpGGl.png" alt="北新地串炸凡">
+                </div>
+                <details>
+                    <summary>🔍 點擊展開：當天詳細流程</summary>
+                    <div class="details-content">
+                        <div class="sub-timeline-item">
+                            <span class="sub-time">10:00 - 12:00 | 抵達與安頓</span>
+                            降落神戶機場後，可利用便捷的 Port Liner 或直達巴士等交通工具迅速移動至西梅田哈頓飯店辦理行李寄存。
+                        </div>
+                        <div class="sub-timeline-item">
+                            <span class="sub-time">12:30 - 14:00 | 午餐：玄品 大阪梅田</span>
+                            享用高檔虎河豚料理。包含晶瑩剔透、極富韌性與鮮味的河豚刺身，以及精緻的紙火鍋，最後以吸收高湯靈魂精華的雜炊粥收尾。
+                        </div>
+                        <div class="sub-timeline-item">
+                            <span class="sub-time">14:30 - 17:45 | 大阪天滿宮 ‧ 道頓堀與法善寺密境</span>
+                            • <strong>大阪天滿宮：</strong>參拜學問之神，感受寧靜傳統的建築美感。<br>
+                            • <strong>道頓堀主街：</strong>欣賞極具特色與震撼力的螃蟹、章魚等巨大立體招牌。<br>
+                            • <strong>法善寺橫丁：</strong>踏上江戶感石板路，體驗對長滿青苔的「水掛不動尊」神像灑水祈福。<br>
+                            • <strong>亞拉比亞咖啡 (Arabiya Coffee)：</strong>自1951年屹立至今的老舖。在木質吧台前品味純粹的職人深焙手沖，深刻感受日本傳統喫茶店底蘊。
+                        </div>
+                        <div class="sub-timeline-item">
+                            <span class="sub-time">18:30 - 20:30 | 晚餐：串かつ凡 北新地</span>
+                            米其林殿堂級的奢華無菜單串炸。主廚巧妙運用夏多布里昂牛排、頂級魚子醬及時令珍饈，裹上極薄酥脆麵衣，徹底打破對大眾平價串炸的刻板印象。
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 2 -->
+        <div class="day-card" id="day2">
+            <div class="day-header">
+                <div class="day-title">9/24 (四) 日本環球影城 (USJ) 全日</div>
+                <div class="day-hotel">🏨 住宿：Hearton Hotel Nishi Umeda</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    全天日本環球影城！<span class="booking-warn">⚠️ 關鍵：切記在 7/24 左右提早於官方通路搶購 Express Pass 快速通關券！</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAY 3 -->
+        <div class="day-card" id="day3">
+            <div class="day-header">
+                <div class="day-title">9/25 (五) 前往京都 ‧ 御金神社、頂級壽喜燒與清水寺</div>
+                <div class="day-hotel">🏨 住宿：Hotel Elcient Kyoto Hachijoguchi</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    前往京都飯店存放行李 → 參拜御金神社 → 快速通過錦市場 → <span class="food-highlight">12:45 午餐：和牛壽喜燒 京都御殿后烏丸</span> → 安井金比羅宮斷惡緣通道 → 二年坂、三年坂 → 清水寺 → <span class="food-highlight">18:30 晚餐：兩百年米其林傳奇水炊鍋【鳥彌三】</span><span class="booking-warn">約7/1訂位</span> → 夜遊鴨川納涼床
+                </div>
+                <div class="image-gallery">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/ryCLj-azMl.png" alt="京都交通動線">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/ry_Bz-azGe.png" alt="壽喜燒頂級和牛">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/H1JvMWpzzx.png" alt="壽喜燒奢華環境">
+                </div>
+                <details>
+                    <summary>🔍 點擊展開：京都傳統與名店看點精華</summary>
+                    <div class="details-content">
+                        <p><strong>御金神社：</strong>隱身都市小巷內，以耀眼的純金鳥居著稱。可在此處清洗零錢作為投資開運「錢母」，並請回極具代表性的金箔御守。</p>
+                        <p><strong>和牛壽喜燒 京都御殿后烏丸：</strong>在極致奢華雅致的包廂空間，享用大理石油花均勻、近乎入口即化的極品頂級和牛。</p>
+                        <p><strong>安井金比羅宮：</strong>極富傳奇的神社。需購買一張「形代（祈願紙）」，口中默唸心願，並從貼滿無數白紙的緣切巨石洞口鑽過去（象徵斷絕惡緣）再鑽回來（代表締結良緣），是非常神聖獨特的儀式。</p>
+                        <p><strong>二年坂・三年坂・清水寺：</strong>不走回頭路的單向流暢爬坡散步路線。沿途古街町屋林立，最後於傍晚時分站上古老清水舞台，將整座京都老城區的夕陽美景盡收眼底。</p>
+                        <p><strong>鳥彌三 (Toriyasa)：</strong>擁有超過兩百年歷史、連續榮獲米其林肯定的水炊鍋老舗。其精髓在於慢火熬煮三天、呈現濃郁奶白色的極致雞骨高湯，搭配細嫩的優質土雞肉，美味暖胃。</p>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 4 -->
+        <div class="day-card" id="day4">
+            <div class="day-header">
+                <div class="day-title">9/26 (六) KLOOK一日遊：琵琶湖與洛北秘境四大景點</div>
+                <div class="day-hotel">🏨 住宿：Hotel Elcient Kyoto Hachijoguchi</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    09:20 京都車站八条口準時上車 → <span class="food-highlight">KLOOK 專車包辦：琵琶湖與洛北秘境四大景點一日遊</span> → 夢幻湖中「白鬚神社」 → 湖面古剎「滿月寺浮御堂」 → 大原森林翠綠青苔庭園「三千院」 → La Collina 近江八幡綠草屋頂 → 18:50 回到心齋橋 → <span class="food-highlight">晚餐：おらが蕎麦 (輕盈道地蕎麥麵)</span>。
+                </div>
+                <div class="image-gallery">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/HkGlV-pGzl.png" alt="一日遊計畫">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/HyD2SbpGfx.png" alt="行程路線細節">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/SJWTjbpMGg.png" alt="白鬚神社水上鳥居">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/SyZRjWpfzg.png" alt="滿月寺浮御堂">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/H1hy3b6MGx.png" alt="三千院地藏青苔">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/ByAe2bpffg.png" alt="La Collina吉卜力草屋頂">
+                </div>
+            </div>
+        </div>
+
+        <!-- DAY 5 -->
+        <div class="day-card" id="day5">
+            <div class="day-header">
+                <div class="day-title">9/27 (日) 前往神戶 ‧ 吃吃吃玩玩玩搭纜車</div>
+                <div class="day-hotel">🏨 住宿：BRENZA HOTEL</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    <span class="food-highlight">07:30 朝食 喜心 kyoto (具儀式感土鍋現煮白飯板前早餐)</span><span class="booking-warn">約8/1訂位</span> → 退房前往神戶 BRENZA HOTEL 寄放行李 → 搭乘空中纜車直達神戶布引香草園俯瞰 → <span class="food-highlight">12:00 超大壽司午餐：神戸元町すしきち</span><span class="booking-warn">約7/1訂位</span> → 北野異人館街散策 → 美利堅公園與紅色神戶港塔夜景點燈 → <span class="food-highlight">晚餐：グリル十字屋 (創立於1933年的老牌西餐洋食)</span>。
+                </div>
+                <!-- FIXED DETAIL CONTENT RE-ADDED HERE -->
+                <details>
+                    <summary>🔍 點擊展開：神戶完美行進動線細節</summary>
+                    <div class="details-content">
+                        <p><strong>朝食 喜心 kyoto：</strong>京都最後一個早晨的極致款待。主廚現場用土鍋盛裝新鮮現煮、粒粒分明、香氣四溢的白米飯，搭配外皮微焦的西京燒魚與濃郁豚汁，體驗純粹且充滿儀式感的日式晨間款待。</p>
+                        <p><strong>神戶布引香草園：</strong>搭乘空中纜車直達山頂俯瞰神戶港，再沿著歐風香草花園悠閒散步下山，這段路線非常順暢且風景極佳。</p>
+                        <p><strong>頂級午餐饗宴：</strong>回到三宮站周邊，在超過百年歷史的名店，享受主廚在鐵板前親自為你們料理的頂級 A5 神戶牛，油脂在高溫鐵板上滋滋作響。</p>
+                        <p><strong>美利堅公園 & 神戶港塔：</strong>傍晚在港區開闊的空間散步，吹著海風，欣賞造型優美的紅色神戶港塔與海洋博物館的夜間點燈。</p>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 6 -->
+        <div class="day-card" id="day6">
+            <div class="day-header">
+                <div class="day-title">9/28 (一) 告別關西 ‧ 從神戶機場啟程返台</div>
+                <div class="day-hotel">✈️ 今日返程</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    08:00 辦理退房辦理手續 → 前往神戶機場 (UKB) 航站 → 11:00 長榮航空 BR133 班機起飛返台。
+                </div>
+                <div class="image-gallery">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/SkO4fI7B-g.png" alt="機場返程卡片">
+                </div>
+            </div>
+        </div>
+
+
+        <!-- FLIGHTS DOCUMENTATION -->
+        <h2 class="section-title" id="flights">✈️ 長榮航空 (EVA AIR) 航班機票明細憑證</h2>
+        <div class="transport-grid">
+            <div class="trans-card">
+                <h4>往返航班官方詳細票務明細【依憑證 image_6e2a43.png 嚴格校對】</h4>
+                <p style="margin-bottom:10px; font-size:0.9rem; color:var(--primary); font-weight:bold;">✅ 訂位狀態：確定出票 (Booking Status: OK) ‧ 實際起降點：神戶機場 (OSAKA KOBE)</p>
+                
+                <h5 style="margin:10px 0 5px 0; color:var(--secondary);">🛫 去程航班資訊 (Outbound Flight)</h5>
+                <table class="ticket-detail-table">
+                    <tr><th>航線 From ➔ To</th><td>台北桃園 (TPE) T2 ➔ 神戶機場 (UKB) T2</td></tr>
+                    <tr><th>航班編號 Flight</th><td>BR134 (長榮航空正班機)</td></tr>
+                    <tr><th>出發時間 Departure</th><td><strong>06:20</strong> 23 Sep 2026</td></tr>
+                    <tr><th>抵達時間 Arrival</th><td><strong>10:00</strong> 23 Sep 2026</td></tr>
+                    <tr><th>艙等 Class / 票種</th><td>W 艙 / WLR1UW</td></tr>
+                    <tr><th>免費行李 Baggage</th><td>1PC</td></tr>
+                    <tr><th>飛行時間 Duration</th><td>02 小時 40 分鐘</td></tr>
+                    <tr><th>頻繁飛行員會員編號</th><td>3347687324</td></tr>
+                </table>
+
+                <h5 style="margin:15px 0 5px 0; color:var(--secondary);">🛬 回程航班資訊 (Inbound Flight)</h5>
+                <table class="ticket-detail-table">
+                    <tr><th>航線 From ➔ To</th><td>神戶機場 (UKB) T2 ➔ 台北桃園 (TPE) T2</td></tr>
+                    <tr><th>航班編號 Flight</th><td>BR133 (長榮航空正班機)</td></tr>
+                    <tr><th>出發時間 Departure</th><td><strong>11:00</strong> 28 Sep 2026</td></tr>
+                    <tr><th>抵達時間 Arrival</th><td><strong>12:55</strong> 28 Sep 2026</td></tr>
+                    <tr><th>艙等 Class / 預選座位</th><td>Q 艙 / <strong>座號 28A</strong></td></tr>
+                    <tr><th>免費行李 Baggage</th><td>2PC (雙倍行李額)</td></tr>
+                    <tr><th>飛行時間 Duration</th><td>02 小時 55 分鐘</td></tr>
+                    <tr><th>票種代碼 Fare basis</th><td>QLR1UW</td></tr>
+                </table>
+
+                <img style="max-width:100%; width:100%; margin-top:15px; border-radius:6px; cursor:pointer;" class="gallery-img" src="https://hackmd.io/_uploads/SyKC-8XSWg.png" alt="電子機票存根">
+            </div>
+        </div>
+
+
+        <!-- PREMIUM HOTEL HIGHLIGHTS -->
+        <h2 class="section-title" id="hotels">🏨 全程精選高分質感飯店總覽</h2>
+        <div class="hotel-grid">
+            <div class="hotel-item-card">
+                <img class="gallery-img" style="height:140px; border-radius:0; width:100%;" src="https://hackmd.io/_uploads/rJLgXmLHbg.png" alt="梅田飯店">
+                <div class="hotel-item-info">
+                    <div class="hotel-item-title">大阪 - 西梅田哈頓飯店</div>
+                    <div class="hotel-meta-text">Hearton Hotel Nishi Umeda</div>
+                    <p style="font-size:0.85rem; color:#718096; margin-top:5px;">✅ 9/18前免費取消<br>緊鄰梅田核心地下動線，首兩日暢玩大阪與前往環球影城的黃金基地。</p>
+                    <details style="padding:5px 10px; margin-top:5px;">
+                        <summary style="font-size:0.82rem;">查看訂房確認書</summary>
+                        <img style="width:100%; margin-top:5px;" src="https://hackmd.io/_uploads/S12SLbpMfx.png" alt="梅田確認單">
+                    </details>
+                </div>
+            </div>
+            <div class="hotel-item-card">
+                <img class="gallery-img" style="height:140px; border-radius:0; width:100%;" src="https://hackmd.io/_uploads/BJ9XLxTGGe.png" alt="京都飯店">
+                <div class="hotel-item-info">
+                    <div class="hotel-item-title">京都八條口艾爾森特酒店</div>
+                    <div class="hotel-meta-text">Hotel Elcient Kyoto Hachijoguchi</div>
+                    <p style="font-size:0.85rem; color:#718096; margin-top:5px;">✅ 9/18前免費取消<br>位於京都車站旁，前往 KLOOK 一日遊集合點極為神速。</p>
+                    <details style="padding:5px 10px; margin-top:5px;">
+                        <summary style="font-size:0.82rem;">查看訂房確認書</summary>
+                        <img style="width:100%; margin-top:5px;" src="https://hackmd.io/_uploads/HkOVUZ6zfe.png" alt="京都確認單">
+                    </details>
+                </div>
+            </div>
+            <div class="hotel-item-card">
+                <img class="gallery-img" style="height:140px; border-radius:0; width:100%;" src="https://hackmd.io/_uploads/rkUMJXIr-l.png" alt="神戶飯店">
+                <div class="hotel-item-info">
+                    <div class="hotel-item-title">神戶 - 布倫扎酒店</div>
+                    <div class="hotel-meta-text">BRENZA HOTEL</div>
+                    <p style="font-size:0.85rem; color:#718096; margin-top:5px;">✅ 9/26前免費取消<br>絕美摩登設計質感，方便最後一日早晨悠閒前往神戶機場登機。</p>
+                    <details style="padding:5px 10px; margin-top:5px;">
+                        <summary style="font-size:0.82rem;">查看訂房確認書</summary>
+                        <img style="width:100%; margin-top:5px;" src="https://hackmd.io/_uploads/BkQmUWazMe.png" alt="神戶確認單">
+                    </details>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODERN INTERACTIVE LIGHTBOX CONTAINER -->
+    <div class="lightbox" id="imageLightbox" onclick="closeLightbox()">
+        <span class="lightbox-close">&times;</span>
+        <img id="lightboxImg" src="" alt="放大圖">
+    </div>
+
+    <footer>
+        <p>🇯🇵 Kansai Premium Tour Memorabilia Album ‧ 願神戶海港與古都的記憶永遠璀璨</p>
+    </footer>
+
+    <!-- INTERACTIVE SCRIPTS -->
+    <script>
+        function scrollToId(id) {
+            const target = document.getElementById(id);
+            if(target) { target.scrollIntoView({ behavior: 'smooth' }); }
+        }
+
+        window.addEventListener('scroll', () => {
+            const sections = ['rate-anchor', 'day1', 'day2', 'day3', 'day4', 'day5', 'day6', 'flights', 'hotels'];
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            let currentSectionId = 'rate-anchor';
+            for (let id of sections) {
+                const el = document.getElementById(id);
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.top <= 140) { currentSectionId = id; }
+                }
+            }
+
+            const linkMap = {
+                'rate-anchor': 0, 'day1': 1, 'day2': 2, 'day3': 3, 'day4': 4, 'day5': 5, 'day6': 6,
+                'flights': 7, 'hotels': 8
+            };
+
+            navLinks.forEach(link => link.classList.remove('active'));
+            if(navLinks[linkMap[currentSectionId]]) {
+                navLinks[linkMap[currentSectionId]].classList.add('active');
+            }
+        });
+
+        document.querySelectorAll('.gallery-img').forEach(img => {
+            img.addEventListener('click', function(e) {
+                e.stopPropagation();
+                document.getElementById('lightboxImg').src = this.src;
+                document.getElementById('imageLightbox').style.display = 'flex';
+            });
+        });
+
+        function closeLightbox() {
+            document.getElementById('imageLightbox').style.display = 'none';
+        }
+
+        // --- REAL LIVE NETWORKING EXCHANGE RATE FETCHING LOGIC ---
+        function fetchLiveJpyRate() {
+            const tickerEl = document.getElementById('rate-ticker');
+            
+            fetch('https://open.er-api.com/v6/latest/JPY')
+                .then(response => {
+                    if (!response.ok) throw new Error('網路回應不穩定');
+                    return response.json();
+                })
+                .then(data => {
+                    if(data && data.rates && data.rates.TWD) {
+                        const realRate = data.rates.TWD;
+                        tickerEl.innerText = realRate.toFixed(4);
+                        tickerEl.style.color = '#48bb78'; 
+                    } else {
+                        tickerEl.innerText = '0.2084 (換算異常)';
+                    }
+                })
+                .catch(error => {
+                    console.error('匯率請求失敗:', error);
+                    tickerEl.innerText = '0.2084 (唯讀備用)';
+                    tickerEl.style.color = '#a0aec0';
+                });
+        }
+
+        fetchLiveJpyRate();
+        setInterval(fetchLiveJpyRate, 60000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🇹🇷 土耳其之旅</title>
+    <style>
+        /* CSS RESET & CORE THEME VARIABLES */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        :root {
+            --primary: #c94a29; /* Turkey terracotta / Cappadocia Red */
+            --primary-light: #fdf3f0;
+            --secondary: #1a4f6e; /* Bosphorus Deep Blue */
+            --secondary-light: #e8f1f5;
+            --accent: #dca134; /* Grand Bazaar Gold */
+            --dark: #2c3e50;
+            --light-bg: #faf7f2; /* Warm premium paper white */
+            --card-bg: #ffffff;
+            --border: #e0dacf;
+            --shadow: 0 8px 30px rgba(0,0,0,0.05);
+            --radius: 12px;
+            --font: 'PingFang TC', 'Microsoft JhengHei', -apple-system, sans-serif;
+        }
+
+        body {
+            font-family: var(--font);
+            background-color: var(--light-bg);
+            color: var(--dark);
+            line-height: 1.65;
+        }
+
+        a {
+            color: var(--secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        a:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        /* HERO HEADER BLOCK */
+        .hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
+            color: white;
+            padding: 100px 20px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+        }
+        .hero p {
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            opacity: 0.9;
+        }
+
+        /* STICKY QUICK NAVIGATION */
+        .nav-bar {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-link {
+            padding: 8px 16px;
+            margin: 0 5px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--dark);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: var(--primary);
+            color: white !important;
+            text-decoration: none;
+        }
+
+        /* MAIN CONTENT LAYOUT */
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: var(--secondary);
+            margin: 45px 0 25px 0;
+            padding-bottom: 8px;
+            border-bottom: 3px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* PRE-FLIGHT CHECKLIST GRID */
+        .checklist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .check-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: var(--radius);
+            text-align: center;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .check-item span {
+            font-size: 1.5rem;
+        }
+
+        /* INFO CALLOUT BANNER */
+        .alert-banner {
+            background: linear-gradient(135deg, var(--primary), #e65c3c);
+            color: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(201, 74, 41, 0.3);
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+        }
+
+        /* METADATA INFO CARDS */
+        .meta-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        @media(max-width: 768px) {
+            .meta-cards { grid-template-columns: 1fr; }
+        }
+        .meta-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border-left: 5px solid var(--secondary);
+        }
+        .meta-card h3 {
+            color: var(--secondary);
+            margin-bottom: 12px;
+            font-size: 1.15rem;
+        }
+
+        /* TIMELINE DAY CARD LAYOUT */
+        .day-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 35px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            scroll-margin-top: 80px;
+            transition: transform 0.3s;
+        }
+        .day-card:hover {
+            transform: translateY(-2px);
+        }
+        .day-header {
+            background: linear-gradient(135deg, var(--secondary), #24668f);
+            color: white;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .day-title {
+            font-size: 1.35rem;
+            font-weight: 600;
+        }
+        .day-hotel {
+            background: rgba(255,255,255,0.18);
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.88rem;
+            font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .day-body {
+            padding: 25px;
+        }
+        
+        /* FLOWING ITINERARY LINES */
+        .flow-path {
+            font-size: 1.1rem;
+            color: var(--dark);
+            margin-bottom: 25px;
+            line-height: 1.8;
+        }
+        .flow-path .food-highlight {
+            color: #148a00;
+            background-color: #f1f9f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* PHOTO GALLERY SLIDER/GRID GRID */
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .gallery-img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: filter 0.3s, transform 0.3s;
+            border: 1px solid var(--border);
+        }
+        .gallery-img:hover {
+            filter: brightness(0.9);
+            transform: scale(1.02);
+        }
+
+        /* SPOILER INTERACTIVE ACCORDIONS */
+        details {
+            background: var(--light-bg);
+            border-radius: 8px;
+            padding: 12px 18px;
+            margin-top: 15px;
+            border: 1px solid var(--border);
+        }
+        details summary {
+            font-weight: 600;
+            color: var(--secondary);
+            cursor: pointer;
+            outline: none;
+            user-select: none;
+        }
+        details[open] summary {
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed var(--border);
+        }
+        .details-content {
+            font-size: 0.95rem;
+            color: #4a5568;
+            white-space: pre-line;
+            line-height: 1.6;
+        }
+        .details-content strong {
+            color: var(--dark);
+        }
+
+        /* FLIGHTS & CAR CARDS */
+        .transport-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .trans-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+        .trans-card h4 {
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+        .pnr-tag {
+            float: right;
+            background: var(--secondary-light);
+            color: var(--secondary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        /* HOTEL CARDS SECTION */
+        .hotel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .hotel-item-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .hotel-item-info {
+            padding: 18px;
+        }
+        .hotel-stars {
+            color: var(--accent);
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .hotel-item-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--secondary);
+            margin-bottom: 8px;
+        }
+
+        /* PRICING BUDGET LUXURY TABLE */
+        .table-wrapper {
+            overflow-x: auto;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+        th, td {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            background-color: var(--secondary);
+            color: white;
+            font-weight: 600;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        tr:nth-child(even) {
+            background-color: #fafbfc;
+        }
+        .unpaid-highlight {
+            color: #d9383a;
+            font-weight: 600;
+        }
+
+        /* FOOD RECOMMENDATION GRID */
+        .food-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+        .food-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 15px;
+            text-align: center;
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            border-top: 3px solid var(--accent);
+            transition: background 0.3s;
+        }
+        .food-card:hover {
+            background: #fffdf9;
+        }
+
+        /* MODAL BOX LIGHTBOX FOR IMAGES */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 5000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .lightbox img {
+            max-width: 90%;
+            max-height: 85%;
+            border-radius: 6px;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.5);
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 2.5rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            margin-top: 60px;
+            color: #a0aec0;
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            background: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HERO SECTION -->
+    <header class="hero">
+        <h1>🇹🇷 土耳其之旅</h1>
+        <p>好吃好玩好累</p>
+    </header>
+
+    <!-- FLOATING DAY MENU NAVIGATION -->
+    <nav class="nav-bar">
+        <div class="nav-link active" onclick="scrollToId('overview')">出發項目</div>
+        <div class="nav-link" onclick="scrollToId('day1')">3/25 伊士麥</div>
+        <div class="nav-link" onclick="scrollToId('day2')">3/26 庫莎達西</div>
+        <div class="nav-link" onclick="scrollToId('day3')">3/27 棉花堡</div>
+        <div class="nav-link" onclick="scrollToId('day4')">3/28 安塔利亞Ⅰ</div>
+        <div class="nav-link" onclick="scrollToId('day5')">3/29 安塔利亞Ⅱ</div>
+        <div class="nav-link" onclick="scrollToId('day6')">3/30 卡帕多奇亞Ⅰ</div>
+        <div class="nav-link" onclick="scrollToId('day7')">3/31 卡帕多奇亞Ⅱ</div>
+        <div class="nav-link" onclick="scrollToId('day8')">4/01 卡帕多奇亞Ⅲ</div>
+        <div class="nav-link" onclick="scrollToId('day9')">4/02 伊斯坦堡Ⅰ</div>
+        <div class="nav-link" onclick="scrollToId('day10')">4/03 伊斯坦堡Ⅱ</div>
+        <div class="nav-link" onclick="scrollToId('day11')">4/04 伊斯坦堡Ⅲ</div>
+        <div class="nav-link" onclick="scrollToId('day12')">4/05 送機</div>
+        <div class="nav-link" onclick="scrollToId('transport')">交通資訊</div>
+        <div class="nav-link" onclick="scrollToId('hotels')">精選旅宿</div>
+        <div class="nav-link" onclick="scrollToId('expenses')">費用預算</div>
+        <div class="nav-link" onclick="scrollToId('must-eat')">在地必吃</div>
+    </nav>
+
+    <div class="container" id="overview">
+        <!-- CRITICAL ALERTS & CHECKS -->
+        <div class="alert-banner">
+            🔔 3/24 晚上 8 點前務必抵達機場集合！
+        </div>
+
+        <div class="checklist-grid">
+            <div class="check-item"><span>🛂</span>護照正本</div>
+            <div class="check-item"><span>🌐</span>網路Sim卡</div>
+            <div class="check-item"><span>🛡️</span>海外保險</div>
+            <div class="check-item"><span>💵</span>美金/歐元</div>
+            <div class="check-item"><span>📄</span>電子簽證</div>
+            <div class="check-item"><span>🚗</span>國際駕照</div>
+            <div class="check-item"><span>🔌</span>轉接頭</div>
+        </div>
+
+        <div class="meta-cards">
+            <div class="meta-card">
+                <h3>💱 匯率與時差資訊</h3>
+                <p><strong>即時匯率：</strong><a href="https://www.google.com/finance/quote/TRY-TWD?sa=X&ved=2ahUKEwiX_NXkt_OSAxXOs1YBHQXiAzsQmY0JegQIBRAz" target="_blank">點此查看 TRY/TWD 走勢 ↗</a></p>
+                <p><strong>當地時差：</strong>UTC+3，比台灣慢 5 小時</p>
+            </div>
+            <div class="meta-card">
+                <h3>🚨 緊要特殊資訊提示</h3>
+                <p>各城市的加密貨幣換錢所(Kripto Para Ofisi)與大使館領事館詳細資訊，已完整收錄在下方摺疊夾中以備不時之需。</p>
+            </div>
+        </div>
+
+        <!-- EMERGENCY DETAILS ACCORDIONS -->
+        <details>
+            <summary>🪙 虛擬貨幣換錢所資訊 (緊急用雙向現金兌換)</summary>
+            <div class="details-content">
+                實體加密貨幣兌換所（通常招牌會寫著 Kripto Para Ofisi 或 Bitcoin Exchange）
+                可進行 USDT、BTC、ETH、SOL 等加密貨幣與美元、歐元或土耳其里拉的雙向現金兌換。
+
+                <strong>- Izmir 伊茲密爾</strong>
+                兌換所主要集中在商業區。科納克廣場 (Konak) 與坐渡輪去的 Karşıyaka，這兩區的街道上就有不少掛著「Kripto Para Ofisi」招牌的店面，或是傳統的黃金外匯所（Döviz）兼營比特幣買賣。
+
+                <strong>- Kuşadası 庫莎達西</strong>
+                • <u>Kuşadası Konak Döviz & Altın Exchange</u>
+                  地址：Camikebir, Sağlık Cd. No: 12/B, 09400 Kuşadası/Aydın
+                  營業時間：每天 08:30 – 00:30 (營業到半夜，極度方便)
+                • <u>DÜZGÜN DÖVİZ</u>
+                  地址：Türkmen, Atatürk Blv. NO:96A, 09400 Kuşadası/Aydın
+                  營業時間：每天 09:00 – 22:00
+
+                <strong>- Antalya 安塔利亞</strong>
+                • <u>BigBit Crypto Exchange (評價極高，連週日都有營業)</u>
+                  地址：Çağlayan, Barınaklar Blv. NO:29/A, 07010 Muratpaşa/Antalya
+                  營業時間：週一至週六 10:00 – 21:00，週日 12:00 – 18:00
+                • <u>CryptoDom Ltd</u>
+                  地址：Fener, 1968. Sk. No:16, 07160 Muratpaşa/Antalya
+                  營業時間：週一至週五 09:00 – 19:00，週六 10:00 – 17:00 (週日休息)
+
+                <strong>- Pamukkale 棉花堡</strong>
+                • <u>pro yonetim (صرافی پرو)</u>
+                  地址：Hacıkaplanlar, Atatürk Cd. No:2, 20150 Pamukkale/Denizli
+                  營業時間：週一至週六 09:00 – 19:00 (週日休息)
+
+                <strong>- Cappadocia 卡帕多奇亞</strong>
+                觀光山城內沒有專門店。最近的大型正規外匯所 Uzer Döviz 位於 Nevşehir 市區 (Tahmis Cd. No:53)，距離住的 Göreme 洞穴飯店區有段車程(約23分鐘)，不建議為了換匯特地開車跑去。
+
+                <strong>- Istanbul 伊斯坦堡</strong>
+                • <u>COINTRAL</u>：位於 Fatih 區的 Molla Fenari, Tezkereci Sk. NO:5
+                • <u>Coinsfera</u>：位於加拉達石塔（Galata Tower）下方的 Müeyyetzade, Necatibey Cd. No.51/A
+            </div>
+        </details>
+
+        <details>
+            <summary>🏢 領事館與緊急救助聯繫資訊</summary>
+            <div class="details-content">
+                <strong>🇹🇼 駐土耳其代表處 (駐安卡拉台北經濟文化代表團)</strong>
+                Taipei Economic and Cultural Mission in Ankara
+                地址：Reşit Galip Cad. Rabat Sok. No. 16 G.O.P. 06700 Ankara, Türkiye
+                電話：(+90-312) 436-7255 / (+90-312) 436-7256
+                <span class="unpaid-highlight">緊急救助電話：(+90) 532-322-7162 (適用於車禍、搶劫、重大人身安危事件)</span>
+                電子郵件：tur@mofa.gov.tw | 領務時間：週一至週五 09:00~12:00
+                服務轄區：土耳其全境，並兼理北賽普勒斯、喬治亞、哈薩克、烏茲別克、土庫曼、吉爾吉斯、塔吉克。
+
+                <strong>🇨🇳 中國駐伊斯坦堡總領事館</strong>
+                領區：伊斯坦堡、巴勒克埃希爾、布爾薩、恰納卡萊等。
+                地址：Ahi Çelebi Cad. Çoban Çeşme Sok. No:4, Tarabya, Sarıyer, İstanbul。
+                領保協助電話：0090-531-338-9459 | 證件諮詢：0090-212-2992855。
+
+                <strong>🇨🇳 中國駐土耳其大使館（安卡拉）</strong>
+                地址：Gölgeli Sok. No.34, G.O.P. Ankara, Turkey。
+                領事保護電話：0090-538-821-5530。
+            </div>
+        </details>
+
+
+        <!-- DAILY DETAILS SECTION -->
+        <h2 class="section-title">📅 每日行程與景點攻略</h2>
+
+        <!-- DAY 1 -->
+        <div class="day-card" id="day1">
+            <div class="day-header">
+                <div class="day-title">3/25 (三) 下機啟程 ‧ 擁抱伊士麥海風</div>
+                <div class="day-hotel">🏨 住宿：Ontur Izmir Otel</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    下機 11:30 取車 → 驅車放行李 → <span class="food-highlight">午餐：Sevinç Kebap & Dürüm Salonu (傳統烤肉)</span> → Kemeraltı Bazaar 集市挖寶 → 科納克廣場與伊茲密爾鐘樓 → Konak 碼頭搭乘浪漫渡輪前往 Karşıyaka → <span class="food-highlight">晚餐：Karşıyaka 集市/Kent Restaurant</span> → 歷史古蹟阿珊索爾塔 (Asansör) 俯瞰醉人夜景 → 飯店休整調時差。
+                </div>
+                <div class="image-gallery">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/SysUuLZFxe.png" alt="行程印象圖" onerror="this.src='https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/rkbB4vd8Wl.png" alt="行程明細" onerror="this.src='https://images.unsplash.com/photo-1527838832700-5059252407fa?auto=format&fit=crop&w=400&q=80'">
+                </div>
+                <p style="font-size:0.9rem; margin-top:5px;"><a href="https://huitinchou.tw/izmir/" target="_blank">🔗 參考旅紀連結 ↗</a> | <a href="https://miyastravel.com/blog/post/35701939" target="_blank">🔗 國內線轉機教學 ↗</a></p>
+                <details>
+                    <summary>💡 本日備忘小叮嚀 (自駕錄影/換匯攻略)</summary>
+                    <div class="details-content">
+                        • <strong>轉機叮嚀：</strong>登機前務必跟櫃台確認行李是否能直掛伊士麥或優先下機。
+                        • <strong>租車檢驗：</strong>交車時進行全車上下、輪框、後照鏡全方位錄影。長途爬山需深度確認胎紋。了解 HGS 感應結算方式與加油類別（建議 Opet 或 Shell）。
+                        • <strong>最佳交通策略：</strong>車子先開去 Ontur Izmir Otel 由飯店泊車或停妥，之後全程步行或搭計程車，切勿開車進擁擠的市集！
+                        • <strong>隱藏玩法：</strong>有空檔可以到 Kahveci Omer Usta 體驗土耳其精妙的咖啡渣占卜。
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 2 -->
+        <div class="day-card" id="day2">
+            <div class="day-header">
+                <div class="day-title">3/26 (四) 以弗所千年古城 ‧ 享受正宗土耳其浴</div>
+                <div class="day-hotel">🏨 住宿：Elite World Kuşadası</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    <span class="food-highlight">早餐：Çorbacı Profesör 溫暖品嚐</span> → 驅車1小時前往 Şirince 小番紅花城山谷 → <span class="food-highlight">午餐：Meşhur Köfteci Veli 土耳其肉丸</span> → 絕美「以弗所古城」探秘 (評估參觀聖母瑪利亞故居) → 車程30分抵達庫莎達西辦理入住 → 鴿子島夕陽步道漫步 → Grand Bazaar 購物 → <span class="food-highlight">晚餐：Kazım Usta 海鮮盛宴</span> → 19:30 盛大預約 Mensis Spa 頂級土耳其浴。
+                </div>
+                <details>
+                    <summary>💡 以弗所極致奢華秘辛與土耳其浴指南</summary>
+                    <div class="details-content">
+                        • <strong>小番紅花城：</strong>山城狹窄。千萬別開進村中心，在村口看見大型收費停車場 (Otopark) 立即停進去步行。
+                        • <strong>以弗所攻略：</strong>務必將車停在「南門」走下坡參觀，出北門後搭計程車回南門取車。塞爾蘇斯圖書館是世界第三大，對面古老妓院傳說極具代表性。
+                        • <strong>聖母瑪利亞故居：</strong>獨立收費，園區偏小（禁止拍照），可依信仰與 UNESCO 集章需求決定是否前往。
+                        • <strong>土耳其浴預約資料：</strong>時間 19:30，位於 Dedeman Hotel 負2樓。請準備歐元/美元或里拉現金。預約姓名: HUANG LIEN CHUN / +886 922206193。
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 3 -->
+        <div class="day-card" id="day3">
+            <div class="day-header">
+                <div class="day-title">3/27 (五) 傳奇老店 Pide ‧ 經典馬賽克Laodicea</div>
+                <div class="day-hotel">🏨 住宿：Anya Resort Hotel (含早)</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    飯店享用精緻早餐 → 歷史卡里亞王國 Nysa Ancient City 廢墟自駕探訪 → <span class="food-highlight">午餐：Kısmet Pide Salonu Nazilli (土耳其披薩首都傳奇老店)</span> → 直奔 Laodicea 古城遺址 → 辦理飯店 check-in → <span class="food-highlight">晚餐：Kayas Wine House 慢烤羊排</span> → Natural Park 感受自然晚風。
+                </div>
+                <details>
+                    <summary>💡 尼薩古城深度歷史與 Laodicea 精華路線</summary>
+                    <div class="details-content">
+                        • <strong>Nysa 古城：</strong>可以直接開車入內巡禮，必看能容納3000人的大劇場及卡里亞式岩石墓穴。
+                        • <strong>午餐傳奇：</strong>Nazilli 是 Pide 首都，一定要點牛肉切塊披薩 (Kuşbaşılı Pide) 和特產甜芝麻醬披薩 (Tahinli Pide)。
+                        • <strong>Laodicea 遺址：</strong>強烈建議 15:30 前抵達。必看招牌「玻璃地板教堂」，透過透明地板能直視底下精美絕倫的古羅馬馬賽克地磚，震撼無比。
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 4 -->
+        <div class="day-card" id="day4">
+            <div class="day-header">
+                <div class="day-title">3/28 (六) 潔白石灰棚 ‧ 翻越雪山前往安塔利亞</div>
+                <div class="day-hotel">🏨 住宿：Ramada Plaza by Wyndham Antalya (含早)</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    早晨 8:00 前抵達棉花堡希拉波利斯 (古羅馬劇場與遺蹟) → <span class="food-highlight">午餐：As Teras Mantı Evi 特色土耳其水餃</span> → 開車 1.25 小時前往夢幻 Salda Gölü 藍色海灘 → 翻山越嶺 2.5 小時開往安塔利亞 → 飯店放車 → <span class="food-highlight">19:00 晚餐：Cava Restaurant 精緻慶祝</span> → 漫步老城區沉浸酒吧微醺氛圍。
+                </div>
+                <div class="image-gallery">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/ByYYJnbd-l.png" alt="Salda湖景" onerror="this.src='https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/SkP_3ozYWx.png" alt="Cava餐廳餐點" onerror="this.src='https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/BJeDw84Fxg.png" alt="老城區夜色" onerror="this.src='https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=400&q=80'">
+                </div>
+                <details>
+                    <summary>💡 赤腳棉花堡心法與高山自駕警示</summary>
+                    <div class="details-content">
+                        • <strong>赤腳棉花堡：</strong>石灰棚區域強制赤腳，請務必隨身攜帶塑膠袋裝鞋子。3 月底清晨泉水與岩石極為冰冷，注意保暖。
+                        • <strong>Salda湖防範：</strong>建議在 15:00 前離開 Salda 湖，因為後段 D695 公路翻越托羅斯山脈山口時可能伴隨大霧、殘雪與大量卡車，安全第一。
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 5 -->
+        <div class="day-card" id="day5">
+            <div class="day-header">
+                <div class="day-title">3/29 (日) 羅馬水利古城 ‧ 驚艷地中海落日遊船</div>
+                <div class="day-hotel">🏨 住宿：Ramada Plaza by Wyndham Antalya (含早)</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    飯店奢華早餐 → Kurşunlu Waterfall 幽靜瀑布小徑 → 佩格爾古城 (Perge) 大規模遺跡巡禮 → <span class="food-highlight">午餐：Meşhur Aksu Şimsek Köfteci İsa (道地科夫塔肉丸搭配特色芝麻沙拉)</span> → 回市區古港口 (Kaleiçi Marina) → 登上 Düden şelalesi 2小時壯麗瀑布遊船之旅 → <span class="food-highlight">晚餐：Ayar Meyhanesi 慶功</span> → 吹海風慢步走回飯店。
+                </div>
+                <details>
+                    <summary>💡 佩格爾古城列柱水渠與安塔利亞式沙拉吃法</summary>
+                    <div class="details-content">
+                        • <strong>Perge 古城必看：</strong>中央帶有精密活水渠系統的列柱大道、可容納萬人的古羅馬體育場，此地也是聖保羅第一次傳教的史詩聖地。
+                        • <strong>道地肉丸與皮亞茲：</strong>安塔利亞的 Piyaz 白豆沙拉獨家添加了濃郁芝麻醬、大蒜與檸檬汁，與剛烤好的肉丸、鹹優格 (Ayran) 堪稱絕配。
+                        • <strong>遊船重要策略：</strong>3月為旅遊肩季，吃完午餐必須先去港口確認船班時刻。務必詢問 "Is this going to the Waterfall today?" 以防風浪大取消。最佳時間為 16:00 - 18:00，回程可在海上面對整片海岸線金黃日落。
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 6 -->
+        <div class="day-card" id="day6">
+            <div class="day-header">
+                <div class="day-title">3/30 (一) 穿越孔亞絲路驛站 ‧ 挺進卡帕多奇亞</div>
+                <div class="day-hotel">🏨 住宿：Kayakapi Premium Caves (極致奢華洞穴)</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    起個大早出發 → 越過山脈前往孔亞 (Konya) 阿拉丁清真寺 → <span class="food-highlight">午餐：Tarihi Bedesten Dönercisi 傳奇沙威瑪</span> (順道採購有名糖果 Mevlana Şekeri) → 梅夫拉那博物館 → 開車 1.25 小時至蘇丹哈訥堡壘古驛站休憩 → 繼續開車 1.75 小時抵達卡帕多奇亞 → 頂級洞穴飯店 check-in → <span class="food-highlight">晚餐：Apetito Restaurant 傳統泥窯陶罐料理</span>。
+                </div>
+                <details>
+                    <summary>💡 山路行車要訣與陶罐料理漫長等待提醒</summary>
+                    <div class="details-content">
+                        • <strong>翻山路況：</strong>翻越海拔 1,825 公尺的阿拉賈貝爾山口大卡車較多，切勿急躁。
+                        • <strong>孔亞停車：</strong>清真寺導航可停在「ŞEMS KATLI OTOPARKI」地下停車場；沙威瑪餐廳可停在「as otopark」。進入博物館女性需備好頭巾包裹。
+                        • <strong>陶罐料理：</strong>正宗 Testi Kebabı 通常需要慢火在泥罐內燉煮 40-60 分鐘，建議一到店就先點好這道主菜！
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 7 -->
+        <div class="day-card" id="day7">
+            <div class="day-header">
+                <div class="day-title">3/31 (二) 夢幻熱氣球昇空 ‧ 深度探索地下八層城</div>
+                <div class="day-hotel">🏨 住宿：Olivia Cave Hotel (含早)</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    清晨迎來重頭戲：Royal Balloon 熱氣球遨遊 → 8:30 回飯店用早餐 → 飽睡退房 → 三姊妹岩打卡 → 格雷梅露天博物館 (深度造訪黑暗教堂濕壁畫) → 新飯店 check-in 放車 → <span class="food-highlight">午餐：Turkish Ravioli Restaurant 歐風品味</span> → 深入神奇德林克尤地下城 → 18:00 Motif Kültür Merkezi 觀賞神聖旋轉舞 → 逛格雷梅商店街 → <span class="food-highlight">晚餐：Dibek / Fırın Expres 烘焙特色菜</span>。
+                </div>
+                <div class="image-gallery">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/rkDRyxR8We.png" alt="熱氣球視野" onerror="this.src='https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/BJsrD5w9-g.png" alt="熱氣球收據" onerror="this.src='https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/HkWp2WPv-e.png" alt="旋轉舞舞台" onerror="this.src='https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/rk3p2bvvbx.png" alt="旋轉舞演出" onerror="this.src='https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/r1WtALBtee.png" alt="商店街夜景" onerror="this.src='https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=400&q=80'">
+                </div>
+                <details>
+                    <summary>💡 地下城密室恐懼預警與黑暗教堂看點</summary>
+                    <div class="details-content">
+                        • <strong>熱氣球通知：</strong>起飛前一天下午 6:30 前要密切注意電子郵件通知確切接送時間。
+                        • <strong>地下城震撼：</strong>德林克尤是地下 8 層、深達 85 米的巨型避難所，可容納2萬人。由於通道極其矮小，需長時間彎腰，午餐切記不能吃太飽！若有嚴重幽閉恐懼症者，可考慮改去通道較寬敞的凱馬克利地下城。
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 8 -->
+        <div class="day-card" id="day8">
+            <div class="day-header">
+                <div class="day-title">4/01 (三) 玫瑰谷大自然騎馬 ‧ 頂級博物館酒店晚宴</div>
+                <div class="day-hotel">🏨 住宿：Olivia Cave Hotel (含早)</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    (熱氣球備用預備日/清晨看滿天球群) → 飯店早餐 → 10:00 展開玫瑰谷精采駱駝/騎馬導覽之旅(含飯店接送) → <span class="food-highlight">午餐：Seyyah Han 風味料理</span> → 玫瑰谷 (Rose Valley) 壯麗岩石健行越野 → 回飯店短暫休息洗漱 → <span class="food-highlight">18:00 奢華晚餐：Lil'a Restaurant by Museum Hotel (極致觀景露台已預約)</span>。
+                </div>
+                <div class="image-gallery">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/BkTvT1z_-l.png" alt="騎馬合影" onerror="this.src='https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/S1Mty1zd-e.png" alt="健行奇岩" onerror="this.src='https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/S1zMvkGO-x.png" alt="Lil'a餐廳預約單" onerror="this.src='https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=400&q=80'">
+                </div>
+                <p style="font-size:0.9rem;"><a href="https://andyventure.com/turkey-cappadocia-hiking-guide/" target="_blank">🔗 參考卡帕多奇亞健行全攻略路線 ↗</a></p>
+            </div>
+        </div>
+
+        <!-- DAY 9 -->
+        <div class="day-card" id="day9">
+            <div class="day-header">
+                <div class="day-title">4/02 (四) 飛往千禧之都伊斯坦堡 ‧ 海峽遊船熱舞</div>
+                <div class="day-hotel">🏨 住宿：Sura Hagia Sophia Hotel İstanbul</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    清晨享用早餐 → 驚嘆烏奇沙城堡與 Pigeon Valley 鴿子谷 → 11:30 前趕往機場還車 → 13:20 飛往伊斯坦堡 (IST) → 14:55 降落並由豪華專車舉牌接機 → 抵達老城區飯店 check-in → <span class="food-highlight">19:15 重磅登場：Mega Lüfer Yachts 博斯普魯斯海峽私人餐桌晚餐遊船+土耳其傳統表演</span>。
+                </div>
+                <div class="image-gallery">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/SJGJX-65gx.png" alt="城堡奇觀" onerror="this.src='https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/SJMdYNuvWx.png" alt="接機單1" onerror="this.src='https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/rJb9OfPPWg.png" alt="遊船精華1" onerror="this.src='https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/SyajOfwvWe.png" alt="遊船精華2" onerror="this.src='https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=400&q=80'">
+                </div>
+                <details>
+                    <summary>💡 伊斯坦堡尖峰大塞車警告與船班接駁守則</summary>
+                    <div class="details-content">
+                        • <strong>極度重要：</strong>下飛機後必須以最快速度移動。伊斯坦堡 16:00 - 19:00 的下班尖峰塞車長達 1.5 到 2 小時，非常誇張。遊船接駁車會在各飯店巡迴接人，若因遲到導致錯過，船絕對不會等人，切記！
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 10 -->
+        <div class="day-card" id="day10">
+            <div class="day-header">
+                <div class="day-title">4/03 (五) 浪漫天台餵海鷗 ‧ 歷史老城與香料市集</div>
+                <div class="day-hotel">🏨 住宿：Sura Hagia Sophia Hotel İstanbul</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    <span class="food-highlight">08:30 Seven Hills Restaurant (網美必拍天台早餐：麵包邊餵海鷗、同框聖索菲亞)</span> → 參觀宏偉聖索菲亞大教堂 → 11:00 前快步進入藍色清真寺與 Arasta Bazaar → 神祕魔幻地下水宮殿 → <span class="food-highlight">午餐：Tarihi Sultanahmet Köftecisi Selim Usta 經典肉丸</span> → 大巴扎市集探險買伴手禮 → 鲁斯坦帕夏清真寺 → Egyptian Bazaar 香料市集採購好喝咖啡 (Kurukahveci Mehmet Efendi) → <span class="food-highlight">19:00 晚餐：Hamdi Restaurant - Eminönü (預約2樓Lounge景觀位)</span>。
+                </div>
+                <div class="image-gallery">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/HyGv5MvDbe.png" alt="天台餵海鷗" onerror="this.src='https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/H1bNIQvvbg.png" alt="Hamdi餐廳通知" onerror="this.src='https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=400&q=80'">
+                </div>
+                <details>
+                    <summary>💡 週五穆斯林主麻日參觀限制與聖索菲亞新制</summary>
+                    <div class="details-content">
+                        • <strong>主麻日避開：</strong>週五是重要主麻日，中午 11:00 - 14:30 兩大清真寺會暫停外國遊客進入，請務必精準掌握時間。
+                        • <strong>聖索菲亞門票：</strong>目前外國遊客票價 25 歐元，且限制只能由東北側入口登入二樓迴廊 (Upper Gallery)，一樓大廳專留給當地穆斯林禮拜使用。
+                        • <strong>夜晚加碼：</strong>若有空檔，強烈推薦前往頂級傳統的 Cagaloglu Hamami 感受極致奢華土耳其浴。
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 11 -->
+        <div class="day-card" id="day11">
+            <div class="day-header">
+                <div class="day-title">4/04 (六) 皇宮絕美水晶燈 ‧ 跨足亞洲區看日落</div>
+                <div class="day-hotel">🏨 住宿：Sura Hagia Sophia Hotel İstanbul</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    <span class="food-highlight">08:00 早餐：Mado (推薦豪華 Breakfast Platter 大拼盤)</span> → 9:00 前衝排隊多爾瑪巴赫切宮 (新皇宮) → 搭車至塔克西姆廣場 → <span class="food-highlight">沿獨立大街一路往下逛吃午餐 (推薦：濕漢堡、奧斯曼宮廷菜、安塔基亞捲餅)</span> → 抵達加拉達石塔 → Karaköy 碼頭搭大船橫跨博斯普魯斯海峽前往亞洲區 (Üsküdar) → 沿著最美海岸線漫步到少女塔，坐在地毯茶攤上喝茶喝咖啡 → <span class="food-highlight">晚餐：Çiya Sofrası (主廚的餐桌推薦名店)</span> → Kadikoy 街道夜生活漫步 → 搭夜航渡輪返回老城區 Eminönü。
+                </div>
+                <details>
+                    <summary>💡 新皇宮限流排隊秘訣與加拉達石塔排隊止損線</summary>
+                    <div class="details-content">
+                        • <strong>多爾瑪巴赫切宮：</strong>每天有嚴格人數限額。必須在 9:00 開門前排隊。時間不夠可直接捨棄「後宮 (Harem)」，只精看「禮儀宮 (Selamlık)」看那盞驚人的巨大水晶吊燈。室內嚴厲禁止拍照。
+                        • <strong>加拉達石塔：</strong>週六下午人潮可能要排 1-2 小時。若隊伍太長千萬不要死排，在塔底網美巷弄喝杯經典咖啡拍外觀即可，因為晚上去亞洲區岸邊茶攤看過來的夕陽與夜景天際線更震撼。
+                        • <strong>Çiya Sofrası 點餐指南：</strong>點餐需要親自去玻璃櫃檯指著菜色秤重。極度推薦點鑲菜類 (Dolma) 以及獨特的水果入菜燉肉！
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- DAY 12 -->
+        <div class="day-card" id="day12">
+            <div class="day-header">
+                <div class="day-title">4/05 (日) 手作馬賽克燈體驗 ‧ 滿載美好回憶返台</div>
+                <div class="day-hotel">✈️ 今日返程 (搭機日)</div>
+            </div>
+            <div class="day-body">
+                <div class="flow-path">
+                    <span class="food-highlight">07:00 早餐：Cigdem Patisserie 迅速享用</span> → 08:00 前準時抵達 Highlights in Istanbul Workshops 進行夢幻土耳其馬賽克燈 DIY 手作工作坊 → <span class="food-highlight">午餐：House of Medusa Restaurant (大啖傳統土耳其滿漢全席早餐盤)</span> → 12:00 整準時在飯店大廳等待豪華專車前來接送機 → 13:50 順利抵達國際機場辦理退稅登機，帶著滿滿感動回台灣。
+                </div>
+                <div class="image-gallery">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/SkJtjIbYeg.png" alt="工作坊明細" onerror="this.src='https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/rJ4a57uDZl.png" alt="馬賽克燈成果" onerror="this.src='https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/SkAMK4Ow-l.png" alt="送機確認單" onerror="this.src='https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=400&q=80'">
+                </div>
+            </div>
+        </div>
+
+
+        <!-- TRANSPORTATION DETAILED CARDS -->
+        <h2 class="section-title" id="transport">✈️ 航班機票與自駕租車詳情</h2>
+        <div class="transport-grid">
+            <div class="trans-card">
+                <h4>台北(TPE) ➔ 伊斯坦堡(IST) <span class="pnr-tag">PNR: UUVKLW</span></h4>
+                <p><strong>狀態：</strong>已確認出票</p>
+                <p><strong>乘機人：</strong>竣浩 ＆ 庭庭 雙人去回程</p>
+                <img style="width:100%; border-radius:6px; margin-top:10px; cursor:pointer;" class="gallery-img" src="https://hackmd.io/_uploads/HyjkN2zKgg.png" alt="機票憑證1" onerror="this.src='https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=400&q=80'">
+            </div>
+            <div class="trans-card">
+                <h4>伊斯坦堡(IST) ➔ 伊斯密(ADB) <span class="pnr-tag">PNR: WGXGGL</span></h4>
+                <p><strong>改期追蹤：</strong>已延後至上午 10:00AM 班次飛行</p>
+                <div class="image-gallery" style="grid-template-columns:1fr 1fr; margin-top:10px;">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/rkCpmw_UWe.png" alt="機票2" onerror="this.src='https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=400&q=80'">
+                    <img class="gallery-img" src="https://hackmd.io/_uploads/SkK0XwOL-x.png" alt="機票3" onerror="this.src='https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=400&q=80'">
+                </div>
+            </div>
+            <div class="trans-card">
+                <h4>卡帕多其亞(NAV) ➔ 伊斯坦堡(IST) <span class="pnr-tag">PNR: VVDBKG</span></h4>
+                <p><strong>回程國內線：</strong>快速便捷連接老城區</p>
+                <img style="width:100%; border-radius:6px; margin-top:10px; cursor:pointer;" class="gallery-img" src="https://hackmd.io/_uploads/HyzD0g65gl.png" alt="機票憑證4" onerror="this.src='https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=400&q=80'">
+            </div>
+            <div class="trans-card" style="grid-column: span 1;">
+                <h4>🚗 自駕租車詳情 (伊士麥 ADB 取車 ➔ 卡帕 NAV 還車)</h4>
+                <p><strong>現場到店支付：</strong><span class="unpaid-highlight">EUR 700</span></p>
+                <p><strong>必備文件清單：</strong>護照、台灣駕照正本 + 國際駕照正本(IDP)、主駕駛名下實體信用卡(額度扣押金 EUR 300-700，不收金融簽帳卡)、列印紙本憑證。</p>
+                <details style="margin-top:8px;">
+                    <summary>📷 點擊查看租車全憑證圖集</summary>
+                    <div class="image-gallery">
+                        <img class="gallery-img" src="https://hackmd.io/_uploads/Sk_lOPdUZx.png" alt="租車憑證1">
+                        <img class="gallery-img" src="https://hackmd.io/_uploads/B14W_P_LWl.png" alt="租車憑證2">
+                        <img class="gallery-img" src="https://hackmd.io/_uploads/B1EGOvuU-g.png" alt="租車憑證3">
+                        <img class="gallery-img" src="https://hackmd.io/_uploads/BJ1muwOLbg.png" alt="租車憑證4">
+                        <img class="gallery-img" src="https://hackmd.io/_uploads/SJpX_DdI-g.png" alt="租車憑證5">
+                    </div>
+                </details>
+            </div>
+        </div>
+
+
+        <!-- PREMIUM HOTEL LISTING -->
+        <h2 class="section-title" id="hotels">🏨 全程精選頂級星級飯店總覽</h2>
+        <div class="hotel-grid">
+            <div class="hotel-item-card">
+                <img class="gallery-img" style="height:140px; border-radius:0;" src="https://hackmd.io/_uploads/SJd1I0zYlx.png" alt="Ontur">
+                <div class="hotel-item-info">
+                    <div class="hotel-stars">⭐⭐⭐⭐ 4星級</div>
+                    <div class="hotel-item-title">伊士麥 - Ontur Izmir Otel</div>
+                    <p style="font-size:0.85rem; color:#718096;">入住時間: 14:00 後<br>特色: 有代客泊車、緊鄰外匯所換里拉超方便。</p>
+                </div>
+            </div>
+            <div class="hotel-item-card">
+                <img class="gallery-img" style="height:140px; border-radius:0;" src="https://hackmd.io/_uploads/r1JYARftxx.png" alt="Elite">
+                <div class="hotel-item-info">
+                    <div class="hotel-stars">⭐⭐⭐⭐⭐ 5星級</div>
+                    <div class="hotel-item-title">庫莎達西 - Elite World Kuşadası</div>
+                    <p style="font-size:0.85rem; color:#718096;">入住時間: 14:00 後<br>特色: 地理位置絕佳，鄰近大巴扎與愛琴海港口。</p>
+                </div>
+            </div>
+            <div class="hotel-item-card">
+                <img class="gallery-img" style="height:140px; border-radius:0;" src="https://hackmd.io/_uploads/S1Kg7kQFel.png" alt="Anya">
+                <div class="hotel-item-info">
+                    <div class="hotel-stars">⭐⭐⭐⭐⭐ 5星級</div>
+                    <div class="hotel-item-title">棉花堡 - Anya Resort Hotel</div>
+                    <p style="font-size:0.85rem; color:#718096;">亮點: ✅ 內含精緻早餐<br>環境清幽，可無縫近距離探索石灰棚遺址。</p>
+                </div>
+            </div>
+            <div class="hotel-item-card">
+                <img class="gallery-img" style="height:140px; border-radius:0;" src="https://hackmd.io/_uploads/r1J6HkQtll.png" alt="Ramada">
+                <div class="hotel-item-info">
+                    <div class="hotel-stars">⭐⭐⭐⭐⭐ 5星級</div>
+                    <div class="hotel-item-title">安塔利亞 - Ramada Plaza by Wyndham</div>
+                    <p style="font-size:0.85rem; color:#718096;">亮點: ✅ 內含早餐 | 爽住2晚<br>坐擁地中海無敵海景崖邊，奢華度假感爆棚。</p>
+                </div>
+            </div>
+            <div class="hotel-item-card">
+                <img class="gallery-img" style="height:140px; border-radius:0;" src="https://hackmd.io/_uploads/Hk2BhxQFxg.png" alt="Kayakapi">
+                <div class="hotel-item-info">
+                    <div class="hotel-stars">⭐⭐⭐⭐⭐ 5星級最高奢華</div>
+                    <div class="hotel-item-title">卡帕多奇亞 - Kayakapi Premium Caves</div>
+                    <p style="font-size:0.85rem; color:#718096;">亮點: ✅ 內含高級早餐<br>世界知名頂級歷史洞穴套房，拍照極美出片。</p>
+                </div>
+            </div>
+            <div class="hotel-item-card">
+                <img class="gallery-img" style="height:140px; border-radius:0;" src="https://hackmd.io/_uploads/Bk6N0eQKee.png" alt="Olivia">
+                <div class="hotel-item-info">
+                    <div class="hotel-stars">🏡 精緻網美特色洞穴</div>
+                    <div class="hotel-item-title">卡帕多奇亞 - Olivia Cave Hotel</div>
+                    <p style="font-size:0.85rem; color:#718096;">亮點: ✅ 內含早餐 | 連住2晚<br>露台即可直接觀看清晨壯麗的熱氣球群升空。</p>
+                </div>
+            </div>
+            <div class="hotel-item-card">
+                <img class="gallery-img" style="height:140px; border-radius:0;" src="https://hackmd.io/_uploads/SJlQ--7Yll.png" alt="Sura">
+                <div class="hotel-item-info">
+                    <div class="hotel-stars">⭐⭐⭐⭐⭐ 5星級</div>
+                    <div class="hotel-item-title">伊斯坦堡 - Sura Hagia Sophia Hotel</div>
+                    <p style="font-size:0.85rem; color:#718096;">亮點: 連續爽住 3 晚核心老城區<br>步行2分鐘秒達聖索菲亞大教堂與地下水宮。</p>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- EXPENSES FINANCES BUDGET TABLE -->
+        <h2 class="section-title" id="expenses">💰 旅行支出與預算追蹤表</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>支出項目分類</th>
+                        <th>記帳金額 (TWD)</th>
+                        <th>核對備註與付款狀態</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>國際機票</td><td>$75,708</td><td>TPE-IST 竣浩份 (已結)</td></tr>
+                    <tr><td>國際機票</td><td>$75,708</td><td>TPE-IST 庭庭份 (已結)</td></tr>
+                    <tr><td>國內線機票</td><td>$7,906</td><td>IST-ADB 國內線 (已結)</td></tr>
+                    <tr><td>國內線改票差額</td><td><span class="unpaid-highlight">$1,330</span></td><td>IST-ADB 10:00AM 班次 (🔴 未結)</td></tr>
+                    <tr><td>國內線回程機票</td><td>$11,984</td><td>NAV-IST 卡帕飛伊斯坦堡 (已結)</td></tr>
+                    <tr><td>3/25 伊士麥住宿</td><td><span class="unpaid-highlight">$5,172</span></td><td>Ontur Izmir Otel (🔴 未結)</td></tr>
+                    <tr><td>3/26 庫莎達西住宿</td><td><span class="unpaid-highlight">$11,259</span></td><td>Elite World Kuşadası (🔴 未結)</td></tr>
+                    <tr><td>3/27 棉花堡住宿</td><td><span class="unpaid-highlight">$3,520</span></td><td>Anya Resort Hotel (🔴 未結)</td></tr>
+                    <tr><td>3/28-29 安塔利亞住宿</td><td><span class="unpaid-highlight">$15,635</span></td><td>Ramada Plaza (兩晚總計 🔴 未結)</td></tr>
+                    <tr><td>3/30 卡帕多奇亞住宿Ⅰ</td><td><span class="unpaid-highlight">$10,445</span></td><td>Kayakapi Premium Caves (🔴 未結)</td></tr>
+                    <tr><td>3/31-4/1 卡帕多奇亞住宿Ⅱ</td><td><span class="unpaid-highlight">$11,359</span></td><td>Olivia Cave Hotel (兩晚總計 🔴 未結)</td></tr>
+                    <tr><td>4/2-4/4 伊斯坦堡住宿</td><td><span class="unpaid-highlight">$42,763</span></td><td>Sura Hagia Sophia (三晚總計 🔴 未結)</td></tr>
+                    <tr><td>3/31 熱氣球超級體驗</td><td>$18,520</td><td>Royal Balloon 傳奇飛行 (已結)</td></tr>
+                    <tr><td>3/31 蘇菲旋轉舞表演</td><td><span class="unpaid-highlight">$1,744</span></td><td>Klook 預訂憑證 (🔴 未結)</td></tr>
+                    <tr><td>4/1 玫瑰谷騎馬導覽</td><td><span class="unpaid-highlight">$1,884</span></td><td>Klook 預訂憑證 (🔴 未結)</td></tr>
+                    <tr><td>4/2 伊斯坦堡接機專車</td><td><span class="unpaid-highlight">$1,263</span></td><td>Klook 奢華接駁 (🔴 未結)</td></tr>
+                    <tr><td>4/2 海峽豪華晚餐遊船</td><td><span class="unpaid-highlight">$5,048</span></td><td>Klook 私人餐桌含表演 (🔴 未結)</td></tr>
+                    <tr><td>4/5 馬賽克燈手作 DIY</td><td><span class="unpaid-highlight">$3,788</span></td><td>Klook 特色文化體驗 (🔴 未結)</td></tr>
+                    <tr><td>4/5 伊斯坦堡送機專車</td><td><span class="unpaid-highlight">$1,263</span></td><td>Klook 安全返程 (🔴 未結)</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p style="margin-top:10px; font-weight:bold; color:#d9383a; text-align:right;">⚠️ 提示：紅色字體項目為「尚未結清」之款項，請在時限前完成支付！</p>
+
+
+        <!-- DESTINATION CULINARY LIST -->
+        <h2 class="section-title" id="must-eat">🥙 舌尖上的土耳其 ‧ 17大必吃清單</h2>
+        <div class="food-grid">
+            <div class="food-card">🥯 芝麻圈 (Simit)</div>
+            <div class="food-card">🥮 果仁蜜餅 (Baklava)</div>
+            <div class="food-card">🍬 土耳其軟糖 (Lokum)</div>
+            <div class="food-card">☕ 土耳其咖啡 (Türk Kahve)</div>
+            <div class="food-card">🥛 鹹優格 (Ayran)</div>
+            <div class="food-card">🍔 濕漢堡 (Islak Burger)</div>
+            <div class="food-card">🍛 雞肉飯 (Tavuklu Pilav)</div>
+            <div class="food-card">🦪 淡菜鑲飯 (Midye Dolma)</div>
+            <div class="food-card">🌰 烤栗子 (Kestane Kebap)</div>
+            <div class="food-card">🍵 土耳其紅茶 (Çay)</div>
+            <div class="food-card">🐟 魚肉三明治 (Balık Ekmek)</div>
+            <div class="food-card">🍦 傳統冰淇淋 (Dondurma)</div>
+            <div class="food-card">🫓 薄捲餅 Lahmacun</div>
+            <div class="food-card">🏺 陶罐料理 Testi Kebabı</div>
+            <div class="food-card">🍞 扁麵包 Leğen Kömbesi</div>
+            <div class="food-card">🍮 烤米布丁 Fırın Sütlaç</div>
+            <div class="food-card">🌯 鮮美魚肉捲 (Balık Dürüm)</div>
+        </div>
+
+    </div>
+
+    <!-- MODERN INTERACTIVE LIGHTBOX CONTAINER -->
+    <div class="lightbox" id="imageLightbox" onclick="closeLightbox()">
+        <span class="lightbox-close">&times;</span>
+        <img id="lightboxImg" src="" alt="放大圖">
+    </div>
+
+    <footer>
+        <p>🇹🇷 Turkey Gogogo</p>
+    </footer>
+
+    <!-- INTERACTIVE SCRIPTS -->
+    <script>
+        // Smooth scroll to element and add active toggle classes
+        function scrollToId(id) {
+            const target = document.getElementById(id);
+            if(target) {
+                target.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Automatic Navbar highlighting algorithm based on user viewport scroll position
+        window.addEventListener('scroll', () => {
+            const sections = ['overview', 'day1', 'day2', 'day3', 'day4', 'day5', 'day6', 'day7', 'day8', 'day9', 'day10', 'day11', 'day12', 'transport', 'hotels', 'expenses', 'must-eat'];
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            let currentSectionId = 'overview';
+            for (let id of sections) {
+                const el = document.getElementById(id);
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    // If the element is near the top of viewport
+                    if (rect.top <= 120) {
+                        currentSectionId = id;
+                    }
+                }
+            }
+
+            // Map standard IDs to menu indices
+            const linkMap = {
+                'overview': 0, 'day1': 1, 'day2': 2, 'day3': 3, 'day4': 4, 'day5': 5, 'day6': 6,
+                'day7': 7, 'day8': 8, 'day9': 9, 'day10': 10, 'day11': 11, 'day12': 12,
+                'transport': 13, 'hotels': 14, 'expenses': 15, 'must-eat': 16
+            };
+
+            navLinks.forEach(link => link.classList.remove('active'));
+            if(navLinks[linkMap[currentSectionId]]) {
+                navLinks[linkMap[currentSectionId]].classList.add('active');
+            }
+        });
+
+        // Dynamic Lightbox Modal logic for full-screen seamless image viewing
+        document.querySelectorAll('.gallery-img').forEach(img => {
+            img.addEventListener('click', function() {
+                document.getElementById('lightboxImg').src = this.src;
+                document.getElementById('imageLightbox').style.display = 'flex';
+            });
+        });
+
+        function closeLightbox() {
+            document.getElementById('imageLightbox').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
