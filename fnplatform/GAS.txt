@@ -279,7 +279,8 @@ function doGet(e) {
     crypto: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'],
     macro: ['^GSPC', '^IXIC', '^SOX'],
     forex: ['TWD=X', 'JPY=X', 'EURUSD=X'],
-    portfolio: {}
+    portfolio: {},
+    customNames: {}
   };
 
   // 尋找使用者
@@ -300,7 +301,8 @@ function doGet(e) {
           crypto: defaultWatchlist.crypto,
           macro: defaultWatchlist.macro,
           forex: defaultWatchlist.forex,
-          portfolio: {}
+          portfolio: {},
+          customNames: {}
         };
         sheet.getRange(i + 1, 2).setValue(JSON.stringify(parsed));
       } else {
@@ -309,6 +311,7 @@ function doGet(e) {
         parsed.macro = parsed.macro || defaultWatchlist.macro;
         parsed.forex = parsed.forex || defaultWatchlist.forex;
         parsed.portfolio = parsed.portfolio || {};
+        parsed.customNames = parsed.customNames || {};
       }
 
       return ContentService.createTextOutput(JSON.stringify({ 

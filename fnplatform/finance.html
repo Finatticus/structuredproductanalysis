@@ -2131,7 +2131,7 @@
         // ==========================================
         // 配置區 (請替換為已發佈之 GAS Web App URL)
         // ==========================================
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjDL1SNnpVU602W3-ypqKVCwHc_UQ_-nGWxaH5kRidaElkzxh3SU99SQXOGqLS7QD_/exec'; 
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbx-RlnclUbTvlJyYOFbuO5aOsvw6owM7lOIEzxXGDoEffYxmePu0htLx95WcUECD01U/exec'; 
         
         let currentUser = null;
         let watchlists = {
@@ -2139,7 +2139,8 @@
             crypto: [],
             macro: [],
             forex: [],
-            portfolio: {}
+            portfolio: {},
+            customNames: {}
         };
         
         let cachedQuotes = {}; 
@@ -2210,7 +2211,8 @@
                         macro: data.watchlist.macro || [],
                         forex: data.watchlist.forex || [],
                         portfolio: data.watchlist.portfolio || {},
-                        settings: data.watchlist.settings || {}
+                        settings: data.watchlist.settings || {},
+                        customNames: data.watchlist.customNames || {}
                     };
                     
                     if (watchlists.settings.theme) {
@@ -2642,7 +2644,8 @@
                 'USDEUR=X': '美金/歐元',
                 'USDGBP=X': '美金/英鎊'
             };
-            const displayName = symbolMap[symbol] || symbol;
+            const customName = watchlists.customNames && watchlists.customNames[symbol];
+            const displayName = customName || symbolMap[symbol] || symbol;
             
             const cached = cachedQuotes[symbol] || { 
                 price: 'Loading...', 
@@ -2744,13 +2747,13 @@
                     <div class="card-top">
                         ${category === 'macro' ? 
                             `<div class="card-symbol-grp">
-                                <span class="card-symbol" style="font-size: 14px;">${displayName}</span>
+                                <span class="card-symbol" style="font-size: 14px;" contenteditable="true" spellcheck="false" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" onblur="saveCustomName('${symbol}', '${category}', this.innerText)" onclick="event.stopPropagation()">${displayName}</span>
                                 ${spikeTag}
                             </div>
                             <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${symbol}</div>` 
                             : 
                             `<div class="card-symbol-grp">
-                                <span class="card-symbol">${symbol}</span>
+                                <span class="card-symbol" contenteditable="true" spellcheck="false" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" onblur="saveCustomName('${symbol}', '${category}', this.innerText)" onclick="event.stopPropagation()">${displayName}</span>
                                 ${spikeTag}
                             </div>`
                         }
@@ -3283,6 +3286,22 @@
         // ==========================================
         // 虛擬持倉控制面板 (全部移動至分頁二中)
         // ==========================================
+        
+        async function saveCustomName(symbol, category, newName) {
+            const nameStr = newName.replace(/\\n/g, '').trim();
+            if (!watchlists.customNames) {
+                watchlists.customNames = {};
+            }
+            if (nameStr === '' || nameStr === symbol) {
+                delete watchlists.customNames[symbol];
+            } else {
+                watchlists.customNames[symbol] = nameStr;
+            }
+            renderGrid(category);
+            await syncWatchlists();
+            showToast(`已更新 ${symbol} 的顯示名稱`, 'success');
+        }
+
         function populatePortfolioSelect() {
             const select = document.getElementById('portfolio-asset-select');
             if (!select) return;
