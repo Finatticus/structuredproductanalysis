@@ -121,9 +121,30 @@ function fetchTaiwanQuotesHTML(symbols, includeHistory) {
     }
     
     if (success) {
+      let historyArray = [];
+      if (includeHistory) {
+        try {
+          const today = new Date();
+          const past30 = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+          const yyyy = past30.getFullYear();
+          const mm = String(past30.getMonth() + 1).padStart(2, '0');
+          const dd = String(past30.getDate()).padStart(2, '0');
+          const startDate = `${yyyy}-${mm}-${dd}`;
+          
+          const historyUrl = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${rawSym}&start_date=${startDate}`;
+          const historyRes = UrlFetchApp.fetch(historyUrl, { muteHttpExceptions: true });
+          if (historyRes.getResponseCode() === 200) {
+            const histData = JSON.parse(historyRes.getContentText());
+            if (histData && histData.data && histData.data.length > 0) {
+              historyArray = histData.data.map(d => d.close);
+            }
+          }
+        } catch(e) { console.log("FinMind err: " + e.message); }
+      }
+      
       results[s] = {
         status: 'success', price: price, change: change, changePercent: pct,
-        longName: name, history: [], volumeSpike: false
+        longName: name, history: historyArray, volumeSpike: false
       };
     } else {
       results[s] = { status: 'error', message: errMsg };
@@ -138,7 +159,45 @@ function doGet(e) {
   
   const action = e.parameter.action;
   
-  // 1. 處理取得即時報價的 API 請求 (使用 Google Finance 引擎，帶有鎖與快取機制以解決併發與效能問題)
+  if (action === 'getChartHistory') {
+    const symbol = (e.parameter.symbol || '').toUpperCase().trim();
+    if (!symbol) return ContentService.createTextOutput(JSON.stringify({error: 'No symbol'})).setMimeType(ContentService.MimeType.JSON);
+    
+    let dates = [];
+    let prices = [];
+    
+    if (symbol.endsWith('.TW') || symbol.endsWith('.TWO')) {
+      // Taiwan Stocks: We no longer fetch FinMind in backend to avoid IP rate limits.
+      // The frontend will handle this directly.
+      return ContentService.createTextOutput(JSON.stringify({error: 'Taiwan stock history is handled by frontend'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    } else {
+      // Others: try to get from cache (already fetched by Google Finance)
+      const cache = CacheService.getScriptCache();
+      const hStr = cache.get('quote_hist_' + symbol);
+      if (hStr) {
+        prices = JSON.parse(hStr); // it's either an array or comma-separated string, actually wait
+        if (!hStr.startsWith('[')) {
+          prices = hStr.split(',').map(Number);
+        } else {
+          prices = JSON.parse(hStr);
+        }
+        // Generate mock dates for the past N days (weekdays)
+        let d = new Date();
+        for (let i = 0; i < prices.length; i++) {
+          dates.unshift(d.toISOString().split('T')[0]);
+          d.setDate(d.getDate() - 1);
+          if (d.getDay() === 0) d.setDate(d.getDate() - 2); // skip weekend roughly
+          else if (d.getDay() === 6) d.setDate(d.getDate() - 1);
+        }
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ symbol: symbol, dates: dates, prices: prices }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  // 1. 處理取得即時報價的 API 請求 (使用 Google Finance 引擎)
   if (action === 'getQuotes') {
     const symbolsStr = e.parameter.symbols || '';
     const symbols = symbolsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
@@ -233,7 +292,7 @@ function doGet(e) {
             `=GOOGLEFINANCE(A${rowIdx}, "change")`,
             `=GOOGLEFINANCE(A${rowIdx}, "changepct")`,
             `=GOOGLEFINANCE(A${rowIdx}, "name")`,
-            includeHistory ? `=JOIN(";", INDEX(GOOGLEFINANCE(A${rowIdx}, "close", TODAY()-30, TODAY()), 0, 2))` : "",
+            includeHistory ? `=JOIN(";", INDEX(GOOGLEFINANCE(A${rowIdx}, "close", TODAY()-730, TODAY()), 0, 2))` : "",
             `=GOOGLEFINANCE(A${rowIdx}, "volume")`,
             includeHistory ? `=AVERAGE(INDEX(GOOGLEFINANCE(A${rowIdx}, "volume", TODAY()-30, TODAY()), 0, 2))` : ""
           ]);

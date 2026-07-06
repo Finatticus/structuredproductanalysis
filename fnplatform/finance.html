@@ -2125,18 +2125,22 @@
                     <span id="modal-asset-name" class="modal-title">-</span>
                     <span id="modal-asset-symbol" class="modal-symbol">-</span>
                 </div>
-                <div class="modal-tabs">
-                    <button class="modal-tab-btn active" onclick="switchModalTab('tv')">TradingView 圖表</button>
-                    <button class="modal-tab-btn" onclick="switchModalTab('local')">本機歷史數據分析</button>
-                </div>
                 <button class="modal-close" onclick="closeChartModal(event)">✕</button>
             </div>
-            <div class="modal-body">
-                <div id="tv-chart-view" style="width: 100%; height: 100%;">
-                    <div id="tradingview-chart-container" style="height: 100%; width: 100%;"></div>
+            <div class="modal-body" style="background: var(--bg-card); padding: 20px; display: flex; flex-direction: column; align-items: center; position: relative;">
+                <div style="width: 100%; display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <button class="tech-btn" onclick="toggleTech('sma5')">SMA 5</button>
+                    <button class="tech-btn" onclick="toggleTech('sma20')">SMA 20</button>
+                    <button class="tech-btn" onclick="toggleTech('sma60')">SMA 60</button>
+                    <button class="tech-btn" onclick="toggleTech('sma120')">SMA 120</button>
+                    <button class="tech-btn" onclick="toggleTech('bb')">布林通道</button>
+                    <button class="tech-btn" onclick="toggleTech('macd')">MACD</button>
+                    <button class="tech-btn" onclick="toggleTech('kd')">KD</button>
                 </div>
-                <div id="local-chart-view" style="width: 100%; height: 100%; display: none; background: #0c0f16; padding: 20px; overflow-y: auto;">
-                    <!-- 自研 SVG 多指標線圖將渲染在此 -->
+                <div id="chart-loading" style="display: none; position: absolute; font-size: 16px; font-weight: 600; color: var(--accent-blue); top: 50%;">載入中...</div>
+                <div id="chart-error" style="display: none; position: absolute; font-size: 14px; color: var(--accent-red); top: 50%;">無法取得歷史線圖資料</div>
+                <div style="width: 100%; height: 500px; position: relative;">
+                    <canvas id="customModalChart"></canvas>
                 </div>
             </div>
         </div>
@@ -2146,7 +2150,7 @@
         // ==========================================
         // 配置區 (請替換為已發佈之 GAS Web App URL)
         // ==========================================
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyA8rARvORvFEwsJvptm4KZHJDIIPxdD5tQvp1M12CJKLpR0DXUW71ENvukzPUcgLzS/exec'; 
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbw7qso_0nqFyr9IT1aHQlb4irvaKh_d8iy8bz78a7YVhOV0Vi95dTHx12i6okSICRLu/exec'; 
         
         let currentUser = null;
         let watchlists = {
@@ -2563,7 +2567,8 @@
         }
 
         // 產生迷你趨勢圖 HTML (SVG)
-        function generateSparklineHTML(history, isUp) {
+        function generateSparklineHTML(rawHistory, isUp) {
+            const history = rawHistory ? rawHistory.slice(-30) : [];
             if (!history || history.length < 2) {
                 return `
                     <svg width="75" height="20" viewBox="0 0 75 20">
@@ -2686,11 +2691,8 @@
             const sparklineHTML = generateSparklineHTML(cached.history, cached.isUp);
             const spikeTag = cached.volumeSpike ? '<span class="volume-spike-tag">⚡ 爆量</span>' : '';
             
-            // 自選股卡片專屬的事件資訊
+            // 自選股卡片專屬的事件資訊 (使用者要求移除)
             let eventHTML = '';
-            if (category === 'watchlist' || category === 'watchlist_tw') {
-                eventHTML = getUpcomingEventText(symbol);
-            }
 
             // 布林通道偏離度計算與警示樣式
             let bbHTML = '';
@@ -3026,6 +3028,15 @@
                                 history: (quote.history && quote.history.length > 0) ? quote.history : existingHistory,
                                 volumeSpike: quote.volumeSpike !== undefined ? quote.volumeSpike : (cachedQuotes[symbol] ? cachedQuotes[symbol].volumeSpike : false)
                             };
+                            
+                            if ((symbol.endsWith('.TW') || symbol.endsWith('.TWO')) && cachedQuotes[symbol].history.length === 0) {
+                                fetchTaiwanHistoryFrontend(symbol, 30).then(hist => {
+                                    if (hist.length > 0) {
+                                        cachedQuotes[symbol].history = hist;
+                                        updateCardDOM(symbol, formattedPrice, formattedChange, formattedPct, isUp);
+                                    }
+                                });
+                            }
                             
                             updateCardDOM(symbol, formattedPrice, formattedChange, formattedPct, isUp);
                         }
@@ -3672,17 +3683,182 @@
             }
             
             if (sym.endsWith('.TW')) {
-                return `TAIEX:${sym.replace('.TW', '')}`; // TradingView 免費組件之台灣代碼格式為 TAIEX:2330
+                return `TWSE:${sym.replace('.TW', '')}`;
+            }
+            if (sym.endsWith('.TWO')) {
+                return `TPEX:${sym.replace('.TWO', '')}`;
             }
             return sym;
         }
 
+        async function fetchTaiwanHistoryFrontend(symbol, days) {
+            const match = symbol.match(/^([A-Z0-9]+)(\.TW|\.TWO)?$/);
+            const rawSym = match ? match[1] : symbol.replace('.TWO', '').replace('.TW', '');
+            
+            try {
+                const today = new Date();
+                const past = new Date(today.getTime() - days * 24 * 60 * 60 * 1000);
+                const yyyy = past.getFullYear();
+                const mm = String(past.getMonth() + 1).padStart(2, '0');
+                const dd = String(past.getDate()).padStart(2, '0');
+                
+                const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${rawSym}&start_date=${yyyy}-${mm}-${dd}`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.data && data.data.length > 0) {
+                        return data.data; // returns array of {date, close}
+                    }
+                }
+            } catch(e) { console.error("FinMind Error", e); }
+            return [];
+        }
+
+        let currentChartInstance = null;
         let currentModalSymbol = null;
         let currentModalCategory = null;
+        let chartRawData = { dates: [], prices: [] };
+        let activeTechs = new Set();
 
-        function openChartModal(symbol, category) {
+        function calculateSMA(data, period) {
+            const sma = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < period - 1) sma.push(null);
+                else {
+                    const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+                    sma.push(sum / period);
+                }
+            }
+            return sma;
+        }
+        
+        function calculateBollinger(data, period=20, multiplier=2) {
+            const upper = [], lower = [];
+            const sma = calculateSMA(data, period);
+            for (let i = 0; i < data.length; i++) {
+                if (i < period - 1) {
+                    upper.push(null); lower.push(null);
+                } else {
+                    const slice = data.slice(i - period + 1, i + 1);
+                    const mean = sma[i];
+                    const variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / period;
+                    const stdDev = Math.sqrt(variance);
+                    upper.push(mean + multiplier * stdDev);
+                    lower.push(mean - multiplier * stdDev);
+                }
+            }
+            return {upper, lower};
+        }
+        
+        function calculateMACD(data) {
+            const ema12 = calculateEMA(data, 12);
+            const ema26 = calculateEMA(data, 26);
+            const diff = data.map((_, i) => (ema12[i] !== null && ema26[i] !== null) ? ema12[i] - ema26[i] : null);
+            const dea = calculateEMA(diff.filter(x => x !== null), 9);
+            const paddedDea = Array(data.length - dea.length).fill(null).concat(dea);
+            const macd = diff.map((d, i) => (d !== null && paddedDea[i] !== null) ? 2 * (d - paddedDea[i]) : null);
+            return {diff, dea: paddedDea, macd};
+        }
+        
+        function calculateKD(data, period=9) {
+            const kVal = [], dVal = [];
+            let curK = 50, curD = 50;
+            for (let i = 0; i < data.length; i++) {
+                if (i < period - 1) {
+                    kVal.push(null); dVal.push(null);
+                } else {
+                    const slice = data.slice(i - period + 1, i + 1);
+                    const h = Math.max(...slice);
+                    const l = Math.min(...slice);
+                    const rsv = (h - l === 0) ? 50 : ((data[i] - l) / (h - l)) * 100;
+                    curK = (2/3) * curK + (1/3) * rsv;
+                    curD = (2/3) * curD + (1/3) * curK;
+                    kVal.push(curK); dVal.push(curD);
+                }
+            }
+            return {kVal, dVal};
+        }
+
+        function toggleTech(tech) {
+            if (activeTechs.has(tech)) activeTechs.delete(tech);
+            else activeTechs.add(tech);
+            
+            document.querySelectorAll('.tech-btn').forEach(btn => {
+                if (btn.getAttribute('onclick').includes(tech)) {
+                    btn.style.background = activeTechs.has(tech) ? 'var(--accent-blue)' : 'rgba(255,255,255,0.1)';
+                    btn.style.color = activeTechs.has(tech) ? '#fff' : 'var(--text-main)';
+                }
+            });
+            updateChartDatasets();
+        }
+
+        function updateChartDatasets() {
+            if (!currentChartInstance || !chartRawData.prices.length) return;
+            
+            const prices = chartRawData.prices;
+            const isUp = prices[prices.length - 1] >= prices[0];
+            const color = isUp ? '#ef4444' : '#10b981';
+            
+            const datasets = [{
+                label: 'Price',
+                data: prices,
+                borderColor: color,
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.1,
+                yAxisID: 'y'
+            }];
+            
+            if (activeTechs.has('sma5')) datasets.push({ label: 'SMA 5', data: calculateSMA(prices, 5), borderColor: '#eab308', borderWidth: 1.5, pointRadius: 0, yAxisID: 'y' });
+            if (activeTechs.has('sma20')) datasets.push({ label: 'SMA 20', data: calculateSMA(prices, 20), borderColor: '#3b82f6', borderWidth: 1.5, pointRadius: 0, yAxisID: 'y' });
+            if (activeTechs.has('sma60')) datasets.push({ label: 'SMA 60', data: calculateSMA(prices, 60), borderColor: '#a855f7', borderWidth: 1.5, pointRadius: 0, yAxisID: 'y' });
+            if (activeTechs.has('sma120')) datasets.push({ label: 'SMA 120', data: calculateSMA(prices, 120), borderColor: '#f97316', borderWidth: 1.5, pointRadius: 0, yAxisID: 'y' });
+            
+            if (activeTechs.has('bb')) {
+                const bb = calculateBollinger(prices);
+                datasets.push({ label: 'BB Upper', data: bb.upper, borderColor: 'rgba(148, 163, 184, 0.5)', borderDash: [5, 5], borderWidth: 1, pointRadius: 0, yAxisID: 'y' });
+                datasets.push({ label: 'BB Lower', data: bb.lower, borderColor: 'rgba(148, 163, 184, 0.5)', borderDash: [5, 5], borderWidth: 1, pointRadius: 0, yAxisID: 'y' });
+            }
+            
+            let hasY2 = false;
+            
+            if (activeTechs.has('macd')) {
+                hasY2 = true;
+                const macd = calculateMACD(prices);
+                datasets.push({ label: 'MACD Bar', data: macd.macd, type: 'bar', backgroundColor: macd.macd.map(v => v >= 0 ? '#ef444488' : '#10b98188'), yAxisID: 'y2' });
+                datasets.push({ label: 'DIF', data: macd.diff, borderColor: '#60a5fa', borderWidth: 1, pointRadius: 0, yAxisID: 'y2' });
+                datasets.push({ label: 'DEA', data: macd.dea, borderColor: '#f59e0b', borderWidth: 1, pointRadius: 0, yAxisID: 'y2' });
+            }
+            
+            if (activeTechs.has('kd')) {
+                hasY2 = true;
+                const kd = calculateKD(prices);
+                datasets.push({ label: 'K', data: kd.kVal, borderColor: '#f472b6', borderWidth: 1, pointRadius: 0, yAxisID: 'y2' });
+                datasets.push({ label: 'D', data: kd.dVal, borderColor: '#2dd4bf', borderWidth: 1, pointRadius: 0, yAxisID: 'y2' });
+            }
+            
+            currentChartInstance.data.datasets = datasets;
+            
+            if (hasY2) {
+                currentChartInstance.options.scales.y2 = { display: true, position: 'right', grid: { display: false } };
+                currentChartInstance.options.scales.y.position = 'left';
+            } else {
+                delete currentChartInstance.options.scales.y2;
+                currentChartInstance.options.scales.y.position = 'right';
+            }
+            
+            currentChartInstance.update();
+        }
+
+        async function openChartModal(symbol, category) {
             currentModalSymbol = symbol;
             currentModalCategory = category;
+            activeTechs.clear();
+            document.querySelectorAll('.tech-btn').forEach(btn => {
+                btn.style.background = 'rgba(255,255,255,0.1)';
+                btn.style.color = 'var(--text-main)';
+            });
             
             const cached = cachedQuotes[symbol] || {};
             const assetName = cached.longName || symbol;
@@ -3695,47 +3871,74 @@
             void modal.offsetWidth; 
             modal.classList.add('active');
             
-            // 預設切換至 TradingView
-            switchModalTab('tv');
-        }
-
-        function switchModalTab(tabId) {
-            document.querySelectorAll('.modal-tab-btn').forEach(btn => btn.classList.remove('active'));
-            const activeBtn = document.querySelector(`.modal-tab-btn[onclick="switchModalTab('${tabId}')"]`);
-            if (activeBtn) activeBtn.classList.add('active');
+            const canvas = document.getElementById('customModalChart');
+            const loading = document.getElementById('chart-loading');
+            const errorDiv = document.getElementById('chart-error');
             
-            const tvView = document.getElementById('tv-chart-view');
-            const localView = document.getElementById('local-chart-view');
+            canvas.style.display = 'none';
+            errorDiv.style.display = 'none';
+            loading.style.display = 'block';
             
-            if (tabId === 'tv') {
-                tvView.style.display = 'block';
-                localView.style.display = 'none';
+            if (currentChartInstance) {
+                currentChartInstance.destroy();
+                currentChartInstance = null;
+            }
+            
+            try {
+                let dates = [], prices = [];
+                if (symbol.endsWith('.TW') || symbol.endsWith('.TWO')) {
+                    const data = await fetchTaiwanHistoryFrontend(symbol, 730);
+                    dates = data.map(d => d.date);
+                    prices = data.map(d => d.close);
+                } else {
+                    const res = await fetch(`${GAS_URL}?action=getChartHistory&symbol=${encodeURIComponent(symbol)}`);
+                    const data = await res.json();
+                    dates = data.dates || [];
+                    prices = data.prices || [];
+                }
                 
-                const tvSymbol = mapYahooToTradingView(currentModalSymbol, currentModalCategory);
-                document.getElementById('tradingview-chart-container').innerHTML = '';
+                loading.style.display = 'none';
                 
-                new TradingView.widget({
-                    "autosize": true,
-                    "symbol": tvSymbol,
-                    "interval": "D",
-                    "timezone": "Etc/UTC",
-                    "theme": "dark",
-                    "style": "1",
-                    "locale": "zh_TW",
-                    "toolbar_bg": "#101420",
-                    "enable_publishing": false,
-                    "hide_side_toolbar": false,
-                    "allow_symbol_change": true,
-                    "container_id": "tradingview-chart-container",
-                    "studies": [
-                        "MACD@tv-basicstudies",
-                        "Stochastic@tv-basicstudies"
-                    ]
-                });
-            } else {
-                tvView.style.display = 'none';
-                localView.style.display = 'block';
-                renderLocalChart(currentModalSymbol);
+                if (prices.length > 0) {
+                    chartRawData = { dates, prices };
+                    canvas.style.display = 'block';
+                    
+                    const isUp = prices[prices.length - 1] >= prices[0];
+                    const color = isUp ? '#ef4444' : '#10b981';
+                    
+                    currentChartInstance = new Chart(canvas, {
+                        type: 'line',
+                        data: {
+                            labels: dates.length ? dates : prices.map((_, i) => i + 1),
+                            datasets: [{
+                                label: 'Price',
+                                data: prices,
+                                borderColor: color,
+                                backgroundColor: 'transparent',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                tension: 0.1,
+                                yAxisID: 'y'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { display: true, grid: { display: false } },
+                                y: { display: true, position: 'right', grid: { color: '#1e293b' } }
+                            }
+                        }
+                    });
+                } else {
+                    errorDiv.style.display = 'block';
+                }
+            } catch(e) {
+                loading.style.display = 'none';
+                errorDiv.style.display = 'block';
+                console.error(e);
             }
         }
 
@@ -3744,7 +3947,10 @@
             modal.classList.remove('active');
             setTimeout(() => {
                 modal.style.display = 'none';
-                document.getElementById('tradingview-chart-container').innerHTML = '';
+                if (currentChartInstance) {
+                    currentChartInstance.destroy();
+                    currentChartInstance = null;
+                }
             }, 300);
         }
 
