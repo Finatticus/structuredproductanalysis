@@ -405,9 +405,10 @@
             letter-spacing: -0.3px;
         }
         .card-change { 
-            font-size: 11px; 
+            font-size: 18px; 
             font-weight: 600; 
             font-variant-numeric: tabular-nums;
+            letter-spacing: -0.3px;
         }
         
         /* 迷你 Sparkline */
@@ -3032,7 +3033,7 @@
                             if ((symbol.endsWith('.TW') || symbol.endsWith('.TWO')) && cachedQuotes[symbol].history.length === 0) {
                                 fetchTaiwanHistoryFrontend(symbol, 30).then(hist => {
                                     if (hist.length > 0) {
-                                        cachedQuotes[symbol].history = hist;
+                                        cachedQuotes[symbol].history = hist.map(d => d.close);
                                         updateCardDOM(symbol, formattedPrice, formattedChange, formattedPct, isUp);
                                     }
                                 });
