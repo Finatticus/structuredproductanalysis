@@ -1181,18 +1181,33 @@
                 
             </div>
 
-            <!-- 自選股區塊 -->
+            <!-- 境外自選股區塊 -->
             <div class="market-section" id="section-watchlist" draggable="true" ondragstart="dragSection(event, 'section-watchlist')" ondragover="allowDrop(event)" ondrop="dropSection(event, 'section-watchlist')">
                 <div class="section-header">
                     <div class="section-title">
                         <span class="drag-handle" draggable="false">☰</span>
-                        我的自選股
+                        我的自選股(境外)
                     </div>
                 </div>
                 <div class="grid" id="watchlist-grid" ondragover="allowDrop(event)"></div>
                 <div class="add-target-container" draggable="false">
-                    <input type="text" id="new-watchlist-input" placeholder="代碼 (例: AAPL, TSLA, 2330.TW)" style="text-transform: uppercase;" draggable="false">
+                    <input type="text" id="new-watchlist-input" placeholder="代碼 (例: AAPL, TSLA)" style="text-transform: uppercase;" draggable="false">
                     <button onclick="addTarget('watchlist')" draggable="false">新增</button>
+                </div>
+            </div>
+
+            <!-- 台灣自選股區塊 -->
+            <div class="market-section" id="section-watchlist_tw" draggable="true" ondragstart="dragSection(event, 'section-watchlist_tw')" ondragover="allowDrop(event)" ondrop="dropSection(event, 'section-watchlist_tw')">
+                <div class="section-header">
+                    <div class="section-title">
+                        <span class="drag-handle" draggable="false">☰</span>
+                        我的自選股(台灣)
+                    </div>
+                </div>
+                <div class="grid" id="watchlist_tw-grid" ondragover="allowDrop(event)"></div>
+                <div class="add-target-container" draggable="false">
+                    <input type="text" id="new-watchlist_tw-input" placeholder="代碼 (例: 2330.TW, 3595.TWO)" style="text-transform: uppercase;" draggable="false">
+                    <button onclick="addTarget('watchlist_tw')" draggable="false">新增</button>
                 </div>
             </div>
 
@@ -2131,11 +2146,12 @@
         // ==========================================
         // 配置區 (請替換為已發佈之 GAS Web App URL)
         // ==========================================
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbx-RlnclUbTvlJyYOFbuO5aOsvw6owM7lOIEzxXGDoEffYxmePu0htLx95WcUECD01U/exec'; 
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyA8rARvORvFEwsJvptm4KZHJDIIPxdD5tQvp1M12CJKLpR0DXUW71ENvukzPUcgLzS/exec'; 
         
         let currentUser = null;
         let watchlists = {
             watchlist: [],
+            watchlist_tw: [],
             crypto: [],
             macro: [],
             forex: [],
@@ -2207,6 +2223,7 @@
                                 if (data.watchlist) {
                     watchlists = {
                         watchlist: data.watchlist.watchlist || [],
+                        watchlist_tw: data.watchlist.watchlist_tw || [],
                         crypto: data.watchlist.crypto || [],
                         macro: data.watchlist.macro || [],
                         forex: data.watchlist.forex || [],
@@ -2444,6 +2461,11 @@
             btn.disabled = true;
             const originalText = btn.innerText;
             btn.innerText = "驗證中...";
+            
+            // 台灣股市：如果使用者只輸入純數字，自動補上 .TW 確保後端正確分流到台灣爬蟲
+            if (category === 'watchlist_tw' && /^\d{4,5}$/.test(symbol)) {
+                symbol = symbol + '.TW';
+            }
 
             try {
                 if (category === 'crypto') {
@@ -2484,7 +2506,8 @@
                         }
                         input.value = '';
                     } else {
-                        showToast(`無效的代碼，Google Finance 無法識別 ${symbol}`, 'error');
+                        const errMsg = (data.quotes && data.quotes[symbol] && data.quotes[symbol].message) ? ` (${data.quotes[symbol].message})` : '';
+                        showToast(`無效的代碼，系統無法識別或無法取得報價 ${symbol}${errMsg}`, 'error');
                     }
                 }
             } catch (err) {
@@ -2529,6 +2552,7 @@
             renderGrid('macro');
             renderGrid('forex');
             renderGrid('watchlist');
+            renderGrid('watchlist_tw');
             renderGrid('crypto');
             
             connectCryptoWS();
@@ -2664,7 +2688,7 @@
             
             // 自選股卡片專屬的事件資訊
             let eventHTML = '';
-            if (category === 'watchlist') {
+            if (category === 'watchlist' || category === 'watchlist_tw') {
                 eventHTML = getUpcomingEventText(symbol);
             }
 
@@ -2964,7 +2988,7 @@
             const pollDot = document.getElementById('market-status-dot');
             pollDot.classList.add('pulse');
             
-            const symbols = Object.keys(watchlists).filter(k=>k!=="portfolio" && k!=="crypto").reduce((arr, k) => arr.concat(watchlists[k]), []);
+            const symbols = Object.keys(watchlists).filter(k=>k!=="portfolio" && k!=="crypto" && k!=="customNames" && k!=="settings").reduce((arr, k) => arr.concat(watchlists[k]), []);
             if (symbols.length === 0) {
                 pollDot.classList.remove('pulse');
                 pollDot.className = 'status-dot';
@@ -3377,6 +3401,7 @@
             if (watchlists.crypto.includes(symbol)) category = 'crypto';
             else if (watchlists.macro.includes(symbol)) category = 'macro';
             else if (watchlists.forex.includes(symbol)) category = 'forex';
+            else if (watchlists.watchlist_tw && watchlists.watchlist_tw.includes(symbol)) category = 'watchlist_tw';
             
             renderGrid(category);
             updatePortfolioSection();
@@ -3487,6 +3512,7 @@
                 if (watchlists.crypto.includes(symbol)) category = 'crypto';
                 else if (watchlists.macro.includes(symbol)) category = 'macro';
                 else if (watchlists.forex.includes(symbol)) category = 'forex';
+                else if (watchlists.watchlist_tw && watchlists.watchlist_tw.includes(symbol)) category = 'watchlist_tw';
                 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `

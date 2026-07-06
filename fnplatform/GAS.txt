@@ -1,4 +1,11 @@
 // gas.js
+// ==========================================
+// 授權專用函式 (請手動執行此函式來觸發授權)
+// ==========================================
+function testAuth() {
+  UrlFetchApp.fetch("https://www.google.com");
+  console.log("授權成功！");
+}
 const SHEET_NAME = 'Users';
 
 // 初始化工作表
@@ -45,6 +52,84 @@ function mapSymbolToGoogleFinance(symbol) {
   
   // 5. 美股個股直接回傳
   return s;
+}
+
+// 透過多重爬蟲 (Histock + CnYes) 獲取台股報價 (確保一定抓得到)
+function fetchTaiwanQuotesHTML(symbols, includeHistory) {
+  const results = {};
+  if (!symbols || symbols.length === 0) return results;
+
+  for (let i = 0; i < symbols.length; i++) {
+    const s = symbols[i];
+    const match = s.match(/^([A-Z0-9]+)(\.TW|\.TWO)?$/);
+    const rawSym = match ? match[1] : s.replace('.TWO', '').replace('.TW', '');
+    
+    let price = 0, change = 0, pct = 0, name = s;
+    let success = false, errMsg = "";
+    
+    // 1. 嘗試使用 Histock 嗨投資
+    try {
+      const url = 'https://histock.tw/stock/' + rawSym;
+      const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (res.getResponseCode() === 200) {
+        const html = res.getContentText();
+        const descMatch = html.match(/股價\s+([0-9.,]+),\s+漲跌\s+([A-Za-z0-9.,\-▲▼]+)/);
+        if (descMatch) {
+          price = parseFloat(descMatch[1].replace(/,/g, ''));
+          let rawChange = descMatch[2].replace(/,/g, '');
+          let chgVal = parseFloat(rawChange.replace(/[^0-9.]/g, '')) || 0;
+          if (rawChange.indexOf('▼') !== -1 || rawChange.indexOf('-') !== -1) {
+            change = -chgVal;
+          } else {
+            change = chgVal;
+          }
+          pct = price > 0 ? (change / (price - change)) * 100 : 0;
+          const nameMatch = html.match(/<title>([^ ]+)\s*\([0-9]+\)/);
+          if (nameMatch) name = nameMatch[1].trim();
+          success = true;
+        } else {
+          errMsg += "Histock parse failed. ";
+        }
+      } else {
+        errMsg += "Histock HTTP " + res.getResponseCode() + ". ";
+      }
+    } catch(e) { errMsg += "Histock err: " + e.message + ". "; }
+
+    // 2. 若 Histock 失敗，嘗試 CnYes 鉅亨網
+    if (!success) {
+      try {
+        const url2 = 'https://www.cnyes.com/twstock/' + rawSym;
+        const res2 = UrlFetchApp.fetch(url2, { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (res2.getResponseCode() === 200) {
+          const html2 = res2.getContentText();
+          const descMatch2 = html2.match(/即時行情\s+([0-9.,]+)\s+([+-]?[0-9.]+)%/);
+          if (descMatch2) {
+            price = parseFloat(descMatch2[1].replace(/,/g, ''));
+            pct = parseFloat(descMatch2[2]);
+            const prevClose = price / (1 + pct / 100);
+            change = price - prevClose;
+            const nameMatch2 = html2.match(/content="([^"(]+)\([0-9]+\)\s*即時行情/);
+            if (nameMatch2) name = nameMatch2[1].trim();
+            success = true;
+          } else {
+            errMsg += "CnYes parse failed.";
+          }
+        } else {
+          errMsg += "CnYes HTTP " + res2.getResponseCode() + ".";
+        }
+      } catch(e) { errMsg += "CnYes err: " + e.message + "."; }
+    }
+    
+    if (success) {
+      results[s] = {
+        status: 'success', price: price, change: change, changePercent: pct,
+        longName: name, history: [], volumeSpike: false
+      };
+    } else {
+      results[s] = { status: 'error', message: errMsg };
+    }
+  }
+  return results;
 }
 
 // 處理前端發送的 GET 請求
@@ -94,8 +179,32 @@ function doGet(e) {
       }
     });
     
-    // 如果有缺失的標的，才去寫入試算表進行 GOOGLEFINANCE 運算
-    if (missingSymbols.length > 0) {
+    // 分流：台灣股票 (包含 .TW 與 .TWO) 全部交由網頁爬蟲處理，其餘交由 Google Finance
+    const yfSymbols = missingSymbols.filter(s => s.endsWith('.TW') || s.endsWith('.TWO'));
+    const gfSymbols = missingSymbols.filter(s => !s.endsWith('.TW') && !s.endsWith('.TWO'));
+    const toCache = {};
+
+    if (yfSymbols.length > 0) {
+      const yfResults = fetchTaiwanQuotesHTML(yfSymbols, includeHistory);
+      for (let i = 0; i < yfSymbols.length; i++) {
+        const sym = yfSymbols[i];
+        const data = yfResults[sym];
+        if (data && data.status === 'success') {
+          results[sym] = data;
+          toCache['quote_price_' + sym] = JSON.stringify({
+            price: data.price, change: data.change, changePercent: data.changePercent,
+            longName: data.longName, volumeSpike: data.volumeSpike
+          });
+          if (includeHistory && data.history && data.history.length > 0) {
+            cache.put('quote_hist_' + sym, JSON.stringify(data.history), 7200);
+          }
+        } else {
+          results[sym] = data || { status: 'error', message: 'Yahoo API failed' };
+        }
+      }
+    }
+
+    if (gfSymbols.length > 0) {
       const lock = LockService.getScriptLock();
       try {
         // 等待最長 15 秒以取得腳本鎖，避免多個網頁籤/使用者併發導致覆寫 cacheSheet
@@ -112,12 +221,12 @@ function doGet(e) {
         cacheSheet.getRange(1, 1, 1, 8).setValues([['Symbol', 'Price', 'Change', 'ChangePct', 'Name', 'History', 'Volume', 'VolumeAvg20']]);
         
         // 寫入規格化代碼至 Column A
-        const mappedSymbols = missingSymbols.map(s => [mapSymbolToGoogleFinance(s)]);
-        cacheSheet.getRange(2, 1, missingSymbols.length, 1).setValues(mappedSymbols);
+        const mappedSymbols = gfSymbols.map(s => [mapSymbolToGoogleFinance(s)]);
+        cacheSheet.getRange(2, 1, gfSymbols.length, 1).setValues(mappedSymbols);
         
         // 寫入 Google Finance 計算公式至 Column B 至 H
         const formulas = [];
-        for (let i = 0; i < missingSymbols.length; i++) {
+        for (let i = 0; i < gfSymbols.length; i++) {
           const rowIdx = i + 2;
           formulas.push([
             `=GOOGLEFINANCE(A${rowIdx})`,
@@ -129,11 +238,11 @@ function doGet(e) {
             includeHistory ? `=AVERAGE(INDEX(GOOGLEFINANCE(A${rowIdx}, "volume", TODAY()-30, TODAY()), 0, 2))` : ""
           ]);
         }
-        cacheSheet.getRange(2, 2, missingSymbols.length, 7).setFormulas(formulas);
+        cacheSheet.getRange(2, 2, gfSymbols.length, 7).setFormulas(formulas);
         
         // 輪詢等待公式在 Google 伺服器端計算完畢 (最多嘗試 15 次，每次 500ms，以解決個股加載慢的問題)
         let values = [];
-        const dataRange = cacheSheet.getRange(2, 1, missingSymbols.length, 8);
+        const dataRange = cacheSheet.getRange(2, 1, gfSymbols.length, 8);
         for (let attempt = 0; attempt < 15; attempt++) {
           SpreadsheetApp.flush();
           values = dataRange.getValues();
@@ -158,9 +267,8 @@ function doGet(e) {
         }
         
         // 解析並建立快取
-        const toCache = {};
-        for (let i = 0; i < missingSymbols.length; i++) {
-          const origSym = missingSymbols[i];
+        for (let i = 0; i < gfSymbols.length; i++) {
+          const origSym = gfSymbols[i];
           const rowValues = values[i];
           
           let rawPriceStr = String(rowValues[1]).trim();
@@ -243,13 +351,9 @@ function doGet(e) {
           }
         }
         
-        if (Object.keys(toCache).length > 0) {
-          cache.putAll(toCache, 10);
-        }
-        
       } catch (err) {
         // 若發生錯誤，為防阻斷，仍對未成功的標的填入錯誤狀態
-        missingSymbols.forEach(s => {
+        gfSymbols.forEach(s => {
           if (!results[s]) {
             results[s] = { status: 'error', message: 'Exception: ' + err.toString() };
           }
@@ -257,6 +361,10 @@ function doGet(e) {
       } finally {
         lock.releaseLock();
       }
+    }
+
+    if (Object.keys(toCache).length > 0) {
+      cache.putAll(toCache, 10);
     }
     
     return ContentService.createTextOutput(JSON.stringify({ quotes: results }))
@@ -276,6 +384,7 @@ function doGet(e) {
   // 預設四個獨立區塊的標的與空倉
   const defaultWatchlist = {
     watchlist: ['AAPL', 'TSLA', 'NVDA'],
+    watchlist_tw: ['2330.TW', '2317.TW'],
     crypto: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'],
     macro: ['^GSPC', '^IXIC', '^SOX'],
     forex: ['TWD=X', 'JPY=X', 'EURUSD=X'],
@@ -298,6 +407,7 @@ function doGet(e) {
       if (Array.isArray(parsed)) {
         parsed = {
           watchlist: parsed,
+          watchlist_tw: defaultWatchlist.watchlist_tw,
           crypto: defaultWatchlist.crypto,
           macro: defaultWatchlist.macro,
           forex: defaultWatchlist.forex,
@@ -307,6 +417,7 @@ function doGet(e) {
         sheet.getRange(i + 1, 2).setValue(JSON.stringify(parsed));
       } else {
         parsed.watchlist = parsed.watchlist || defaultWatchlist.watchlist;
+        parsed.watchlist_tw = parsed.watchlist_tw || defaultWatchlist.watchlist_tw;
         parsed.crypto = parsed.crypto || defaultWatchlist.crypto;
         parsed.macro = parsed.macro || defaultWatchlist.macro;
         parsed.forex = parsed.forex || defaultWatchlist.forex;
