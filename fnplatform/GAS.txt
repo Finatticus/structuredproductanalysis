@@ -67,66 +67,66 @@ function fetchTaiwanQuotesHTML(symbols, includeHistory) {
     let price = 0, change = 0, pct = 0, name = s;
     let success = false, errMsg = "";
     
-    // 1. 優先嘗試 CnYes 鉅亨網 (因為有明確的漲跌正負號)
+    // 1. 優先嘗試 Histock 嗨投資 (依使用者要求)
     try {
-      const url2 = 'https://www.cnyes.com/twstock/' + rawSym;
-      const res2 = UrlFetchApp.fetch(url2, { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
-      if (res2.getResponseCode() === 200) {
-        const html2 = res2.getContentText();
-        const descMatch2 = html2.match(/即時行情\s+([0-9.,]+)\s+([+-]?[0-9.]+)%/);
-        if (descMatch2) {
-          price = parseFloat(descMatch2[1].replace(/,/g, ''));
-          pct = parseFloat(descMatch2[2]);
-          const prevClose = price / (1 + pct / 100);
-          change = price - prevClose;
-          const nameMatch2 = html2.match(/content="([^"(]+)\([0-9]+\)\s*即時行情/);
-          if (nameMatch2) name = nameMatch2[1].trim();
+      const url = 'https://histock.tw/stock/' + rawSym;
+      const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (res.getResponseCode() === 200) {
+        const html = res.getContentText();
+        const descMatch = html.match(/股價\s+([0-9.,]+),\s+漲跌\s+([A-Za-z0-9.,\-▲▼]+)/);
+        if (descMatch) {
+          price = parseFloat(descMatch[1].replace(/,/g, ''));
+          
+          // 嘗試從 HTML 內尋找精確的漲跌百分比 (包含正負號)
+          const pctMatch = html.match(/id="Price1_lbTPercent"[^>]*><span[^>]*>([+-]?[0-9.]+)%<\/span>/);
+          if (pctMatch) {
+            pct = parseFloat(pctMatch[1]);
+            const prevClose = price / (1 + pct / 100);
+            change = price - prevClose;
+          } else {
+            let rawChange = descMatch[2].replace(/,/g, '');
+            let chgVal = parseFloat(rawChange.replace(/[^0-9.]/g, '')) || 0;
+            change = chgVal;
+            if (html.includes('id="Price1_lbTChange"><span class="clr-gr"')) {
+              change = -chgVal;
+            }
+            pct = price > 0 ? (change / (price - change)) * 100 : 0;
+          }
+          
+          const nameMatch = html.match(/<title>([^ ]+)\s*\([0-9]+\)/);
+          if (nameMatch) name = nameMatch[1].trim();
           success = true;
         } else {
-          errMsg += "CnYes parse failed. ";
+          errMsg += "Histock parse failed.";
         }
       } else {
-        errMsg += "CnYes HTTP " + res2.getResponseCode() + ". ";
+        errMsg += "Histock HTTP " + res.getResponseCode() + ".";
       }
-    } catch(e) { errMsg += "CnYes err: " + e.message + ". "; }
+    } catch(e) { errMsg += "Histock err: " + e.message + "."; }
 
-    // 2. 若 CnYes 失敗，備用 Histock (並嘗試抓取漲跌符號)
+    // 2. 若 Histock 失敗，備用 CnYes 鉅亨網
     if (!success) {
       try {
-        const url = 'https://histock.tw/stock/' + rawSym;
-        const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
-        if (res.getResponseCode() === 200) {
-          const html = res.getContentText();
-          const descMatch = html.match(/<meta name="description" content="[^0-9]*([0-9.,]+)[^0-9]*([+-]?[0-9.,]+[漲跌]*)[^0-9]*([0-9.,]+%)/);
-          if (descMatch) {
-            price = parseFloat(descMatch[1].replace(/,/g, ''));
-            
-            // 嘗試從 HTML 內尋找精確的漲跌百分比 (包含正負號)
-            const pctMatch = html.match(/id="Price1_lbTPercent"[^>]*><span[^>]*>([+-]?[0-9.]+)%<\/span>/);
-            if (pctMatch) {
-              pct = parseFloat(pctMatch[1]);
-              const prevClose = price / (1 + pct / 100);
-              change = price - prevClose;
-            } else {
-              let rawChange = descMatch[2].replace(/,/g, '');
-              let chgVal = parseFloat(rawChange.replace(/[^0-9.]/g, '')) || 0;
-              change = chgVal;
-              if (html.includes('id="Price1_lbTChange"><span class="clr-gr"')) {
-                change = -chgVal;
-              }
-              pct = price > 0 ? (change / (price - change)) * 100 : 0;
-            }
-            
-            const nameMatch = html.match(/<title>([^ ]+)\s*\([0-9]+\)/);
-            if (nameMatch) name = nameMatch[1].trim();
+        const url2 = 'https://www.cnyes.com/twstock/' + rawSym;
+        const res2 = UrlFetchApp.fetch(url2, { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (res2.getResponseCode() === 200) {
+          const html2 = res2.getContentText();
+          const descMatch2 = html2.match(/即時行情\s+([0-9.,]+)\s+([+-]?[0-9.]+)%/);
+          if (descMatch2) {
+            price = parseFloat(descMatch2[1].replace(/,/g, ''));
+            pct = parseFloat(descMatch2[2]);
+            const prevClose = price / (1 + pct / 100);
+            change = price - prevClose;
+            const nameMatch2 = html2.match(/content="([^"(]+)\([0-9]+\)\s*即時行情/);
+            if (nameMatch2) name = nameMatch2[1].trim();
             success = true;
           } else {
-            errMsg += "Histock parse failed.";
+            errMsg += "CnYes parse failed. ";
           }
         } else {
-          errMsg += "Histock HTTP " + res.getResponseCode() + ".";
+          errMsg += "CnYes HTTP " + res2.getResponseCode() + ". ";
         }
-      } catch(e) { errMsg += "Histock err: " + e.message + "."; }
+      } catch(e) { errMsg += "CnYes err: " + e.message + ". "; }
     }
     
     if (success) {
