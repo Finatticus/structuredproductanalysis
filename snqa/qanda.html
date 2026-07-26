@@ -1332,6 +1332,19 @@
             
             <span class="fmt-divider">|</span>
             
+            <button type="button" class="fmt-btn" onclick="applyFontSize('qaAnswerInput', '1.25rem')" title="放大文字 (125%)"><b>A+</b></button>
+            <button type="button" class="fmt-btn" onclick="applyFontSize('qaAnswerInput', '0.85rem')" title="縮小文字 (85%)"><small>A-</small></button>
+            <select class="fmt-select" onchange="applyFontSize('qaAnswerInput', this.value); this.value='';" title="選取字體大小">
+              <option value="">🔤 字體大小</option>
+              <option value="0.85rem">🔈 偏小 (85%)</option>
+              <option value="1rem">🔔 正常 (100%)</option>
+              <option value="1.15rem" style="font-weight:bold;">中大 (115%)</option>
+              <option value="1.3rem" style="font-weight:bold;">特大 (130%)</option>
+              <option value="1.5rem" style="font-weight:bold;">超大標題 (150%)</option>
+            </select>
+
+            <span class="fmt-divider">|</span>
+            
             <select class="fmt-select" onchange="applyColor('qaAnswerInput', this.value); this.value='';" title="選取字體顏色">
               <option value="">🎨 字體顏色</option>
               <option value="#0f172a" style="color:#0f172a; font-weight:bold;">● 黑色</option>
@@ -2058,11 +2071,63 @@
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const selected = textarea.value.substring(start, end);
-      const replacement = openTag + selected + closeTag;
+      const scrollTop = textarea.scrollTop;
+      const scrollLeft = textarea.scrollLeft;
       
-      textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
-      textarea.focus();
-      textarea.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
+      // 檢查 1：選取的文字本身直接被 openTag 與 closeTag 包覆
+      if (selected.startsWith(openTag) && selected.endsWith(closeTag) && selected.length >= openTag.length + closeTag.length) {
+        const unwrapped = selected.substring(openTag.length, selected.length - closeTag.length);
+        textarea.value = textarea.value.substring(0, start) + unwrapped + textarea.value.substring(end);
+        textarea.focus();
+        textarea.setSelectionRange(start, start + unwrapped.length);
+      } 
+      // 檢查 2：選取文字的「前後」剛好是 openTag 與 closeTag (例如按第二次粗體或斜體時自動取消)
+      else if (textarea.value.substring(start - openTag.length, start) === openTag && textarea.value.substring(end, end + closeTag.length) === closeTag) {
+        textarea.value = textarea.value.substring(0, start - openTag.length) + selected + textarea.value.substring(end + closeTag.length);
+        textarea.focus();
+        textarea.setSelectionRange(start - openTag.length, start - openTag.length + selected.length);
+      }
+      // 檢查 3：若是 span 樣式 (顏色/底色/字體大小)，檢查選取文字前後是否已經有同類型的 span 標籤，若有則切換/覆蓋
+      else if (openTag.startsWith('<span style="') && textarea.value.substring(end, end + 7) === '</span>') {
+        const beforeSlice = textarea.value.substring(0, start);
+        const lastSpanIdx = beforeSlice.lastIndexOf('<span style="');
+        if (lastSpanIdx !== -1) {
+          const oldTag = beforeSlice.substring(lastSpanIdx, start);
+          if (oldTag.endsWith('>') && !oldTag.slice(1).includes('<') && !oldTag.slice(0, -1).includes('>')) {
+            if (oldTag === openTag) {
+              // 取消該樣式
+              textarea.value = textarea.value.substring(0, lastSpanIdx) + selected + textarea.value.substring(end + 7);
+              textarea.focus();
+              textarea.setSelectionRange(lastSpanIdx, lastSpanIdx + selected.length);
+            } else {
+              // 覆蓋替換成新的 span 樣式
+              textarea.value = textarea.value.substring(0, lastSpanIdx) + openTag + selected + closeTag + textarea.value.substring(end + 7);
+              textarea.focus();
+              textarea.setSelectionRange(lastSpanIdx + openTag.length, lastSpanIdx + openTag.length + selected.length);
+            }
+          } else {
+            const replacement = openTag + selected + closeTag;
+            textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+            textarea.focus();
+            textarea.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
+          }
+        } else {
+          const replacement = openTag + selected + closeTag;
+          textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+          textarea.focus();
+          textarea.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
+        }
+      }
+      // 一般新增包覆
+      else {
+        const replacement = openTag + selected + closeTag;
+        textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+        textarea.focus();
+        textarea.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
+      }
+
+      textarea.scrollTop = scrollTop;
+      textarea.scrollLeft = scrollLeft;
       updateLivePreview();
     }
 
@@ -2076,6 +2141,11 @@
       wrapText(inputId, `<span style="background-color:${bgColor}; padding:0 3px; border-radius:3px;">`, `</span>`);
     }
 
+    function applyFontSize(inputId, size) {
+      if (!size) return;
+      wrapText(inputId, `<span style="font-size:${size}; line-height:1.6;">`, `</span>`);
+    }
+
     function insertLink(inputId) {
       const url = prompt('請貼上超連結網址 (URL)：', 'https://');
       if (!url || !url.trim() || url.trim() === 'https://') return;
@@ -2084,9 +2154,13 @@
       
       const linkTag = `<a href="${url.trim()}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:600;">${text.trim()}</a>`;
       const textarea = document.getElementById(inputId);
+      const scrollTop = textarea.scrollTop;
+      const scrollLeft = textarea.scrollLeft;
       const start = textarea.selectionStart;
       textarea.value = textarea.value.substring(0, start) + linkTag + textarea.value.substring(textarea.selectionEnd);
       textarea.focus();
+      textarea.scrollTop = scrollTop;
+      textarea.scrollLeft = scrollLeft;
       updateLivePreview();
     }
 
