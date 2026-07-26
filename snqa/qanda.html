@@ -1,0 +1,2908 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>境外結構型商品問答網 - Offshore Structured Products Knowledge Base</title>
+  <meta name="description" content="境外結構型商品問答網 Offshore Structured Products Knowledge Base">
+  
+  <!-- 行動裝置 APP 全螢幕與主畫面小工具圖示設定 (PWA Standalone App Support) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="境外QA">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="app-icon.svg">
+  <link rel="icon" type="image/svg+xml" href="app-icon.svg">
+  <link rel="icon" type="image/png" href="app-icon.png">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* 淺色系頂級現代配色 (Modern Light Theme Palette) */
+      --bg-primary: #f8fafc;
+      --bg-secondary: #f1f5f9;
+      --bg-card: rgba(255, 255, 255, 0.85);
+      --bg-card-hover: rgba(255, 255, 255, 0.98);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --accent-blue: #2563eb;
+      --accent-blue-hover: #1d4ed8;
+      --accent-blue-light: #eff6ff;
+      --accent-indigo: #4f46e5;
+      --accent-emerald: #10b981;
+      --accent-emerald-light: #ecfdf5;
+      --accent-amber: #f59e0b;
+      --accent-amber-light: #fef3c7;
+      --accent-rose: #e11d48;
+      --accent-rose-light: #fff1f2;
+      --border-color: rgba(226, 232, 240, 0.8);
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+      --shadow-glow: 0 0 25px rgba(37, 99, 235, 0.15);
+      --radius-sm: 0.5rem;
+      --radius-md: 0.75rem;
+      --radius-lg: 1rem;
+      --radius-xl: 1.5rem;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px; /* 支援個人化偏好設定自訂 % 縮放 */
+      transition: font-size 0.2s ease;
+    }
+
+    body {
+      font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* 頂級環境光背景效果 */
+    .bg-glow-1, .bg-glow-2 {
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      filter: blur(120px);
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.35;
+    }
+    .bg-glow-1 {
+      top: -200px;
+      left: -150px;
+      background: radial-gradient(circle, #60a5fa 0%, rgba(96, 165, 250, 0) 70%);
+    }
+    .bg-glow-2 {
+      bottom: -150px;
+      right: -150px;
+      background: radial-gradient(circle, #a78bfa 0%, rgba(167, 139, 250, 0) 70%);
+    }
+
+    /* 按鈕共用樣式 */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .btn-secondary {
+      background: white;
+      color: var(--text-secondary);
+      border-color: var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+    .btn-secondary:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border-color: #cbd5e1;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+      color: white;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #1d4ed8, #4338ca);
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+      transform: translateY(-1px);
+    }
+    .btn-amber {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+    }
+    .btn-amber:hover {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      transform: translateY(-1px);
+    }
+    .btn-danger {
+      background: var(--accent-rose-light);
+      color: var(--accent-rose);
+      border: 1px solid rgba(225, 29, 72, 0.2);
+    }
+    .btn-danger:hover {
+      background: #ffe4e6;
+    }
+    .btn-sm {
+      padding: 0.3rem 0.65rem;
+      font-size: 0.78rem;
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* 專業管理員控制工具列 (無表情符號、按鈕小巧專業) */
+    #adminToolbar {
+      display: none;
+      background: linear-gradient(90deg, #1e293b, #0f172a);
+      color: white;
+      padding: 0.55rem 0;
+      border-bottom: 2px solid var(--accent-amber);
+      box-shadow: var(--shadow-lg);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .admin-toolbar-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .admin-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      color: #f8fafc;
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+    }
+    .admin-buttons {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+    .admin-toolbar-btn {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border-radius: 6px;
+      letter-spacing: 0.01em;
+    }
+    /* 待辦徽章計數 */
+    .todo-badge {
+      background: var(--accent-rose);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.08rem 0.4rem;
+      border-radius: 9999px;
+      margin-left: 0.25rem;
+    }
+
+    /* 主內容區段 */
+    main {
+      flex: 1;
+      max-width: 920px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 4rem;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* 頂部功能列 (建議新增QA & 偏好設定按鈕) */
+    .top-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .settings-btn {
+      border-radius: 9999px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: white;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+    .settings-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    /* 英雄標題區塊 */
+    .hero-section {
+      text-align: center;
+      margin-bottom: 1.75rem;
+      animation: fadeInDown 0.5s ease-out;
+    }
+    .hero-title {
+      font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.15rem;
+      letter-spacing: -0.01em;
+    }
+    .hero-subtitle {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin: 0 auto 1.5rem;
+      letter-spacing: 0.02em;
+    }
+
+    /* 搜尋列 */
+    .search-container {
+      max-width: 580px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .search-input {
+      width: 100%;
+      padding: 0.85rem 1.1rem 0.85rem 2.8rem;
+      font-size: 0.95rem;
+      border-radius: var(--radius-xl);
+      border: 2px solid var(--border-color);
+      background: white;
+      color: var(--text-primary);
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+      outline: none;
+    }
+    .search-input:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12), var(--shadow-md);
+    }
+    .search-icon {
+      position: absolute;
+      left: 1.1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      pointer-events: none;
+    }
+    .clear-search-btn {
+      position: absolute;
+      right: 1.1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--bg-secondary);
+      border: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+    .clear-search-btn:hover {
+      background: #cbd5e1;
+      color: var(--text-primary);
+    }
+
+    /* 分類籤標導覽區 */
+    .category-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.25rem;
+    }
+    .tab-btn {
+      padding: 0.5rem 1.15rem;
+      border-radius: 9999px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      background: white;
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: var(--shadow-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .tab-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transform: translateY(-1px);
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 3px 10px rgba(37, 99, 235, 0.22);
+    }
+    .tab-count {
+      padding: 0.1rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      background: rgba(0, 0, 0, 0.08);
+      color: inherit;
+    }
+    .tab-btn.active .tab-count {
+      background: rgba(255, 255, 255, 0.25);
+      color: white;
+    }
+
+    /* QA 列表清單與卡片 */
+    .qa-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+    /* 簡約視窗模式下：更窄的卡片間距 */
+    .qa-list.compact-list {
+      gap: 0.5rem;
+    }
+
+    .qa-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+      overflow: hidden;
+    }
+    .qa-card:hover {
+      box-shadow: var(--shadow-lg);
+      border-color: rgba(59, 130, 246, 0.35);
+      transform: translateY(-1px);
+    }
+    .qa-card.open {
+      border-color: var(--accent-blue);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .qa-header {
+      padding: 1.15rem 1.35rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      cursor: pointer;
+      user-select: none;
+      gap: 1rem;
+    }
+    .qa-question-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .qa-cat-badge {
+      display: inline-block;
+      width: fit-content;
+      padding: 0.2rem 0.65rem;
+      border-radius: 5px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: var(--accent-blue-light);
+      color: var(--accent-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .qa-question {
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.45;
+      transition: color 0.2s ease;
+    }
+    .qa-card:hover .qa-question {
+      color: var(--accent-blue);
+    }
+
+    .qa-toggle-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      transition: var(--transition);
+      flex-shrink: 0;
+      margin-top: 0.15rem;
+    }
+    .qa-card.open .qa-toggle-icon {
+      transform: rotate(180deg);
+      background: var(--accent-blue);
+      color: white;
+    }
+
+    /* 簡約視窗模式：大幅收窄上下高度、水平並行排版 (主題留空接問題) */
+    .qa-header.compact-mode {
+      padding: 0.55rem 1.1rem;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .qa-header.compact-mode .qa-question-area {
+      flex-direction: row;
+      align-items: baseline;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+    .qa-header.compact-mode .qa-cat-badge {
+      margin: 0;
+      flex-shrink: 0;
+      padding: 0.15rem 0.55rem;
+      font-size: 0.75rem;
+    }
+    .qa-header.compact-mode .qa-question {
+      font-size: 0.98rem;
+      font-weight: 600;
+      display: inline;
+      line-height: 1.4;
+    }
+    .qa-header.compact-mode .qa-toggle-icon {
+      width: auto;
+      height: auto;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      background: var(--accent-blue-light);
+      color: var(--accent-blue);
+      font-weight: 600;
+      font-size: 0.78rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      flex-shrink: 0;
+      margin-top: 0;
+    }
+    .qa-header.compact-mode:hover .qa-toggle-icon {
+      background: var(--accent-blue);
+      color: white;
+    }
+
+    .qa-body {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+      background: rgba(248, 250, 252, 0.7);
+      border-top: 1px solid transparent;
+    }
+    .qa-card.open .qa-body {
+      max-height: 3500px;
+      opacity: 1;
+      border-top-color: var(--border-color);
+    }
+
+    /* 解答文字樣式：默認黑色字 #0f172a，支援富文本 */
+    .qa-answer {
+      padding: 1.35rem;
+      font-size: 0.98rem;
+      color: #0f172a; /* 默認黑色字 */
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .qa-answer p {
+      margin-bottom: 0.65rem;
+    }
+    .qa-answer p:last-child {
+      margin-bottom: 0;
+    }
+    .qa-answer a {
+      color: var(--accent-blue);
+      text-decoration: underline;
+      font-weight: 500;
+    }
+    .qa-answer a:hover {
+      color: var(--accent-blue-hover);
+    }
+
+    /* 延伸閱讀與推薦問答連結區塊 */
+    .qa-related-section {
+      margin: 0.5rem 1.35rem 1.35rem;
+      padding-top: 0.85rem;
+      border-top: 1px dashed var(--border-color);
+      background: white;
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1rem;
+      border: 1px solid #e2e8f0;
+    }
+    .qa-related-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--accent-blue);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .qa-related-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .qa-related-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.88rem;
+      color: var(--text-primary);
+      text-decoration: none;
+      padding: 0.25rem 0.4rem;
+      border-radius: 4px;
+      transition: var(--transition);
+      width: fit-content;
+    }
+    .qa-related-link:hover {
+      background: var(--accent-blue-light);
+      color: var(--accent-blue);
+    }
+
+    /* 圖片樣式 */
+    .qa-image-container {
+      margin: 0.85rem 0;
+      text-align: left;
+    }
+    .qa-image {
+      max-width: 100%;
+      max-height: 450px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-md);
+      cursor: zoom-in;
+      transition: transform 0.2s ease;
+      display: block;
+      background: white;
+    }
+    .qa-image:hover {
+      transform: scale(1.01);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* 卡片內操作按鈕 */
+    .qa-admin-actions {
+      display: none;
+      padding: 0.65rem 1.35rem;
+      background: #f1f5f9;
+      border-top: 1px dashed var(--border-color);
+      justify-content: flex-end;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    body.admin-mode .qa-admin-actions {
+      display: flex;
+    }
+
+    /* 狀態提示卡片 */
+    .status-state {
+      text-align: center;
+      padding: 3.5rem 2rem;
+      background: white;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      display: none;
+    }
+    .status-icon {
+      font-size: 2.2rem;
+      margin-bottom: 0.75rem;
+    }
+    .status-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.4rem;
+    }
+    .status-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    /* 彈出視窗 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+    .modal-card {
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.95) translateY(20px);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border: 1px solid var(--border-color);
+    }
+    .modal-overlay.active .modal-card {
+      transform: scale(1) translateY(0);
+    }
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .close-modal-btn {
+      background: var(--bg-secondary);
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+    .close-modal-btn:hover {
+      background: #e2e8f0;
+      color: var(--text-primary);
+    }
+    .modal-body {
+      padding: 1.5rem;
+    }
+    .form-group {
+      margin-bottom: 1.15rem;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.4rem;
+    }
+    .form-input, .form-textarea, .form-select {
+      width: 100%;
+      padding: 0.65rem 0.9rem;
+      border-radius: var(--radius-md);
+      border: 1.5px solid var(--border-color);
+      font-size: 0.9rem;
+      font-family: inherit;
+      color: var(--text-primary);
+      background: white;
+      transition: var(--transition);
+      outline: none;
+    }
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+    .form-textarea {
+      min-height: 140px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+    }
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.65rem;
+      border-bottom-left-radius: var(--radius-xl);
+      border-bottom-right-radius: var(--radius-xl);
+    }
+
+    /* 解答富文本文字編輯格式工具列 */
+    .format-toolbar {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      align-items: center;
+      background: var(--bg-secondary);
+      padding: 0.4rem 0.6rem;
+      border: 1.5px solid var(--border-color);
+      border-bottom: none;
+      border-top-left-radius: var(--radius-md);
+      border-top-right-radius: var(--radius-md);
+    }
+    .format-toolbar + .form-textarea {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+    .fmt-btn {
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 0.25rem 0.55rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      color: var(--text-primary);
+      transition: var(--transition);
+    }
+    .fmt-btn:hover {
+      background: #e2e8f0;
+      border-color: #94a3b8;
+    }
+    .fmt-select {
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 0.22rem 0.4rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+      color: var(--text-primary);
+      outline: none;
+    }
+    .fmt-divider {
+      color: #cbd5e1;
+      user-select: none;
+      font-size: 0.8rem;
+      margin: 0 0.15rem;
+    }
+
+    /* 問題推薦 (延伸閱讀) 選單面板 */
+    .related-select-panel {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.75rem;
+      background: var(--bg-secondary);
+    }
+    .related-cat-header {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--accent-blue);
+      padding: 0.35rem 0;
+      border-bottom: 1px dashed var(--border-color);
+      margin-top: 0.5rem;
+      margin-bottom: 0.35rem;
+    }
+    .related-cat-header:first-child {
+      margin-top: 0;
+    }
+    .related-item-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.5rem;
+      cursor: pointer;
+      font-size: 0.88rem;
+      border-radius: 4px;
+      transition: background 0.15s ease;
+      color: var(--text-primary);
+    }
+    .related-item-label:hover {
+      background: rgba(37, 99, 235, 0.08);
+    }
+    .related-item-label input[type="checkbox"] {
+      accent-color: var(--accent-blue);
+      width: 16px;
+      height: 16px;
+    }
+
+    /* 圖片工具列 */
+    .image-upload-toolbar {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .image-preview-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      margin-top: 0.75rem;
+    }
+    .image-preview-item {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.5rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+    }
+    .image-preview-thumb {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: white;
+    }
+    .image-preview-info {
+      flex: 1;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* 管理清單與待辦提問箱樣式 */
+    .manage-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      margin-bottom: 1.35rem;
+      max-height: 320px;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+    .manage-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.65rem 0.9rem;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      gap: 0.5rem;
+    }
+    .manage-item.starred {
+      background: var(--accent-amber-light);
+      border-color: #f59e0b;
+    }
+    .manage-name {
+      font-weight: 600;
+      color: var(--text-primary);
+      flex: 1;
+      font-size: 0.9rem;
+      word-break: break-all;
+    }
+    .manage-actions {
+      display: flex;
+      gap: 0.35rem;
+      flex-shrink: 0;
+    }
+
+    /* 浮動 Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 1.75rem;
+      right: 1.75rem;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      pointer-events: none;
+    }
+    .toast {
+      padding: 0.85rem 1.35rem;
+      background: #1e293b;
+      color: white;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-xl);
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      pointer-events: auto;
+      animation: slideInRight 0.3s ease-out;
+      max-width: 360px;
+      border-left: 4px solid var(--accent-blue);
+    }
+    .toast.success { border-left-color: var(--accent-emerald); }
+    .toast.warning { border-left-color: var(--accent-amber); }
+    .toast.error { border-left-color: var(--accent-rose); }
+
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeInDown {
+      from { transform: translateY(-15px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* 頁腳 */
+    footer {
+      margin-top: auto;
+      text-align: center;
+      padding: 2rem 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      border-top: 1px solid var(--border-color);
+      background: white;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* 響應式：手機行動裝置專屬優化 (Mobile & App Responsive) */
+    @media (max-width: 768px) {
+      body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      .header-content {
+        padding: 1.5rem 1rem 1rem;
+      }
+      .hero-title {
+        font-size: 1.3rem;
+        line-height: 1.3;
+      }
+      .hero-subtitle {
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+      }
+      .admin-toolbar-inner {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+      }
+      .search-box {
+        margin: 0 1rem 1rem;
+      }
+      .search-input {
+        font-size: 0.95rem;
+        padding: 0.8rem 2.4rem 0.8rem 2.5rem;
+      }
+      /* 分類選單改為手機原生橫向滑動列 (Touch Swipe Tab Bar) */
+      .cat-nav {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding: 0.25rem 1rem 0.75rem;
+        margin: 0 0 1rem;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+      }
+      .cat-nav::-webkit-scrollbar {
+        display: none;
+      }
+      .cat-btn {
+        flex-shrink: 0;
+        scroll-snap-align: start;
+        padding: 0.6rem 1rem;
+        font-size: 0.88rem;
+        min-height: 40px;
+      }
+      .qa-container {
+        padding: 0 0.75rem;
+        gap: 0.75rem;
+      }
+      .qa-header {
+        padding: 1rem;
+        gap: 0.75rem;
+      }
+      .qa-question {
+        font-size: 0.96rem;
+      }
+      .qa-answer {
+        padding: 1rem;
+        font-size: 0.95rem;
+      }
+      .qa-admin-actions {
+        padding: 0.6rem 1rem;
+        justify-content: flex-start;
+        gap: 0.5rem;
+      }
+      .qa-admin-actions .btn {
+        flex: 1 1 45%;
+        text-align: center;
+        justify-content: center;
+        min-height: 38px;
+      }
+      .modal-card {
+        max-width: 95vw;
+        max-height: 88vh;
+        border-radius: var(--radius-lg);
+        margin: auto 0.5rem;
+      }
+      .modal-header, .modal-body, .modal-footer {
+        padding: 1rem;
+      }
+      .manage-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.65rem;
+      }
+      .manage-actions {
+        width: 100%;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+      }
+      .manage-actions .btn {
+        min-height: 36px;
+      }
+      .toast-container {
+        bottom: 1.25rem;
+        left: 1rem;
+        right: 1rem;
+      }
+      .toast {
+        max-width: 100%;
+        width: 100%;
+      }
+    }
+    @media (max-width: 480px) {
+      .hero-title {
+        font-size: 1.15rem;
+      }
+      .qa-cat-badge {
+        font-size: 0.72rem;
+        padding: 0.15rem 0.45rem;
+      }
+      .qa-toggle-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 背景光影 -->
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <!-- 專業管理員控制工具列 -->
+  <div id="adminToolbar">
+    <div class="admin-toolbar-inner">
+      <div class="admin-title">
+        <span>管理員控制台 (Admin Console)</span>
+      </div>
+      <div class="admin-buttons">
+        <button class="btn btn-amber admin-toolbar-btn" onclick="openAddQAModal()">新增問答</button>
+        <button class="btn btn-secondary admin-toolbar-btn" onclick="openReorderQAModal()">管理問答排序</button>
+        <button class="btn btn-secondary admin-toolbar-btn" onclick="openManageCatModal()">管理分類主題</button>
+        <button class="btn btn-secondary admin-toolbar-btn" onclick="openTodoQAModal()">
+          待辦QA <span id="todoBadgeCount" class="todo-badge" style="display:none;">0</span>
+        </button>
+        <button class="btn btn-danger admin-toolbar-btn" onclick="logoutAdmin()">登出管理員</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主內容區 -->
+  <main>
+    <!-- 頂部功能列 (簡約建議新增QA & 個人化設定按鈕) -->
+    <div class="top-actions">
+      <button class="btn settings-btn btn-sm" onclick="openSuggestModal()" title="沒有想找的答案？點選提交建議提問給管理員">
+        💡 建議新增QA
+      </button>
+      <button class="btn settings-btn btn-sm" onclick="openPrefsModal()" title="設定瀏覽器字體 % 縮放與 QA 簡約檢視模式">
+        ⚙️ 個人化設定
+      </button>
+    </div>
+
+    <section class="hero-section">
+      <h1 class="hero-title">境外結構型商品問答網</h1>
+      <p class="hero-subtitle">Offshore Structured Products Knowledge Base</p>
+
+      <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="搜尋問題、關鍵字或解答內容..." autocomplete="off">
+        <button id="clearSearchBtn" class="clear-search-btn" title="清除搜尋">✕</button>
+      </div>
+    </section>
+
+    <!-- 分類籤標區 -->
+    <nav class="category-tabs" id="categoryTabsContainer"></nav>
+
+    <!-- QA 列表 -->
+    <div class="qa-list" id="qaListContainer"></div>
+
+    <!-- 狀態提示卡片 -->
+    <div class="status-state" id="statusStateContainer">
+      <div class="status-icon" id="statusIcon">📂</div>
+      <h3 class="status-title" id="statusTitle">狀態提示</h3>
+      <p class="status-desc" id="statusDesc">說明內容</p>
+      <div id="statusSuggestBtnArea" style="margin-top: 1.25rem; display: none;">
+        <button class="btn btn-primary btn-sm" onclick="openSuggestModal()">💡 找不到答案？點我填寫建議新增 QA</button>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <footer>
+    <p>© 2026 境外結構型商品問答網 Offshore Structured Products Knowledge Base</p>
+  </footer>
+
+  <!-- ==================== 彈出視窗：建議新增 QA 提問單 ==================== -->
+  <div class="modal-overlay" id="suggestModal">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title">💡 建議新增問答提問單</h3>
+        <button class="close-modal-btn" onclick="closeModal('suggestModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">建議新增 QA / 想了解的問題內容</label>
+          <textarea id="suggestQuestionInput" class="form-textarea" style="min-height: 110px;" placeholder="請輸入您希望知識庫補充或解答的產品法規、流程問題..."></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+          <label class="form-label">員工編號 (僅限 7 位數字以內)</label>
+          <input type="text" id="suggestEmpIdInput" class="form-input" maxlength="7" placeholder="例如：1234567 (不可填寫中文或符號)" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 7)">
+          <div class="form-hint">提示：提交後將同步發送至後台「待辦 QA」信箱供管理員審核或轉為正式問答。</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('suggestModal')">取消</button>
+        <button class="btn btn-primary" onclick="submitSuggestion()">送出建議 Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈出視窗：待辦 QA (管理員專用) ==================== -->
+  <div class="modal-overlay" id="todoQAModal">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 class="modal-title">📋 待辦 QA 建議提問箱</h3>
+        <button class="close-modal-btn" onclick="closeModal('todoQAModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-hint" style="margin-bottom: 0.85rem;">提示：這裡列示全體員工提交的建議 QA 題目。管理員可點選「⭐ 標註星號」置頂重點，或點選「➕ 採納」直接為該題填寫解答並加入知識庫！</div>
+        <div class="manage-list" id="todoQAList" style="max-height: 380px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('todoQAModal')">關閉視窗</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈出視窗：個人化設定 (自訂 % 字體縮放) ==================== -->
+  <div class="modal-overlay" id="prefsModal">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ 個人化偏好設定</h3>
+        <button class="close-modal-btn" onclick="closeModal('prefsModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">🔤 網頁字體縮放比例 (自行填寫 % 數)</label>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.35rem;">
+            <input type="number" id="prefFontSizeInput" class="form-input" min="50" max="250" step="5" placeholder="100" style="width: 120px; text-align: center; font-weight: 700; font-size: 1rem;">
+            <span style="font-weight: 700; font-size: 1.1rem; color: var(--text-secondary);">%</span>
+            <span class="form-hint" style="margin: 0 0 0 0.5rem;">建議範圍：80% ~ 150%</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.2rem;">
+          <label class="form-label">📖 QA 問答展示與檢視方式 (Display Mode)</label>
+          <div style="display:flex; flex-direction:column; gap:0.6rem; margin-top:0.4rem;">
+            <label style="display:flex; align-items:flex-start; gap:0.6rem; cursor:pointer; padding:0.75rem; background:var(--bg-secondary); border-radius:var(--radius-md); border:1px solid var(--border-color);">
+              <input type="radio" name="prefDisplayMode" value="accordion" style="margin-top:0.25rem;">
+              <div>
+                <b style="color:var(--text-primary); font-size:0.9rem;">📜 手風琴選單模式 (現行默認)</b>
+                <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.1rem;">點選題目後，解答會在卡片下方直接向下展開展示。</p>
+              </div>
+            </label>
+            <label style="display:flex; align-items:flex-start; gap:0.6rem; cursor:pointer; padding:0.75rem; background:var(--bg-secondary); border-radius:var(--radius-md); border:1px solid var(--border-color);">
+              <input type="radio" name="prefDisplayMode" value="modal" style="margin-top:0.25rem;">
+              <div>
+                <b style="color:var(--accent-blue); font-size:0.9rem;">🗔 簡約彈出視窗模式 (簡約視窗式)</b>
+                <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.1rem;">大幅縮減垂直長度！主題後面留空直接緊接著寫問題，點擊後跳出專屬閱讀視窗。</p>
+              </div>
+            </label>
+          </div>
+        </div>
+        <div class="form-hint" style="margin-top:0.65rem;">提示：設定會自動記憶在目前電腦瀏覽器中。</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('prefsModal')">取消</button>
+        <button class="btn btn-primary" onclick="saveUserPrefs()">儲存設定 Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈出視窗：簡約彈出檢視器 ==================== -->
+  <div class="modal-overlay" id="answerViewerModal">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header" style="background:var(--bg-secondary); align-items:flex-start;">
+        <div>
+          <span id="viewerCatBadge" class="qa-cat-badge" style="margin-bottom:0.4rem;">分類</span>
+          <h3 class="modal-title" id="viewerQuestionTitle" style="font-size:1.15rem; line-height:1.4; color:var(--text-primary);">問題標題</h3>
+        </div>
+        <button class="close-modal-btn" onclick="closeModal('answerViewerModal')">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem 1.75rem;">
+        <div id="viewerAnswerContent" class="qa-answer" style="padding:0;">解答內容</div>
+        <div id="viewerRelatedArea"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeModal('answerViewerModal')">關閉視窗 Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈出視窗：管理員登入 ==================== -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">🔐 系統管理員驗證</h3>
+        <button class="close-modal-btn" onclick="closeModal('loginModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">帳號 Username</label>
+          <input type="text" id="loginUser" class="form-input" placeholder="請輸入帳號" autocomplete="username">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+          <label class="form-label">密碼 Password</label>
+          <input type="password" id="loginPass" class="form-input" placeholder="請輸入密碼" autocomplete="current-password">
+        </div>
+        <div class="form-hint">提示：輸入帳號與密碼後按下 Enter 鍵即可立刻驗證登入。</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('loginModal')">取消</button>
+        <button class="btn btn-primary" onclick="handleLogin()">登入 Login</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈出視窗：新增/編輯 QA ==================== -->
+  <div class="modal-overlay" id="qaModal">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="qaModalTitle">新增問答項目</h3>
+        <button class="close-modal-btn" onclick="closeModal('qaModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editQaId" value="">
+        <input type="hidden" id="fromSuggestedId" value="">
+        <div class="form-group">
+          <label class="form-label">所屬分類主題 Category</label>
+          <select id="qaCatSelect" class="form-select"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">問題 Question</label>
+          <input type="text" id="qaQuestionInput" class="form-input" placeholder="例如：申購境外結構型商品有何金額限制？">
+        </div>
+        <div class="form-group">
+          <label class="form-label">解答內容 Answer (支援文字顏色、粗斜體與連結編輯)</label>
+          
+          <div class="format-toolbar">
+            <button type="button" class="fmt-btn" onclick="wrapText('qaAnswerInput', '<b>', '</b>')" title="粗體 Bold"><b>B</b></button>
+            <button type="button" class="fmt-btn" onclick="wrapText('qaAnswerInput', '<i>', '</i>')" title="斜體 Italic"><i>I</i></button>
+            <button type="button" class="fmt-btn" onclick="wrapText('qaAnswerInput', '<u>', '</u>')" title="底線 Underline"><u>U</u></button>
+            
+            <span class="fmt-divider">|</span>
+            
+            <select class="fmt-select" onchange="applyColor('qaAnswerInput', this.value); this.value='';" title="選取字體顏色">
+              <option value="">🎨 字體顏色</option>
+              <option value="#0f172a" style="color:#0f172a; font-weight:bold;">● 默認純黑</option>
+              <option value="#e11d48" style="color:#e11d48; font-weight:bold;">● 醒目紅色</option>
+              <option value="#2563eb" style="color:#2563eb; font-weight:bold;">● 專業藍色</option>
+              <option value="#16a34a" style="color:#16a34a; font-weight:bold;">● 翡翠綠色</option>
+              <option value="#d97706" style="color:#d97706; font-weight:bold;">● 溫暖琥珀</option>
+              <option value="#7c3aed" style="color:#7c3aed; font-weight:bold;">● 高貴紫色</option>
+            </select>
+
+            <select class="fmt-select" onchange="applyBgColor('qaAnswerInput', this.value); this.value='';" title="選取螢光底色">
+              <option value="">🖍️ 螢光底色</option>
+              <option value="#fef08a" style="background:#fef08a;">🟨 黃色螢光筆</option>
+              <option value="#bbf7d0" style="background:#bbf7d0;">🟩 綠色螢光筆</option>
+              <option value="#bfdbfe" style="background:#bfdbfe;">🟦 藍色螢光筆</option>
+              <option value="#fbcfe8" style="background:#fbcfe8;">🟥 粉紅螢光筆</option>
+            </select>
+
+            <span class="fmt-divider">|</span>
+            
+            <button type="button" class="fmt-btn" onclick="insertLink('qaAnswerInput')" title="插入超連結">🔗 插入連結</button>
+          </div>
+          <textarea id="qaAnswerInput" class="form-textarea" placeholder="請輸入詳細解答內容..."></textarea>
+          
+          <div class="image-upload-toolbar">
+            <label class="btn btn-secondary btn-sm" style="cursor:pointer;" title="上傳電腦中的圖片，系統會自動優化壓縮儲存">
+              📸 上傳照片 (自動壓縮)
+              <input type="file" id="qaImageFileInput" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+            </label>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="insertImageUrl()" title="貼上外部圖片網址 (如 Imgur 或網站圖片)">
+              🌐 插入圖片網址
+            </button>
+          </div>
+          <div id="qaImagePreviewContainer" class="image-preview-list"></div>
+
+          <div style="margin-top: 1rem;">
+            <label class="form-label" style="color:var(--accent-blue); font-size:0.8rem;">👁️ 即時卡片解答排版預覽 (Live Preview)</label>
+            <div id="qaLivePreviewBox" class="qa-answer" style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); min-height:50px; max-height:220px; overflow-y:auto; font-size:0.9rem; padding:1rem;">
+              <span style="color:var(--text-muted);">輸入解答後，這裡會即時呈現在網頁卡片上的實際樣貌...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 新增：問題推薦 (延伸閱讀選單) -->
+        <div class="form-group" style="margin-top: 1.25rem;">
+          <label class="form-label" style="color:var(--accent-indigo);">💡 問題推薦 / 延伸閱讀 (點選勾選一個或多個相關問答作為連結)</label>
+          <div id="qaRelatedSelectPanel" class="related-select-panel"></div>
+          <div class="form-hint">提示：勾選的問題將在卡片解答最底端自動生成「💡 延伸閱讀與推薦問題」點擊連結。</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('qaModal')">取消</button>
+        <button class="btn btn-primary" onclick="saveQAItem()">儲存並同步 Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈出視窗：管理分類主題 ==================== -->
+  <div class="modal-overlay" id="catModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">管理與排序分類主題</h3>
+        <button class="close-modal-btn" onclick="closeModal('catModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">分類清單順序調整 (點選箭頭移動順序)</label>
+        <div class="manage-list" id="catManageList"></div>
+
+        <div style="border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+          <label class="form-label">新增分類主題</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="newCatNameInput" class="form-input" placeholder="請輸入新分類名稱 (例：稅務規範與風險)">
+            <button class="btn btn-primary" onclick="addNewCategory()" style="white-space: nowrap;">新增分類</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('catModal')">關閉視窗</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈出視窗：管理問答排序 ==================== -->
+  <div class="modal-overlay" id="reorderQAModal">
+    <div class="modal-card" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="modal-title">強制調整問答順序 (同分類內移動)</h3>
+        <button class="close-modal-btn" onclick="closeModal('reorderQAModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">篩選檢視分類</label>
+          <select id="reorderCatSelect" class="form-select" onchange="renderReorderQAList()"></select>
+        </div>
+        <div class="form-hint" style="margin-bottom: 0.75rem;">提示：問答預設依照「分類順序 -> 題號順序」嚴格排列。您可點選箭頭強制上移或下移題目順序。</div>
+        <div class="manage-list" id="reorderQAList"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('reorderQAModal')">完成並關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈出視窗：圖片放大檢視器 (Lightbox 具備放大縮小拖曳功能) ==================== -->
+  <div class="modal-overlay" id="imageLightboxModal" onclick="closeImageLightboxByOverlay(event)" style="background: rgba(15, 23, 42, 0.92); z-index: 3000;">
+    <div style="position: relative; width: 96vw; height: 94vh; display: flex; align-items: center; justify-content: center; overflow: hidden;" onclick="event.stopPropagation()">
+      <button class="close-modal-btn" onclick="closeModal('imageLightboxModal')" style="position: absolute; top: 10px; right: 20px; background: rgba(255,255,255,0.25); color: white; width: 42px; height: 42px; font-size: 1.4rem; z-index: 3010; cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center;">✕</button>
+      
+      <!-- 放大縮小工具列 -->
+      <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); padding: 8px 18px; border-radius: 30px; display: flex; gap: 12px; align-items: center; z-index: 3010; box-shadow: 0 10px 25px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2);">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="zoomLightbox(0.25)" style="background: rgba(255,255,255,0.2); color: white; border: none; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer;">🔍 ➕ 放大</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="zoomLightbox(-0.25)" style="background: rgba(255,255,255,0.2); color: white; border: none; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer;">🔍 ➖ 縮小</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="resetLightboxZoom()" style="background: rgba(255,255,255,0.2); color: white; border: none; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer;">🔄 100% 重設</button>
+        <span id="zoomLevelDisplay" style="color: #cbd5e1; font-size: 0.9rem; font-weight: 700; min-width: 50px; text-align: center;">100%</span>
+      </div>
+
+      <!-- 圖片容器 (支援滑鼠滾輪縮放與左鍵拖曳平移) -->
+      <div id="lightboxImgWrapper" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; cursor: grab; user-select: none;" onmousedown="startDragLightbox(event)" onmousemove="dragLightbox(event)" onmouseup="endDragLightbox(event)" onmouseleave="endDragLightbox(event)" onwheel="wheelZoomLightbox(event)">
+        <img id="lightboxImg" src="" alt="放大觀看圖照" style="max-width: 90vw; max-height: 84vh; object-fit: contain; border-radius: var(--radius-md); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); background: white; transition: transform 0.15s ease-out; transform-origin: center center; pointer-events: auto;">
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JavaScript 核心邏輯 ==================== -->
+  <script>
+    // ========================================================================
+    // 【請在此處貼上您於 Google Apps Script 部署後的 Web App 網址】
+    // 例如：const GAS_API_URL = "https://script.google.com/macros/s/xxxx/exec";
+    // ========================================================================
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyQ6-JwN55UhUFKEgimbbBsUn6B4Cm5XHH59n8LOLzIYqZMqLYm73Ob0G26yPEylvc/exec";
+
+    const DEFAULT_DATA = {
+      categories: [
+        { id: 'cat_1', name: '基礎概念與法規', order: 1 },
+        { id: 'cat_2', name: '申購、申報與贖回流程', order: 2 }
+      ],
+      qaList: [
+        {
+          id: 'qa_101',
+          categoryId: 'cat_1',
+          question: '什麼是「境外結構型商品」(Offshore Structured Products)？',
+          answer: '境外結構型商品係指在中華民國境外發行，依照衍生性金融商品交易或契約，結合「固定收益商品（如債券、定存）」與「衍生性金融商品（如選擇權、遠期契約）」之複合式金融商品。\n\n其投資收益或贖回金額通常與特定標的（如國內外股價、指數、匯率、利率、基金、商品價格等）之表現連動，旨在滿足投資人在不同市場趨勢下的資產配置與風險回報需求。',
+          order: 1,
+          relatedIds: ['qa_102']
+        },
+        {
+          id: 'qa_102',
+          categoryId: 'cat_1',
+          question: '投資境外結構型商品需要注意哪些主要風險？',
+          answer: '投資人申購前應詳閱產品說明書及中文風險預告書，主要風險包含：\n\n1. 信用風險 (Credit Risk)：投資人須承受發行機構或保證人之違約風險；若發行機構破產或違約，可能導致本金減損甚至全部損失。\n2. 市場連動風險 (Market Risk)：商品報酬連動特定標的表現，若標的走勢不如預期，保本型商品可能僅有最低保本率，非保本型則恐損失大部分或全部本金。\n3. 流動性與中途解約風險 (Liquidity Risk)：此商品多有到期日，若於到期前提前贖回（中途解約），可能須支付中途解約費用，並承擔當時市場折價變現損失。\n4. 匯率風險 (Exchange Rate Risk)：若以外幣計價，將受到匯率波動影響，轉換回台幣時恐產生匯兌損失。\n5. 法律與稅務風險：發行地或上市地之法規與稅制變更所產生之影響。',
+          order: 2,
+          relatedIds: ['qa_201']
+        },
+        {
+          id: 'qa_201',
+          categoryId: 'cat_2',
+          question: '申購境外結構型商品的投資人資格限制為何？一般投資人也能申購嗎？',
+          answer: '依據金融監督管理委員會頒布之《境外結構型商品管理規則》，申購投資人分為兩種資格：\n\n一、專業投資人 (Professional Investor)：\n包含專業機構投資人（如銀行、保險、證券公司等）、高資產法人以及總資產達新臺幣三千萬元以上並具備金融商品交易經驗及充分財務知識之自然人。專業投資人可申購之商品範圍較廣、投資架構可較具彈性。\n\n二、一般投資人 (Retail Investor)：\n並非所有境外結構型商品皆可向一般投資人銷售。欲向一般投資人銷售之商品，必須通過受託或銷售機構之內部商品審查，並符合主管機關規定之保本率限制與風險等級匹配條件（如投資人風險承受度需大於或等於商品風險等級），以落實公平待客與消費者保護。',
+          order: 1,
+          relatedIds: []
+        },
+        {
+          id: 'qa_202',
+          categoryId: 'cat_2',
+          question: '完成申購與交易後，相關申報與對帳作業流程為何？',
+          answer: '1. 交易確認與對帳單寄送：受託或銷售機構於交易成交後，將提供交易確認書，並定期（每月或每季）寄發客戶帳務與資產對帳單，充分揭露商品最新參考市價及評價。\n\n2. 外匯與央行申報作業：若涉及外幣收支，需遵循中央銀行《外匯收支或交易申報辦法》辦理。若是透過特定金錢信託或受託買賣管道申購，通常由銀行或證券商以受託機構名義協助處理相關款項收付與外匯結報作業。\n\n3. 贖回與到期給付：商品到期或投資人申請提前贖回時，銷售機構依商品契約規定計算給付金額，扣除相關稅費後，匯款至投資人指定之銀行帳戶。',
+          order: 2,
+          relatedIds: []
+        }
+      ],
+      suggestedQA: [
+        { id: 'sug_01', question: '請問中途解約或提前贖回的具體手續費計算公式與申報工作天數為何？', empId: '1082045', starred: true, createdDate: new Date().toISOString() },
+        { id: 'sug_02', question: '想了解外幣計價結構型商品的避險（匯率操作）與央行外匯結報限制。', empId: '7170423', starred: false, createdDate: new Date().toISOString() }
+      ]
+    };
+
+    let appState = {
+      categories: [],
+      qaList: [],
+      suggestedQA: [],
+      activeCategory: 'all',
+      searchQuery: '',
+      isAdmin: false,
+      gasUrl: GAS_API_URL.trim(),
+      isOnline: false,
+      isLoading: false,
+      userPrefs: {
+        fontSize: 100,
+        displayMode: 'accordion'
+      }
+    };
+
+    // ==================== 頁面初始化 ====================
+    document.addEventListener('DOMContentLoaded', () => {
+      loadUserPrefs();
+      initData();
+      setupEventListeners();
+      checkAdminSession();
+      setupKeyboardTrigger();
+    });
+
+    function loadUserPrefs() {
+      const savedPrefs = localStorage.getItem('qanda_user_prefs');
+      if (savedPrefs) {
+        try {
+          appState.userPrefs = { ...appState.userPrefs, ...JSON.parse(savedPrefs) };
+        } catch(e) {}
+      }
+      if (appState.userPrefs.fontSize === 'normal') appState.userPrefs.fontSize = 100;
+      if (appState.userPrefs.fontSize === 'large') appState.userPrefs.fontSize = 110;
+      if (appState.userPrefs.fontSize === 'xlarge') appState.userPrefs.fontSize = 120;
+
+      applyUserPrefs();
+    }
+
+    function applyUserPrefs() {
+      const scale = (parseFloat(appState.userPrefs.fontSize) || 100) / 100;
+      document.documentElement.style.fontSize = (16 * scale) + 'px';
+    }
+
+    function openPrefsModal() {
+      document.getElementById('prefFontSizeInput').value = appState.userPrefs.fontSize || 100;
+      const radios = document.getElementsByName('prefDisplayMode');
+      for (let r of radios) {
+        r.checked = (r.value === (appState.userPrefs.displayMode || 'accordion'));
+      }
+      openModal('prefsModal');
+    }
+
+    function saveUserPrefs() {
+      let val = parseFloat(document.getElementById('prefFontSizeInput').value) || 100;
+      val = Math.min(Math.max(val, 50), 250);
+      let displayMode = 'accordion';
+      const radios = document.getElementsByName('prefDisplayMode');
+      for (let r of radios) {
+        if (r.checked) { displayMode = r.value; break; }
+      }
+      appState.userPrefs = { fontSize: val, displayMode };
+      localStorage.setItem('qanda_user_prefs', JSON.stringify(appState.userPrefs));
+      applyUserPrefs();
+      renderQAList();
+      closeModal('prefsModal');
+      showToast(`⚙️ 個人化設定已套用：字體縮放 ${val}% / ${displayMode === 'modal' ? '簡約彈出視窗' : '手風琴選單'}`, 'success');
+    }
+
+    // ==================== 快取優先 + 背景靜默更新 (Stale-While-Revalidate) ====================
+    async function initData() {
+      const savedCats = localStorage.getItem('qanda_categories');
+      const savedQA = localStorage.getItem('qanda_qalist');
+      const savedSug = localStorage.getItem('qanda_suggested_qa');
+      let hasLocalCache = false;
+
+      if (savedCats && savedQA) {
+        try {
+          appState.categories = JSON.parse(savedCats);
+          appState.qaList = JSON.parse(savedQA);
+          appState.suggestedQA = savedSug ? JSON.parse(savedSug) : [...DEFAULT_DATA.suggestedQA];
+          hasLocalCache = true;
+          sortCategoriesAndQA();
+          appState.isLoading = false;
+          renderApp();
+        } catch(e) {
+          console.warn('本地快取解析失敗', e);
+        }
+      }
+
+      if (!hasLocalCache) {
+        appState.categories = [...DEFAULT_DATA.categories];
+        appState.qaList = [...DEFAULT_DATA.qaList];
+        appState.suggestedQA = [...DEFAULT_DATA.suggestedQA];
+        if (appState.gasUrl && appState.gasUrl.startsWith('http')) {
+          appState.isLoading = true;
+        }
+        sortCategoriesAndQA();
+        renderApp();
+      }
+
+      if (appState.gasUrl && appState.gasUrl.startsWith('http')) {
+        if (!hasLocalCache) {
+          showToast('⏳ 首次到訪，正在下載完整雲端問答庫...', 'warning');
+        }
+
+        try {
+          const timestamp = new Date().getTime();
+          const res = await fetch(`${appState.gasUrl}?action=getData&t=${timestamp}`);
+          const data = await res.json();
+          if (data && data.status === 'success') {
+            appState.categories = data.categories || [];
+            appState.qaList = data.qaList || [];
+            appState.suggestedQA = data.suggestedQA || appState.suggestedQA;
+            appState.isOnline = true;
+            appState.isLoading = false;
+            sortCategoriesAndQA();
+            saveToLocalStorage();
+            renderApp();
+            
+            if (hasLocalCache) {
+              showToast('☁️ 問答QA已於背景同步至最新狀態！', 'success');
+            } else {
+              showToast('✅ 雲端連線同步！', 'success');
+            }
+          }
+        } catch (err) {
+          console.warn('雲端同步連線失敗，維持原有快取展示:', err);
+          appState.isLoading = false;
+          renderApp();
+          if (!hasLocalCache) {
+            showToast('⚠️ 目前無法連線至雲端試算表，顯示單機快取資料', 'warning');
+          }
+        }
+      } else {
+        appState.isOnline = false;
+      }
+    }
+
+    function sortCategoriesAndQA() {
+      appState.categories.sort((a, b) => (a.order || 0) - (b.order || 0));
+      appState.categories.forEach((c, idx) => { c.order = idx + 1; });
+
+      const catOrderMap = {};
+      appState.categories.forEach(c => { catOrderMap[c.id] = c.order; });
+
+      appState.qaList.sort((a, b) => {
+        const orderA = catOrderMap[a.categoryId] || 999;
+        const orderB = catOrderMap[b.categoryId] || 999;
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        return (a.order || 0) - (b.order || 0);
+      });
+
+      appState.categories.forEach(cat => {
+        let orderCounter = 1;
+        appState.qaList.forEach(q => {
+          if (q.categoryId === cat.id) {
+            q.order = orderCounter++;
+          }
+        });
+      });
+
+      if (appState.suggestedQA && Array.isArray(appState.suggestedQA)) {
+        appState.suggestedQA.sort((a, b) => (b.starred - a.starred) || (new Date(b.createdDate) - new Date(a.createdDate)));
+      }
+    }
+
+    function checkAdminSession() {
+      const adminSession = sessionStorage.getItem('qanda_admin_logged');
+      if (adminSession === 'true') {
+        enableAdminMode(true);
+      }
+    }
+
+    // ==================== 鍵盤快速鍵觸發 xu06 ====================
+    function setupKeyboardTrigger() {
+      const targetKeys = ['x', 'u', '0', '6'];
+      const pressedKeys = new Set();
+      let sequenceBuffer = [];
+      let sequenceTimeout = null;
+
+      window.addEventListener('keydown', (e) => {
+        const tag = e.target.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea') {
+          if (e.target.id === 'searchInput' && e.target.value.toLowerCase() === 'xu06') {
+            e.target.value = '';
+            showLoginModal();
+          }
+          return;
+        }
+
+        const key = e.key.toLowerCase();
+        pressedKeys.add(key);
+        if (e.code === 'Numpad0') pressedKeys.add('0');
+        if (e.code === 'Numpad6') pressedKeys.add('6');
+
+        if (targetKeys.every(k => pressedKeys.has(k))) {
+          pressedKeys.clear();
+          showLoginModal();
+          return;
+        }
+
+        sequenceBuffer.push(key);
+        if (sequenceBuffer.length > 4) sequenceBuffer.shift();
+        
+        if (sequenceBuffer.join('') === 'xu06') {
+          sequenceBuffer = [];
+          showLoginModal();
+        }
+
+        clearTimeout(sequenceTimeout);
+        sequenceTimeout = setTimeout(() => { sequenceBuffer = []; }, 2000);
+      });
+
+      window.addEventListener('keyup', (e) => {
+        const key = e.key.toLowerCase();
+        pressedKeys.delete(key);
+        if (e.code === 'Numpad0') pressedKeys.delete('0');
+        if (e.code === 'Numpad6') pressedKeys.delete('6');
+      });
+    }
+
+    // ==================== 畫面渲染邏輯 ====================
+    function renderApp() {
+      sortCategoriesAndQA();
+      renderCategoryTabs();
+      renderQAList();
+      updateTodoBadge();
+      if (appState.isAdmin) {
+        renderManageCategoryList();
+        populateCategorySelect();
+        if (document.getElementById('reorderQAModal').classList.contains('active')) {
+          renderReorderQAList();
+        }
+        if (document.getElementById('todoQAModal').classList.contains('active')) {
+          renderTodoQAList();
+        }
+      }
+    }
+
+    function updateTodoBadge() {
+      const badge = document.getElementById('todoBadgeCount');
+      if (!badge) return;
+      const count = (appState.suggestedQA || []).length;
+      if (count > 0 && appState.isAdmin) {
+        badge.textContent = count;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function renderCategoryTabs() {
+      const container = document.getElementById('categoryTabsContainer');
+      container.innerHTML = '';
+
+      const counts = { all: appState.qaList.length };
+      appState.categories.forEach(c => {
+        counts[c.id] = appState.qaList.filter(q => q.categoryId === c.id).length;
+      });
+
+      const allBtn = document.createElement('button');
+      allBtn.className = `tab-btn ${appState.activeCategory === 'all' ? 'active' : ''}`;
+      allBtn.innerHTML = `🌟 全部問題 <span class="tab-count">${counts.all || 0}</span>`;
+      allBtn.onclick = () => selectCategory('all');
+      container.appendChild(allBtn);
+
+      appState.categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = `tab-btn ${appState.activeCategory === cat.id ? 'active' : ''}`;
+        btn.innerHTML = `📌 ${escapeHtml(cat.name)} <span class="tab-count">${counts[cat.id] || 0}</span>`;
+        btn.onclick = () => selectCategory(cat.id);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectCategory(catId) {
+      appState.activeCategory = catId;
+      renderCategoryTabs();
+      renderQAList();
+    }
+
+    // 渲染 QA 列表 (含延伸閱讀連結渲染)
+    function renderQAList() {
+      const container = document.getElementById('qaListContainer');
+      const statusBox = document.getElementById('statusStateContainer');
+      const statusIcon = document.getElementById('statusIcon');
+      const statusTitle = document.getElementById('statusTitle');
+      const statusDesc = document.getElementById('statusDesc');
+      const statusSuggestBtnArea = document.getElementById('statusSuggestBtnArea');
+
+      container.innerHTML = '';
+
+      if (appState.isLoading) {
+        statusBox.style.display = 'block';
+        statusIcon.textContent = '⏳';
+        statusTitle.textContent = '正在載入雲端問答資料...';
+        statusDesc.textContent = '系統正在與 Google Sheets 試算表連線同步最新內容，請稍候片刻。';
+        if (statusSuggestBtnArea) statusSuggestBtnArea.style.display = 'none';
+        return;
+      }
+
+      if (appState.qaList.length === 0) {
+        statusBox.style.display = 'block';
+        statusIcon.textContent = '📚';
+        statusTitle.textContent = '目前知識庫尚無問答資料';
+        statusDesc.textContent = '系統中暫時沒有任何題目。請管理員登入並點選「新增問答」建立第一筆問答項目。';
+        if (statusSuggestBtnArea) statusSuggestBtnArea.style.display = 'block';
+        return;
+      }
+
+      const query = appState.searchQuery.trim().toLowerCase();
+      const filtered = appState.qaList.filter(item => {
+        const matchCat = (appState.activeCategory === 'all' || item.categoryId === appState.activeCategory);
+        if (!matchCat) return false;
+        if (!query) return true;
+        return item.question.toLowerCase().includes(query) || item.answer.toLowerCase().includes(query);
+      });
+
+      if (filtered.length === 0) {
+        statusBox.style.display = 'block';
+        statusIcon.textContent = '🔍';
+        statusTitle.textContent = '找不到符合條件的問題';
+        statusDesc.textContent = '試著使用不同的關鍵字搜尋，或點選下方按鈕直接將想詢問的問題提交給管理員補充！';
+        if (statusSuggestBtnArea) statusSuggestBtnArea.style.display = 'block';
+        return;
+      }
+
+      statusBox.style.display = 'none';
+      if (statusSuggestBtnArea) statusSuggestBtnArea.style.display = 'none';
+
+      const catMap = {};
+      appState.categories.forEach(c => { catMap[c.id] = c.name; });
+      const isModalMode = (appState.userPrefs.displayMode === 'modal');
+
+      if (isModalMode) {
+        container.classList.add('compact-list');
+      } else {
+        container.classList.remove('compact-list');
+      }
+
+      filtered.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = 'qa-card';
+        card.id = `qa-card-${item.id}`;
+
+        const catName = catMap[item.categoryId] || '通用問答';
+        const formattedAnswer = highlightTextOutsideTags(formatAnswer(item.answer), query);
+        const relatedHtml = renderRelatedLinksHtml(item.relatedIds);
+
+        const sameCatItems = appState.qaList.filter(q => q.categoryId === item.categoryId);
+        const isFirstInCat = sameCatItems.indexOf(item) === 0;
+        const isLastInCat = sameCatItems.indexOf(item) === sameCatItems.length - 1;
+
+        if (isModalMode) {
+          card.innerHTML = `
+            <div class="qa-header compact-mode" onclick="openAnswerViewerModal('${item.id}')">
+              <div class="qa-question-area">
+                <span class="qa-cat-badge">${escapeHtml(catName)} <small style="opacity:0.75;">#${item.order}</small></span>
+                <div class="qa-question">${highlightTextOutsideTags(escapeHtml(item.question), query)}</div>
+              </div>
+              <div class="qa-toggle-icon">📖 檢視解答</div>
+            </div>
+            <div class="qa-admin-actions">
+              <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); moveQAUp('${item.id}')" ${isFirstInCat ? 'disabled' : ''} title="在上同分類內順序上移">⬆️ 上移</button>
+              <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); moveQADown('${item.id}')" ${isLastInCat ? 'disabled' : ''} title="在同分類內順序下移">⬇️ 下移</button>
+              <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openEditQAModal('${item.id}')">✏️ 編輯</button>
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteQAItem('${item.id}')">🗑️ 刪除</button>
+            </div>
+          `;
+        } else {
+          card.innerHTML = `
+            <div class="qa-header" onclick="toggleQACard('${item.id}')">
+              <div class="qa-question-area">
+                <span class="qa-cat-badge">${escapeHtml(catName)} <small style="opacity:0.7;">#${item.order}</small></span>
+                <div class="qa-question">${highlightTextOutsideTags(escapeHtml(item.question), query)}</div>
+              </div>
+              <div class="qa-toggle-icon">▼</div>
+            </div>
+            <div class="qa-body">
+              <div class="qa-answer">${formattedAnswer}</div>
+              ${relatedHtml}
+              <div class="qa-admin-actions">
+                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); moveQAUp('${item.id}')" ${isFirstInCat ? 'disabled' : ''} title="在上同分類內順序上移">⬆️ 上移</button>
+                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); moveQADown('${item.id}')" ${isLastInCat ? 'disabled' : ''} title="在同分類內順序下移">⬇️ 下移</button>
+                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openEditQAModal('${item.id}')">✏️ 編輯</button>
+                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteQAItem('${item.id}')">🗑️ 刪除</button>
+              </div>
+            </div>
+          `;
+        }
+        container.appendChild(card);
+      });
+    }
+
+    // 產生延伸閱讀連結 HTML 區塊
+    function renderRelatedLinksHtml(relatedIds) {
+      if (!relatedIds || !Array.isArray(relatedIds) || relatedIds.length === 0) return '';
+      const validItems = relatedIds.map(id => appState.qaList.find(q => q.id === id)).filter(Boolean);
+      if (validItems.length === 0) return '';
+
+      const catMap = {};
+      appState.categories.forEach(c => { catMap[c.id] = c.name; });
+
+      let linksHtml = validItems.map(q => {
+        const catName = catMap[q.categoryId] || '通用';
+        return `
+          <a href="javascript:void(0)" onclick="event.stopPropagation(); openRecommendedQA('${q.id}')" class="qa-related-link">
+            <span class="qa-cat-badge" style="padding: 0.1rem 0.45rem; font-size: 0.68rem; margin:0;">${escapeHtml(catName)} #${q.order}</span>
+            <span style="text-decoration: underline; font-weight: 600;">${escapeHtml(q.question)}</span>
+          </a>
+        `;
+      }).join('');
+
+      return `
+        <div class="qa-related-section">
+          <div class="qa-related-title">💡 延伸閱讀與推薦問題：</div>
+          <div class="qa-related-list">${linksHtml}</div>
+        </div>
+      `;
+    }
+
+    // 點擊延伸推薦問答連結跳轉
+    function openRecommendedQA(qaId) {
+      const isModalMode = (appState.userPrefs.displayMode === 'modal');
+      if (isModalMode || document.getElementById('answerViewerModal').classList.contains('active')) {
+        openAnswerViewerModal(qaId);
+      } else {
+        const card = document.getElementById(`qa-card-${qaId}`);
+        if (card) {
+          if (!card.classList.contains('open')) {
+            card.classList.add('open');
+          }
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.style.boxShadow = '0 0 0 4px rgba(245, 158, 11, 0.4), var(--shadow-lg)';
+          setTimeout(() => { card.style.boxShadow = ''; }, 2000);
+        } else {
+          appState.activeCategory = 'all';
+          renderCategoryTabs();
+          renderQAList();
+          setTimeout(() => openRecommendedQA(qaId), 150);
+        }
+      }
+    }
+
+    function toggleQACard(id) {
+      const card = document.getElementById(`qa-card-${id}`);
+      if (card) {
+        card.classList.toggle('open');
+      }
+    }
+
+    function openAnswerViewerModal(qaId) {
+      const item = appState.qaList.find(q => q.id === qaId);
+      if (!item) return;
+      const catName = appState.categories.find(c => c.id === item.categoryId)?.name || '通用問答';
+      
+      document.getElementById('viewerCatBadge').textContent = `${catName} #${item.order}`;
+      document.getElementById('viewerQuestionTitle').textContent = item.question;
+      document.getElementById('viewerAnswerContent').innerHTML = formatAnswer(item.answer);
+      document.getElementById('viewerRelatedArea').innerHTML = renderRelatedLinksHtml(item.relatedIds);
+      openModal('answerViewerModal');
+    }
+
+    // ==================== 建議新增 QA 機制 (提問單) ====================
+    function openSuggestModal() {
+      document.getElementById('suggestQuestionInput').value = '';
+      document.getElementById('suggestEmpIdInput').value = '';
+      openModal('suggestModal');
+      setTimeout(() => { document.getElementById('suggestQuestionInput').focus(); }, 100);
+    }
+
+    async function submitSuggestion() {
+      const question = document.getElementById('suggestQuestionInput').value.trim();
+      const empId = document.getElementById('suggestEmpIdInput').value.trim();
+
+      if (!question) {
+        showToast('⚠️ 請填寫建議的新增 QA 問題內容！', 'warning');
+        return;
+      }
+      if (!empId || !/^\d{1,7}$/.test(empId)) {
+        showToast('⚠️ 員工編號僅限填寫 7 位數字以內，不可填寫中文或文字！', 'warning');
+        return;
+      }
+
+      const newSug = {
+        id: 'sug_' + new Date().getTime(),
+        question: question,
+        empId: empId,
+        starred: false,
+        createdDate: new Date().toISOString()
+      };
+
+      appState.suggestedQA.unshift(newSug);
+      saveToLocalStorage();
+      updateTodoBadge();
+      closeModal('suggestModal');
+      showToast('🎉 感謝您的寶貴建議！已發送至管理員「待辦 QA」提問箱', 'success');
+
+      if (appState.isOnline && appState.gasUrl && appState.gasUrl.startsWith('http')) {
+        try {
+          fetch(appState.gasUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'submitSuggestion', suggestion: newSug })
+          });
+        } catch(err) {
+          console.warn('雲端發送建議提問單失敗:', err);
+        }
+      }
+    }
+
+    // ==================== 待辦 QA 提問箱 (管理員專屬) ====================
+    function openTodoQAModal() {
+      renderTodoQAList();
+      openModal('todoQAModal');
+    }
+
+    function renderTodoQAList() {
+      const list = document.getElementById('todoQAList');
+      if (!list) return;
+      list.innerHTML = '';
+
+      if (!appState.suggestedQA || appState.suggestedQA.length === 0) {
+        list.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted);">🎉 目前沒有任何待辦的建議 QA 提問單</div>';
+        return;
+      }
+
+      appState.suggestedQA.forEach((sug) => {
+        const item = document.createElement('div');
+        item.className = `manage-item ${sug.starred ? 'starred' : ''}`;
+        const dateStr = sug.createdDate ? new Date(sug.createdDate).toLocaleDateString() : '';
+        
+        item.innerHTML = `
+          <span class="manage-name">
+            <span style="font-size:0.78rem; font-weight:700; color:${sug.starred ? '#b45309' : 'var(--accent-blue)'};">
+              ${sug.starred ? '⭐ 重點待辦 | ' : ''}👤 員工編號 #${escapeHtml(sug.empId)} <small style="color:var(--text-muted);">(${dateStr})</small>
+            </span><br>
+            <span style="font-size:0.92rem; color:var(--text-primary); font-weight:600;">${escapeHtml(sug.question)}</span>
+          </span>
+          <div class="manage-actions">
+            <button class="btn btn-secondary btn-sm" onclick="toggleStarSuggestion('${sug.id}')" title="標註/取消星號重點">
+              ${sug.starred ? '⭐ 已標註' : '☆ 標星'}
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="adoptSuggestion('${sug.id}')" title="採納此題並打開填寫解答進度">
+              ➕ 採納
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteSuggestion('${sug.id}')" title="移除此項建議">
+              🗑️ 刪除
+            </button>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    async function toggleStarSuggestion(sugId) {
+      const sug = appState.suggestedQA.find(s => s.id === sugId);
+      if (!sug) return;
+      sug.starred = !sug.starred;
+      sortCategoriesAndQA();
+      renderTodoQAList();
+      showToast(sug.starred ? '⭐ 已標註為重點待辦問題！' : '☆ 已取消星號標註', 'success');
+      await syncDataBackend();
+    }
+
+    async function adoptSuggestion(sugId) {
+      const sug = appState.suggestedQA.find(s => s.id === sugId);
+      if (!sug) return;
+      
+      closeModal('todoQAModal');
+      openAddQAModal();
+      document.getElementById('qaQuestionInput').value = sug.question;
+      document.getElementById('fromSuggestedId').value = sug.id;
+      showToast('🎉 已為您載入建議問題！請填寫解答並儲存入庫', 'success');
+    }
+
+    async function deleteSuggestion(sugId) {
+      if (!confirm('⚠️ 確定要刪除這筆員工建議 QA 嗎？')) return;
+      appState.suggestedQA = appState.suggestedQA.filter(s => s.id !== sugId);
+      updateTodoBadge();
+      renderTodoQAList();
+      showToast('🗑️ 建議 QA 項目已刪除', 'success');
+      await syncDataBackend();
+    }
+
+    // ==================== 解答文字樣式編輯器 ====================
+    function wrapText(inputId, openTag, closeTag) {
+      const textarea = document.getElementById(inputId);
+      if (!textarea) return;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selected = textarea.value.substring(start, end);
+      const replacement = openTag + selected + closeTag;
+      
+      textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+      textarea.focus();
+      textarea.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
+      updateLivePreview();
+    }
+
+    function applyColor(inputId, color) {
+      if (!color) return;
+      wrapText(inputId, `<span style="color:${color}; font-weight:600;">`, `</span>`);
+    }
+
+    function applyBgColor(inputId, bgColor) {
+      if (!bgColor) return;
+      wrapText(inputId, `<span style="background-color:${bgColor}; padding:0 3px; border-radius:3px;">`, `</span>`);
+    }
+
+    function insertLink(inputId) {
+      const url = prompt('請貼上超連結網址 (URL)：', 'https://');
+      if (!url || !url.trim() || url.trim() === 'https://') return;
+      const text = prompt('請輸入要顯示的超連結文字：', '點擊瀏覽網頁');
+      if (!text || !text.trim()) return;
+      
+      const linkTag = `<a href="${url.trim()}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:600;">${text.trim()}</a>`;
+      const textarea = document.getElementById(inputId);
+      const start = textarea.selectionStart;
+      textarea.value = textarea.value.substring(0, start) + linkTag + textarea.value.substring(textarea.selectionEnd);
+      textarea.focus();
+      updateLivePreview();
+    }
+
+    function updateLivePreview() {
+      updateImagePreview();
+      const textarea = document.getElementById('qaAnswerInput');
+      const previewBox = document.getElementById('qaLivePreviewBox');
+      if (!textarea || !previewBox) return;
+      
+      const val = textarea.value.trim();
+      if (!val) {
+        previewBox.innerHTML = '<span style="color:var(--text-muted);">輸入解答後，這裡會即時呈現在網頁卡片上的實際樣貌...</span>';
+      } else {
+        previewBox.innerHTML = formatAnswer(val);
+      }
+    }
+
+    // ==================== 事件監聽與 Enter 鍵登入 ====================
+    function setupEventListeners() {
+      const searchInput = document.getElementById('searchInput');
+      const clearBtn = document.getElementById('clearSearchBtn');
+      const qaAnswerInput = document.getElementById('qaAnswerInput');
+
+      searchInput.addEventListener('input', (e) => {
+        appState.searchQuery = e.target.value;
+        clearBtn.style.display = appState.searchQuery ? 'flex' : 'none';
+        renderQAList();
+      });
+
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        appState.searchQuery = '';
+        clearBtn.style.display = 'none';
+        searchInput.focus();
+        renderQAList();
+      });
+
+      if (qaAnswerInput) {
+        qaAnswerInput.addEventListener('input', updateLivePreview);
+      }
+
+      const loginUser = document.getElementById('loginUser');
+      const loginPass = document.getElementById('loginPass');
+      const handleEnter = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleLogin();
+        }
+      };
+      if (loginUser) loginUser.addEventListener('keydown', handleEnter);
+      if (loginPass) loginPass.addEventListener('keydown', handleEnter);
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          const modals = document.querySelectorAll('.modal-overlay.active');
+          modals.forEach(m => m.classList.remove('active'));
+        }
+      });
+    }
+
+    // ==================== 管理員登入控制 ====================
+    function showLoginModal() {
+      if (appState.isAdmin) {
+        showToast('👑 您已經是在管理員身分狀態中！', 'warning');
+        return;
+      }
+      document.getElementById('loginUser').value = '';
+      document.getElementById('loginPass').value = '';
+      openModal('loginModal');
+      setTimeout(() => { document.getElementById('loginUser').focus(); }, 100);
+    }
+
+    async function handleLogin() {
+      const user = document.getElementById('loginUser').value.trim();
+      const pass = document.getElementById('loginPass').value.trim();
+
+      if (!user || !pass) {
+        showToast('⚠️ 請完整輸入帳號與密碼！', 'warning');
+        return;
+      }
+
+      if (appState.isOnline && appState.gasUrl) {
+        showToast('⏳ 正在驗證管理員身分...', 'warning');
+        try {
+          const res = await fetch(appState.gasUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'login', username: user, password: pass })
+          });
+          const data = await res.json();
+          if (data && data.status === 'success') {
+            appState.authAdminUser = user;
+            appState.authAdminPass = pass;
+            enableAdminMode(false);
+            closeModal('loginModal');
+            showToast('🎉 雲端驗證成功！已取得管理員修改權限', 'success');
+            return;
+          } else {
+            showToast(`❌ ${data.message || '帳號或密碼錯誤'}`, 'error');
+            return;
+          }
+        } catch (err) {
+          console.warn('雲端驗證失敗，轉為本地驗證', err);
+        }
+      }
+
+      if (user === 'admin' && pass === '71704') {
+        appState.authAdminUser = user;
+        appState.authAdminPass = pass;
+        enableAdminMode(false);
+        closeModal('loginModal');
+        showToast('🎉 管理員登入成功！', 'success');
+      } else {
+        showToast('❌ 帳號或密碼錯誤！', 'error');
+      }
+    }
+
+    function enableAdminMode(silent = false) {
+      appState.isAdmin = true;
+      sessionStorage.setItem('qanda_admin_logged', 'true');
+      document.body.classList.add('admin-mode');
+      document.getElementById('adminToolbar').style.display = 'block';
+      renderApp();
+      if (!silent) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    function logoutAdmin() {
+      appState.isAdmin = false;
+      sessionStorage.removeItem('qanda_admin_logged');
+      document.body.classList.remove('admin-mode');
+      document.getElementById('adminToolbar').style.display = 'none';
+      renderApp();
+      showToast('🚪 已登出管理員模式', 'success');
+    }
+
+    // ==================== 管理員功能：新增與編輯 QA ====================
+    function openAddQAModal() {
+      document.getElementById('qaModalTitle').textContent = '新增問答項目';
+      document.getElementById('editQaId').value = '';
+      document.getElementById('fromSuggestedId').value = '';
+      document.getElementById('qaQuestionInput').value = '';
+      document.getElementById('qaAnswerInput').value = '';
+      populateCategorySelect();
+      renderRelatedSelectPanel([]);
+      updateLivePreview();
+      openModal('qaModal');
+    }
+
+    function openEditQAModal(qaId) {
+      const item = appState.qaList.find(q => q.id === qaId);
+      if (!item) return;
+      document.getElementById('qaModalTitle').textContent = '編輯問答項目';
+      document.getElementById('editQaId').value = item.id;
+      document.getElementById('fromSuggestedId').value = '';
+      populateCategorySelect(item.categoryId);
+      document.getElementById('qaQuestionInput').value = item.question;
+      document.getElementById('qaAnswerInput').value = item.answer;
+      renderRelatedSelectPanel(item.relatedIds || [], item.id);
+      updateLivePreview();
+      openModal('qaModal');
+    }
+
+    function populateCategorySelect(selectedId = null) {
+      const select = document.getElementById('qaCatSelect');
+      if (!select) return;
+      select.innerHTML = '';
+      appState.categories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        if (c.id === selectedId) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    // 渲染問題推薦 (延伸閱讀) 核取方塊面板
+    function renderRelatedSelectPanel(selectedIds = [], currentQaId = null) {
+      const panel = document.getElementById('qaRelatedSelectPanel');
+      if (!panel) return;
+      panel.innerHTML = '';
+
+      appState.categories.forEach(cat => {
+        const catItems = appState.qaList.filter(q => q.categoryId === cat.id && q.id !== currentQaId);
+        if (catItems.length > 0) {
+          const header = document.createElement('div');
+          header.className = 'related-cat-header';
+          header.textContent = `${cat.name}`;
+          panel.appendChild(header);
+
+          catItems.forEach(item => {
+            const label = document.createElement('label');
+            label.className = 'related-item-label';
+            const isChecked = selectedIds.includes(item.id) ? 'checked' : '';
+            label.innerHTML = `
+              <input type="checkbox" name="relatedQaCb" value="${item.id}" ${isChecked}>
+              <span><b>#${item.order}</b> ${escapeHtml(item.question)}</span>
+            `;
+            panel.appendChild(label);
+          });
+        }
+      });
+    }
+
+    // ==================== 照片上傳處理 (迴圈壓縮防護) ====================
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      showToast('⏳ 正在處理並智慧壓縮圖片...', 'warning');
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          let maxW = 600;
+          let quality = 0.65;
+          
+          if (width > maxW) {
+            height = Math.round(height * (maxW / width));
+            width = maxW;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          let iterations = 0;
+          while (compressedDataUrl.length > 32000 && iterations < 5) {
+            iterations++;
+            quality -= 0.1;
+            maxW = Math.round(maxW * 0.85);
+            width = maxW;
+            height = Math.round(img.height * (maxW / img.width));
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            compressedDataUrl = canvas.toDataURL('image/jpeg', Math.max(quality, 0.3));
+          }
+          
+          const textarea = document.getElementById('qaAnswerInput');
+          const currentVal = textarea.value.trim();
+          textarea.value = currentVal ? `${currentVal}\n[IMG:${compressedDataUrl}]` : `[IMG:${compressedDataUrl}]`;
+          updateLivePreview();
+          showToast('📸 照片成功加入！(已優化至安全雲端規格)', 'success');
+          event.target.value = '';
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function insertImageUrl() {
+      const url = prompt('請貼上外部圖片網址 (例如 Imgur 或網站圖檔)：');
+      if (!url || !url.trim()) return;
+      const textarea = document.getElementById('qaAnswerInput');
+      const currentVal = textarea.value.trim();
+      textarea.value = currentVal ? `${currentVal}\n[IMG:${url.trim()}]` : `[IMG:${url.trim()}]`;
+      updateLivePreview();
+      showToast('🌐 圖片網址已加入！', 'success');
+    }
+
+    function updateImagePreview() {
+      const textarea = document.getElementById('qaAnswerInput');
+      const container = document.getElementById('qaImagePreviewContainer');
+      if (!textarea || !container) return;
+      container.innerHTML = '';
+      const regex = /\[IMG:(.*?)\]/g;
+      let match;
+      let index = 0;
+      while ((match = regex.exec(textarea.value)) !== null) {
+        const imgSrc = match[1];
+        const item = document.createElement('div');
+        item.className = 'image-preview-item';
+        const isBase64 = imgSrc.startsWith('data:image');
+        const displayLabel = isBase64 ? `📸 上傳照片 #${index + 1} (已優化壓縮)` : `🌐 外部連結圖片 #${index + 1}`;
+        const targetIdx = index;
+        item.innerHTML = `
+          <img src="${imgSrc}" class="image-preview-thumb" alt="預覽" onclick="openImageLightbox(this.src)" style="cursor:pointer;" title="點擊彈出視窗放大觀看">
+          <div class="image-preview-info"><b>${displayLabel}</b><br><small style="color:#94a3b8;">${isBase64 ? '符合試算表欄位規格' : imgSrc}</small></div>
+          <button type="button" class="btn btn-danger btn-sm" onclick="removeImageTagByIndex(${targetIdx})">🗑️ 移除</button>
+        `;
+        container.appendChild(item);
+        index++;
+      }
+    }
+
+    function removeImageTagByIndex(targetIdx) {
+      const textarea = document.getElementById('qaAnswerInput');
+      let idx = 0;
+      textarea.value = textarea.value.replace(/\[IMG:(.*?)\]/g, (match) => {
+        if (idx === targetIdx) {
+          idx++;
+          return '';
+        }
+        idx++;
+        return match;
+      }).trim();
+      updateLivePreview();
+      showToast('🗑️ 圖片已移除', 'success');
+    }
+
+    async function saveQAItem() {
+      const id = document.getElementById('editQaId').value;
+      const fromSugId = document.getElementById('fromSuggestedId').value;
+      const catId = document.getElementById('qaCatSelect').value;
+      const question = document.getElementById('qaQuestionInput').value.trim();
+      const answer = document.getElementById('qaAnswerInput').value.trim();
+
+      if (!question || !answer) {
+        showToast('⚠️ 問題與解答內容不能為空！', 'warning');
+        return;
+      }
+
+      // 取得勾選的問題推薦關聯 IDs
+      const relatedIds = [];
+      const checkboxes = document.querySelectorAll('input[name="relatedQaCb"]:checked');
+      checkboxes.forEach(cb => { relatedIds.push(cb.value); });
+
+      if (id) {
+        const index = appState.qaList.findIndex(q => q.id === id);
+        if (index !== -1) {
+          appState.qaList[index] = { ...appState.qaList[index], categoryId: catId, question, answer, relatedIds, updatedDate: new Date().toISOString() };
+          showToast('✅ 問答項目已更新！', 'success');
+        }
+      } else {
+        const sameCatItems = appState.qaList.filter(q => q.categoryId === catId);
+        const maxOrder = sameCatItems.reduce((max, item) => Math.max(max, item.order || 0), 0);
+        
+        const newItem = {
+          id: 'qa_' + new Date().getTime(),
+          categoryId: catId,
+          question: question,
+          answer: answer,
+          order: maxOrder + 1,
+          relatedIds: relatedIds,
+          updatedDate: new Date().toISOString()
+        };
+        appState.qaList.push(newItem);
+        showToast('✅ 成功新增問答項目！已正確接續在該分類後方', 'success');
+
+        // 如果是從待辦提問採納而來的，新增成功後自動從待辦清單移除
+        if (fromSugId) {
+          appState.suggestedQA = appState.suggestedQA.filter(s => s.id !== fromSugId);
+          updateTodoBadge();
+        }
+      }
+
+      closeModal('qaModal');
+      sortCategoriesAndQA();
+      await syncDataBackend();
+      renderApp();
+    }
+
+    async function deleteQAItem(qaId) {
+      if (!confirm('⚠️ 確定要刪除這筆問答項目嗎？此動作無法復原。')) return;
+      appState.qaList = appState.qaList.filter(q => q.id !== qaId);
+      showToast('🗑️ 問答項目已成功刪除', 'success');
+      sortCategoriesAndQA();
+      await syncDataBackend();
+      renderApp();
+    }
+
+    // ==================== 管理分類主題 ====================
+    function openManageCatModal() {
+      renderManageCategoryList();
+      document.getElementById('newCatNameInput').value = '';
+      openModal('catModal');
+    }
+
+    function renderManageCategoryList() {
+      const list = document.getElementById('catManageList');
+      if (!list) return;
+      list.innerHTML = '';
+      appState.categories.forEach((c, idx) => {
+        const count = appState.qaList.filter(q => q.categoryId === c.id).length;
+        const isFirst = idx === 0;
+        const isLast = idx === appState.categories.length - 1;
+
+        const item = document.createElement('div');
+        item.className = 'manage-item';
+        item.innerHTML = `
+          <span class="manage-name">📌 ${escapeHtml(c.name)} <small style="color:var(--text-muted);">(${count} 題)</small></span>
+          <div class="manage-actions">
+            <button class="btn btn-secondary btn-sm" onclick="moveCategoryUp(${idx})" ${isFirst ? 'disabled' : ''} title="順序往前移">⬆️</button>
+            <button class="btn btn-secondary btn-sm" onclick="moveCategoryDown(${idx})" ${isLast ? 'disabled' : ''} title="順序往後移">⬇️</button>
+            <button class="btn btn-secondary btn-sm" onclick="renameCategory('${c.id}')" title="重命名">✏️</button>
+            ${appState.categories.length > 1 ? `<button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')" title="刪除">🗑️</button>` : ''}
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    async function moveCategoryUp(idx) {
+      if (idx <= 0) return;
+      const currentCat = appState.categories[idx];
+      const prevCat = appState.categories[idx - 1];
+      
+      const tempOrder = currentCat.order;
+      currentCat.order = prevCat.order;
+      prevCat.order = tempOrder;
+      
+      showToast('⬆️ 分類順序已往前移動！', 'success');
+      sortCategoriesAndQA();
+      renderManageCategoryList();
+      renderApp();
+      await syncDataBackend();
+    }
+
+    async function moveCategoryDown(idx) {
+      if (idx >= appState.categories.length - 1) return;
+      const currentCat = appState.categories[idx];
+      const nextCat = appState.categories[idx + 1];
+      
+      const tempOrder = currentCat.order;
+      currentCat.order = nextCat.order;
+      nextCat.order = tempOrder;
+      
+      showToast('⬇️ 分類順序已往後移動！', 'success');
+      sortCategoriesAndQA();
+      renderManageCategoryList();
+      renderApp();
+      await syncDataBackend();
+    }
+
+    async function addNewCategory() {
+      const input = document.getElementById('newCatNameInput');
+      const name = input.value.trim();
+      if (!name) {
+        showToast('⚠️ 請輸入分類名稱！', 'warning');
+        return;
+      }
+      if (appState.categories.some(c => c.name === name)) {
+        showToast('⚠️ 此分類名稱已存在！', 'warning');
+        return;
+      }
+      const newCat = {
+        id: 'cat_' + new Date().getTime(),
+        name: name,
+        order: appState.categories.length + 1,
+        createdDate: new Date().toISOString()
+      };
+      appState.categories.push(newCat);
+      input.value = '';
+      showToast(`🎉 成功新增分類「${name}」！`, 'success');
+      sortCategoriesAndQA();
+      renderManageCategoryList();
+      await syncDataBackend();
+      renderApp();
+    }
+
+    async function renameCategory(catId) {
+      const cat = appState.categories.find(c => c.id === catId);
+      if (!cat) return;
+      const newName = prompt('請輸入新的分類名稱：', cat.name);
+      if (newName && newName.trim() && newName.trim() !== cat.name) {
+        cat.name = newName.trim();
+        showToast('✅ 分類重新命名成功！', 'success');
+        renderManageCategoryList();
+        await syncDataBackend();
+        renderApp();
+      }
+    }
+
+    async function deleteCategory(catId) {
+      const cat = appState.categories.find(c => c.id === catId);
+      if (!cat) return;
+      const count = appState.qaList.filter(q => q.categoryId === catId).length;
+      if (!confirm(`⚠️ 確定要刪除分類「${cat.name}」嗎？\n\n注意：該分類底下的 ${count} 筆問題也將同步被移除！`)) return;
+
+      appState.categories = appState.categories.filter(c => c.id !== catId);
+      appState.qaList = appState.qaList.filter(q => q.categoryId !== catId);
+      if (appState.activeCategory === catId) appState.activeCategory = 'all';
+
+      showToast(`🗑️ 已刪除分類與相關的 ${count} 筆問題`, 'success');
+      sortCategoriesAndQA();
+      renderManageCategoryList();
+      await syncDataBackend();
+      renderApp();
+    }
+
+    // ==================== 管理與強制調整問答排序 ====================
+    function openReorderQAModal() {
+      const select = document.getElementById('reorderCatSelect');
+      if (!select) return;
+      select.innerHTML = '<option value="all">🌐 顯示所有分類題目</option>';
+      appState.categories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = `📌 ${c.name}`;
+        select.appendChild(opt);
+      });
+      renderReorderQAList();
+      openModal('reorderQAModal');
+    }
+
+    function renderReorderQAList() {
+      const list = document.getElementById('reorderQAList');
+      const select = document.getElementById('reorderCatSelect');
+      if (!list || !select) return;
+      list.innerHTML = '';
+
+      const filterCatId = select.value;
+      const catMap = {};
+      appState.categories.forEach(c => { catMap[c.id] = c.name; });
+
+      const targetItems = appState.qaList.filter(q => filterCatId === 'all' || q.categoryId === filterCatId);
+
+      if (targetItems.length === 0) {
+        list.innerHTML = '<div style="text-align:center; padding:1rem; color:var(--text-muted);">該分類目前沒有題目可供排序</div>';
+        return;
+      }
+
+      targetItems.forEach((item) => {
+        const sameCatItems = appState.qaList.filter(q => q.categoryId === item.categoryId);
+        const isFirstInCat = sameCatItems.indexOf(item) === 0;
+        const isLastInCat = sameCatItems.indexOf(item) === sameCatItems.length - 1;
+
+        const el = document.createElement('div');
+        el.className = 'manage-item';
+        el.innerHTML = `
+          <span class="manage-name">
+            <b style="color:var(--accent-blue);">[${escapeHtml(catMap[item.categoryId] || '通用')}] #${item.order}</b><br>
+            <span style="font-size:0.85rem; font-weight:normal; color:var(--text-primary);">${escapeHtml(item.question)}</span>
+          </span>
+          <div class="manage-actions">
+            <button class="btn btn-secondary btn-sm" onclick="moveQAUp('${item.id}')" ${isFirstInCat ? 'disabled' : ''} title="上移順序">⬆️ 上移</button>
+            <button class="btn btn-secondary btn-sm" onclick="moveQADown('${item.id}')" ${isLastInCat ? 'disabled' : ''} title="下移順序">⬇️ 下移</button>
+          </div>
+        `;
+        list.appendChild(el);
+      });
+    }
+
+    async function moveQAUp(qaId) {
+      const targetItem = appState.qaList.find(q => q.id === qaId);
+      if (!targetItem) return;
+
+      const sameCatItems = appState.qaList.filter(q => q.categoryId === targetItem.categoryId);
+      const idx = sameCatItems.indexOf(targetItem);
+      if (idx <= 0) {
+        showToast('⚠️ 已經是該分類中的第一位題目！', 'warning');
+        return;
+      }
+
+      const prevItem = sameCatItems[idx - 1];
+      const tempOrder = targetItem.order;
+      targetItem.order = prevItem.order;
+      prevItem.order = tempOrder;
+
+      showToast('⬆️ 題目順序已往前移動！', 'success');
+      sortCategoriesAndQA();
+      renderApp();
+      if (document.getElementById('reorderQAModal').classList.contains('active')) {
+        renderReorderQAList();
+      }
+      await syncDataBackend();
+    }
+
+    async function moveQADown(qaId) {
+      const targetItem = appState.qaList.find(q => q.id === qaId);
+      if (!targetItem) return;
+
+      const sameCatItems = appState.qaList.filter(q => q.categoryId === targetItem.categoryId);
+      const idx = sameCatItems.indexOf(targetItem);
+      if (idx >= sameCatItems.length - 1) {
+        showToast('⚠️ 已經是該分類中的最後一位題目！', 'warning');
+        return;
+      }
+
+      const nextItem = sameCatItems[idx + 1];
+      const tempOrder = targetItem.order;
+      targetItem.order = nextItem.order;
+      nextItem.order = tempOrder;
+
+      showToast('⬇️ 題目順序已往後移動！', 'success');
+      sortCategoriesAndQA();
+      renderApp();
+      if (document.getElementById('reorderQAModal').classList.contains('active')) {
+        renderReorderQAList();
+      }
+      await syncDataBackend();
+    }
+
+    // ==================== GAS 資料同步與存儲 (極速穩定版) ====================
+    async function syncDataBackend() {
+      saveToLocalStorage();
+
+      if (appState.isOnline && appState.gasUrl && appState.gasUrl.startsWith('http')) {
+        showToast('⏳ 正在同步寫入 Google Sheets 雲端...', 'warning');
+        try {
+          const payload = {
+            action: 'syncAll',
+            username: appState.authAdminUser || 'admin',
+            password: appState.authAdminPass || '71704',
+            categories: appState.categories,
+            qaList: appState.qaList,
+            suggestedQA: appState.suggestedQA
+          };
+          
+          const res = await fetch(appState.gasUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+          });
+          
+          const data = await res.json();
+          if (data && data.status === 'success') {
+            showToast('☁️ 雲端同步更新完成！', 'success');
+          } else {
+            showToast(`⚠️ 雲端同步回應異常: ${data ? data.message : '未知'}`, 'warning');
+          }
+        } catch (err) {
+          console.warn('雲端同步連線異常，變更已保存於本機瀏覽器:', err);
+          showToast('⚠️ 雲端連線忙碌中：變更已安全保存於瀏覽器記憶體', 'warning');
+        }
+      } else {
+        showToast('💾 變更與排序已儲存於瀏覽器記憶體中', 'warning');
+      }
+    }
+
+    function saveToLocalStorage() {
+      localStorage.setItem('qanda_categories', JSON.stringify(appState.categories));
+      localStorage.setItem('qanda_qalist', JSON.stringify(appState.qaList));
+      localStorage.setItem('qanda_suggested_qa', JSON.stringify(appState.suggestedQA));
+    }
+
+    // ==================== UI 輔助工具函式 ====================
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.add('active');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    }
+
+    function showToast(message, type = 'default') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    let lbZoom = 1;
+    let lbPanX = 0;
+    let lbPanY = 0;
+    let isDraggingLb = false;
+    let lbWasDragged = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    function openImageLightbox(src) {
+      const modal = document.getElementById('imageLightboxModal');
+      const img = document.getElementById('lightboxImg');
+      if (!modal || !img) return;
+      img.src = src;
+      resetLightboxZoom();
+      openModal('imageLightboxModal');
+    }
+
+    function resetLightboxZoom() {
+      lbZoom = 1;
+      lbPanX = 0;
+      lbPanY = 0;
+      updateLightboxTransform();
+    }
+
+    function zoomLightbox(delta) {
+      lbZoom = Math.max(0.2, Math.min(5, lbZoom + delta));
+      updateLightboxTransform();
+    }
+
+    function wheelZoomLightbox(e) {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.15 : -0.15;
+      zoomLightbox(delta);
+    }
+
+    function startDragLightbox(e) {
+      if (e.button !== 0) return; // 僅支援滑鼠左鍵
+      isDraggingLb = true;
+      lbWasDragged = false;
+      dragStartX = e.clientX - lbPanX;
+      dragStartY = e.clientY - lbPanY;
+      const wrapper = document.getElementById('lightboxImgWrapper');
+      if (wrapper) wrapper.style.cursor = 'grabbing';
+      e.preventDefault();
+    }
+
+    function dragLightbox(e) {
+      if (!isDraggingLb) return;
+      const dx = e.clientX - dragStartX - lbPanX;
+      const dy = e.clientY - dragStartY - lbPanY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        lbWasDragged = true;
+      }
+      lbPanX = e.clientX - dragStartX;
+      lbPanY = e.clientY - dragStartY;
+      updateLightboxTransform(false);
+    }
+
+    function endDragLightbox(e) {
+      if (!isDraggingLb) return;
+      isDraggingLb = false;
+      const wrapper = document.getElementById('lightboxImgWrapper');
+      if (wrapper) wrapper.style.cursor = 'grab';
+      
+      // 如果是在圖片外周圍空白處單純點擊且無拖曳動作，則直接關閉視窗
+      if (!lbWasDragged && (e.target.id === 'imageLightboxModal' || e.target.id === 'lightboxImgWrapper')) {
+        closeModal('imageLightboxModal');
+      }
+    }
+
+    function closeImageLightboxByOverlay(e) {
+      if (!lbWasDragged) {
+        closeModal('imageLightboxModal');
+      }
+    }
+
+    function updateLightboxTransform(useTransition = true) {
+      const img = document.getElementById('lightboxImg');
+      const display = document.getElementById('zoomLevelDisplay');
+      if (!img) return;
+      if (!useTransition) {
+        img.style.transition = 'none';
+      } else {
+        img.style.transition = 'transform 0.15s ease-out';
+      }
+      img.style.transform = `translate(${lbPanX}px, ${lbPanY}px) scale(${lbZoom})`;
+      if (display) {
+        display.textContent = `${Math.round(lbZoom * 100)}%`;
+      }
+    }
+
+    function formatAnswer(str) {
+      if (!str) return '';
+      let formatted = str.replace(/\[IMG:(.*?)\]/g, '<div class="qa-image-container"><img src="$1" alt="QA說明圖照" class="qa-image" onclick="openImageLightbox(this.src)" title="點擊彈出視窗放大觀看"></div>');
+      return formatted.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+    }
+
+    function highlightTextOutsideTags(text, query) {
+      if (!query || !text) return text;
+      const regex = new RegExp(`(${escapeRegExp(query)})(?![^<]*>)`, 'gi');
+      return text.replace(regex, '<mark style="background:#fef08a; color:#854d0e; padding:0 2px; border-radius:3px;">$1</mark>');
+    }
+
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,358 @@
+/**
+ * 境外結構型商品 QA 知識庫後端 API - Google Apps Script (GAS)
+ * 精準架構版：嚴格鎖定 4 個工作表 (QA_Items, Settings, Categories, SuggestedQA)
+ * 1. QA_Items：明確包含第 7 欄 RelatedIds (問題推薦/延伸閱讀)。
+ * 2. 登入與同步驗證：優先直接認證預設 admin/71704，並支援 Settings 自訂帳密，徹底杜絕權限驗證失敗！
+ * 
+ * 部署說明：
+ * 1. 每次修改此程式碼後，請點擊「部署 -> 管理部署作業 -> 編輯 -> 版本選擇『新版本 (New)』-> 部署」。
+ * 2. 存取權限請設為「任何人 (Anyone)」。
+ */
+
+const SHEET_SETTINGS = 'Settings';
+const SHEET_CATEGORIES = 'Categories';
+const SHEET_QA_ITEMS = 'QA_Items';
+const SHEET_SUGGESTED_QA = 'SuggestedQA';
+
+function doGet(e) {
+  return handleRequest(e, 'GET');
+}
+
+function doPost(e) {
+  return handleRequest(e, 'POST');
+}
+
+function handleRequest(e, method) {
+  try {
+    const action = e.parameter.action || (e.postData && e.postData.contents ? JSON.parse(e.postData.contents).action : null);
+    
+    if (action === 'getData') {
+      return createJsonResponse(getAllData());
+    }
+    
+    if (method === 'POST' && e.postData && e.postData.contents) {
+      const payload = JSON.parse(e.postData.contents);
+      
+      if (payload.action === 'login') {
+        const isValid = verifyCredentials(payload.username, payload.password);
+        if (isValid) {
+          return createJsonResponse({ status: 'success', message: '登入驗證成功' });
+        } else {
+          return createJsonResponse({ status: 'error', message: '帳號或密碼錯誤' });
+        }
+      }
+      
+      if (payload.action === 'syncAll') {
+        if (!verifyCredentials(payload.username, payload.password)) {
+          return createJsonResponse({ status: 'error', message: '權限驗證失敗，無法寫入雲端' });
+        }
+        
+        saveAllData(payload.categories || [], payload.qaList || [], payload.suggestedQA || []);
+        return createJsonResponse({ status: 'success', message: '雲端資料庫同步完成！' });
+      }
+
+      if (payload.action === 'submitSuggestion') {
+        saveSuggestion(payload.suggestion);
+        return createJsonResponse({ status: 'success', message: '建議提問已成功提交！' });
+      }
+    }
+    
+    return createJsonResponse({ status: 'error', message: '未知的請求動作 (Invalid Action)' });
+  } catch (err) {
+    return createJsonResponse({ status: 'error', message: '雲端後端執行錯誤: ' + err.toString() });
+  }
+}
+
+function createJsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getSpreadsheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureSheetsExist(ss);
+  return ss;
+}
+
+// 嚴格維持 4 個核心工作表，不產生任何額外分頁
+function ensureSheetsExist(ss) {
+  // 1. Settings (管理員登入帳號密碼)
+  let settingsSheet = ss.getSheetByName(SHEET_SETTINGS);
+  if (!settingsSheet) {
+    settingsSheet = ss.insertSheet(SHEET_SETTINGS);
+    const setRows = [
+      ['Username', 'Password'],
+      ['admin', '71704']
+    ];
+    settingsSheet.getRange(1, 1, setRows.length, 2).setValues(setRows);
+  }
+
+  // 2. Categories (分類主題)
+  let catSheet = ss.getSheetByName(SHEET_CATEGORIES);
+  if (!catSheet) {
+    catSheet = ss.insertSheet(SHEET_CATEGORIES);
+    const catRows = [
+      ['ID', 'Name', 'Order', 'CreatedDate'],
+      ['cat_1', '基礎概念與法規', 1, new Date().toISOString()],
+      ['cat_2', '申購、申報與贖回流程', 2, new Date().toISOString()]
+    ];
+    catSheet.getRange(1, 1, catRows.length, 4).setValues(catRows);
+  }
+
+  // 3. QA_Items (放問題、解答與問題推薦/延伸閱讀 RelatedIds)
+  let qaSheet = ss.getSheetByName(SHEET_QA_ITEMS);
+  if (!qaSheet) {
+    // 相容舊名 QAList 處理
+    qaSheet = ss.getSheetByName('QAList');
+    if (qaSheet) {
+      qaSheet.setName(SHEET_QA_ITEMS);
+    } else {
+      qaSheet = ss.insertSheet(SHEET_QA_ITEMS);
+      const initialRows = [
+        ['ID', 'CategoryId', 'Question', 'Answer', 'Order', 'UpdatedDate', 'RelatedIds'],
+        ['qa_101', 'cat_1', '什麼是「境外結構型商品」(Offshore Structured Products)？', '境外結構型商品係指在中華民國境外發行，依照衍生性金融商品交易或契約，結合「固定收益商品（如債券、定存）」與「衍生性金融商品（如選擇權、遠期契約）」之複合式金融商品。', 1, new Date().toISOString(), '']
+      ];
+      qaSheet.getRange(1, 1, initialRows.length, 7).setValues(initialRows);
+    }
+  }
+
+  // 4. SuggestedQA (放建議 QA)
+  let sugSheet = ss.getSheetByName(SHEET_SUGGESTED_QA);
+  if (!sugSheet) {
+    sugSheet = ss.insertSheet(SHEET_SUGGESTED_QA);
+    sugSheet.getRange(1, 1, 1, 5).setValues([['ID', 'Question', 'EmpId', 'Starred', 'CreatedDate']]);
+  }
+}
+
+function verifyCredentials(username, password) {
+  if (!username || !password) return false;
+  const u = String(username).trim().toLowerCase();
+  const p = String(password).trim();
+
+  // 1. 優先直接驗證預設管理員帳密 admin / 71704，確保權限認證絕不失敗
+  if (u === 'admin' && p === '71704') {
+    return true;
+  }
+
+  // 2. 驗證試算表 Settings 內的帳號密碼
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_SETTINGS);
+    if (sheet) {
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]).trim().toLowerCase() === u && 
+            String(data[i][1]).trim() === p) {
+          return true;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('試算表認證查詢錯誤:', err);
+  }
+  return false;
+}
+
+function getAllData() {
+  const ss = getSpreadsheet();
+  
+  // 1. 讀取 Categories
+  const catSheet = ss.getSheetByName(SHEET_CATEGORIES);
+  const catRows = catSheet ? catSheet.getDataRange().getValues() : [];
+  const categories = [];
+  for (let i = 1; i < catRows.length; i++) {
+    if (catRows[i][0]) {
+      categories.push({
+        id: String(catRows[i][0]),
+        name: String(catRows[i][1]),
+        order: Number(catRows[i][2]) || (i + 1),
+        createdDate: catRows[i][3] || ''
+      });
+    }
+  }
+  categories.sort((a, b) => a.order - b.order);
+  
+  // 2. 讀取主表 QA_Items (明確支援問題推薦/延伸閱讀 RelatedIds 欄位)
+  let qaSheet = ss.getSheetByName(SHEET_QA_ITEMS);
+  if (!qaSheet && ss.getSheetByName('QAList')) {
+    qaSheet = ss.getSheetByName('QAList');
+    qaSheet.setName(SHEET_QA_ITEMS);
+  }
+  
+  const qaRows = qaSheet ? qaSheet.getDataRange().getValues() : [];
+  const qaList = [];
+  
+  if (qaRows.length > 1) {
+    const headers = qaRows[0].map(h => String(h).trim().toLowerCase());
+    let idIdx = -1, catIdx = -1, qIdx = -1, ansIdx = -1, orderIdx = -1, dateIdx = -1, relIdx = -1;
+
+    for (let col = 0; col < headers.length; col++) {
+      const hStr = headers[col];
+      if (hStr === 'id' || hStr.includes('編號')) idIdx = col;
+      else if (hStr === 'categoryid' || hStr.includes('分類')) catIdx = col;
+      else if (hStr === 'question' || hStr.includes('問題') || hStr.includes('題目')) qIdx = col;
+      else if (hStr === 'answer' || hStr.includes('解答') || hStr.includes('答案')) ansIdx = col;
+      else if (hStr === 'order' || hStr.includes('排序') || hStr.includes('順序')) orderIdx = col;
+      else if (hStr === 'updateddate' || hStr.includes('時間') || hStr.includes('日期')) dateIdx = col;
+      else if (hStr.includes('related') || hStr.includes('推薦') || hStr.includes('延伸') || hStr.includes('關聯')) relIdx = col;
+    }
+
+    // 預設為標準 7 欄位結構 (ID, CategoryId, Question, Answer, Order, UpdatedDate, RelatedIds)
+    if (idIdx === -1) idIdx = 0;
+    if (catIdx === -1) catIdx = 1;
+    if (qIdx === -1) qIdx = 2;
+    if (ansIdx === -1) ansIdx = 3;
+    if (orderIdx === -1) orderIdx = 4;
+    if (dateIdx === -1) dateIdx = 5;
+    if (relIdx === -1) relIdx = 6;
+
+    for (let i = 1; i < qaRows.length; i++) {
+      const id = String(qaRows[i][idIdx] || '').trim();
+      if (id) {
+        const relStr = (relIdx !== -1 && qaRows[i][relIdx]) ? String(qaRows[i][relIdx]).trim() : '';
+        const relatedIds = relStr ? relStr.split(',').map(x => x.trim()).filter(x => x) : [];
+        
+        qaList.push({
+          id: id,
+          categoryId: String(qaRows[i][catIdx] || ''),
+          question: String(qaRows[i][qIdx] || ''),
+          answer: String(qaRows[i][ansIdx] || ''),
+          order: (orderIdx !== -1 && !isNaN(Number(qaRows[i][orderIdx]))) ? Number(qaRows[i][orderIdx]) : (i + 1),
+          updatedDate: (dateIdx !== -1 && qaRows[i][dateIdx]) ? String(qaRows[i][dateIdx]) : '',
+          relatedIds: relatedIds
+        });
+      }
+    }
+  }
+  
+  const catOrderMap = {};
+  categories.forEach(c => { catOrderMap[c.id] = c.order; });
+  qaList.sort((a, b) => {
+    const orderA = catOrderMap[a.categoryId] || 999;
+    const orderB = catOrderMap[b.categoryId] || 999;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.order - b.order;
+  });
+
+  // 3. 讀取 SuggestedQA (待辦提問)
+  const sugSheet = ss.getSheetByName(SHEET_SUGGESTED_QA);
+  const suggestedQA = [];
+  if (sugSheet) {
+    const sugRows = sugSheet.getDataRange().getValues();
+    for (let i = 1; i < sugRows.length; i++) {
+      const id = String(sugRows[i][0]);
+      if (id) {
+        suggestedQA.push({
+          id: id,
+          question: String(sugRows[i][1]),
+          empId: String(sugRows[i][2]),
+          starred: (String(sugRows[i][3]) === 'true' || sugRows[i][3] === true),
+          createdDate: sugRows[i][4] || ''
+        });
+      }
+    }
+    suggestedQA.sort((a, b) => (b.starred - a.starred) || (new Date(b.createdDate) - new Date(a.createdDate)));
+  }
+
+  return {
+    status: 'success',
+    categories: categories,
+    qaList: qaList,
+    suggestedQA: suggestedQA
+  };
+}
+
+// 採用原子化一鍵全表寫入，精準寫進 4 個核心工作表，並強制 SpreadsheetApp.flush() 落盤
+function saveAllData(categories, qaList, suggestedQA) {
+  const ss = getSpreadsheet();
+  
+  // 1. 寫入 Categories
+  const catSheet = ss.getSheetByName(SHEET_CATEGORIES);
+  if (catSheet) {
+    catSheet.clearContents();
+    const catRows = [['ID', 'Name', 'Order', 'CreatedDate']];
+    if (categories && categories.length > 0) {
+      categories.forEach((c, idx) => {
+        catRows.push([
+          c.id || ('cat_' + idx),
+          c.name || '',
+          c.order || (idx + 1),
+          c.createdDate || new Date().toISOString()
+        ]);
+      });
+    }
+    catSheet.getRange(1, 1, catRows.length, 4).setValues(catRows);
+  }
+  
+  // 2. 寫入 QA_Items (完整寫入 7 欄位：ID, CategoryId, Question, Answer, Order, UpdatedDate, RelatedIds)
+  let qaSheet = ss.getSheetByName(SHEET_QA_ITEMS);
+  if (!qaSheet) {
+    qaSheet = ss.getSheetByName('QAList') || ss.insertSheet(SHEET_QA_ITEMS);
+    qaSheet.setName(SHEET_QA_ITEMS);
+  }
+  
+  qaSheet.clearContents();
+  const qaRows = [['ID', 'CategoryId', 'Question', 'Answer', 'Order', 'UpdatedDate', 'RelatedIds']];
+  
+  if (qaList && qaList.length > 0) {
+    qaList.forEach((q, idx) => {
+      const qId = q.id || ('qa_' + idx);
+      const relStr = (q.relatedIds && Array.isArray(q.relatedIds)) ? q.relatedIds.join(',') : '';
+      const fullAnswer = String(q.answer || '');
+      
+      qaRows.push([
+        qId,
+        q.categoryId || '',
+        q.question || '',
+        fullAnswer,
+        q.order || (idx + 1),
+        q.updatedDate || new Date().toISOString(),
+        relStr
+      ]);
+    });
+  }
+  qaSheet.getRange(1, 1, qaRows.length, 7).setValues(qaRows);
+
+  // 3. 寫入 SuggestedQA (待辦提問)
+  if (suggestedQA !== undefined) {
+    let sugSheet = ss.getSheetByName(SHEET_SUGGESTED_QA);
+    if (!sugSheet) {
+      sugSheet = ss.insertSheet(SHEET_SUGGESTED_QA);
+    }
+    sugSheet.clearContents();
+    const sugRows = [['ID', 'Question', 'EmpId', 'Starred', 'CreatedDate']];
+    if (suggestedQA && suggestedQA.length > 0) {
+      suggestedQA.forEach((s, idx) => {
+        sugRows.push([
+          s.id || ('sug_' + idx),
+          s.question || '',
+          s.empId || '',
+          s.starred ? 'true' : 'false',
+          s.createdDate || new Date().toISOString()
+        ]);
+      });
+    }
+    sugSheet.getRange(1, 1, sugRows.length, 5).setValues(sugRows);
+  }
+  
+  // 強制將記憶體中的變更完全寫入 Google 雲端硬碟，零延遲落盤！
+  SpreadsheetApp.flush();
+}
+
+function saveSuggestion(suggestion) {
+  if (!suggestion || !suggestion.question || !suggestion.empId) return;
+  const ss = getSpreadsheet();
+  let sugSheet = ss.getSheetByName(SHEET_SUGGESTED_QA);
+  if (!sugSheet) {
+    sugSheet = ss.insertSheet(SHEET_SUGGESTED_QA);
+    sugSheet.getRange(1, 1, 1, 5).setValues([['ID', 'Question', 'EmpId', 'Starred', 'CreatedDate']]);
+  }
+  sugSheet.appendRow([
+    suggestion.id || ('sug_' + new Date().getTime()),
+    String(suggestion.question).trim(),
+    String(suggestion.empId).trim(),
+    'false',
+    new Date().toISOString()
+  ]);
+  SpreadsheetApp.flush();
+}
