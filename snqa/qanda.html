@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>境外結構型商品問答網 - Offshore Structured Products Knowledge Base</title>
+  <title>境外結構型商品Q&A - Structured Products Q&A</title>
   <meta name="description" content="境外結構型商品問答網 Offshore Structured Products Knowledge Base">
   
   <!-- 行動裝置 APP 全螢幕與主畫面小工具圖示設定 (PWA Standalone App Support) -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="境外QA">
+  <meta name="apple-mobile-web-app-title" content="SN QA">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#0f172a">
   <link rel="manifest" href="manifest.json">
@@ -1119,7 +1119,7 @@
         <button class="btn btn-secondary admin-toolbar-btn" onclick="openReorderQAModal()">管理問答排序</button>
         <button class="btn btn-secondary admin-toolbar-btn" onclick="openManageCatModal()">管理分類主題</button>
         <button class="btn btn-secondary admin-toolbar-btn" onclick="openTodoQAModal()">
-          待辦QA <span id="todoBadgeCount" class="todo-badge" style="display:none;">0</span>
+          待辦Q&A <span id="todoBadgeCount" class="todo-badge" style="display:none;">0</span>
         </button>
         <button class="btn btn-danger admin-toolbar-btn" onclick="logoutAdmin()">登出管理員</button>
       </div>
@@ -1133,18 +1133,18 @@
       <button class="btn settings-btn btn-sm" onclick="openSuggestModal()" title="沒有想找的答案？點選提交建議提問給管理員">
         💡 建議新增QA
       </button>
-      <button class="btn settings-btn btn-sm" onclick="openPrefsModal()" title="設定瀏覽器字體 % 縮放與 QA 簡約檢視模式">
-        ⚙️ 個人化設定
+      <button class="btn settings-btn btn-sm" onclick="openPrefsModal()" title="個人化設定">
+        ⚙️ 設定
       </button>
     </div>
 
     <section class="hero-section">
-      <h1 class="hero-title">境外結構型商品問答網</h1>
-      <p class="hero-subtitle">Offshore Structured Products Knowledge Base</p>
+      <h1 class="hero-title">境外結構型商品 Q&A</h1>
+      <p class="hero-subtitle">Structured Products Q&A</p>
 
       <div class="search-container">
         <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" class="search-input" placeholder="搜尋問題、關鍵字或解答內容..." autocomplete="off">
+        <input type="text" id="searchInput" class="search-input" placeholder="搜尋問題、關鍵字或內容..." autocomplete="off">
         <button id="clearSearchBtn" class="clear-search-btn" title="清除搜尋">✕</button>
       </div>
     </section>
@@ -1169,7 +1169,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <footer>
-    <p>© 2026 境外結構型商品問答網 Offshore Structured Products Knowledge Base</p>
+    <p>© 2026 境外結構型商品Q&A Structured Products Q&A by Michael</p>
   </footer>
 
   <!-- ==================== 彈出視窗：建議新增 QA 提問單 ==================== -->
@@ -1181,13 +1181,13 @@
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label class="form-label">建議新增 QA / 想了解的問題內容</label>
-          <textarea id="suggestQuestionInput" class="form-textarea" style="min-height: 110px;" placeholder="請輸入您希望知識庫補充或解答的產品法規、流程問題..."></textarea>
+          <label class="form-label">建議新增 QA / 想新增的QA內容</label>
+          <textarea id="suggestQuestionInput" class="form-textarea" style="min-height: 110px;" placeholder="請敘述您希望我們補充或解答的問題..."></textarea>
         </div>
         <div class="form-group" style="margin-bottom: 0.5rem;">
           <label class="form-label">員工編號 (僅限 7 位數字以內)</label>
-          <input type="text" id="suggestEmpIdInput" class="form-input" maxlength="7" placeholder="例如：1234567 (不可填寫中文或符號)" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 7)">
-          <div class="form-hint">提示：提交後將同步發送至後台「待辦 QA」信箱供管理員審核或轉為正式問答。</div>
+          <input type="text" id="suggestEmpIdInput" class="form-input" maxlength="7" placeholder="例如：0012345 (不可填寫中英文或符號)" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 7)">
+          <div class="form-hint">提示：提交後將同步發送至管理員審核。</div>
         </div>
       </div>
       <div class="modal-footer">
@@ -1205,7 +1205,7 @@
         <button class="close-modal-btn" onclick="closeModal('todoQAModal')">✕</button>
       </div>
       <div class="modal-body">
-        <div class="form-hint" style="margin-bottom: 0.85rem;">提示：這裡列示全體員工提交的建議 QA 題目。管理員可點選「⭐ 標註星號」置頂重點，或點選「➕ 採納」直接為該題填寫解答並加入知識庫！</div>
+        <div class="form-hint" style="margin-bottom: 0.85rem;">列示建議 QA 題目。可點選「⭐ 標註星號」置頂重點，或點選「➕ 採納」直接為該題填寫解答並加入QA！</div>
         <div class="manage-list" id="todoQAList" style="max-height: 380px;"></div>
       </div>
       <div class="modal-footer">
@@ -1223,7 +1223,7 @@
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label class="form-label">🔤 網頁字體縮放比例 (自行填寫 % 數)</label>
+          <label class="form-label">🔤 字體縮放比例 (自行填寫 % 數)</label>
           <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.35rem;">
             <input type="number" id="prefFontSizeInput" class="form-input" min="50" max="250" step="5" placeholder="100" style="width: 120px; text-align: center; font-weight: 700; font-size: 1rem;">
             <span style="font-weight: 700; font-size: 1.1rem; color: var(--text-secondary);">%</span>
@@ -1232,25 +1232,25 @@
         </div>
 
         <div class="form-group" style="margin-bottom: 0.2rem;">
-          <label class="form-label">📖 QA 問答展示與檢視方式 (Display Mode)</label>
+          <label class="form-label">📖 QA 問答檢視方式 (Display Mode)</label>
           <div style="display:flex; flex-direction:column; gap:0.6rem; margin-top:0.4rem;">
             <label style="display:flex; align-items:flex-start; gap:0.6rem; cursor:pointer; padding:0.75rem; background:var(--bg-secondary); border-radius:var(--radius-md); border:1px solid var(--border-color);">
               <input type="radio" name="prefDisplayMode" value="accordion" style="margin-top:0.25rem;">
               <div>
-                <b style="color:var(--text-primary); font-size:0.9rem;">📜 手風琴選單模式 (現行默認)</b>
+                <b style="color:var(--text-primary); font-size:0.9rem;">📜 選單展開模式 (默認)</b>
                 <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.1rem;">點選題目後，解答會在卡片下方直接向下展開展示。</p>
               </div>
             </label>
             <label style="display:flex; align-items:flex-start; gap:0.6rem; cursor:pointer; padding:0.75rem; background:var(--bg-secondary); border-radius:var(--radius-md); border:1px solid var(--border-color);">
               <input type="radio" name="prefDisplayMode" value="modal" style="margin-top:0.25rem;">
               <div>
-                <b style="color:var(--accent-blue); font-size:0.9rem;">🗔 簡約彈出視窗模式 (簡約視窗式)</b>
-                <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.1rem;">大幅縮減垂直長度！主題後面留空直接緊接著寫問題，點擊後跳出專屬閱讀視窗。</p>
+                <b style="color:var(--accent-blue); font-size:0.9rem;">🗔 簡約視窗模式 </b>
+                <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.1rem;">簡約列示QA，點擊後跳出專屬閱讀視窗。</p>
               </div>
             </label>
           </div>
         </div>
-        <div class="form-hint" style="margin-top:0.65rem;">提示：設定會自動記憶在目前電腦瀏覽器中。</div>
+        <div class="form-hint" style="margin-top:0.65rem;">選擇完成後點選儲存完成設定</div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('prefsModal')">取消</button>
@@ -1270,7 +1270,7 @@
         <button class="close-modal-btn" onclick="closeModal('answerViewerModal')">✕</button>
       </div>
       <div class="modal-body" style="padding: 1.5rem 1.75rem;">
-        <div id="viewerAnswerContent" class="qa-answer" style="padding:0;">解答內容</div>
+        <div id="viewerAnswerContent" class="qa-answer" style="padding:0;">回答內容</div>
         <div id="viewerRelatedArea"></div>
       </div>
       <div class="modal-footer">
@@ -1283,7 +1283,7 @@
   <div class="modal-overlay" id="loginModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">🔐 系統管理員驗證</h3>
+        <h3 class="modal-title">🔐 管理員權限登入</h3>
         <button class="close-modal-btn" onclick="closeModal('loginModal')">✕</button>
       </div>
       <div class="modal-body">
@@ -1295,7 +1295,7 @@
           <label class="form-label">密碼 Password</label>
           <input type="password" id="loginPass" class="form-input" placeholder="請輸入密碼" autocomplete="current-password">
         </div>
-        <div class="form-hint">提示：輸入帳號與密碼後按下 Enter 鍵即可立刻驗證登入。</div>
+        <div class="form-hint">輸入帳號與密碼後按下 Enter 鍵即可登入。</div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('loginModal')">取消</button>
@@ -1308,14 +1308,14 @@
   <div class="modal-overlay" id="qaModal">
     <div class="modal-card" style="max-width: 680px;">
       <div class="modal-header">
-        <h3 class="modal-title" id="qaModalTitle">新增問答項目</h3>
+        <h3 class="modal-title" id="qaModalTitle">新增QA項目</h3>
         <button class="close-modal-btn" onclick="closeModal('qaModal')">✕</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="editQaId" value="">
         <input type="hidden" id="fromSuggestedId" value="">
         <div class="form-group">
-          <label class="form-label">所屬分類主題 Category</label>
+          <label class="form-label">所屬分類 Category</label>
           <select id="qaCatSelect" class="form-select"></select>
         </div>
         <div class="form-group">
@@ -1323,7 +1323,7 @@
           <input type="text" id="qaQuestionInput" class="form-input" placeholder="例如：申購境外結構型商品有何金額限制？">
         </div>
         <div class="form-group">
-          <label class="form-label">解答內容 Answer (支援文字顏色、粗斜體與連結編輯)</label>
+          <label class="form-label">回答 Answer</label>
           
           <div class="format-toolbar">
             <button type="button" class="fmt-btn" onclick="wrapText('qaAnswerInput', '<b>', '</b>')" title="粗體 Bold"><b>B</b></button>
@@ -1334,52 +1334,52 @@
             
             <select class="fmt-select" onchange="applyColor('qaAnswerInput', this.value); this.value='';" title="選取字體顏色">
               <option value="">🎨 字體顏色</option>
-              <option value="#0f172a" style="color:#0f172a; font-weight:bold;">● 默認純黑</option>
-              <option value="#e11d48" style="color:#e11d48; font-weight:bold;">● 醒目紅色</option>
-              <option value="#2563eb" style="color:#2563eb; font-weight:bold;">● 專業藍色</option>
-              <option value="#16a34a" style="color:#16a34a; font-weight:bold;">● 翡翠綠色</option>
-              <option value="#d97706" style="color:#d97706; font-weight:bold;">● 溫暖琥珀</option>
-              <option value="#7c3aed" style="color:#7c3aed; font-weight:bold;">● 高貴紫色</option>
+              <option value="#0f172a" style="color:#0f172a; font-weight:bold;">● 黑色</option>
+              <option value="#e11d48" style="color:#e11d48; font-weight:bold;">● 紅色</option>
+              <option value="#2563eb" style="color:#2563eb; font-weight:bold;">● 藍色</option>
+              <option value="#16a34a" style="color:#16a34a; font-weight:bold;">● 綠色</option>
+              <option value="#d97706" style="color:#d97706; font-weight:bold;">● 琥珀</option>
+              <option value="#7c3aed" style="color:#7c3aed; font-weight:bold;">● 紫色</option>
             </select>
 
-            <select class="fmt-select" onchange="applyBgColor('qaAnswerInput', this.value); this.value='';" title="選取螢光底色">
-              <option value="">🖍️ 螢光底色</option>
-              <option value="#fef08a" style="background:#fef08a;">🟨 黃色螢光筆</option>
-              <option value="#bbf7d0" style="background:#bbf7d0;">🟩 綠色螢光筆</option>
-              <option value="#bfdbfe" style="background:#bfdbfe;">🟦 藍色螢光筆</option>
-              <option value="#fbcfe8" style="background:#fbcfe8;">🟥 粉紅螢光筆</option>
+            <select class="fmt-select" onchange="applyBgColor('qaAnswerInput', this.value); this.value='';" title="選取底色">
+              <option value="">🖍️ 底色</option>
+              <option value="#fef08a" style="background:#fef08a;">🟨 黃色</option>
+              <option value="#bbf7d0" style="background:#bbf7d0;">🟩 綠色</option>
+              <option value="#bfdbfe" style="background:#bfdbfe;">🟦 藍色</option>
+              <option value="#fbcfe8" style="background:#fbcfe8;">🟥 粉紅</option>
             </select>
 
             <span class="fmt-divider">|</span>
             
             <button type="button" class="fmt-btn" onclick="insertLink('qaAnswerInput')" title="插入超連結">🔗 插入連結</button>
           </div>
-          <textarea id="qaAnswerInput" class="form-textarea" placeholder="請輸入詳細解答內容..."></textarea>
+          <textarea id="qaAnswerInput" class="form-textarea" placeholder="請輸入詳細內容..."></textarea>
           
           <div class="image-upload-toolbar">
-            <label class="btn btn-secondary btn-sm" style="cursor:pointer;" title="上傳電腦中的圖片，系統會自動優化壓縮儲存">
-              📸 上傳照片 (自動壓縮)
+            <label class="btn btn-secondary btn-sm" style="cursor:pointer;" title="上傳電腦中的圖片，自動優化壓縮儲存">
+              📸 上傳照片
               <input type="file" id="qaImageFileInput" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
             </label>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="insertImageUrl()" title="貼上外部圖片網址 (如 Imgur 或網站圖片)">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="insertImageUrl()" title="貼上外部圖片網址">
               🌐 插入圖片網址
             </button>
           </div>
           <div id="qaImagePreviewContainer" class="image-preview-list"></div>
 
           <div style="margin-top: 1rem;">
-            <label class="form-label" style="color:var(--accent-blue); font-size:0.8rem;">👁️ 即時卡片解答排版預覽 (Live Preview)</label>
+            <label class="form-label" style="color:var(--accent-blue); font-size:0.8rem;">👁️ 即時排版預覽 (Live Preview)</label>
             <div id="qaLivePreviewBox" class="qa-answer" style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); min-height:50px; max-height:220px; overflow-y:auto; font-size:0.9rem; padding:1rem;">
-              <span style="color:var(--text-muted);">輸入解答後，這裡會即時呈現在網頁卡片上的實際樣貌...</span>
+              <span style="color:var(--text-muted);">輸入後，會即時呈現在網頁的實際樣貌...</span>
             </div>
           </div>
         </div>
 
         <!-- 新增：問題推薦 (延伸閱讀選單) -->
         <div class="form-group" style="margin-top: 1.25rem;">
-          <label class="form-label" style="color:var(--accent-indigo);">💡 問題推薦 / 延伸閱讀 (點選勾選一個或多個相關問答作為連結)</label>
+          <label class="form-label" style="color:var(--accent-indigo);">💡 問題推薦 / 延伸閱讀 (點選勾選一/多個相關問答)</label>
           <div id="qaRelatedSelectPanel" class="related-select-panel"></div>
-          <div class="form-hint">提示：勾選的問題將在卡片解答最底端自動生成「💡 延伸閱讀與推薦問題」點擊連結。</div>
+          <div class="form-hint">勾選的問題將在解答最底端生成「💡 延伸閱讀」連結。</div>
         </div>
       </div>
       <div class="modal-footer">
@@ -1393,7 +1393,7 @@
   <div class="modal-overlay" id="catModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">管理與排序分類主題</h3>
+        <h3 class="modal-title">管理與排序分類</h3>
         <button class="close-modal-btn" onclick="closeModal('catModal')">✕</button>
       </div>
       <div class="modal-body">
@@ -1403,7 +1403,7 @@
         <div style="border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
           <label class="form-label">新增分類主題</label>
           <div style="display: flex; gap: 0.5rem;">
-            <input type="text" id="newCatNameInput" class="form-input" placeholder="請輸入新分類名稱 (例：稅務規範與風險)">
+            <input type="text" id="newCatNameInput" class="form-input" placeholder="請輸入新分類名稱">
             <button class="btn btn-primary" onclick="addNewCategory()" style="white-space: nowrap;">新增分類</button>
           </div>
         </div>
@@ -1418,7 +1418,7 @@
   <div class="modal-overlay" id="reorderQAModal">
     <div class="modal-card" style="max-width: 600px;">
       <div class="modal-header">
-        <h3 class="modal-title">強制調整問答順序 (同分類內移動)</h3>
+        <h3 class="modal-title">強制調整QA順序 (同分類內移動)</h3>
         <button class="close-modal-btn" onclick="closeModal('reorderQAModal')">✕</button>
       </div>
       <div class="modal-body">
@@ -1426,7 +1426,7 @@
           <label class="form-label">篩選檢視分類</label>
           <select id="reorderCatSelect" class="form-select" onchange="renderReorderQAList()"></select>
         </div>
-        <div class="form-hint" style="margin-bottom: 0.75rem;">提示：問答預設依照「分類順序 -> 題號順序」嚴格排列。您可點選箭頭強制上移或下移題目順序。</div>
+        <div class="form-hint" style="margin-bottom: 0.75rem;">問答預設依照「分類順序 -> 題號順序」嚴格排列。可點選箭頭強制上移或下移題目順序。</div>
         <div class="manage-list" id="reorderQAList"></div>
       </div>
       <div class="modal-footer">
@@ -1442,8 +1442,8 @@
       
       <!-- 放大縮小工具列 -->
       <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); padding: 8px 18px; border-radius: 30px; display: flex; gap: 12px; align-items: center; z-index: 3010; box-shadow: 0 10px 25px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2);">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="zoomLightbox(0.25)" style="background: rgba(255,255,255,0.2); color: white; border: none; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer;">🔍 ➕ 放大</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="zoomLightbox(-0.25)" style="background: rgba(255,255,255,0.2); color: white; border: none; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer;">🔍 ➖ 縮小</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="zoomLightbox(0.25)" style="background: rgba(255,255,255,0.2); color: white; border: none; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer;">➕ 放大</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="zoomLightbox(-0.25)" style="background: rgba(255,255,255,0.2); color: white; border: none; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer;">➖ 縮小</button>
         <button type="button" class="btn btn-secondary btn-sm" onclick="resetLightboxZoom()" style="background: rgba(255,255,255,0.2); color: white; border: none; font-weight: 700; padding: 6px 14px; border-radius: 20px; cursor: pointer;">🔄 100% 重設</button>
         <span id="zoomLevelDisplay" style="color: #cbd5e1; font-size: 0.9rem; font-weight: 700; min-width: 50px; text-align: center;">100%</span>
       </div>
@@ -1462,51 +1462,6 @@
     // 例如：const GAS_API_URL = "https://script.google.com/macros/s/xxxx/exec";
     // ========================================================================
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyQ6-JwN55UhUFKEgimbbBsUn6B4Cm5XHH59n8LOLzIYqZMqLYm73Ob0G26yPEylvc/exec";
-
-    const DEFAULT_DATA = {
-      categories: [
-        { id: 'cat_1', name: '基礎概念與法規', order: 1 },
-        { id: 'cat_2', name: '申購、申報與贖回流程', order: 2 }
-      ],
-      qaList: [
-        {
-          id: 'qa_101',
-          categoryId: 'cat_1',
-          question: '什麼是「境外結構型商品」(Offshore Structured Products)？',
-          answer: '境外結構型商品係指在中華民國境外發行，依照衍生性金融商品交易或契約，結合「固定收益商品（如債券、定存）」與「衍生性金融商品（如選擇權、遠期契約）」之複合式金融商品。\n\n其投資收益或贖回金額通常與特定標的（如國內外股價、指數、匯率、利率、基金、商品價格等）之表現連動，旨在滿足投資人在不同市場趨勢下的資產配置與風險回報需求。',
-          order: 1,
-          relatedIds: ['qa_102']
-        },
-        {
-          id: 'qa_102',
-          categoryId: 'cat_1',
-          question: '投資境外結構型商品需要注意哪些主要風險？',
-          answer: '投資人申購前應詳閱產品說明書及中文風險預告書，主要風險包含：\n\n1. 信用風險 (Credit Risk)：投資人須承受發行機構或保證人之違約風險；若發行機構破產或違約，可能導致本金減損甚至全部損失。\n2. 市場連動風險 (Market Risk)：商品報酬連動特定標的表現，若標的走勢不如預期，保本型商品可能僅有最低保本率，非保本型則恐損失大部分或全部本金。\n3. 流動性與中途解約風險 (Liquidity Risk)：此商品多有到期日，若於到期前提前贖回（中途解約），可能須支付中途解約費用，並承擔當時市場折價變現損失。\n4. 匯率風險 (Exchange Rate Risk)：若以外幣計價，將受到匯率波動影響，轉換回台幣時恐產生匯兌損失。\n5. 法律與稅務風險：發行地或上市地之法規與稅制變更所產生之影響。',
-          order: 2,
-          relatedIds: ['qa_201']
-        },
-        {
-          id: 'qa_201',
-          categoryId: 'cat_2',
-          question: '申購境外結構型商品的投資人資格限制為何？一般投資人也能申購嗎？',
-          answer: '依據金融監督管理委員會頒布之《境外結構型商品管理規則》，申購投資人分為兩種資格：\n\n一、專業投資人 (Professional Investor)：\n包含專業機構投資人（如銀行、保險、證券公司等）、高資產法人以及總資產達新臺幣三千萬元以上並具備金融商品交易經驗及充分財務知識之自然人。專業投資人可申購之商品範圍較廣、投資架構可較具彈性。\n\n二、一般投資人 (Retail Investor)：\n並非所有境外結構型商品皆可向一般投資人銷售。欲向一般投資人銷售之商品，必須通過受託或銷售機構之內部商品審查，並符合主管機關規定之保本率限制與風險等級匹配條件（如投資人風險承受度需大於或等於商品風險等級），以落實公平待客與消費者保護。',
-          order: 1,
-          relatedIds: []
-        },
-        {
-          id: 'qa_202',
-          categoryId: 'cat_2',
-          question: '完成申購與交易後，相關申報與對帳作業流程為何？',
-          answer: '1. 交易確認與對帳單寄送：受託或銷售機構於交易成交後，將提供交易確認書，並定期（每月或每季）寄發客戶帳務與資產對帳單，充分揭露商品最新參考市價及評價。\n\n2. 外匯與央行申報作業：若涉及外幣收支，需遵循中央銀行《外匯收支或交易申報辦法》辦理。若是透過特定金錢信託或受託買賣管道申購，通常由銀行或證券商以受託機構名義協助處理相關款項收付與外匯結報作業。\n\n3. 贖回與到期給付：商品到期或投資人申請提前贖回時，銷售機構依商品契約規定計算給付金額，扣除相關稅費後，匯款至投資人指定之銀行帳戶。',
-          order: 2,
-          relatedIds: []
-        }
-      ],
-      suggestedQA: [
-        { id: 'sug_01', question: '請問中途解約或提前贖回的具體手續費計算公式與申報工作天數為何？', empId: '1082045', starred: true, createdDate: new Date().toISOString() },
-        { id: 'sug_02', question: '想了解外幣計價結構型商品的避險（匯率操作）與央行外匯結報限制。', empId: '7170423', starred: false, createdDate: new Date().toISOString() }
-      ]
-    };
 
     let appState = {
       categories: [],
@@ -1574,7 +1529,7 @@
       applyUserPrefs();
       renderQAList();
       closeModal('prefsModal');
-      showToast(`⚙️ 個人化設定已套用：字體縮放 ${val}% / ${displayMode === 'modal' ? '簡約彈出視窗' : '手風琴選單'}`, 'success');
+      showToast(`⚙️ 個人化設定已套用：字體縮放 ${val}% / ${displayMode === 'modal' ? '簡約模式' : '默認模式'}`, 'success');
     }
 
     // ==================== 快取優先 + 背景靜默更新 (Stale-While-Revalidate) ====================
@@ -1588,7 +1543,7 @@
         try {
           appState.categories = JSON.parse(savedCats);
           appState.qaList = JSON.parse(savedQA);
-          appState.suggestedQA = savedSug ? JSON.parse(savedSug) : [...DEFAULT_DATA.suggestedQA];
+          appState.suggestedQA = savedSug ? JSON.parse(savedSug) : [];
           hasLocalCache = true;
           sortCategoriesAndQA();
           appState.isLoading = false;
@@ -1599,9 +1554,9 @@
       }
 
       if (!hasLocalCache) {
-        appState.categories = [...DEFAULT_DATA.categories];
-        appState.qaList = [...DEFAULT_DATA.qaList];
-        appState.suggestedQA = [...DEFAULT_DATA.suggestedQA];
+        appState.categories = [];
+        appState.qaList = [];
+        appState.suggestedQA = [];
         if (appState.gasUrl && appState.gasUrl.startsWith('http')) {
           appState.isLoading = true;
         }
@@ -1611,7 +1566,7 @@
 
       if (appState.gasUrl && appState.gasUrl.startsWith('http')) {
         if (!hasLocalCache) {
-          showToast('⏳ 首次到訪，正在下載完整雲端問答庫...', 'warning');
+          showToast('⏳ 首次到訪，正在下載完整雲端QA資料庫...', 'warning');
         }
 
         try {
@@ -1639,7 +1594,7 @@
           appState.isLoading = false;
           renderApp();
           if (!hasLocalCache) {
-            showToast('⚠️ 目前無法連線至雲端試算表，顯示單機快取資料', 'warning');
+            showToast('⚠️ 目前無法連線，顯示離線快取資料', 'warning');
           }
         }
       } else {
@@ -1806,8 +1761,8 @@
       if (appState.isLoading) {
         statusBox.style.display = 'block';
         statusIcon.textContent = '⏳';
-        statusTitle.textContent = '正在載入雲端問答資料...';
-        statusDesc.textContent = '系統正在與 Google Sheets 試算表連線同步最新內容，請稍候片刻。';
+        statusTitle.textContent = '正在載入資料...';
+        statusDesc.textContent = '系統連線同步最新內容，請稍候片刻';
         if (statusSuggestBtnArea) statusSuggestBtnArea.style.display = 'none';
         return;
       }
@@ -1815,8 +1770,8 @@
       if (appState.qaList.length === 0) {
         statusBox.style.display = 'block';
         statusIcon.textContent = '📚';
-        statusTitle.textContent = '目前知識庫尚無問答資料';
-        statusDesc.textContent = '系統中暫時沒有任何題目。請管理員登入並點選「新增問答」建立第一筆問答項目。';
+        statusTitle.textContent = '目前尚無問答資料';
+        statusDesc.textContent = '系統中暫時沒有任何題目。';
         if (statusSuggestBtnArea) statusSuggestBtnArea.style.display = 'block';
         return;
       }
@@ -1871,7 +1826,7 @@
                 <span class="qa-cat-badge">${escapeHtml(catName)} <small style="opacity:0.75;">#${item.order}</small></span>
                 <div class="qa-question">${highlightTextOutsideTags(escapeHtml(item.question), query)}</div>
               </div>
-              <div class="qa-toggle-icon">📖 檢視解答</div>
+              <div class="qa-toggle-icon">📖 檢視回答</div>
             </div>
             <div class="qa-admin-actions">
               <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); moveQAUp('${item.id}')" ${isFirstInCat ? 'disabled' : ''} title="在上同分類內順序上移">⬆️ 上移</button>
@@ -1926,7 +1881,7 @@
 
       return `
         <div class="qa-related-section">
-          <div class="qa-related-title">💡 延伸閱讀與推薦問題：</div>
+          <div class="qa-related-title">💡 相關問題：</div>
           <div class="qa-related-list">${linksHtml}</div>
         </div>
       `;
@@ -2007,7 +1962,7 @@
       saveToLocalStorage();
       updateTodoBadge();
       closeModal('suggestModal');
-      showToast('🎉 感謝您的寶貴建議！已發送至管理員「待辦 QA」提問箱', 'success');
+      showToast('🎉 感謝您的寶貴建議！已發送至管理員', 'success');
 
       if (appState.isOnline && appState.gasUrl && appState.gasUrl.startsWith('http')) {
         try {
@@ -2034,7 +1989,7 @@
       list.innerHTML = '';
 
       if (!appState.suggestedQA || appState.suggestedQA.length === 0) {
-        list.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted);">🎉 目前沒有任何待辦的建議 QA 提問單</div>';
+        list.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted);">🎉 目前沒有任何待辦的建議 QA</div>';
         return;
       }
 
@@ -2054,7 +2009,7 @@
             <button class="btn btn-secondary btn-sm" onclick="toggleStarSuggestion('${sug.id}')" title="標註/取消星號重點">
               ${sug.starred ? '⭐ 已標註' : '☆ 標星'}
             </button>
-            <button class="btn btn-primary btn-sm" onclick="adoptSuggestion('${sug.id}')" title="採納此題並打開填寫解答進度">
+            <button class="btn btn-primary btn-sm" onclick="adoptSuggestion('${sug.id}')" title="採納此題並打開填寫">
               ➕ 採納
             </button>
             <button class="btn btn-danger btn-sm" onclick="deleteSuggestion('${sug.id}')" title="移除此項建議">
@@ -2072,7 +2027,7 @@
       sug.starred = !sug.starred;
       sortCategoriesAndQA();
       renderTodoQAList();
-      showToast(sug.starred ? '⭐ 已標註為重點待辦問題！' : '☆ 已取消星號標註', 'success');
+      showToast(sug.starred ? '⭐ 已標註為重點待辦！' : '☆ 已取消星號標註', 'success');
       await syncDataBackend();
     }
 
@@ -2084,11 +2039,11 @@
       openAddQAModal();
       document.getElementById('qaQuestionInput').value = sug.question;
       document.getElementById('fromSuggestedId').value = sug.id;
-      showToast('🎉 已為您載入建議問題！請填寫解答並儲存入庫', 'success');
+      showToast('🎉 已載入建議問題！', 'success');
     }
 
     async function deleteSuggestion(sugId) {
-      if (!confirm('⚠️ 確定要刪除這筆員工建議 QA 嗎？')) return;
+      if (!confirm('⚠️ 確定要刪除這筆建議 QA 嗎？')) return;
       appState.suggestedQA = appState.suggestedQA.filter(s => s.id !== sugId);
       updateTodoBadge();
       renderTodoQAList();
@@ -2143,7 +2098,7 @@
       
       const val = textarea.value.trim();
       if (!val) {
-        previewBox.innerHTML = '<span style="color:var(--text-muted);">輸入解答後，這裡會即時呈現在網頁卡片上的實際樣貌...</span>';
+        previewBox.innerHTML = '<span style="color:var(--text-muted);">輸入內容後，這裡會即時呈現在網頁卡片上的實際樣貌...</span>';
       } else {
         previewBox.innerHTML = formatAnswer(val);
       }
@@ -2227,7 +2182,7 @@
             appState.authAdminPass = pass;
             enableAdminMode(false);
             closeModal('loginModal');
-            showToast('🎉 雲端驗證成功！已取得管理員修改權限', 'success');
+            showToast('🎉 雲端驗證成功！已取得管理員權限', 'success');
             return;
           } else {
             showToast(`❌ ${data.message || '帳號或密碼錯誤'}`, 'error');
@@ -2410,7 +2365,7 @@
         const item = document.createElement('div');
         item.className = 'image-preview-item';
         const isBase64 = imgSrc.startsWith('data:image');
-        const displayLabel = isBase64 ? `📸 上傳照片 #${index + 1} (已優化壓縮)` : `🌐 外部連結圖片 #${index + 1}`;
+        const displayLabel = isBase64 ? `📸 上傳照片 #${index + 1} (已壓縮)` : `🌐 外部連結圖片 #${index + 1}`;
         const targetIdx = index;
         item.innerHTML = `
           <img src="${imgSrc}" class="image-preview-thumb" alt="預覽" onclick="openImageLightbox(this.src)" style="cursor:pointer;" title="點擊彈出視窗放大觀看">
@@ -2445,7 +2400,7 @@
       const answer = document.getElementById('qaAnswerInput').value.trim();
 
       if (!question || !answer) {
-        showToast('⚠️ 問題與解答內容不能為空！', 'warning');
+        showToast('⚠️ 問與答內容不能為空！', 'warning');
         return;
       }
 
@@ -2750,10 +2705,10 @@
           }
         } catch (err) {
           console.warn('雲端同步連線異常，變更已保存於本機瀏覽器:', err);
-          showToast('⚠️ 雲端連線忙碌中：變更已安全保存於瀏覽器記憶體', 'warning');
+          showToast('⚠️ 雲端連線忙碌中：變更已安全保存於瀏覽器快存', 'warning');
         }
       } else {
-        showToast('💾 變更與排序已儲存於瀏覽器記憶體中', 'warning');
+        showToast('💾 變更與排序已儲存於瀏覽器快存中', 'warning');
       }
     }
 
