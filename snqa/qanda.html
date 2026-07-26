@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>境外結構型商品Q&A - Structured Products Q&A</title>
+  <title>境外結構型商品Q&A</title>
   <meta name="description" content="境外結構型商品問答網 Offshore Structured Products Knowledge Base">
   
   <!-- 行動裝置 APP 全螢幕與主畫面小工具圖示設定 (PWA Standalone App Support) -->
@@ -543,13 +543,15 @@
 
     /* 延伸閱讀與推薦問答連結區塊 */
     .qa-related-section {
-      margin: 0.5rem 1.35rem 1.35rem;
-      padding-top: 0.85rem;
-      border-top: 1px dashed var(--border-color);
+      margin: 2.8rem 1.35rem 1.35rem;
       background: white;
       border-radius: var(--radius-md);
-      padding: 0.85rem 1rem;
+      padding: 1rem 1.25rem;
       border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    #viewerRelatedArea .qa-related-section {
+      margin: 3rem 0 0.5rem 0;
     }
     .qa-related-title {
       font-size: 0.82rem;
@@ -1114,7 +1116,7 @@
   <div id="adminToolbar">
     <div class="admin-toolbar-inner">
       <div class="admin-title">
-        <span>管理員控制台 (Admin Console)</span>
+        <span>管理員控制台</span>
       </div>
       <div class="admin-buttons">
         <button class="btn btn-amber admin-toolbar-btn" onclick="openAddQAModal()">新增問答</button>
@@ -1145,7 +1147,7 @@
 
     <section class="hero-section">
       <h1 class="hero-title">境外結構型商品 Q&A</h1>
-      <p class="hero-subtitle">Structured Products Q&A</p>
+      <p class="hero-subtitle">Structured Products</p>
 
       <div class="search-container">
         <span class="search-icon">🔍</span>
@@ -1294,7 +1296,7 @@
       <div class="modal-body">
         <div class="form-group" style="margin-bottom: 0.5rem;">
           <label class="form-label">登入密碼 Password</label>
-          <input type="password" id="loginPass" class="form-input" placeholder="請輸入管理員登入密碼" autocomplete="current-password" onkeydown="if(event.key==='Enter') handleLogin()">
+          <input type="password" id="loginPass" class="form-input" placeholder="請輸入管理員登入密碼" autocomplete="current-password" onkeydown="if(event.key==='Enter'){ event.preventDefault(); handleLogin(); }">
         </div>
         <div class="form-hint">請輸入管理員密碼後按下 Enter 鍵即可登入。</div>
       </div>
@@ -2011,7 +2013,7 @@
       saveToLocalStorage();
       updateTodoBadge();
       closeModal('suggestModal');
-      showToast('🎉 感謝您的寶貴建議！已發送至管理員', 'success');
+      showToast('🎉 填寫完成！已發送至管理員', 'success');
 
       if (appState.isOnline && appState.gasUrl && appState.gasUrl.startsWith('http')) {
         try {
@@ -2366,7 +2368,9 @@
       setTimeout(() => { document.getElementById('loginPass').focus(); }, 100);
     }
 
+    let isLoggingIn = false;
     async function handleLogin() {
+      if (isLoggingIn) return;
       const pass = document.getElementById('loginPass').value.trim();
 
       if (!pass) {
@@ -2374,39 +2378,55 @@
         return;
       }
 
-      if (appState.isOnline && appState.gasUrl) {
-        showToast('⏳ 正在驗證管理員密碼...', 'warning');
-        try {
-          const res = await fetch(appState.gasUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'login', password: pass })
-          });
-          const data = await res.json();
-          if (data && data.status === 'success') {
-            appState.authAdminUser = 'admin';
-            appState.authAdminPass = pass;
-            enableAdminMode(false);
-            closeModal('loginModal');
-            showToast('🎉 雲端密碼驗證成功！已取得管理員權限', 'success');
-            return;
-          } else {
-            showToast(`❌ ${data.message || '登入密碼錯誤'}`, 'error');
-            return;
-          }
-        } catch (err) {
-          console.warn('雲端驗證失敗，轉為本地驗證', err);
-        }
+      isLoggingIn = true;
+      const loginBtn = document.querySelector('#loginModal .btn-primary');
+      const originalBtnText = loginBtn ? loginBtn.innerHTML : '登入 Login';
+      if (loginBtn) {
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = '⏳ 驗證中...';
       }
 
-      if (pass === '71704') {
-        appState.authAdminUser = 'admin';
-        appState.authAdminPass = pass;
-        enableAdminMode(false);
-        closeModal('loginModal');
-        showToast('🎉 管理員登入成功！', 'success');
-      } else {
-        showToast('❌ 登入密碼錯誤！', 'error');
+      try {
+        if (appState.isOnline && appState.gasUrl) {
+          showToast('⏳ 正在驗證管理員密碼...', 'warning');
+          try {
+            const res = await fetch(appState.gasUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: 'login', password: pass })
+            });
+            const data = await res.json();
+            if (data && data.status === 'success') {
+              appState.authAdminUser = 'admin';
+              appState.authAdminPass = pass;
+              enableAdminMode(false);
+              closeModal('loginModal');
+              showToast('🎉 雲端密碼驗證成功！已取得管理員權限', 'success');
+              return;
+            } else {
+              showToast(`❌ ${data.message || '登入密碼錯誤'}`, 'error');
+              return;
+            }
+          } catch (err) {
+            console.warn('雲端驗證失敗，轉為本地驗證', err);
+          }
+        }
+
+        if (pass === '71704') {
+          appState.authAdminUser = 'admin';
+          appState.authAdminPass = pass;
+          enableAdminMode(false);
+          closeModal('loginModal');
+          showToast('🎉 管理員登入成功！', 'success');
+        } else {
+          showToast('❌ 登入密碼錯誤！', 'error');
+        }
+      } finally {
+        isLoggingIn = false;
+        if (loginBtn) {
+          loginBtn.disabled = false;
+          loginBtn.innerHTML = originalBtnText;
+        }
       }
     }
 
