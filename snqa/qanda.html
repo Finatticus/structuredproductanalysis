@@ -1292,15 +1292,11 @@
         <button class="close-modal-btn" onclick="closeModal('loginModal')">✕</button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">帳號 Username</label>
-          <input type="text" id="loginUser" class="form-input" placeholder="請輸入帳號" autocomplete="username">
-        </div>
         <div class="form-group" style="margin-bottom: 0.5rem;">
-          <label class="form-label">密碼 Password</label>
-          <input type="password" id="loginPass" class="form-input" placeholder="請輸入密碼" autocomplete="current-password">
+          <label class="form-label">登入密碼 Password</label>
+          <input type="password" id="loginPass" class="form-input" placeholder="請輸入管理員登入密碼" autocomplete="current-password" onkeydown="if(event.key==='Enter') handleLogin()">
         </div>
-        <div class="form-hint">輸入帳號與密碼後按下 Enter 鍵即可登入。</div>
+        <div class="form-hint">請輸入管理員密碼後按下 Enter 鍵即可登入。</div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('loginModal')">取消</button>
@@ -1497,7 +1493,7 @@
     // 【請在此處貼上您於 Google Apps Script 部署後的 Web App 網址】
     // 例如：const GAS_API_URL = "https://script.google.com/macros/s/xxxx/exec";
     // ========================================================================
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbw1fMAUqs67LCY3V3NT7fcuiPgbq1zXOuDJMBpKkI7vun8jnsf7Slh1yY_w4UoLgAs/exec";
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwqg3xWrYQDtQj7KBexpJlMYccy5N1Eq7CUy_9YSNvq67X_94HHrkv53GEHHUpXeHk/exec";
 
     let appState = {
       categories: [],
@@ -1680,9 +1676,9 @@
       }
     }
 
-    // ==================== 鍵盤快速鍵觸發 xu06 ====================
+    // ==================== 鍵盤快速鍵觸發 admin ====================
     function setupKeyboardTrigger() {
-      const targetKeys = ['x', 'u', '0', '6'];
+      const targetKeys = ['a', 'd', 'm', 'i', 'n'];
       const pressedKeys = new Set();
       let sequenceBuffer = [];
       let sequenceTimeout = null;
@@ -1690,7 +1686,7 @@
       window.addEventListener('keydown', (e) => {
         const tag = e.target.tagName.toLowerCase();
         if (tag === 'input' || tag === 'textarea') {
-          if (e.target.id === 'searchInput' && e.target.value.toLowerCase() === 'xu06') {
+          if (e.target.id === 'searchInput' && e.target.value.toLowerCase() === 'admin') {
             e.target.value = '';
             showLoginModal();
           }
@@ -1699,8 +1695,6 @@
 
         const key = e.key.toLowerCase();
         pressedKeys.add(key);
-        if (e.code === 'Numpad0') pressedKeys.add('0');
-        if (e.code === 'Numpad6') pressedKeys.add('6');
 
         if (targetKeys.every(k => pressedKeys.has(k))) {
           pressedKeys.clear();
@@ -1709,9 +1703,9 @@
         }
 
         sequenceBuffer.push(key);
-        if (sequenceBuffer.length > 4) sequenceBuffer.shift();
+        if (sequenceBuffer.length > 5) sequenceBuffer.shift();
         
-        if (sequenceBuffer.join('') === 'xu06') {
+        if (sequenceBuffer.join('') === 'admin') {
           sequenceBuffer = [];
           showLoginModal();
         }
@@ -1723,8 +1717,6 @@
       window.addEventListener('keyup', (e) => {
         const key = e.key.toLowerCase();
         pressedKeys.delete(key);
-        if (e.code === 'Numpad0') pressedKeys.delete('0');
-        if (e.code === 'Numpad6') pressedKeys.delete('6');
       });
     }
 
@@ -2369,39 +2361,37 @@
         showToast('👑 您已經是在管理員身分狀態中！', 'warning');
         return;
       }
-      document.getElementById('loginUser').value = '';
       document.getElementById('loginPass').value = '';
       openModal('loginModal');
-      setTimeout(() => { document.getElementById('loginUser').focus(); }, 100);
+      setTimeout(() => { document.getElementById('loginPass').focus(); }, 100);
     }
 
     async function handleLogin() {
-      const user = document.getElementById('loginUser').value.trim();
       const pass = document.getElementById('loginPass').value.trim();
 
-      if (!user || !pass) {
-        showToast('⚠️ 請完整輸入帳號與密碼！', 'warning');
+      if (!pass) {
+        showToast('⚠️ 請輸入登入密碼！', 'warning');
         return;
       }
 
       if (appState.isOnline && appState.gasUrl) {
-        showToast('⏳ 正在驗證管理員身分...', 'warning');
+        showToast('⏳ 正在驗證管理員密碼...', 'warning');
         try {
           const res = await fetch(appState.gasUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'login', username: user, password: pass })
+            body: JSON.stringify({ action: 'login', password: pass })
           });
           const data = await res.json();
           if (data && data.status === 'success') {
-            appState.authAdminUser = user;
+            appState.authAdminUser = 'admin';
             appState.authAdminPass = pass;
             enableAdminMode(false);
             closeModal('loginModal');
-            showToast('🎉 雲端驗證成功！已取得管理員權限', 'success');
+            showToast('🎉 雲端密碼驗證成功！已取得管理員權限', 'success');
             return;
           } else {
-            showToast(`❌ ${data.message || '帳號或密碼錯誤'}`, 'error');
+            showToast(`❌ ${data.message || '登入密碼錯誤'}`, 'error');
             return;
           }
         } catch (err) {
@@ -2409,14 +2399,14 @@
         }
       }
 
-      if (user === 'admin' && pass === '71704') {
-        appState.authAdminUser = user;
+      if (pass === '71704') {
+        appState.authAdminUser = 'admin';
         appState.authAdminPass = pass;
         enableAdminMode(false);
         closeModal('loginModal');
         showToast('🎉 管理員登入成功！', 'success');
       } else {
-        showToast('❌ 帳號或密碼錯誤！', 'error');
+        showToast('❌ 登入密碼錯誤！', 'error');
       }
     }
 
