@@ -1118,8 +1118,8 @@
       </div>
       <div class="admin-buttons">
         <button class="btn btn-amber admin-toolbar-btn" onclick="openAddQAModal()">新增問答</button>
-        <button class="btn btn-secondary admin-toolbar-btn" onclick="openReorderQAModal()">管理問答排序</button>
-        <button class="btn btn-secondary admin-toolbar-btn" onclick="openManageCatModal()">管理分類主題</button>
+        <button class="btn btn-secondary admin-toolbar-btn" onclick="openReorderQAModal()">管理QA排序</button>
+        <button class="btn btn-secondary admin-toolbar-btn" onclick="openManageCatModal()">管理分類</button>
         <button class="btn btn-secondary admin-toolbar-btn" onclick="openTodoQAModal()">
           待辦Q&A <span id="todoBadgeCount" class="todo-badge" style="display:none;">0</span>
         </button>
@@ -1265,8 +1265,8 @@
   </div>
 
   <!-- ==================== 彈出視窗：簡約彈出檢視器 ==================== -->
-  <div class="modal-overlay" id="answerViewerModal">
-    <div class="modal-card" style="max-width: 680px;">
+  <div class="modal-overlay" id="answerViewerModal" onclick="closeModalByOverlay(event, 'answerViewerModal')">
+    <div class="modal-card" style="max-width: 680px;" onclick="event.stopPropagation()">
       <div class="modal-header" style="background:var(--bg-secondary); align-items:flex-start;">
         <div>
           <span id="viewerCatBadge" class="qa-cat-badge" style="margin-bottom:0.4rem;">分類</span>
@@ -1457,7 +1457,7 @@
   <div class="modal-overlay" id="trashModal">
     <div class="modal-card" style="max-width: 650px;">
       <div class="modal-header">
-        <h3 class="modal-title">🗑️ (已刪除的QA)</h3>
+        <h3 class="modal-title">垃圾桶🗑️ (已刪除的QA)</h3>
         <button class="close-modal-btn" onclick="closeModal('trashModal')">✕</button>
       </div>
       <div class="modal-body">
@@ -1883,7 +1883,7 @@
                 <span class="qa-cat-badge">${escapeHtml(catName)} <small style="opacity:0.75;">#${item.order}</small></span>
                 <div class="qa-question">${highlightTextOutsideTags(escapeHtml(item.question), query)}</div>
               </div>
-              <div class="qa-toggle-icon">📖 檢視回答</div>
+              <div class="qa-toggle-icon">📖 檢視</div>
             </div>
             <div class="qa-admin-actions">
               <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); moveQAUp('${item.id}')" ${isFirstInCat ? 'disabled' : ''} title="在上同分類內順序上移">⬆️ 上移</button>
@@ -2959,6 +2959,12 @@
 
     function closeModal(modalId) {
       document.getElementById(modalId).classList.remove('active');
+    }
+
+    function closeModalByOverlay(e, modalId) {
+      if (e.target.id === modalId || e.target.classList.contains('modal-overlay')) {
+        closeModal(modalId);
+      }
     }
 
     function showToast(message, type = 'default') {
