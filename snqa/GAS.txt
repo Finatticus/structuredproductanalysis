@@ -13,6 +13,7 @@ const SHEET_SETTINGS = 'Settings';
 const SHEET_CATEGORIES = 'Categories';
 const SHEET_QA_ITEMS = 'QA_Items';
 const SHEET_SUGGESTED_QA = 'SuggestedQA';
+const SHEET_TRASH_QA = 'TrashQA';
 
 function doGet(e) {
   return handleRequest(e, 'GET');
@@ -47,8 +48,8 @@ function handleRequest(e, method) {
           return createJsonResponse({ status: 'error', message: '權限驗證失敗，無法寫入雲端' });
         }
         
-        saveAllData(payload.categories || [], payload.qaList || [], payload.suggestedQA || []);
-        return createJsonResponse({ status: 'success', message: '雲端資料庫同步完成！' });
+        saveAllData(payload.categories || [], payload.qaList || [], payload.suggestedQA || [], payload.trashQA || []);
+        return createJsonResponse({ status: 'success', message: '雲端資料庫與回收桶同步完成！' });
       }
 
       if (payload.action === 'submitSuggestion') {
@@ -121,6 +122,13 @@ function ensureSheetsExist(ss) {
   if (!sugSheet) {
     sugSheet = ss.insertSheet(SHEET_SUGGESTED_QA);
     sugSheet.getRange(1, 1, 1, 5).setValues([['ID', 'Question', 'EmpId', 'Starred', 'CreatedDate']]);
+  }
+
+  // 5. TrashQA (放資源回收桶的已刪除問答)
+  let trashSheet = ss.getSheetByName(SHEET_TRASH_QA);
+  if (!trashSheet) {
+    trashSheet = ss.insertSheet(SHEET_TRASH_QA);
+    trashSheet.getRange(1, 1, 1, 8).setValues([['ID', 'CategoryId', 'Question', 'Answer', 'Order', 'UpdatedDate', 'RelatedIds', 'DeletedDate']]);
   }
 }
 
@@ -254,16 +262,41 @@ function getAllData() {
     suggestedQA.sort((a, b) => (b.starred - a.starred) || (new Date(b.createdDate) - new Date(a.createdDate)));
   }
 
+  // 4. 讀取 TrashQA (資源回收桶)
+  const trashSheet = ss.getSheetByName(SHEET_TRASH_QA);
+  const trashQA = [];
+  if (trashSheet) {
+    const trashRows = trashSheet.getDataRange().getValues();
+    for (let i = 1; i < trashRows.length; i++) {
+      const id = String(trashRows[i][0] || '').trim();
+      if (id) {
+        const relStr = String(trashRows[i][6] || '').trim();
+        const relatedIds = relStr ? relStr.split(',').map(x => x.trim()).filter(x => x) : [];
+        trashQA.push({
+          id: id,
+          categoryId: String(trashRows[i][1] || ''),
+          question: String(trashRows[i][2] || ''),
+          answer: String(trashRows[i][3] || ''),
+          order: Number(trashRows[i][4]) || (i + 1),
+          updatedDate: String(trashRows[i][5] || ''),
+          relatedIds: relatedIds,
+          deletedDate: String(trashRows[i][7] || '')
+        });
+      }
+    }
+  }
+
   return {
     status: 'success',
     categories: categories,
     qaList: qaList,
-    suggestedQA: suggestedQA
+    suggestedQA: suggestedQA,
+    trashQA: trashQA
   };
 }
 
-// 採用原子化一鍵全表寫入，精準寫進 4 個核心工作表，並強制 SpreadsheetApp.flush() 落盤
-function saveAllData(categories, qaList, suggestedQA) {
+// 採用原子化一鍵全表寫入，精準寫進核心工作表，並強制 SpreadsheetApp.flush() 落盤
+function saveAllData(categories, qaList, suggestedQA, trashQA) {
   const ss = getSpreadsheet();
   
   // 1. 寫入 Categories
@@ -335,6 +368,33 @@ function saveAllData(categories, qaList, suggestedQA) {
     sugSheet.getRange(1, 1, sugRows.length, 5).setValues(sugRows);
   }
   
+  // 4. 寫入 TrashQA (資源回收桶)
+  if (trashQA !== undefined) {
+    let trashSheet = ss.getSheetByName(SHEET_TRASH_QA);
+    if (!trashSheet) {
+      trashSheet = ss.insertSheet(SHEET_TRASH_QA);
+    }
+    trashSheet.clearContents();
+    const trashRows = [['ID', 'CategoryId', 'Question', 'Answer', 'Order', 'UpdatedDate', 'RelatedIds', 'DeletedDate']];
+    if (trashQA && trashQA.length > 0) {
+      trashQA.forEach((q, idx) => {
+        const qId = q.id || ('trash_' + idx);
+        const relStr = (q.relatedIds && Array.isArray(q.relatedIds)) ? q.relatedIds.join(',') : '';
+        trashRows.push([
+          qId,
+          q.categoryId || '',
+          q.question || '',
+          String(q.answer || ''),
+          q.order || (idx + 1),
+          q.updatedDate || new Date().toISOString(),
+          relStr,
+          q.deletedDate || new Date().toISOString()
+        ]);
+      });
+    }
+    trashSheet.getRange(1, 1, trashRows.length, 8).setValues(trashRows);
+  }
+
   // 強制將記憶體中的變更完全寫入 Google 雲端硬碟，零延遲落盤！
   SpreadsheetApp.flush();
 }

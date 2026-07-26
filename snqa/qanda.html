@@ -322,21 +322,21 @@
       color: var(--text-primary);
     }
 
-    /* 分類籤標導覽區 */
+    /* 分類籤標導覽區 (簡約緊湊模式) */
     .category-tabs {
       display: flex;
       justify-content: center;
-      gap: 0.6rem;
+      gap: 0.35rem;
       flex-wrap: wrap;
-      margin-bottom: 2rem;
+      margin-bottom: 1.25rem;
       border-bottom: 1px solid var(--border-color);
-      padding-bottom: 1.25rem;
+      padding-bottom: 0.85rem;
     }
     .tab-btn {
-      padding: 0.5rem 1.15rem;
+      padding: 0.3rem 0.75rem;
       border-radius: 9999px;
-      font-size: 0.88rem;
-      font-weight: 600;
+      font-size: 0.8rem;
+      font-weight: 500;
       background: white;
       color: var(--text-secondary);
       border: 1px solid var(--border-color);
@@ -345,7 +345,7 @@
       box-shadow: var(--shadow-sm);
       display: inline-flex;
       align-items: center;
-      gap: 0.45rem;
+      gap: 0.35rem;
     }
     .tab-btn:hover {
       background: var(--bg-secondary);
@@ -355,13 +355,14 @@
     .tab-btn.active {
       background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
       color: white;
+      font-weight: 600;
       border-color: transparent;
-      box-shadow: 0 3px 10px rgba(37, 99, 235, 0.22);
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.22);
     }
     .tab-count {
-      padding: 0.1rem 0.5rem;
+      padding: 0.05rem 0.35rem;
       border-radius: 9999px;
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       background: rgba(0, 0, 0, 0.08);
       color: inherit;
     }
@@ -1009,25 +1010,26 @@
         padding: 0.8rem 2.4rem 0.8rem 2.5rem;
       }
       /* 分類選單改為手機原生橫向滑動列 (Touch Swipe Tab Bar) */
-      .cat-nav {
+      .category-tabs {
         flex-wrap: nowrap;
         overflow-x: auto;
         justify-content: flex-start;
-        padding: 0.25rem 1rem 0.75rem;
+        padding: 0.25rem 0.5rem 0.65rem;
         margin: 0 0 1rem;
+        gap: 0.3rem;
         -webkit-overflow-scrolling: touch;
         scroll-snap-type: x mandatory;
         scrollbar-width: none;
       }
-      .cat-nav::-webkit-scrollbar {
+      .category-tabs::-webkit-scrollbar {
         display: none;
       }
-      .cat-btn {
+      .tab-btn {
         flex-shrink: 0;
         scroll-snap-align: start;
-        padding: 0.6rem 1rem;
-        font-size: 0.88rem;
-        min-height: 40px;
+        padding: 0.3rem 0.7rem;
+        font-size: 0.78rem;
+        min-height: 32px;
       }
       .qa-container {
         padding: 0 0.75rem;
@@ -1120,6 +1122,9 @@
         <button class="btn btn-secondary admin-toolbar-btn" onclick="openManageCatModal()">管理分類主題</button>
         <button class="btn btn-secondary admin-toolbar-btn" onclick="openTodoQAModal()">
           待辦Q&A <span id="todoBadgeCount" class="todo-badge" style="display:none;">0</span>
+        </button>
+        <button class="btn btn-secondary admin-toolbar-btn" onclick="openTrashModal()" title="資源回收桶 (已刪除的問答)">
+          🗑️ <span id="trashBadgeCount" class="todo-badge" style="background:#64748b; display:none;">0</span>
         </button>
         <button class="btn btn-danger admin-toolbar-btn" onclick="logoutAdmin()">登出管理員</button>
       </div>
@@ -1237,14 +1242,14 @@
             <label style="display:flex; align-items:flex-start; gap:0.6rem; cursor:pointer; padding:0.75rem; background:var(--bg-secondary); border-radius:var(--radius-md); border:1px solid var(--border-color);">
               <input type="radio" name="prefDisplayMode" value="accordion" style="margin-top:0.25rem;">
               <div>
-                <b style="color:var(--text-primary); font-size:0.9rem;">📜 選單展開模式 (默認)</b>
+                <b style="color:var(--text-primary); font-size:0.9rem;">📜 選單展開模式</b>
                 <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.1rem;">點選題目後，解答會在卡片下方直接向下展開展示。</p>
               </div>
             </label>
             <label style="display:flex; align-items:flex-start; gap:0.6rem; cursor:pointer; padding:0.75rem; background:var(--bg-secondary); border-radius:var(--radius-md); border:1px solid var(--border-color);">
-              <input type="radio" name="prefDisplayMode" value="modal" style="margin-top:0.25rem;">
+              <input type="radio" name="prefDisplayMode" value="modal" checked style="margin-top:0.25rem;">
               <div>
-                <b style="color:var(--accent-blue); font-size:0.9rem;">🗔 簡約視窗模式 </b>
+                <b style="color:var(--accent-blue); font-size:0.9rem;">🗔 簡約視窗模式 (默認)</b>
                 <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.1rem;">簡約列示QA，點擊後跳出專屬閱讀視窗。</p>
               </div>
             </label>
@@ -1448,6 +1453,24 @@
     </div>
   </div>
 
+  <!-- ==================== 彈出視窗：資源回收桶 (已刪除的問答) ==================== -->
+  <div class="modal-overlay" id="trashModal">
+    <div class="modal-card" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🗑️ (已刪除的QA)</h3>
+        <button class="close-modal-btn" onclick="closeModal('trashModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-hint" style="margin-bottom: 0.75rem;">點選「恢復」重新加回，或點選「徹底刪除」永久移除</div>
+        <div class="manage-list" id="trashQAList" style="max-height: 55vh; overflow-y: auto;"></div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button class="btn btn-danger btn-sm" onclick="emptyTrashQA()">🧹 清空</button>
+        <button class="btn btn-secondary" onclick="closeModal('trashModal')">關閉視窗</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== 彈出視窗：圖片放大檢視器 (Lightbox 具備放大縮小拖曳功能) ==================== -->
   <div class="modal-overlay" id="imageLightboxModal" onclick="closeImageLightboxByOverlay(event)" style="background: rgba(15, 23, 42, 0.92); z-index: 3000;">
     <div style="position: relative; width: 96vw; height: 94vh; display: flex; align-items: center; justify-content: center; overflow: hidden;" onclick="event.stopPropagation()">
@@ -1474,12 +1497,13 @@
     // 【請在此處貼上您於 Google Apps Script 部署後的 Web App 網址】
     // 例如：const GAS_API_URL = "https://script.google.com/macros/s/xxxx/exec";
     // ========================================================================
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyQ6-JwN55UhUFKEgimbbBsUn6B4Cm5XHH59n8LOLzIYqZMqLYm73Ob0G26yPEylvc/exec";
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbw1fMAUqs67LCY3V3NT7fcuiPgbq1zXOuDJMBpKkI7vun8jnsf7Slh1yY_w4UoLgAs/exec";
 
     let appState = {
       categories: [],
       qaList: [],
       suggestedQA: [],
+      trashQA: [],
       activeCategory: 'all',
       searchQuery: '',
       isAdmin: false,
@@ -1488,7 +1512,7 @@
       isLoading: false,
       userPrefs: {
         fontSize: 100,
-        displayMode: 'accordion'
+        displayMode: 'modal'
       }
     };
 
@@ -1524,7 +1548,7 @@
       document.getElementById('prefFontSizeInput').value = appState.userPrefs.fontSize || 100;
       const radios = document.getElementsByName('prefDisplayMode');
       for (let r of radios) {
-        r.checked = (r.value === (appState.userPrefs.displayMode || 'accordion'));
+        r.checked = (r.value === (appState.userPrefs.displayMode || 'modal'));
       }
       openModal('prefsModal');
     }
@@ -1532,7 +1556,7 @@
     function saveUserPrefs() {
       let val = parseFloat(document.getElementById('prefFontSizeInput').value) || 100;
       val = Math.min(Math.max(val, 50), 250);
-      let displayMode = 'accordion';
+      let displayMode = 'modal';
       const radios = document.getElementsByName('prefDisplayMode');
       for (let r of radios) {
         if (r.checked) { displayMode = r.value; break; }
@@ -1550,6 +1574,7 @@
       const savedCats = localStorage.getItem('qanda_categories');
       const savedQA = localStorage.getItem('qanda_qalist');
       const savedSug = localStorage.getItem('qanda_suggested_qa');
+      const savedTrash = localStorage.getItem('qanda_trash_qa');
       let hasLocalCache = false;
 
       if (savedCats && savedQA) {
@@ -1557,6 +1582,7 @@
           appState.categories = JSON.parse(savedCats);
           appState.qaList = JSON.parse(savedQA);
           appState.suggestedQA = savedSug ? JSON.parse(savedSug) : [];
+          appState.trashQA = savedTrash ? JSON.parse(savedTrash) : [];
           hasLocalCache = true;
           sortCategoriesAndQA();
           appState.isLoading = false;
@@ -1570,6 +1596,7 @@
         appState.categories = [];
         appState.qaList = [];
         appState.suggestedQA = [];
+        appState.trashQA = [];
         if (appState.gasUrl && appState.gasUrl.startsWith('http')) {
           appState.isLoading = true;
         }
@@ -1590,6 +1617,7 @@
             appState.categories = data.categories || [];
             appState.qaList = data.qaList || [];
             appState.suggestedQA = data.suggestedQA || appState.suggestedQA;
+            appState.trashQA = data.trashQA || appState.trashQA || [];
             appState.isOnline = true;
             appState.isLoading = false;
             sortCategoriesAndQA();
@@ -1706,6 +1734,7 @@
       renderCategoryTabs();
       renderQAList();
       updateTodoBadge();
+      updateTrashBadge();
       if (appState.isAdmin) {
         renderManageCategoryList();
         populateCategorySelect();
@@ -1715,6 +1744,9 @@
         if (document.getElementById('todoQAModal').classList.contains('active')) {
           renderTodoQAList();
         }
+        if (document.getElementById('trashModal').classList.contains('active')) {
+          renderTrashQAList();
+        }
       }
     }
 
@@ -1722,6 +1754,18 @@
       const badge = document.getElementById('todoBadgeCount');
       if (!badge) return;
       const count = (appState.suggestedQA || []).length;
+      if (count > 0 && appState.isAdmin) {
+        badge.textContent = count;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function updateTrashBadge() {
+      const badge = document.getElementById('trashBadgeCount');
+      if (!badge) return;
+      const count = (appState.trashQA || []).length;
       if (count > 0 && appState.isAdmin) {
         badge.textContent = count;
         badge.style.display = 'inline-block';
@@ -1741,14 +1785,14 @@
 
       const allBtn = document.createElement('button');
       allBtn.className = `tab-btn ${appState.activeCategory === 'all' ? 'active' : ''}`;
-      allBtn.innerHTML = `🌟 全部問題 <span class="tab-count">${counts.all || 0}</span>`;
+      allBtn.innerHTML = `全部 <span class="tab-count">${counts.all || 0}</span>`;
       allBtn.onclick = () => selectCategory('all');
       container.appendChild(allBtn);
 
       appState.categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = `tab-btn ${appState.activeCategory === cat.id ? 'active' : ''}`;
-        btn.innerHTML = `📌 ${escapeHtml(cat.name)} <span class="tab-count">${counts[cat.id] || 0}</span>`;
+        btn.innerHTML = `${escapeHtml(cat.name)} <span class="tab-count">${counts[cat.id] || 0}</span>`;
         btn.onclick = () => selectCategory(cat.id);
         container.appendChild(btn);
       });
@@ -2061,6 +2105,104 @@
       updateTodoBadge();
       renderTodoQAList();
       showToast('🗑️ 建議 QA 項目已刪除', 'success');
+      await syncDataBackend();
+    }
+
+    // ==================== 資源回收桶 (Trash QA) ====================
+    function openTrashModal() {
+      renderTrashQAList();
+      openModal('trashModal');
+    }
+
+    function renderTrashQAList() {
+      const list = document.getElementById('trashQAList');
+      if (!list) return;
+      list.innerHTML = '';
+
+      if (!appState.trashQA || appState.trashQA.length === 0) {
+        list.innerHTML = '<div style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted);">🎉 目前資源回收桶是空的，沒有被刪除的題目</div>';
+        return;
+      }
+
+      const catMap = {};
+      appState.categories.forEach(c => { catMap[c.id] = c.name; });
+
+      appState.trashQA.forEach((item) => {
+        const el = document.createElement('div');
+        el.className = 'manage-item';
+        const dateStr = item.deletedDate ? new Date(item.deletedDate).toLocaleString() : '最近刪除';
+        const catName = catMap[item.categoryId] || '原有分類已刪除 (將放入首個分類)';
+
+        el.innerHTML = `
+          <span class="manage-name">
+            <span style="font-size:0.78rem; font-weight:700; color:#64748b;">
+              🗑️ 刪除時間: ${dateStr} | 原分類: [${escapeHtml(catName)}]
+            </span><br>
+            <span style="font-size:0.92rem; color:var(--text-primary); font-weight:600;">${escapeHtml(item.question)}</span>
+          </span>
+          <div class="manage-actions">
+            <button class="btn btn-primary btn-sm" onclick="restoreTrashQA('${item.id}')" title="恢復此問答加回知識庫">
+              ♻️ 恢復
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="permanentDeleteTrashQA('${item.id}')" title="永久徹底刪除此問答">
+              🔥 徹底刪除
+            </button>
+          </div>
+        `;
+        list.appendChild(el);
+      });
+    }
+
+    async function restoreTrashQA(qaId) {
+      if (!appState.trashQA) return;
+      const idx = appState.trashQA.findIndex(q => q.id === qaId);
+      if (idx === -1) return;
+
+      const restored = appState.trashQA[idx];
+      delete restored.deletedDate;
+
+      if (!appState.categories.some(c => c.id === restored.categoryId)) {
+        if (appState.categories.length > 0) {
+          restored.categoryId = appState.categories[0].id;
+        }
+      }
+
+      appState.qaList.push(restored);
+      appState.trashQA.splice(idx, 1);
+
+      showToast('♻️ 問答已成功恢復並加入知識庫！', 'success');
+      updateTrashBadge();
+      sortCategoriesAndQA();
+      renderApp();
+      if (document.getElementById('trashModal').classList.contains('active')) {
+        renderTrashQAList();
+      }
+      await syncDataBackend();
+    }
+
+    async function permanentDeleteTrashQA(qaId) {
+      if (!confirm('🔥 確定要永久徹底刪除此問答嗎？刪除後將無法再從任何地方復原！')) return;
+      appState.trashQA = appState.trashQA.filter(q => q.id !== qaId);
+      showToast('🔥 該問答已徹底刪除', 'success');
+      updateTrashBadge();
+      if (document.getElementById('trashModal').classList.contains('active')) {
+        renderTrashQAList();
+      }
+      await syncDataBackend();
+    }
+
+    async function emptyTrashQA() {
+      if (!appState.trashQA || appState.trashQA.length === 0) {
+        showToast('ℹ️ 目前資源回收桶已經是空的', 'warning');
+        return;
+      }
+      if (!confirm('🧹 確定要清空資源回收桶中的所有問答嗎？清空後將無法復原！')) return;
+      appState.trashQA = [];
+      showToast('🧹 資源回收桶已完全清空！', 'success');
+      updateTrashBadge();
+      if (document.getElementById('trashModal').classList.contains('active')) {
+        renderTrashQAList();
+      }
       await syncDataBackend();
     }
 
@@ -2519,12 +2661,20 @@
     }
 
     async function deleteQAItem(qaId) {
-      if (!confirm('⚠️ 確定要刪除這筆問答項目嗎？此動作無法復原。')) return;
-      appState.qaList = appState.qaList.filter(q => q.id !== qaId);
-      showToast('🗑️ 問答項目已成功刪除', 'success');
-      sortCategoriesAndQA();
-      await syncDataBackend();
-      renderApp();
+      if (!confirm('⚠️ 確定要將這筆問答移入資源回收桶嗎？\n(管理員後續可在控制台的「🗑️ 回收桶」中隨時點選恢復或徹底刪除)')) return;
+      const index = appState.qaList.findIndex(q => q.id === qaId);
+      if (index !== -1) {
+        const target = appState.qaList[index];
+        target.deletedDate = new Date().toISOString();
+        if (!appState.trashQA) appState.trashQA = [];
+        appState.trashQA.push(target);
+        appState.qaList.splice(index, 1);
+        showToast('🗑️ 已移至資源回收桶 (可在 🗑️ 中隨時恢復)', 'warning');
+        updateTrashBadge();
+        sortCategoriesAndQA();
+        await syncDataBackend();
+        renderApp();
+      }
     }
 
     // ==================== 管理分類主題 ====================
@@ -2633,13 +2783,21 @@
       const cat = appState.categories.find(c => c.id === catId);
       if (!cat) return;
       const count = appState.qaList.filter(q => q.categoryId === catId).length;
-      if (!confirm(`⚠️ 確定要刪除分類「${cat.name}」嗎？\n\n注意：該分類底下的 ${count} 筆問題也將同步被移除！`)) return;
+      if (!confirm(`⚠️ 確定要刪除分類「${cat.name}」嗎？\n\n注意：該分類底下的 ${count} 筆問題將自動移入資源回收桶保護！`)) return;
+
+      const removedQAs = appState.qaList.filter(q => q.categoryId === catId);
+      if (!appState.trashQA) appState.trashQA = [];
+      removedQAs.forEach(q => {
+        q.deletedDate = new Date().toISOString();
+        appState.trashQA.push(q);
+      });
 
       appState.categories = appState.categories.filter(c => c.id !== catId);
       appState.qaList = appState.qaList.filter(q => q.categoryId !== catId);
       if (appState.activeCategory === catId) appState.activeCategory = 'all';
 
-      showToast(`🗑️ 已刪除分類與相關的 ${count} 筆問題`, 'success');
+      showToast(`🗑️ 已刪除分類，相關的 ${count} 筆問題已移至回收桶`, 'success');
+      updateTrashBadge();
       sortCategoriesAndQA();
       renderManageCategoryList();
       await syncDataBackend();
@@ -2762,7 +2920,8 @@
             password: appState.authAdminPass || '71704',
             categories: appState.categories,
             qaList: appState.qaList,
-            suggestedQA: appState.suggestedQA
+            suggestedQA: appState.suggestedQA,
+            trashQA: appState.trashQA || []
           };
           
           const res = await fetch(appState.gasUrl, {
@@ -2790,6 +2949,7 @@
       localStorage.setItem('qanda_categories', JSON.stringify(appState.categories));
       localStorage.setItem('qanda_qalist', JSON.stringify(appState.qaList));
       localStorage.setItem('qanda_suggested_qa', JSON.stringify(appState.suggestedQA));
+      localStorage.setItem('qanda_trash_qa', JSON.stringify(appState.trashQA || []));
     }
 
     // ==================== UI 輔助工具函式 ====================
