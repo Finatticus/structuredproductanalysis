@@ -642,6 +642,57 @@ body.tight .ptab{display:none}
   filter:blur(1.5px);animation:fadein .6s,rot 9s linear infinite}
 .lv3 .om-flash{background:radial-gradient(circle,#fffbe6,#ffd76a 60%,rgba(255,200,80,0))}
 .lv3 .om-txt span{filter:drop-shadow(0 3px 0 #5a0006) drop-shadow(0 0 18px rgba(255,220,120,1))}
+
+/* ===== 預告動畫：三個等級共用的「橫越」版型 ===== */
+.omen .om-core{position:absolute;left:0;right:0;bottom:15%}
+.lv1 .om-dim{background:radial-gradient(ellipse at 50% 40%,rgba(110,50,0,.6),rgba(20,4,0,.94) 75%)}
+.lv1 .om-rays{background:repeating-conic-gradient(from 0deg,rgba(255,226,140,.34) 0 4deg,transparent 4deg 14deg);
+  -webkit-mask:radial-gradient(circle,#000 0 8%,transparent 45%);mask:radial-gradient(circle,#000 0 8%,transparent 45%);filter:blur(1.5px);animation:fadein .6s,rot 12s linear infinite}
+.lv2 .om-dim{background:radial-gradient(ellipse at 50% 40%,rgba(140,10,20,.65),rgba(24,0,2,.95) 75%)}
+.lv2 .om-rays{background:repeating-conic-gradient(from 0deg,rgba(255,215,100,.45) 0 4deg,rgba(255,60,50,.32) 4deg 8deg,transparent 8deg 14deg);
+  -webkit-mask:radial-gradient(circle,#000 0 8%,transparent 50%);mask:radial-gradient(circle,#000 0 8%,transparent 50%);filter:blur(1.2px);animation:fadein .5s,rot 6s linear infinite}
+.lv2 .om-flash{background:radial-gradient(circle,#fff6e0,#ff8a5a 60%,rgba(255,80,60,0));animation:omflash .55s ease-out,omflash .55s ease-out 1.1s}
+.om-rays2{position:absolute;left:50%;top:50%;width:170vmax;height:170vmax;margin:-85vmax 0 0 -85vmax;opacity:.14;mix-blend-mode:screen;
+  background:conic-gradient(from 0deg,#ff9ad2,#ffd76a,#9be7ff,#b8ffb0,#e2b0ff,#ff9ad2);
+  -webkit-mask:radial-gradient(circle,transparent 0 10%,#000 22%,transparent 46%);mask:radial-gradient(circle,transparent 0 10%,#000 22%,transparent 46%);animation:fadein .8s,rotr 7s linear infinite}
+@keyframes rotr{to{transform:rotate(-360deg)}}
+.lv3 .om-flash{animation:omflash .55s ease-out,omflash .55s ease-out 1.2s,omflash .55s ease-out 2.4s}
+.lv1 .om-bdrays{background:repeating-conic-gradient(from 0deg,rgba(255,240,170,.45) 0 5deg,transparent 5deg 18deg);animation:rot 6s linear infinite}
+.lv2 .om-bdrays{background:repeating-conic-gradient(from 0deg,rgba(255,220,120,.55) 0 5deg,rgba(255,80,60,.35) 5deg 10deg,transparent 10deg 16deg);animation:rot 3.5s linear infinite}
+.lv2 .om-bdsvg{animation:bdglow2 .6s ease-in-out infinite alternate}
+@keyframes bdglow2{from{filter:drop-shadow(0 0 14px #ff9a5a) brightness(1)}to{filter:drop-shadow(0 0 36px #ffd76a) drop-shadow(0 0 60px #ff3c3c) brightness(1.18)}}
+.lv1 .om-bdsvg{animation:bdglow1 .8s ease-in-out infinite alternate}
+@keyframes bdglow1{from{filter:drop-shadow(0 0 10px #ffd76a) brightness(1)}to{filter:drop-shadow(0 0 30px #fff3a0) brightness(1.15)}}
+.om-halo2{position:absolute;left:50%;top:34%;width:72%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
+  border:3px solid rgba(255,243,196,.85);box-shadow:0 0 20px #ffd76a,inset 0 0 20px #ffd76a;animation:halo2 1.6s ease-in-out infinite}
+@keyframes halo2{50%{transform:translate(-50%,-50%) scale(1.12);opacity:.5}}
+/* 繞圈金幣 */
+.om-orbit{position:absolute;left:50%;top:46%;width:0;height:0;animation:rot 3s linear infinite}
+.om-orbit i{position:absolute;left:-11px;top:-11px;width:22px;height:22px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fffbe0,#f6d27a 45%,#a8701a);box-shadow:0 0 10px #ffd76a;
+  transform:rotate(var(--a)) translateX(min(40vw,175px)) rotate(calc(-1 * var(--a)))}
+.om-orbit i::after{content:"";position:absolute;left:8px;top:8px;width:6px;height:6px;background:#7a4a0c;border-radius:1px}
+.lv2 .om-orbit{animation-duration:2.2s}
+/* 金幣尾跡、蓮花瓣、煙火 */
+.om-gc{position:fixed;z-index:2;pointer-events:none;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fffbe0,#f6d27a 45%,#a8701a);box-shadow:0 0 6px #ffd76a}
+.om-petal{position:fixed;z-index:2;pointer-events:none;border-radius:50% 50% 50% 50% / 70% 70% 30% 30%;
+  background:linear-gradient(180deg,#fff0f5,#ffb6cf 55%,#e9709a);box-shadow:0 0 6px rgba(255,180,210,.8)}
+.om-fw{position:fixed;z-index:2;pointer-events:none;width:6px;height:6px;border-radius:50%}
+/* 文字：越高等級越華麗 */
+.lv2 .om-txt span{background:linear-gradient(180deg,#fff6d0,#ffd76a 40%,#ff7a2c 75%,#d1102f);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 3px 0 #4a0006) drop-shadow(0 0 16px rgba(255,120,60,.9))}
+.lv3 .om-txt span{background:linear-gradient(110deg,#fff 0%,#ffe27a 30%,#fff 45%,#ffd76a 60%,#ffb347 100%);background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:dropin .55s cubic-bezier(.2,1.8,.4,1) both,shimmer 1.6s linear infinite}
+@keyframes shimmer{to{background-position:-200% 0}}
+.om-sub{letter-spacing:4px}
+.lv2 .om-sub{color:#ffe0c8;text-shadow:0 0 10px #ff5a3c}
+.lv3 .om-sub{color:#fff8e0;text-shadow:0 0 12px #ffd76a,0 0 24px #ff9ad2}
+.lv3 .om-rays{opacity:.75}
+.lv3 .om-txt span{filter:drop-shadow(0 3px 0 #5a0006) drop-shadow(0 0 2px #5a0006) drop-shadow(0 0 16px rgba(255,200,80,.9))}
+.omen .om-sub{opacity:0;animation:subin .6s ease-out forwards;margin-top:8px;font-size:15px}
+@keyframes subin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.omen .om-core{bottom:20%}
+.omen .om-tap{bottom:7%}
 </style>
 </head>
 <body>
@@ -1755,50 +1806,180 @@ const BUDDHA_SVG = `<svg viewBox="0 0 320 340" xmlns="http://www.w3.org/2000/svg
 <path d="M140 117 Q160 123 180 117" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".9"/>
 </svg>`;
 
-/* 彌勒賜福：佛像從左邊慢慢滑進、經過畫面中央、再從右邊滑出（約 3.6 秒），全程閃閃發光 */
-async function buddhaPass(o) {
+// 好運降臨：金元寶（紅絨墊、流蘇、繞圈金幣）
+const INGOT_FIG_SVG = `<svg viewBox="0 0 320 340" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="igHalo" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff6c8" stop-opacity=".9"/><stop offset=".5" stop-color="#ffcf5a" stop-opacity=".45"/><stop offset="1" stop-color="#ff9d1c" stop-opacity="0"/></radialGradient>
+  <linearGradient id="igGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffbe0"/><stop offset=".35" stop-color="#ffd76a"/><stop offset=".7" stop-color="#e0a22a"/><stop offset="1" stop-color="#9a6410"/></linearGradient>
+  <linearGradient id="igGold2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c0"/><stop offset="1" stop-color="#c88a1c"/></linearGradient>
+  <linearGradient id="igRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8323a"/><stop offset="1" stop-color="#7a0a12"/></linearGradient>
+</defs>
+<circle cx="160" cy="160" r="156" fill="url(#igHalo)"/>
+<circle cx="160" cy="160" r="112" fill="none" stroke="#fff3c4" stroke-width="2.5" opacity=".6"/>
+<!-- 紅絨墊與流蘇 -->
+<path d="M58 250 Q160 220 262 250 L270 282 Q160 312 50 282Z" fill="url(#igRed)" stroke="#5a0610" stroke-width="2.5"/>
+<path d="M64 258 Q160 232 256 258" fill="none" stroke="#ffd76a" stroke-width="3"/>
+<path d="M56 278 Q160 304 264 278" fill="none" stroke="#ffd76a" stroke-width="3"/>
+<g stroke="#ffd76a" stroke-width="3" fill="#ffd76a"><path d="M52 282 L44 312"/><circle cx="43" cy="316" r="5"/><path d="M268 282 L276 312"/><circle cx="277" cy="316" r="5"/></g>
+<!-- 疊起的金幣 -->
+<g stroke="#7a4b0a" stroke-width="1.5" fill="url(#igGold2)">
+  <ellipse cx="86" cy="252" rx="20" ry="7"/><ellipse cx="86" cy="244" rx="20" ry="7"/><ellipse cx="86" cy="236" rx="20" ry="7"/>
+  <ellipse cx="234" cy="252" rx="20" ry="7"/><ellipse cx="234" cy="244" rx="20" ry="7"/><ellipse cx="234" cy="236" rx="20" ry="7"/><ellipse cx="234" cy="228" rx="20" ry="7"/>
+</g>
+<!-- 大元寶 -->
+<ellipse cx="160" cy="250" rx="110" ry="12" fill="#4a0a06" opacity=".45"/>
+<path d="M44 162 Q58 244 160 250 Q262 244 276 162 Q222 186 202 172 Q190 96 160 96 Q130 96 118 172 Q98 186 44 162Z" fill="url(#igGold)" stroke="#6b3d05" stroke-width="4"/>
+<path d="M44 162 Q58 244 160 250 Q262 244 276 162 Q240 220 160 224 Q80 220 44 162Z" fill="#a8701a" opacity=".45"/>
+<ellipse cx="148" cy="124" rx="22" ry="15" fill="#fff" opacity=".55"/>
+<path d="M66 190 Q160 228 254 190" fill="none" stroke="#fff3c4" stroke-width="3" opacity=".55"/>
+<text x="160" y="168" text-anchor="middle" font-size="34" font-weight="900" fill="#8a5a12" opacity=".9" font-family="'Songti TC','Noto Serif TC',serif">招財</text>
+<!-- 閃光十字 -->
+<g fill="#fff">
+  <path d="M232 112 l4 14 l14 4 l-14 4 l-4 14 l-4 -14 l-14 -4 l14 -4z" opacity=".95"/>
+  <path d="M96 140 l3 9 l9 3 l-9 3 l-3 9 l-3 -9 l-9 -3 l9 -3z" opacity=".85"/>
+</g>
+</svg>`;
+
+// 財神駕到：財神爺（官帽帽翅、長鬚、紅袍、手捧元寶、腳踏祥雲）
+const CAISHEN_SVG = `<svg viewBox="0 0 320 340" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="csHalo" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff2c8" stop-opacity=".95"/><stop offset=".45" stop-color="#ff9a5a" stop-opacity=".5"/><stop offset="1" stop-color="#d1102f" stop-opacity="0"/></radialGradient>
+  <linearGradient id="csRobe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0403a"/><stop offset=".6" stop-color="#b8121c"/><stop offset="1" stop-color="#6d070c"/></linearGradient>
+  <linearGradient id="csGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffbe0"/><stop offset=".4" stop-color="#ffd76a"/><stop offset=".75" stop-color="#d4951f"/><stop offset="1" stop-color="#8f5a0e"/></linearGradient>
+  <radialGradient id="csFace" cx=".42" cy=".35" r=".7"><stop offset="0" stop-color="#ffe9d4"/><stop offset=".6" stop-color="#ffc9a0"/><stop offset="1" stop-color="#e09a6c"/></radialGradient>
+  <linearGradient id="csHat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3a4a"/><stop offset="1" stop-color="#0c0c14"/></linearGradient>
+  <linearGradient id="csCloud" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#bfe4ff"/></linearGradient>
+</defs>
+<circle cx="160" cy="150" r="158" fill="url(#csHalo)"/>
+<circle cx="160" cy="96" r="70" fill="none" stroke="#ffe27a" stroke-width="3" opacity=".75"/>
+<circle cx="160" cy="96" r="80" fill="none" stroke="#fff3c4" stroke-width="1.5" opacity=".5" stroke-dasharray="3 7"/>
+<!-- 祥雲 -->
+<g fill="url(#csCloud)" stroke="#6aa8d8" stroke-width="2.5">
+  <path d="M40 300 q-6 -26 22 -28 q6 -22 32 -14 q14 -18 38 -6 q16 -14 36 -2 q20 -14 40 0 q24 -12 38 6 q26 -8 32 14 q28 2 22 28 q-130 26 -260 2z"/>
+</g>
+<path d="M70 296 q14 -10 26 0 M120 292 q16 -12 30 0 M178 292 q16 -12 30 0 M228 296 q14 -10 26 0" fill="none" stroke="#6aa8d8" stroke-width="2.5" stroke-linecap="round"/>
+<!-- 紅袍下擺 -->
+<path d="M84 186 Q66 240 62 284 Q160 302 258 284 Q254 240 236 186Z" fill="url(#csRobe)" stroke="#4a0508" stroke-width="2.5"/>
+<path d="M66 278 Q160 296 254 278" fill="none" stroke="url(#csGold)" stroke-width="6"/>
+<path d="M160 196 L160 290" stroke="url(#csGold)" stroke-width="5"/>
+<!-- 上身 -->
+<path d="M96 132 Q72 150 80 196 Q120 210 160 210 Q200 210 240 196 Q248 150 224 132 Q194 120 160 120 Q126 120 96 132Z" fill="url(#csRobe)" stroke="#4a0508" stroke-width="2.5"/>
+<circle cx="160" cy="166" r="26" fill="url(#csGold)" stroke="#6b3d05" stroke-width="2"/>
+<circle cx="160" cy="166" r="20" fill="#b8121c" stroke="#ffe9a6" stroke-width="1.5"/>
+<text x="160" y="175" text-anchor="middle" font-size="24" font-weight="900" fill="url(#csGold)" font-family="'Songti TC','Noto Serif TC',serif">財</text>
+<!-- 玉帶 -->
+<path d="M78 198 Q160 216 242 198 L240 212 Q160 230 80 212Z" fill="#1f9d6a" stroke="#0b4a30" stroke-width="2"/>
+<g fill="#bff5dc"><circle cx="110" cy="208" r="4"/><circle cx="160" cy="217" r="4"/><circle cx="210" cy="208" r="4"/></g>
+<!-- 大袖子 -->
+<path d="M96 136 Q48 160 52 214 Q60 236 96 230 Q118 206 128 200Z" fill="url(#csRobe)" stroke="#4a0508" stroke-width="2.5"/>
+<path d="M224 136 Q272 160 268 214 Q260 236 224 230 Q202 206 192 200Z" fill="url(#csRobe)" stroke="#4a0508" stroke-width="2.5"/>
+<path d="M56 214 Q62 232 96 228" fill="none" stroke="url(#csGold)" stroke-width="5"/>
+<path d="M264 214 Q258 232 224 228" fill="none" stroke="url(#csGold)" stroke-width="5"/>
+<!-- 手捧元寶 -->
+<ellipse cx="124" cy="214" rx="14" ry="10" fill="url(#csFace)" stroke="#a8603a" stroke-width="1.5"/>
+<ellipse cx="196" cy="214" rx="14" ry="10" fill="url(#csFace)" stroke="#a8603a" stroke-width="1.5"/>
+<path d="M104 206 Q112 238 160 240 Q208 238 216 206 Q192 216 182 210 Q176 178 160 178 Q144 178 138 210 Q128 216 104 206Z" fill="url(#csGold)" stroke="#6b3d05" stroke-width="3"/>
+<ellipse cx="152" cy="192" rx="9" ry="6" fill="#fff" opacity=".6"/>
+<!-- 臉 -->
+<ellipse cx="160" cy="94" rx="40" ry="44" fill="url(#csFace)" stroke="#a8603a" stroke-width="2"/>
+<ellipse cx="120" cy="98" rx="8" ry="14" fill="url(#csFace)" stroke="#a8603a" stroke-width="1.5"/>
+<ellipse cx="200" cy="98" rx="8" ry="14" fill="url(#csFace)" stroke="#a8603a" stroke-width="1.5"/>
+<path d="M136 86 Q144 80 152 86" fill="none" stroke="#2a1608" stroke-width="3" stroke-linecap="round"/>
+<path d="M168 86 Q176 80 184 86" fill="none" stroke="#2a1608" stroke-width="3" stroke-linecap="round"/>
+<path d="M138 74 Q145 69 153 73 M167 73 Q175 69 182 74" fill="none" stroke="#2a1608" stroke-width="2.5" stroke-linecap="round"/>
+<circle cx="132" cy="104" r="8" fill="#ff7a6a" opacity=".45"/><circle cx="188" cy="104" r="8" fill="#ff7a6a" opacity=".45"/>
+<path d="M156 92 Q160 100 164 92" fill="none" stroke="#a8603a" stroke-width="2" stroke-linecap="round"/>
+<!-- 鬍子 -->
+<path d="M144 108 Q132 112 124 124 Q138 116 152 112Z M176 108 Q188 112 196 124 Q182 116 168 112Z" fill="#1a1a1a"/>
+<path d="M146 112 Q160 106 174 112 Q172 152 160 168 Q148 152 146 112Z" fill="#1a1a1a"/>
+<path d="M152 116 Q160 122 168 116" fill="none" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+<path d="M154 128 L156 156 M160 126 L160 162 M166 128 L164 156" stroke="#444" stroke-width="1.2" opacity=".7"/>
+<!-- 官帽與帽翅 -->
+<path d="M70 52 Q66 44 72 40 L120 50 L120 58 Z" fill="url(#csHat)" stroke="#000" stroke-width="1.5"/>
+<path d="M250 52 Q254 44 248 40 L200 50 L200 58 Z" fill="url(#csHat)" stroke="#000" stroke-width="1.5"/>
+<ellipse cx="66" cy="46" rx="14" ry="8" fill="url(#csHat)" stroke="url(#csGold)" stroke-width="2"/>
+<ellipse cx="254" cy="46" rx="14" ry="8" fill="url(#csHat)" stroke="url(#csGold)" stroke-width="2"/>
+<path d="M118 70 Q114 30 160 22 Q206 30 202 70 Q160 62 118 70Z" fill="url(#csHat)" stroke="#000" stroke-width="2"/>
+<path d="M116 68 Q160 58 204 68 L206 78 Q160 68 114 78Z" fill="url(#csGold)" stroke="#6b3d05" stroke-width="1.5"/>
+<rect x="148" y="34" width="24" height="22" rx="4" fill="url(#csGold)" stroke="#6b3d05" stroke-width="1.5"/>
+<circle cx="160" cy="45" r="6" fill="#e0242c" stroke="#fff3c4" stroke-width="1.5"/>
+<g fill="#1f9d6a"><circle cx="134" cy="72" r="3"/><circle cx="186" cy="72" r="3"/></g>
+</svg>`;
+
+/* 預告動畫：三個等級都是「主角從左邊慢慢滑進、經過中央、再從右邊滑出」，等級越高越奢華 */
+const OMEN_LV = {
+  1: { txt: '好運降臨', sub: '金 元 寶 滾 滾 來', svg: () => INGOT_FIG_SVG, dur: 3000, orbit: 6, coins: false, petals: false, fireworks: [], twinkles: 12 },
+  2: { txt: '財神駕到', sub: '招 財 進 寶 ・ 富 貴 臨 門', svg: () => CAISHEN_SVG, dur: 3400, orbit: 8, coins: true, petals: false, fireworks: [1150, 2050], twinkles: 18 },
+  3: { txt: '彌勒賜福', sub: '笑 口 常 開 ・ 福 滿 乾 坤', svg: () => BUDDHA_SVG, dur: 3800, orbit: 0, coins: true, petals: true, fireworks: [1000, 1700, 2400, 3100], twinkles: 26 }
+};
+function fireworks(o, lvl) {
+  const x = innerWidth * (.18 + rand() * .64), y = innerHeight * (.12 + rand() * .3);
+  const cols = lvl === 3 ? ['#fff3c4', '#ffd76a', '#ff9ad2', '#9be7ff', '#b8ffb0'] : ['#ffd76a', '#ff5a3c', '#fff3c4'];
+  const n = lvl === 3 ? 34 : 26;
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('i'); p.className = 'om-fw';
+    p.style.cssText = `left:${x}px;top:${y}px;background:${cols[i % cols.length]};box-shadow:0 0 8px ${cols[i % cols.length]}`;
+    o.appendChild(p);
+    const a = (i / n) * Math.PI * 2, d = 70 + rand() * 70;
+    p.animate([{ transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+      { transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d + 30}px)) scale(.3)`, opacity: 0 }],
+      { duration: 1100 + rand() * 300, easing: 'cubic-bezier(.1,.8,.3,1)', fill: 'forwards' }).onfinish = () => p.remove();
+  }
+  tone(180, .25, 'triangle', .08); tone(1400 + rand() * 400, .3, 'sine', .04, .05);
+}
+async function figurePass(o, lvl) {
+  const L = OMEN_LV[lvl];
   const mv = o.querySelector('.om-bdmove'), bob = o.querySelector('.om-bdbob');
   const w = mv.getBoundingClientRect().width || 300, half = innerWidth / 2 + w / 2 + 20;
-  const DUR = 3600;
   mv.animate([
     { transform: `translateX(${-half}px)`, offset: 0 },
     { transform: `translateX(${-innerWidth * .1}px)`, offset: .3, easing: 'linear' },
     { transform: `translateX(${innerWidth * .1}px)`, offset: .7 },
     { transform: `translateX(${half}px)`, offset: 1 }
-  ], { duration: DUR, easing: 'ease-in-out', fill: 'forwards' });
-  // 一路灑下金色星光
-  const stars = setInterval(() => {
+  ], { duration: L.dur, easing: 'ease-in-out', fill: 'forwards' });
+  // 主角身後一路灑下星光（財神、彌勒再加金幣）
+  const trail = setInterval(() => {
     const r = bob.getBoundingClientRect();
     if (r.right < -40 || r.left > innerWidth + 40) return;
-    for (let i = 0; i < 4; i++) {
-      const st = document.createElement('i'); st.className = 'om-star' + (rand() < .3 ? ' w' : '');
-      const x = r.left + r.width * (.15 + rand() * .7), y = r.top + r.height * (.1 + rand() * .8), sz = 8 + rand() * 18;
+    const n = 2 + lvl;
+    for (let i = 0; i < n; i++) {
+      const coin = L.coins && rand() < .35;
+      const st = document.createElement('i'); st.className = coin ? 'om-gc' : 'om-star' + (rand() < .3 ? ' w' : '');
+      const x = r.left + r.width * (.15 + rand() * .7), y = r.top + r.height * (.1 + rand() * .8), sz = coin ? 12 + rand() * 10 : 8 + rand() * 18;
       st.style.cssText = `left:${x}px;top:${y}px;width:${sz}px;height:${sz}px`;
       o.appendChild(st);
       st.animate([
         { transform: 'translate(-50%,-50%) scale(0) rotate(0deg)', opacity: 1 },
         { transform: `translate(${-50 - 40 - rand() * 80}%, ${-50 + 60 + rand() * 120}%) scale(1) rotate(90deg)`, opacity: 1, offset: .35 },
-        { transform: `translate(${-50 - 120 - rand() * 200}%, ${-50 + 200 + rand() * 300}%) scale(0) rotate(200deg)`, opacity: 0 }
+        { transform: `translate(${-50 - 120 - rand() * 200}%, ${-50 + (coin ? 600 : 200) + rand() * 300}%) scale(${coin ? .8 : 0}) rotate(${coin ? 540 : 200}deg)`, opacity: 0 }
       ], { duration: 900 + rand() * 700, easing: 'ease-out', fill: 'forwards' }).onfinish = () => st.remove();
     }
   }, 55);
-  // 閃亮音效
-  for (let i = 0; i < 22; i++) tone(1568 + (i % 5) * 196 + rand() * 120, .18, 'sine', .035, .3 + i * .15);
-  await sleep(DUR);
-  clearInterval(stars);
+  // 彌勒：滿天蓮花瓣
+  const petals = L.petals ? setInterval(() => {
+    const p = document.createElement('i'); p.className = 'om-petal';
+    const x = rand() * innerWidth, sz = 12 + rand() * 12;
+    p.style.cssText = `left:${x}px;top:-30px;width:${sz}px;height:${sz * 1.4}px`;
+    o.appendChild(p);
+    p.animate([{ transform: 'translate(0,0) rotate(0deg)', opacity: .95 },
+      { transform: `translate(${(rand() - .5) * 160}px, ${innerHeight + 60}px) rotate(${360 + rand() * 360}deg)`, opacity: .9 }],
+      { duration: 2600 + rand() * 1600, easing: 'linear', fill: 'forwards' }).onfinish = () => p.remove();
+  }, 90) : null;
+  L.fireworks.forEach(t => setTimeout(() => fireworks(o, lvl), t));
+  for (let i = 0; i < L.twinkles; i++) tone(1568 + (i % 5) * 196 + rand() * 120, .18, 'sine', .035, .3 + i * (L.dur / 1000 - .4) / L.twinkles);
+  await sleep(L.dur);
+  clearInterval(trail); if (petals) clearInterval(petals);
   await sleep(450);
 }
 async function omen(x) {
   const lvl = x >= 300 ? 3 : x >= 100 ? 2 : 1;
-  const txt = ['', '好運降臨', '財神駕到', '彌勒賜福'][lvl];
-  const sub = ['', 'GOOD FORTUNE', 'WEALTH ARRIVES', 'BLESSING OF MAITREYA'][lvl];
-  const emblem = lvl === 2 ? SVG.DR : `<svg viewBox="0 0 200 118">${$('#ingot').innerHTML}</svg>`;
+  const L = OMEN_LV[lvl];
   const o = document.createElement('div'); o.className = 'omen lv' + lvl;
-  o.innerHTML = `<div class="om-dim"></div><div class="om-rays"></div><div class="om-flash"></div>
-    ${lvl === 3 ? `<div class="om-bdpos"><div class="om-bdmove"><div class="om-bdbob"><div class="om-bdrays"></div><div class="om-bdsvg">${BUDDHA_SVG}</div></div></div></div>` : ''}
-    <div class="om-core">${lvl === 3 ? '' : `<div class="om-medal">${emblem}</div>`}
-    <div class="om-txt serif">${[...txt].map((c, i) => `<span style="animation-delay:${(lvl === 3 ? 1.1 : .45) + i * .17}s">${c}</span>`).join('')}</div>
-    <div class="om-sub">${sub}</div></div>`;
+  const orbit = L.orbit ? `<div class="om-orbit">${Array.from({ length: L.orbit }, (_, i) => `<i style="--a:${i * 360 / L.orbit}deg"></i>`).join('')}</div>` : '';
+  o.innerHTML = `<div class="om-dim"></div><div class="om-rays"></div>${lvl === 3 ? '<div class="om-rays2"></div>' : ''}<div class="om-flash"></div>
+    <div class="om-bdpos"><div class="om-bdmove"><div class="om-bdbob"><div class="om-bdrays"></div>${lvl === 3 ? '<div class="om-halo2"></div>' : ''}${orbit}<div class="om-bdsvg">${L.svg()}</div></div></div></div>
+    <div class="om-core"><div class="om-txt serif">${[...L.txt].map((c, i) => `<span style="animation-delay:${L.dur * .3 / 1000 + i * .17}s">${c}</span>`).join('')}</div>
+    <div class="om-sub" style="animation-delay:${L.dur * .3 / 1000 + .9}s">${L.sub}</div></div>`;
   document.body.appendChild(o);
   SND.omen(lvl);
   // 機台震動
@@ -1806,18 +1987,7 @@ async function omen(x) {
     { transform: 'translate(0,0)' }, { transform: 'translate(-5px,3px)' }, { transform: 'translate(5px,-3px)' },
     { transform: 'translate(-4px,-2px)' }, { transform: 'translate(4px,2px)' }, { transform: 'translate(0,0)' }
   ], { duration: 520, iterations: lvl, delay: 300 });
-  // 金色火花
-  const burst = (n, delay) => setTimeout(() => {
-    for (let i = 0; i < n; i++) {
-      const sp = document.createElement('i'); sp.className = 'om-sp'; o.appendChild(sp);
-      const ang = rand() * Math.PI * 2, dist = 120 + rand() * 260, sz = .6 + rand() * 1.4;
-      sp.animate([
-        { transform: `translate(0,0) scale(${sz})`, opacity: 1 },
-        { transform: `translate(${Math.cos(ang) * dist}px,${Math.sin(ang) * dist}px) scale(0)`, opacity: 0 }
-      ], { duration: 900 + rand() * 700, easing: 'cubic-bezier(.1,.7,.3,1)', fill: 'forwards' });
-    }
-  }, delay);
-  if (lvl === 3) await buddhaPass(o); else { burst(36 + lvl * 12, 350); if (lvl >= 2) burst(40, 1250); await sleep(2500 + lvl * 250); }
+  await figurePass(o, lvl);
   // 等玩家點擊螢幕才繼續（自動旋轉時也一樣暫停）
   const tip = document.createElement('div'); tip.className = 'om-tap'; tip.textContent = '點擊螢幕繼續';
   o.appendChild(tip); o.style.pointerEvents = 'auto';
@@ -1994,7 +2164,7 @@ $('#btnBuy').addEventListener('click', async () => {
   ac();
   if (state.balance < E.BUY_PRICE) { flash('積分不足 5,000，無法購買免費遊戲'); return; }
   stopAuto();
-  const ok = await confirmBox(`<h2 class="serif">購買免費遊戲</h2><p>花費 <b style="color:#ffe27a">5,000</b> 積分，<br>以 <b>88 積分</b> 押注直接進入免費遊戲。</p>`, '確定購買', '取消');
+  const ok = await confirmBox(`<h2 class="serif">免費遊戲</h2><p>花費 <b style="color:#ffe27a">5,000</b> 積分，<br>以 <b>88 積分</b> 押注直接進入免費遊戲。</p>`, '確定購買', '取消');
   if (!ok || busy || state.fg || state.fgPending) return;
   state.balance -= E.BUY_PRICE; shownBalance = state.balance;
   state.stats.wagered += E.BUY_PRICE; state.stats.fg++;
@@ -2234,7 +2404,7 @@ ${E.FG_OPTIONS.map((o, i) => `<tr><td>${o.spins} 次</td><td>+${o.wilds} 個</td
 <li><b>全服公告</b>：任何玩家打中迷你獎、小獎、大獎或巨獎時，所有線上玩家畫面上方都會出現跑馬燈。</li>
 <li><b>排行榜</b>可切換：積分、今日盈虧、本週盈虧（週一起算）、總盈虧、單次最大贏分、最高倍數、彩金次數。</li>
 <li>右上角積分旁的小圓點是雲端同步狀態：綠色已同步、黃色同步中、紅色連線失敗（會自動重試）。</li>
-<li><b>預告動畫</b>：這一轉的贏分（連線＋散佈，不含彩金）達到押注 <b>45 倍以上</b>時，轉輪開始前會先播放預告，再轉動機台。預告只要出現就一定是 45 倍以上；100 倍以上是「財神駕到」，300 倍以上是「彌勒賜福」：金色彌勒佛像會從左邊慢慢橫越到右邊，灑下滿天星光。預告播完後會停住，<b>要點擊螢幕才會開始轉</b>；自動旋轉時也會暫停等你點擊。</li>
+<li><b>預告動畫</b>：這一轉的贏分（連線＋散佈，不含彩金）達到押注 <b>45 倍以上</b>時，轉輪開始前會先播放預告，再轉動機台。預告只要出現就一定是 45 倍以上；三種預告都會有主角從左邊慢慢橫越到右邊，等級越高越華麗：45 倍「好運降臨」是金元寶與繞圈金幣；100 倍「財神駕到」是財神爺，加上紅金光芒、金幣與煙火；300 倍「彌勒賜福」是彌勒佛，加上雙重光環、彩光、滿天蓮花瓣與連續煙火。預告播完後會停住，<b>要點擊螢幕才會開始轉</b>；自動旋轉時也會暫停等你點擊。</li>
 <li>左下角<b>設定</b>按鈕裡有規則與機率、音效開關、加到主畫面與登出；旁邊的<b>排行</b>按鈕可以看排行榜。<b>紀錄</b>按鈕可以看你的累積數據：盈虧、返還率、積分走勢、贏分來源、免費遊戲與彩金次數等。</li>
 <li>每一轉都是獨立隨機，轉輪結果在按下旋轉的瞬間就已決定，動畫只是呈現。</li>
 <li>電腦可按<b>空白鍵</b>旋轉。「自動旋轉」遇到免費遊戲、彩金或積分不足會自動停止。</li>
