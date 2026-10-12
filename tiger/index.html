@@ -1994,7 +1994,7 @@ $('#btnBuy').addEventListener('click', async () => {
   ac();
   if (state.balance < E.BUY_PRICE) { flash('積分不足 5,000，無法購買免費遊戲'); return; }
   stopAuto();
-  const ok = await confirmBox(`<h2 class="serif">購買免費遊戲</h2><p>花費 <b style="color:#ffe27a">5,000</b> 積分，<br>以 <b>88 積分</b> 押注直接進入免費遊戲。</p>`, '確定購買', '取消');
+  const ok = await confirmBox(`<h2 class="serif">免費遊戲</h2><p>花費 <b style="color:#ffe27a">5,000</b> 積分，<br>以 <b>88 積分</b> 押注直接進入免費遊戲。</p>`, '確定購買', '取消');
   if (!ok || busy || state.fg || state.fgPending) return;
   state.balance -= E.BUY_PRICE; shownBalance = state.balance;
   state.stats.wagered += E.BUY_PRICE; state.stats.fg++;
