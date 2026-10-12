@@ -1171,7 +1171,7 @@ function pushRecent(type, amt, x, bet, tier) {
   state.stats.recent = state.stats.recent.slice(0, 12);
 }
 /* ================= 雲端連線（Google Apps Script 後端） ================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzogYnmdViB6ZXOVd6MMIUuBByMfrm7QYgAM6A6Xpe352WQArYWbMlfRXsmeCAHbRGZ/exec';   // ← 把 GAS「網頁應用程式網址」（結尾 /exec）貼在引號裡
+const API_URL = 'https://script.google.com/macros/s/AKfycbyHS83Xz_gkman413OqhwtFrKO_7Q6CXB95RlFJSkhHwMHKtFP9gvrRxYzeFLVZTaos/exec';   // ← 把 GAS「網頁應用程式網址」（結尾 /exec）貼在引號裡
 const AUTH_KEY = 'haoyun_baida_auth', CACHE_KEY = 'haoyun_baida_cache_';
 let auth = null;
 try { auth = JSON.parse(localStorage.getItem(AUTH_KEY)); } catch (e) { }
