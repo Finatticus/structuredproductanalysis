@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<title>好運百搭v2</title>
+<title>好運百搭</title>
 <style>
 :root{
   --cell: min(16.6vw, 88px);
@@ -786,12 +786,12 @@ body.tight .ptab{display:none}
 
   // 彩金
   const JP = {
-    grand: { name: '巨獎', seed: 300000, inc: 0.0045, w: 0.002 },
-    major: { name: '大獎', seed: 30000, inc: 0.003, w: 0.02 },
-    minor: { name: '小獎', seed: 3000, inc: 0.0015, w: 0.15 },
-    mini: { name: '迷你獎', seed: 1000, inc: 0.001, w: 0.828 }
+    grand: { name: '巨獎', seed: 1000000, inc: 0.009, w: 0.00123 },
+    major: { name: '大獎', seed: 200000, inc: 0.006, w: 0.00712 },
+    minor: { name: '小獎', seed: 6000, inc: 0.003, w: 0.2158 },
+    mini: { name: '迷你獎', seed: 3000, inc: 0.002, w: 0.77585 }
   };
-  const P_THROW = 0.00245; // 每個有效百搭打落元寶的機率（88 押注），隨押注等比例提高
+  const P_THROW = 0.000634; // 每個有效百搭打落元寶的機率（88 押注），隨押注等比例提高
 
   // 轉輪組成（區塊：[符號, 疊放數量, 區塊數]）
   // 轉輪組成（區塊：[符號, 疊放高度, 區塊數]）— 大量疊放符號，增加 243 排列的組合數
@@ -1120,7 +1120,7 @@ function pushRecent(type, amt, x, bet, tier) {
   state.stats.recent = state.stats.recent.slice(0, 12);
 }
 /* ================= 雲端連線（Google Apps Script 後端） ================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbxm3B6Kst1_90TgrHW6yP4dcXY5WQ3pETjkTeo0vZwV2JvMExbAPhLXKvfbvrzxPvsM/exec';   // ← 把 GAS「網頁應用程式網址」（結尾 /exec）貼在引號裡
+const API_URL = 'https://script.google.com/macros/s/AKfycbzogYnmdViB6ZXOVd6MMIUuBByMfrm7QYgAM6A6Xpe352WQArYWbMlfRXsmeCAHbRGZ/exec';   // ← 把 GAS「網頁應用程式網址」（結尾 /exec）貼在引號裡
 const AUTH_KEY = 'haoyun_baida_auth', CACHE_KEY = 'haoyun_baida_cache_';
 let auth = null;
 try { auth = JSON.parse(localStorage.getItem(AUTH_KEY)); } catch (e) { }
@@ -1994,7 +1994,7 @@ $('#btnBuy').addEventListener('click', async () => {
   ac();
   if (state.balance < E.BUY_PRICE) { flash('積分不足 5,000，無法購買免費遊戲'); return; }
   stopAuto();
-  const ok = await confirmBox(`<h2 class="serif">免費遊戲</h2><p>花費 <b style="color:#ffe27a">5,000</b> 積分，<br>以 <b>88 積分</b> 押注直接進入免費遊戲。</p>`, '確定購買', '取消');
+  const ok = await confirmBox(`<h2 class="serif">購買免費遊戲</h2><p>花費 <b style="color:#ffe27a">5,000</b> 積分，<br>以 <b>88 積分</b> 押注直接進入免費遊戲。</p>`, '確定購買', '取消');
   if (!ok || busy || state.fg || state.fgPending) return;
   state.balance -= E.BUY_PRICE; shownBalance = state.balance;
   state.stats.wagered += E.BUY_PRICE; state.stats.fg++;
@@ -2081,7 +2081,7 @@ function openStats() {
   const every = (n) => n ? '約每 ' + fmt(sp / n) + ' 轉' : '—';
   const net = S.won - S.wagered;
   const cfg = curCfg();
-  const theo = { b33: 83, b55: 84, b66: 87, b88: 92 }[cfg.base] || 92;
+  const theo = { b33: 83, b55: 84, b66: 86, b88: 89 }[cfg.base] || 89;
   // 積分走勢
   const h = S.hist.length > 1 ? S.hist : [START, state.balance];
   const lo = Math.min(...h, START), hi = Math.max(...h, START), rg = Math.max(1, hi - lo);
@@ -2186,12 +2186,12 @@ function openRules(tab) {
 <ul><li>百搭只出現在<b>第 2～5 輪</b>，可代替<b>青花聚寶以外</b>的所有符號。</li>
 <li>百搭落在「有效輪」上，就會把一枚錢幣丟向上方元寶，<b>每一枚都有機會把元寶打下來</b>。</li></ul>
 <h3>四、元寶與四級彩金</h3>
-<table><tr><th>彩金</th><th>起始金額</th><th>累積比例</th></tr>
-<tr><td>🧘 巨獎（佛）</td><td>300,000</td><td>押注 0.45%</td></tr>
-<tr><td>🦌 大獎（鹿）</td><td>30,000</td><td>押注 0.30%</td></tr>
-<tr><td>🕊 小獎（鶴）</td><td>3,000</td><td>押注 0.15%</td></tr>
-<tr><td>🐦 迷你獎（鵲）</td><td>1,000</td><td>押注 0.10%</td></tr></table>
-<ul><li>每次押注都會讓四個彩金依比例往上累積；被打中後該彩金回到起始金額。</li>
+<table><tr><th>彩金</th><th>目前金額</th><th>累積比例</th></tr>
+<tr><td>🧘 巨獎（佛）</td><td>₱${fmt2(state.jp.grand)}</td><td>押注 0.9%</td></tr>
+<tr><td>🦌 大獎（鹿）</td><td>₱${fmt2(state.jp.major)}</td><td>押注 0.6%</td></tr>
+<tr><td>🕊 小獎（鶴）</td><td>₱${fmt2(state.jp.minor)}</td><td>押注 0.3%</td></tr>
+<tr><td>🐦 迷你獎（鵲）</td><td>₱${fmt2(state.jp.mini)}</td><td>押注 0.2%</td></tr></table>
+<ul><li>每次押注都會讓四個彩金依比例往上累積；被打中後該彩金回到起始金額（由管理員設定）。</li>
 <li><b>四種彩金是所有玩家共用的</b>：每個人的押注都會讓彩金一起累積，金額會即時更新；被任何人打中後才回到起始金額。排行榜裡可以看到最近的得主。</li>
 <li>每一枚錢幣都有固定機率打落元寶，押注越高機率等比例越高（×10 就是 10 倍）。詳細數字見「機率」分頁。</li>
 <li>元寶被打落後，依機率抽出是哪一級（只在目前押注可贏的彩金之間抽），迷你獎最常見、巨獎最稀有。</li>
@@ -2278,10 +2278,10 @@ function buildProbHtml() {
 <p class="pnote">以下數字依 88 押注計算（另有註明者除外），轉輪組成由遊戲程式直接算出，其餘為每項 20～300 萬轉的電腦模擬結果，會有約 ±1% 的誤差。</p>
 <h3>一、返還率（RTP）</h3>
 <table><tr><th>押注</th><th>返還率</th><th>每轉平均盈虧</th></tr>
-<tr><td>33</td><td>約 83%</td><td>−5.6</td></tr><tr><td>55</td><td>約 85%</td><td>−8.3</td></tr><tr><td>66</td><td>約 89%</td><td>−7.3</td></tr>
-<tr><td>88</td><td>約 92%</td><td>−7.0</td></tr><tr><td>88 ×2 / ×3 / ×5</td><td>約 93–95%</td><td>−12 / −12 / −31</td></tr>
-<tr><td>88 ×8 / ×10</td><td>約 95%</td><td>−37 / −45</td></tr><tr><td>33／55／66 加倍數</td><td>和原本差不多（約 84–89%）</td><td>—</td></tr><tr><td>購買 5,000</td><td>約 92%</td><td>每次 −400</td></tr></table>
-<ul><li>88 押注的組成：一般連線約 47%、散佈獎約 4%、免費遊戲約 29%、彩金約 12%。</li>
+<tr><td>33</td><td>約 83%</td><td>−5.6</td></tr><tr><td>55</td><td>約 84%</td><td>−8.8</td></tr><tr><td>66</td><td>約 86%</td><td>−9.2</td></tr>
+<tr><td>88</td><td>約 89%</td><td>−9.5</td></tr><tr><td>88 ×2 / ×3 / ×5</td><td>約 90–92%</td><td>−17 / −21 / −40</td></tr>
+<tr><td>88 ×8 / ×10</td><td>約 92%</td><td>−56 / −65</td></tr><tr><td>33／55／66 加倍數</td><td>和原本差不多（約 83–87%）</td><td>—</td></tr><tr><td>購買 5,000</td><td>約 91%</td><td>每次 −450</td></tr></table>
+<ul><li>88 押注的組成：一般連線約 47%、散佈獎約 4%、免費遊戲約 29%、彩金約 9%。</li>
 <li>低押注（33、55）丟錢有效輪少、可贏彩金少，所以返還率較低；88 是每轉虧最少的押注。</li>
 <li>返還率低於 100%，長期一定是虧的（莊家優勢）。</li></ul>
 
@@ -2327,23 +2327,25 @@ ${fg.map(r => `<tr><td>${r[0]} 次</td><td>${r[9]} 枚</td><td>${r[10]}%</td><td
 
 <h3>七、元寶彩金</h3>
 <table><tr><th>基本押注</th><th>每轉平均丟錢</th><th>每枚打落機率</th><th>平均多久打落一次<br>（含免費遊戲）</th></tr>
-<tr><td>33</td><td>0.37 枚</td><td>${pc(P * 33 / 88, 3)}</td><td>約 2,700 轉</td></tr>
-<tr><td>55</td><td>0.74 枚</td><td>${pc(P * 55 / 88, 3)}</td><td>約 820 轉</td></tr>
-<tr><td>66</td><td>1.10 枚</td><td>${pc(P * 66 / 88, 3)}</td><td>約 460 轉</td></tr>
-<tr><td>88</td><td>1.46 枚</td><td>${pc(P, 3)}</td><td>約 260 轉</td></tr></table>
-<ul><li>選倍數時，每枚打落機率再乘上倍數（88 ×10 = ${pc(P * 10, 2)}，約 31 轉一次；倍數押注第 5 輪百搭較少，所以不是剛好 10 倍快），但每轉也付倍數的錢。</li>
+<tr><td>33</td><td>0.37 枚</td><td>${pc(P * 33 / 88, 3)}</td><td>約 10,500 轉</td></tr>
+<tr><td>55</td><td>0.74 枚</td><td>${pc(P * 55 / 88, 3)}</td><td>約 3,200 轉</td></tr>
+<tr><td>66</td><td>1.10 枚</td><td>${pc(P * 66 / 88, 3)}</td><td>約 1,800 轉</td></tr>
+<tr><td>88</td><td>1.46 枚</td><td>${pc(P, 3)}</td><td>約 1,000 轉</td></tr></table>
+<ul><li>選倍數時，每枚打落機率再乘上倍數（88 ×10 = ${pc(P * 10, 2)}，約 120 轉一次；倍數押注第 5 輪百搭較少，所以不是剛好 10 倍快），但每轉也付倍數的錢。</li>
 <li>一般遊戲約 81% 的轉數至少有一個百搭，但只有落在「有效輪」的才會丟錢。</li></ul>
 <table><tr><th>打落後抽中</th><th>巨獎</th><th>大獎</th><th>小獎</th><th>迷你</th></tr>
 <tr><td>33</td>${tierRow('b33', ['mini'])}</tr>
 <tr><td>55</td>${tierRow('b55', ['mini', 'minor'])}</tr>
 <tr><td>66</td>${tierRow('b66', ['mini', 'minor', 'major'])}</tr>
 <tr><td>88 以上</td>${tierRow('b88', JPK)}</tr></table>
-<table><tr><th>88 押注</th><th>平均多久中一次</th><th>起始金額</th><th>每次押注累積</th></tr>
-<tr><td>🧘 巨獎</td><td>約 13 萬轉</td><td>300,000</td><td>0.45%</td></tr>
-<tr><td>🦌 大獎</td><td>約 1.3 萬轉</td><td>30,000</td><td>0.30%</td></tr>
-<tr><td>🕊 小獎</td><td>約 1,700 轉</td><td>3,000</td><td>0.15%</td></tr>
-<tr><td>🐦 迷你獎</td><td>約 310 轉</td><td>1,000</td><td>0.10%</td></tr></table>
-<ul><li>彩金是所有玩家共用的，上面是「你自己」中獎的頻率；全體玩家一起累積，所以彩金金額可能比起始金額高很多。</li></ul>
+<table><tr><th>88 押注</th><th>平均多久中一次</th><th>目前金額</th><th>每次押注累積</th></tr>
+<tr><td>🧘 巨獎</td><td>約 81 萬轉</td><td>₱${fmt(state.jp.grand)}</td><td>0.9%</td></tr>
+<tr><td>🦌 大獎</td><td>約 14 萬轉</td><td>₱${fmt(state.jp.major)}</td><td>0.6%</td></tr>
+<tr><td>🕊 小獎</td><td>約 4,600 轉</td><td>₱${fmt(state.jp.minor)}</td><td>0.3%</td></tr>
+<tr><td>🐦 迷你獎</td><td>約 1,300 轉</td><td>₱${fmt(state.jp.mini)}</td><td>0.2%</td></tr></table>
+<ul><li>彩金是所有玩家共用的，上面是「你自己」中獎的頻率；全體玩家一起累積，所以彩金金額會一直上漲，直到有人打中。</li>
+<li>起始金額：迷你 3,000、小 6,000、大 200,000、巨 1,000,000。每次押注有 2% 進入四個彩金池（巨 0.9%、大 0.6%、小 0.3%、迷你 0.2%），所以彩金會漲得很快。</li>
+<li>大獎、巨獎很少出現（88 押注約 14 萬、81 萬轉一次），但因為所有玩家共用，整個伺服器裡遲早會有人打中。</li></ul>
 
 <h3>八、翻牌</h3>
 <ul><li>彩金等級在元寶打落的瞬間就已決定，翻牌只是揭曉過程。</li>
