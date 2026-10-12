@@ -845,6 +845,35 @@ body.tight .ptab{display:none}
   const FREE_STRIPS = {};
   FG_OPTIONS.forEach(o => { FREE_STRIPS[o.wilds] = buildFreeStrips(o.wilds, o.trim); });
 
+  // 加倍押注時第 5 輪的轉輪：解鎖加碼的符號與百搭在第 5 輪較少（換成數字牌），
+  // 讓 5 連 ×3 加碼的頻率下降，整體返還率維持正常。
+  const ENH_KEEP = root.__ENH_KEEP || [1, 0.5, 0.45, 0.3, 0.27, 0.22];     // 第 5 輪保留多少比例的「加碼符號」
+  const ENH_WKEEP = root.__ENH_WKEEP || [1, 0.79, 0.65, 0.55, 0.47, 0.38];   // 第 5 輪保留多少比例的百搭
+  const VAR = {};
+  function thin(reel, sym, keep, cards) {
+    const idx = []; reel.forEach((x, i) => { if (x === sym) idx.push(i); });
+    const remove = idx.length - Math.round(idx.length * keep);
+    for (let i = 0; i < remove; i++) {
+      const at = idx[Math.floor((i + 0.5) * idx.length / remove)];
+      reel[at] = cards[(i + at) % cards.length];
+    }
+  }
+  function variant(strips, key, enh) {
+    if (!enh) return strips;
+    const k = key + ':' + enh;
+    if (VAR[k]) return VAR[k];
+    const out = strips.map(r => r.slice());
+    const cards = ['A', 'K', 'Q', 'J', 'T', 'N'];
+    ENH_ORDER.slice(0, enh).forEach(sym => thin(out[4], sym, ENH_KEEP[enh], cards));
+    thin(out[4], 'W', ENH_WKEEP[enh], cards);
+    return (VAR[k] = out);
+  }
+  /** 依押注（加碼等級）取得轉輪；fgWilds 有值時為免費遊戲轉輪 */
+  function stripsFor(betCfg, fgWilds) {
+    const enh = (betCfg && betCfg.enh) || 0;
+    return fgWilds == null ? variant(BASE_STRIPS, 'b', enh) : variant(FREE_STRIPS[fgWilds], 'f' + fgWilds, enh);
+  }
+
   function spinGrid(strips, rnd) {
     const grid = [], stops = [];
     for (let r = 0; r < 5; r++) {
@@ -875,11 +904,9 @@ body.tight .ptab{display:none}
       if (len >= 3) {
         const used = cells.filter(([r]) => r < len);
         const base0 = PAY[sym][len - 3];
-        // 加碼：5連且該組合至少有一條是純本體（不含百搭）才算加碼；只加碼純本體的那幾組
-        let pureWays = 1;
-        for (let r = 0; r < 5; r++) pureWays *= grid[r].filter(g => g === sym).length;
-        const enh = len === 5 && enhanced.includes(sym) && pureWays > 0;
-        const pay = Math.round((base0 * ways + (enh ? base0 * 2 * pureWays : 0)) * scale);
+        // 加碼：解鎖的符號連成 5 個（百搭代替也算）時，5 連獎金 ×3
+        const enh = len === 5 && enhanced.includes(sym);
+        const pay = Math.round(base0 * ways * (enh ? 3 : 1) * scale);
         total += pay;
         wins.push({ sym, len, ways, pay, cells: used, enh });
       }
@@ -916,7 +943,7 @@ body.tight .ptab{display:none}
 
   root.SlotEngine = {
     PAY, SCAT_PAY, ENH_ORDER, BASE_BET, BETS, MULTS, MULT_ENH, makeBet, BUY_PRICE, FG_OPTIONS, JP, P_THROW,
-    BASE_STRIPS, FREE_STRIPS, spinGrid, evaluate, rollJackpot
+    BASE_STRIPS, FREE_STRIPS, stripsFor, spinGrid, evaluate, rollJackpot
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
@@ -1219,7 +1246,7 @@ window.addEventListener('resize', () => { if (!busy) fit(); });
 window.addEventListener('orientationchange', () => setTimeout(fit, 300));
 if (window.visualViewport) visualViewport.addEventListener('resize', () => { if (!busy) fit(); });
 
-function strips() { return state.fg ? E.FREE_STRIPS[E.FG_OPTIONS[state.fg.opt].wilds] : E.BASE_STRIPS; }
+function strips() { return E.stripsFor(curCfg(), state.fg ? E.FG_OPTIONS[state.fg.opt].wilds : null); }
 function curCfg() {
   if (state.fg) return betCfg(state.fg.betId);
   if (state.fgPending) return betCfg(state.fgPending.betId);
@@ -2068,7 +2095,8 @@ ${E.FG_OPTIONS.map((o, i) => `<tr><td>${o.spins} 次</td><td>+${o.wilds} 個</td
 <tr><td>×8</td><td>＋寶船</td></tr><tr><td>×10</td><td>五種全部（＋金龍）</td></tr></table>
 <ul><li>解鎖的符號<b>連成 5 個</b>時，獎金變 <b>3 倍</b>，再乘上押注倍數；3 連、4 連不加碼。</li>
 <li>例：88 押注福袋 5 連賠 100 → 選 ×2 時加碼 3 倍 = 300 → 再乘 2 倍 = <b>600</b>。基本押注 33 選 ×2 時同樣有加碼，金額依 33 換算。</li>
-<li>加碼只算<b>純本體 5 連</b>（5 輪都是該符號本身）的組合；含百搭湊成的 5 連照原本賠率。</li>
+<li>百搭代替湊成的 5 連<b>也算加碼</b>。例：88 ×10 時，福袋 + 4 輪百搭、共 2 組 → 1,000 × 2 組 × 3 = <b>6,000</b>。</li>
+<li>為了讓加碼後的返還率維持正常，選擇倍數時<b>第 5 輪的加碼符號與百搭會比較少</b>（換成數字牌），所以 5 連較少見，但一出現就是 3 倍。</li>
 <li>轉輪下方「同種類獎金增加」的圖示亮起並標 ×3，就是目前有加碼的符號。</li></ul>
 <h3>八、賠率表（目前押注 ${fmt(cfg.bet)} 積分）</h3>
 <div class="pt">${pt}</div>
@@ -2125,8 +2153,8 @@ function buildProbHtml() {
 <h3>一、返還率（RTP）</h3>
 <table><tr><th>押注</th><th>返還率</th><th>每轉平均盈虧</th></tr>
 <tr><td>33</td><td>約 83%</td><td>−5.6</td></tr><tr><td>55</td><td>約 85%</td><td>−8.3</td></tr><tr><td>66</td><td>約 89%</td><td>−7.3</td></tr>
-<tr><td>88</td><td>約 92%</td><td>−7.0</td></tr><tr><td>88 ×2 / ×3 / ×5</td><td>約 93–95%</td><td>−12 / −18 / −24</td></tr>
-<tr><td>88 ×8 / ×10</td><td>約 95–96%</td><td>−35 / −39</td></tr><tr><td>33／55／66 加倍數</td><td>原本再高 1–3%</td><td>—</td></tr><tr><td>購買 5,000</td><td>約 92%</td><td>每次 −400</td></tr></table>
+<tr><td>88</td><td>約 92%</td><td>−7.0</td></tr><tr><td>88 ×2 / ×3 / ×5</td><td>約 93–95%</td><td>−12 / −12 / −31</td></tr>
+<tr><td>88 ×8 / ×10</td><td>約 95%</td><td>−37 / −45</td></tr><tr><td>33／55／66 加倍數</td><td>和原本差不多（約 84–89%）</td><td>—</td></tr><tr><td>購買 5,000</td><td>約 92%</td><td>每次 −400</td></tr></table>
 <ul><li>88 押注的組成：一般連線約 47%、散佈獎約 4%、免費遊戲約 29%、彩金約 12%。</li>
 <li>低押注（33、55）丟錢有效輪少、可贏彩金少，所以返還率較低；88 是每轉虧最少的押注。</li>
 <li>返還率低於 100%，長期一定是虧的（莊家優勢）。</li></ul>
@@ -2145,7 +2173,7 @@ function buildProbHtml() {
 <table><tr><th>符號</th><th>3 連</th><th>4 連</th><th>5 連</th></tr>
 ${order.map(s => `<tr><td class="l">${NAME[s]}</td>${symF[s].map(n => `<td>每 ${n} 轉</td>`).join('')}</tr>`).join('')}</table>
 <ul><li>指一般遊戲中，這個符號最長連到幾輪；百搭可以代替，所以有些符號的 5 連甚至比 4 連還常見。</li>
-<li>「同種類獎金增加」的加碼只算純本體 5 連（不含百搭），比上表的 5 連少很多。</li></ul>
+<li>上表為 88 押注（×1）。選擇倍數時第 5 輪的加碼符號與百搭較少：88 ×2 約每 72 轉出現一次加碼 5 連，×5 約每 49 轉，×10 約每 52 轉。</li></ul>
 
 <h3>四、轉輪組成（一般遊戲）</h3>
 <table class="comp"><tr><th>符號</th><th>第1輪</th><th>第2輪</th><th>第3輪</th><th>第4輪</th><th>第5輪</th></tr>${comp}
@@ -2177,7 +2205,7 @@ ${fg.map(r => `<tr><td>${r[0]} 次</td><td>${r[9]} 枚</td><td>${r[10]}%</td><td
 <tr><td>55</td><td>0.74 枚</td><td>${pc(P * 55 / 88, 3)}</td><td>約 820 轉</td></tr>
 <tr><td>66</td><td>1.10 枚</td><td>${pc(P * 66 / 88, 3)}</td><td>約 460 轉</td></tr>
 <tr><td>88</td><td>1.46 枚</td><td>${pc(P, 3)}</td><td>約 260 轉</td></tr></table>
-<ul><li>選倍數時，每枚打落機率再乘上倍數（88 ×10 = ${pc(P * 10, 2)}，約 26 轉一次），但每轉也付倍數的錢。</li>
+<ul><li>選倍數時，每枚打落機率再乘上倍數（88 ×10 = ${pc(P * 10, 2)}，約 31 轉一次；倍數押注第 5 輪百搭較少，所以不是剛好 10 倍快），但每轉也付倍數的錢。</li>
 <li>一般遊戲約 81% 的轉數至少有一個百搭，但只有落在「有效輪」的才會丟錢。</li></ul>
 <table><tr><th>打落後抽中</th><th>巨獎</th><th>大獎</th><th>小獎</th><th>迷你</th></tr>
 <tr><td>33</td>${tierRow('b33', ['mini'])}</tr>
