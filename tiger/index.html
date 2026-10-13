@@ -598,10 +598,54 @@ body.tight .ptab{display:none}
 .chip.on{background:linear-gradient(180deg,#fff0b8,#f0b93a 60%,#c4801a);color:#5a0006;border-color:#fff3c4}
 .anote{font-size:11.5px!important;color:#c9ae7c!important;margin-top:10px!important}
 .act.auto small{white-space:nowrap}
+/* 大獎／巨獎慶祝動畫 */
+.jpc{position:fixed;inset:0;z-index:95;overflow:hidden;display:flex;align-items:center;justify-content:center;animation:fadein .3s;-webkit-user-select:none;user-select:none}
+.jpc.out{animation:fadeout .5s forwards}
+.jc-dim{position:absolute;inset:0}
+.jpc.major .jc-dim{background:radial-gradient(ellipse at 50% 34%,rgba(110,30,170,.82),rgba(12,0,24,.97) 75%)}
+.jpc.grand .jc-dim{background:radial-gradient(ellipse at 50% 32%,rgba(170,70,0,.85),rgba(22,0,0,.98) 75%)}
+.jc-rays,.jc-rays2{position:absolute;left:50%;top:34%;width:180vmax;height:180vmax;margin:-90vmax 0 0 -90vmax;border-radius:50%;pointer-events:none}
+.major .jc-rays{background:repeating-conic-gradient(from 0deg,rgba(255,220,120,.42) 0 5deg,rgba(180,100,255,.32) 5deg 10deg,transparent 10deg 16deg);animation:rot 5s linear infinite}
+.major .jc-rays2{background:repeating-conic-gradient(from 0deg,rgba(255,250,220,.35) 0 2deg,transparent 2deg 13deg);animation:rotr 9s linear infinite;mix-blend-mode:screen}
+.grand .jc-rays{background:repeating-conic-gradient(from 0deg,rgba(255,80,80,.48) 0 4deg,rgba(255,220,90,.55) 4deg 8deg,rgba(120,255,160,.42) 8deg 12deg,rgba(110,180,255,.42) 12deg 16deg,rgba(220,120,255,.42) 16deg 20deg,transparent 20deg 24deg);animation:rot 2.8s linear infinite}
+.grand .jc-rays2{background:repeating-conic-gradient(from 0deg,rgba(255,250,210,.55) 0 2deg,transparent 2deg 10deg);animation:rotr 4.5s linear infinite;mix-blend-mode:screen}
+.jpc.hold .jc-rays{animation-duration:16s}.jpc.hold .jc-rays2{animation-duration:24s}
+.jc-flash{position:absolute;inset:0;background:radial-gradient(circle,#fffbe6,#ffd76a 55%,rgba(255,200,80,0));opacity:0;pointer-events:none;z-index:4}
+.jc-stage{position:absolute;inset:0;pointer-events:none;z-index:1}
+.jc-fly{position:absolute;left:0;top:0;pointer-events:none;filter:drop-shadow(0 0 16px #ffd76a);will-change:transform}
+.jc-main{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;width:100%;max-width:460px;padding:0 16px;box-sizing:border-box}
+.jc-hero{position:relative;width:min(52vw,220px);aspect-ratio:1}
+.grand .jc-hero{width:min(62vw,270px);aspect-ratio:320/340}
+.jc-hero>img{position:relative;z-index:2;width:100%;height:100%;display:block}
+.jc-medal{position:relative;z-index:2;width:100%;height:100%;animation:medalIn 1.1s cubic-bezier(.2,1.6,.4,1) both,glowp 1.1s ease-in-out 1.1s infinite}
+.jc-medal svg{width:100%;height:100%;display:block;filter:drop-shadow(0 0 24px #d9a6ff) drop-shadow(0 0 46px #ffd76a)}
+.grand .jc-hero>img{animation:jcRise 1.6s cubic-bezier(.2,1.25,.4,1) both,bdglow .7s ease-in-out 1.6s infinite alternate}
+@keyframes jcIn{to{opacity:1}}
+@keyframes jcRise{from{transform:translateY(70vh) scale(.3);opacity:0}}
+.jc-halo{position:absolute;left:50%;top:46%;width:150%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,250,210,.9),rgba(255,210,90,.45) 40%,rgba(255,160,40,0) 70%);animation:glowp 1.2s ease-in-out infinite;z-index:1}
+.major .jc-halo{background:radial-gradient(circle,rgba(255,245,220,.85),rgba(200,140,255,.45) 40%,rgba(160,80,255,0) 70%)}
+.jc-ring{position:absolute;left:50%;top:48%;width:175%;aspect-ratio:1;margin:0;transform:translate(-50%,-50%);z-index:1;opacity:0;animation:jcIn .8s 1.4s forwards}
+.jc-ring>i{position:absolute;inset:0;animation:rot 16s linear infinite}
+.jc-ring>i>span{position:absolute;inset:0;transform:rotate(var(--a))}
+.jc-ring>i>span>em{position:absolute;left:50%;top:0;width:22%;aspect-ratio:320/340;margin-left:-11%;transform:rotate(calc(-1 * var(--a)))}
+.jc-ring em img{width:100%;height:100%;display:block;animation:rotr 16s linear infinite;filter:drop-shadow(0 0 10px #ffd76a)}
+.jc-title,.jc-sub,.jc-amt,.jc-ok{position:relative;z-index:5}
+.jc-title{margin-top:2px;font-size:min(19vw,86px);font-weight:900;letter-spacing:12px;padding-left:12px;white-space:nowrap;line-height:1.05}
+.jc-title span{display:inline-block;background:linear-gradient(180deg,#fff,#ffe27a 45%,#e08a14);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 3px 0 #5a0006) drop-shadow(0 0 18px rgba(255,220,120,1));animation:dropin .7s cubic-bezier(.2,1.5,.4,1) both,jcPulse 1.1s ease-in-out .8s infinite alternate}
+.major .jc-title span{filter:drop-shadow(0 3px 0 #3a0060) drop-shadow(0 0 18px rgba(210,150,255,1))}
+@keyframes jcPulse{to{transform:scale(1.08);filter:drop-shadow(0 3px 0 #5a0006) drop-shadow(0 0 30px #fff3a0) brightness(1.25)}}
+.jc-sub{margin-top:4px;font-size:14px;font-weight:800;letter-spacing:5px;color:#fff3c4;text-shadow:0 0 10px #ff9d1c;opacity:0;animation:jcIn .6s 1.3s forwards;white-space:nowrap}
+.jc-amt{margin-top:10px;font:900 min(10.5vw,46px) "Arial Black",Arial,sans-serif;color:#ffe27a;text-shadow:0 0 16px rgba(255,200,80,.9),0 3px 0 #5a0006;white-space:nowrap}
+.jc-sim{position:relative;z-index:5;margin-top:8px;font-size:12px;font-weight:800;color:#fff3c4;background:rgba(0,0,0,.45);border:1px dashed #ffe27a;border-radius:8px;padding:3px 10px}
+.jc-ok{margin-top:16px;padding:12px 40px;border-radius:30px;border:2px solid #fff3c4;font-size:18px;font-weight:900;color:#5a0006;background:linear-gradient(180deg,#fff0b8,#f0b93a 60%,#c4801a);box-shadow:0 0 22px rgba(255,200,80,.9);cursor:pointer;visibility:hidden;opacity:0;transition:opacity .4s}
+.jc-ok.show{visibility:visible;opacity:1;animation:pulse 1.1s ease-in-out infinite}
+.jc-banner{position:absolute;left:0;right:0;top:4%;text-align:center;z-index:3;font-size:13px;font-weight:900;letter-spacing:6px;color:#fff3c4;text-shadow:0 0 10px #ff9d1c;opacity:0;animation:jcIn .6s 2s forwards}
 /* ×10 長按自訂倍數 */
 .bb{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
-.bb.bigm{position:relative}
-.bb .lp{position:absolute;top:-6px;right:-3px;font-style:normal;font-size:8px;line-height:1;padding:2px 3px;border-radius:5px;background:#ffe27a;color:#5a0006;font-weight:900;pointer-events:none}
+.bb.bigm,#btnBuy{position:relative}
+#btnBuy{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.bb .lp,#btnBuy .lp{position:absolute;top:-6px;right:-3px;font-style:normal;font-size:8px;line-height:1;padding:2px 3px;border-radius:5px;background:#ffe27a;color:#5a0006;font-weight:900;pointer-events:none}
 .mv{display:flex;align-items:baseline;justify-content:center;gap:10px;margin:6px 0 4px}
 .mv b{font:900 34px "Arial Black",Arial,sans-serif;color:#ffe27a;text-shadow:0 0 12px rgba(255,200,80,.6)}
 .mv span{font-size:13px;color:#f3d38a}
@@ -800,7 +844,7 @@ body.tight .ptab{display:none}
       <button class="act stat" id="btnSet" aria-label="設定"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="#ffe27a" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.7 7.7 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.7 7.7 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.7 7.7 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.7 7.7 0 0 0 1.7-1l2.5 1 2-3.5zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg><small>設定</small></button>
       <button class="act stat" id="btnStats" aria-label="我的紀錄"><svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="12" width="4" height="9" rx="1" fill="#ffe27a"/><rect x="10" y="7" width="4" height="14" rx="1" fill="#ffe27a"/><rect x="17" y="3" width="4" height="18" rx="1" fill="#ffe27a"/></svg><small>紀錄</small></button>
       <button class="act stat" id="btnLb" aria-label="排行榜"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="#ffe27a" d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V17h3v2H8v-2h3v-2.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3V3zm0 4H6v1a2 2 0 0 0 1 1.7V7zm10 0v2.7A2 2 0 0 0 18 8V7h-1zM7 20h10v1H7z"/></svg><small>排行</small></button>
-      <button class="act" id="btnBuy">購買<br>免費遊戲<small>5,000 積分</small></button>
+      <button class="act" id="btnBuy">購買<br>免費遊戲<small>5,000 積分</small><i class="lp">長按</i></button>
       <button class="act auto" id="btnAuto">自動旋轉<small>關</small></button>
       <button class="spin" id="btnSpin">旋轉<small>SPIN</small></button>
     </div>
@@ -839,9 +883,10 @@ body.tight .ptab{display:none}
   function makeBet(baseId, m) {
     const base = BETS.find(b => b.id === baseId && !b.enh) || BETS.find(b => b.id === 'b88');
     m = Math.round(Number(m)) || 1;
-    // ×10～×100：長按 ×10 自訂的倍數，加成與 ×10 相同（返還率一致）
-    if (!(m in MULT_ENH) && !(m >= 10 && m <= MAX_MULT)) m = 1;
-    const enh = m in MULT_ENH ? MULT_ENH[m] : MULT_ENH[10];
+    if (m < 1 || m > MAX_MULT) m = 1;
+    // 任意倍數 1～100：加成取「不超過它的最大標準倍數」（例如 ×4 同 ×3、×9 同 ×8、×10 以上同 ×10），返還率一致
+    let enh = 0;
+    for (const k of MULTS) if (k <= m) enh = MULT_ENH[k];
     return { id: base.id + 'x' + m, base: base.id, m, bet: base.bet * m, label: m > 1 ? `${base.bet}×${m}` : `${base.bet}`,
       sub: base.sub, active: base.active, enh, jp: base.jp };
   }
@@ -1190,7 +1235,7 @@ function pushRecent(type, amt, x, bet, tier) {
   state.stats.recent = state.stats.recent.slice(0, 12);
 }
 /* ================= 雲端連線（Google Apps Script 後端） ================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbw1kf8DA2oSjhx737sx6QUEnnYpM2gUs98Juqi7zubv-MyO3VO548hfvkg-KL4rDx3m/exec';   // ← 把 GAS「網頁應用程式網址」（結尾 /exec）貼在引號裡
+const API_URL = 'https://script.google.com/macros/s/AKfycbyke-GifFRGwQ6ShCCTYWQsXZndzAi6BvSBj1VzBk8K4Bh0y85j2onK3lUhr9UX3X7Z/exec';   // ← 把 GAS「網頁應用程式網址」（結尾 /exec）貼在引號裡
 const AUTH_KEY = 'haoyun_baida_auth', CACHE_KEY = 'haoyun_baida_cache_';
 let auth = null;
 try { auth = JSON.parse(localStorage.getItem(AUTH_KEY)); } catch (e) { }
@@ -1255,6 +1300,8 @@ let lastPtSig = null;
 let autoCfg = { count: 50, profit: 0, loss: 0, single: 0 };
 try { Object.assign(autoCfg, JSON.parse(localStorage.getItem('hb_auto') || '{}')); } catch (e) { }
 let autoRun = null;   // { left, startBal }
+let buyM = 1;   // 購買免費遊戲的倍數（長按調整）
+try { const v = +localStorage.getItem('hb_buym'); if (v >= 1 && v <= 100) buyM = Math.round(v); } catch (e) { }
 let busy = false, autoOn = false, jpFrozen = null, msgTimer = null, flashTimer = null;
 
 /* ================= 音效 ================= */
@@ -1487,6 +1534,7 @@ function renderAll() {
   $('#vBet').textContent = inFG ? '免費' : fmt(cfg.bet);
   $('#btnSpin').disabled = busy || inFG;
   $('#btnBuy').disabled = busy || inFG || !!state.fgPending;
+  { const sm = $('#btnBuy small'); if (sm) sm.textContent = (buyM > 1 ? `×${buyM}・` : '') + fmt(E.BUY_PRICE * buyM) + ' 積分'; }
   $('#btnAuto').disabled = inFG;
   $('#btnAuto').classList.toggle('on', autoOn);
   $('#btnAuto').querySelector('small').textContent = autoOn ? (autoRun && isFinite(autoRun.left) ? `剩 ${autoRun.left} 轉・點我停止` : '點我停止') : '設定';
@@ -1788,9 +1836,163 @@ function pickGame(win, elig) {
   });
 }
 
-async function jackpotOverlay(tier, amtP, elig) {
+/* ================= 大獎／巨獎慶祝 ================= */
+const svgImg = (() => { const c = {}; return s => c[s] || (c[s] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s)); })();
+function jcCoinBurst(o, n) {
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement('i'); c.className = 'om-gc';
+    const sz = 14 + rand() * 14, x0 = innerWidth * (.3 + rand() * .4), dx = (rand() - .5) * innerWidth * 1.1, up = innerHeight * (.45 + rand() * .4);
+    c.style.cssText = `left:${x0}px;top:${innerHeight + 20}px;width:${sz}px;height:${sz}px`;
+    o.appendChild(c);
+    c.animate([
+      { transform: 'translate(-50%,0) rotate(0deg)' },
+      { transform: `translate(calc(-50% + ${dx * .55}px), ${-up}px) rotate(400deg)`, offset: .45, easing: 'ease-in' },
+      { transform: `translate(calc(-50% + ${dx}px), 40px) rotate(900deg)` }
+    ], { duration: 1800 + rand() * 900, easing: 'ease-out', fill: 'forwards' }).onfinish = () => c.remove();
+  }
+  SND.coin();
+}
+function jcStars(o, n) {
+  for (let i = 0; i < n; i++) {
+    const st = document.createElement('i'); st.className = 'om-star' + (rand() < .35 ? ' w' : '');
+    const sz = 8 + rand() * 18;
+    st.style.cssText = `left:${rand() * innerWidth}px;top:${rand() * innerHeight}px;width:${sz}px;height:${sz}px`;
+    o.appendChild(st);
+    st.animate([{ transform: 'translate(-50%,-50%) scale(0) rotate(0deg)', opacity: 1 }, { transform: 'translate(-50%,-50%) scale(1.2) rotate(90deg)', opacity: 1, offset: .5 },
+      { transform: 'translate(-50%,-50%) scale(0) rotate(180deg)', opacity: 0 }], { duration: 700 + rand() * 600 }).onfinish = () => st.remove();
+  }
+}
+function jcPetal(o) {
+  const p = document.createElement('i'); p.className = 'om-petal';
+  const sz = 12 + rand() * 12;
+  p.style.cssText = `left:${rand() * innerWidth}px;top:-30px;width:${sz}px;height:${sz * 1.4}px`;
+  o.appendChild(p);
+  p.animate([{ transform: 'translate(0,0) rotate(0deg)', opacity: .95 }, { transform: `translate(${(rand() - .5) * 160}px, ${innerHeight + 60}px) rotate(${360 + rand() * 360}deg)`, opacity: .9 }],
+    { duration: 2600 + rand() * 1600, easing: 'linear', fill: 'forwards' }).onfinish = () => p.remove();
+}
+// 一尊神像從畫面一側飛到另一側（可上下飄）
+function jcFly(stage, svg, opt = {}) {
+  const im = document.createElement('img'); im.className = 'jc-fly'; im.src = svgImg(svg);
+  const w = opt.w || 80 + rand() * 70, h = w * 340 / 320;
+  im.style.width = w + 'px';
+  stage.appendChild(im);
+  const ltr = opt.ltr != null ? opt.ltr : rand() < .5;
+  const y = opt.y != null ? opt.y : innerHeight * (.04 + rand() * .7);
+  const x0 = ltr ? -w - 10 : innerWidth + 10, x1 = ltr ? innerWidth + 10 : -w - 10, amp = 18 + rand() * 30;
+  const kf = [];
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8;
+    kf.push({ transform: `translate(${x0 + (x1 - x0) * t}px, ${y + Math.sin(t * Math.PI * 3) * amp}px) rotate(${Math.sin(t * Math.PI * 4) * 8}deg)` });
+  }
+  im.animate(kf, { duration: opt.dur || 3400 + rand() * 1600, easing: 'linear', fill: 'forwards' }).onfinish = () => im.remove();
+}
+// 從底部冉冉升起的一尊
+function jcRiseUp(stage, svg) {
+  const im = document.createElement('img'); im.className = 'jc-fly'; im.src = svgImg(svg);
+  const w = 70 + rand() * 60, x = rand() < .5 ? rand() * innerWidth * .25 : innerWidth * .75 + rand() * innerWidth * .25 - w;
+  im.style.width = w + 'px';
+  stage.appendChild(im);
+  im.animate([{ transform: `translate(${x}px, ${innerHeight + 20}px) scale(.6)`, opacity: 0 }, { transform: `translate(${x}px, ${innerHeight * .55}px) scale(1)`, opacity: 1, offset: .3 },
+    { transform: `translate(${x + (rand() - .5) * 60}px, ${-w * 1.3}px) scale(1.1)`, opacity: .9 }], { duration: 4200 + rand() * 1200, easing: 'ease-out', fill: 'forwards' }).onfinish = () => im.remove();
+}
+function jcFlash(o) {
+  o.querySelector('.jc-flash').animate([{ opacity: .9 }, { opacity: 0 }], { duration: 600, easing: 'ease-out' });
+}
+function jcGong(big) {
+  [65, 98, 196, 293, 415].forEach((f, i) => tone(f, big ? 3.2 : 2.4, 'sine', [.14, .16, .08, .05, .03][i], 0));
+}
+function jcTune(grand) {
+  // 喜慶五聲音階
+  const sc = [523, 587, 659, 784, 880, 1047, 1175, 1319, 1568];
+  const pat = grand ? [0, 2, 3, 5, 4, 3, 5, 7, 8, 7, 5, 6] : [0, 2, 4, 3, 5, 7];
+  pat.forEach((k, i) => tone(sc[k], .22, 'triangle', .06, i * .16));
+  pat.forEach((k, i) => i % 2 === 0 && tone(sc[k] / 2, .3, 'sine', .05, i * .16));
+}
+async function jpCelebrate(tier, amt, sim) {
+  const grand = tier === 'grand', name = JPSTYLE[tier].label;
+  const o = document.createElement('div'); o.className = 'jpc ' + tier;
+  const title = grand ? '巨獎' : '大獎';
+  const sub = grand ? '萬 佛 朝 宗 ・ 福 壽 無 疆' : '鴻 運 當 頭 ・ 財 源 廣 進';
+  const ring = grand ? `<div class="jc-ring"><i>${Array.from({ length: 8 }, (_, i) => `<span style="--a:${i * 45}deg"><em><img src="${svgImg(BUDDHA_SVG)}"></em></span>`).join('')}</i></div>` : '';
+  o.innerHTML = `<div class="jc-dim"></div><div class="jc-rays"></div><div class="jc-rays2"></div><div class="jc-stage"></div>
+    <div class="jc-banner">${grand ? '✦ 恭 喜 打 落 金 元 寶 ✦' : '✦ 恭 喜 打 落 元 寶 ✦'}</div>
+    <div class="jc-main">
+      <div class="jc-hero"><div class="jc-halo"></div>${ring}${grand ? `<img src="${svgImg(BUDDHA_SVG)}" alt="">` : `<div class="jc-medal">${medal(tier)}</div>`}</div>
+      <div class="jc-title serif">${[...title].map((c, i) => `<span style="animation-delay:${.5 + i * .25}s,${1.3 + i * .25}s">${c}</span>`).join('')}</div>
+      <div class="jc-sub">${sub}</div>
+      <div class="jc-amt">₱0.00</div>
+      ${sim ? '<div class="jc-sim">測試模擬・不入帳、不影響獎池</div>' : ''}
+      <button class="jc-ok">${sim ? '結束測試' : '收下' + name}</button>
+    </div><div class="jc-flash"></div>`;
+  document.body.appendChild(o);
+  const stage = o.querySelector('.jc-stage'), amtEl = o.querySelector('.jc-amt'), ok = o.querySelector('.jc-ok');
+  const timers = [];
+  const every = (ms, fn) => timers.push(setInterval(fn, ms));
+  const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+  const stopAll = () => { timers.forEach(t => { clearInterval(t); clearTimeout(t); }); timers.length = 0; };
+
+  // 開場：閃光、銅鑼、機台震動
+  jcFlash(o); jcGong(grand); SND.jp();
+  $('.cab').animate([{ transform: 'translate(0,0)' }, { transform: 'translate(-6px,3px)' }, { transform: 'translate(6px,-3px)' }, { transform: 'translate(0,0)' }],
+    { duration: 420, iterations: grand ? 4 : 2, delay: 200 });
+  at(1100, () => jcTune(grand));
+
+  if (grand) {
+    // 巨獎：彌勒佛一尊接一尊、煙火金幣花瓣不停，直到玩家按下確認
+    at(900, () => jcFlash(o)); at(1900, () => jcFlash(o));
+    at(600, () => { jcFly(stage, BUDDHA_SVG, { ltr: true, y: innerHeight * .06, w: 110 }); jcFly(stage, BUDDHA_SVG, { ltr: false, y: innerHeight * .62, w: 110 }); });
+    let side = true;
+    every(1150, () => { jcFly(stage, rand() < .8 ? BUDDHA_SVG : (rand() < .5 ? CAISHEN_SVG : INGOT_FIG_SVG), { ltr: side = !side }); });
+    every(2300, () => jcRiseUp(stage, BUDDHA_SVG));
+    every(480, () => { fireworks(o, 3); if (rand() < .4) setTimeout(() => fireworks(o, 3), 200); });
+    every(900, () => jcCoinBurst(o, 12));
+    every(110, () => jcPetal(o));
+    every(260, () => jcStars(o, 3));
+    every(3200, () => jcFlash(o));
+    every(2700, () => { jcTune(true); if (rand() < .5) jcGong(true); });
+  } else {
+    // 大獎：約 10 秒的慶祝，之後停在畫面上等玩家確認
+    at(500, () => jcFly(stage, CAISHEN_SVG, { ltr: true, y: innerHeight * .08, w: 130, dur: 4200 }));
+    at(3600, () => jcFly(stage, INGOT_FIG_SVG, { ltr: false, y: innerHeight * .6, w: 120, dur: 4000 }));
+    at(6200, () => jcFly(stage, CAISHEN_SVG, { ltr: false, y: innerHeight * .1, w: 120, dur: 3800 }));
+    every(750, () => fireworks(o, 2));
+    every(1300, () => jcCoinBurst(o, 10));
+    every(320, () => jcStars(o, 2));
+    at(2600, () => jcFlash(o)); at(5600, () => jcFlash(o));
+    at(4200, () => jcTune(false)); at(7400, () => jcTune(false));
+  }
+
+  // 金額跳動（同時更新上方積分）
+  const bal0 = shownBalance, countMs = grand ? 8000 : 7000;
+  const counting = (async () => {
+    await sleep(900);
+    let lastT = 0;
+    await countUp(0, amt, countMs, v => {
+      amtEl.textContent = '₱' + fmt2(v); if (!sim) { shownBalance = bal0 + v; $('#vBal').textContent = fmt(shownBalance); }
+      const t = performance.now(); if (t - lastT > 90) { lastT = t; tone(900 + (v / amt) * 900, .05, 'square', .025); }
+    });
+    amtEl.textContent = '₱' + fmt2(amt);
+    SND.big(); jcFlash(o);
+  })();
+  if (grand) await counting;
+  else { await Promise.all([counting, sleep(10000)]); stopAll(); o.classList.add('hold'); }
+  ok.classList.add('show');
+  await new Promise(res => {
+    const go = e => {
+      if (e.type === 'keydown') { if (e.code !== 'Enter' && e.code !== 'Space') return; e.preventDefault(); }
+      ok.removeEventListener('click', go); document.removeEventListener('keydown', go, true); res();
+    };
+    ok.addEventListener('click', go); document.addEventListener('keydown', go, true);
+  });
+  stopAll(); SND.click();
+  if (sim) { shownBalance = state.balance; $('#vBal').textContent = fmt(shownBalance); }
+  o.classList.add('out'); await sleep(500); o.remove();
+}
+
+async function jackpotOverlay(tier, amtP, elig, sim) {
   await pickGame(tier, elig || JPK);
   const amt = await amtP;
+  if (tier === 'major' || tier === 'grand') { await jpCelebrate(tier, amt, sim); return amt; }
   coinRain(80);
   const p = overlay(`<div class="jpmedal">${medal(tier)}</div><h2 class="serif">恭喜打落元寶！</h2><p style="font-size:18px;font-weight:900;color:#ffe27a">${JPSTYLE[tier].label}</p><div class="big" id="jpAmt">₱0.00</div>`,
     { btn: '收下彩金' });
@@ -2119,11 +2321,18 @@ async function spin() {
 
   // 先決定結果並存檔（重新整理也不會改變結果）
   const { grid } = E.spinGrid(strips(), rand);
+  const forced = isAdmin() ? forceJp : null; forceJp = null;   // 測試暗碼只限管理員
+  if (forced && !cfg.active.some(r => grid[r].includes('W'))) {   // 測試用：確保有百搭可以丟錢
+    const r = cfg.active[Math.floor(rand() * cfg.active.length)]; grid[r][1] = 'W';
+  }
   const ev = E.evaluate(grid, cfg);
-  const jp = E.rollJackpot(ev.throwCells.length, cfg, rand);
+  const jp = forced ? { tier: forced, throwIndex: ev.throwCells.length - 1, sim: true } : E.rollJackpot(ev.throwCells.length, cfg, rand);
   let claimP = null;
   let retrig = false, triggered = false, fgSum = null;
-  if (jp) {   // 共用彩金：向後端領取「當下」的金額（後端會同時重置）
+  if (jp && jp.sim) {
+    // 測試模擬：完整播放丟錢、打落元寶、翻牌、慶祝動畫，但不向後端領取、不重置共用獎池、不入帳、不記錄
+    claimP = Promise.resolve(Math.round(state.jp[jp.tier] * 100) / 100);
+  } else if (jp) {   // 共用彩金：向後端領取「當下」的金額（後端會同時重置）
     jpFrozen = { tier: jp.tier, amt: Math.round(state.jp[jp.tier] * 100) / 100 };
     state.stats.jps++;
     // 後端一確認就立刻入帳並存檔，翻牌途中重新整理也不會遺失彩金
@@ -2156,12 +2365,12 @@ async function spin() {
       S.lineWon += ev.total - ev.scatPay; S.scatWon += ev.scatPay;
       if (ev.total > 0) S.hits++;
       S.sinceFG++; S.sinceJP++;
-      if (credit > 0 || jp) S.loseStreak = 0; else { S.loseStreak++; S.maxLoseStreak = Math.max(S.maxLoseStreak, S.loseStreak); }
+      if (credit > 0 || (jp && !jp.sim)) S.loseStreak = 0; else { S.loseStreak++; S.maxLoseStreak = Math.max(S.maxLoseStreak, S.loseStreak); }
       if (x >= 15) { S.bigWins++; pushRecent('big', ev.total, x, cfg.bet); }
     } else { S.fgWon += ev.total; S.fgSpins++; }
     if (x >= OMEN_X) S.omens++;
     S.biggestX = Math.max(S.biggestX, x);
-    if (jp) S.sinceJP = 0;
+    if (jp && !jp.sim) S.sinceJP = 0;
     if (triggered) { S.fgTrig++; S.sinceFG = 0; }
     if (fgSum) pushRecent('fg', fgSum.total, fgSum.total / cfg.bet, cfg.bet);
     if (!inFG || fgSum) trackBal();
@@ -2180,7 +2389,7 @@ async function spin() {
   if (ev.throwCells.length) await doThrows(ev.throwCells, jp);
   if (ev.total > 0) await showWins(ev, cfg);
   if (jp) {
-    await jackpotOverlay(jp.tier, claimP, cfg.jp);
+    await jackpotOverlay(jp.tier, claimP, cfg.jp.includes(jp.tier) ? cfg.jp : JPK.filter(k => cfg.jp.includes(k) || k === jp.tier), jp.sim);
     jpFrozen = null; renderMeters(); await restoreIngot(); stopAuto();
   }
   { const keep = state.fg; if (fgSum) state.fg = null; save(); if (fgSum) state.fg = keep; }
@@ -2254,22 +2463,79 @@ function openAutoSheet() {
     o.addEventListener('click', e => { if (e.target === o) close(); });
   } });
 }
-$('#btnBuy').addEventListener('click', async () => {
+// 購買免費遊戲：點一下用上次選的倍數；長按可選 ×1～×100（每倍 5,000，最高 500,000，以 88 × 倍數押注進行）
+let buyLp = null, buyLpFired = false;
+$('#btnBuy').addEventListener('pointerdown', () => {
+  buyLpFired = false; clearTimeout(buyLp);
+  if ($('#btnBuy').disabled) return;
+  buyLp = setTimeout(() => { buyLpFired = true; if (navigator.vibrate) try { navigator.vibrate(15); } catch (er) { } openBuySheet(); }, 480);
+});
+['pointerup', 'pointerleave', 'pointercancel'].forEach(t => $('#btnBuy').addEventListener(t, () => clearTimeout(buyLp)));
+$('#btnBuy').addEventListener('contextmenu', e => e.preventDefault());
+$('#btnBuy').addEventListener('click', () => {
+  if (buyLpFired) { buyLpFired = false; return; }
+  buyFG(buyM, false);
+});
+function openBuySheet() {
   if (busy || state.fg || state.fgPending) return;
   ac();
-  if (state.balance < E.BUY_PRICE) { flash('積分不足 5,000，無法購買免費遊戲'); return; }
+  let v = buyM;
+  const quick = [1, 2, 5, 10, 20, 50, 100];
+  const html = `<h2 class="serif" style="font-size:20px;margin:2px 0 4px">購買免費遊戲</h2>
+    <div class="as"><div class="mv"><b id="byN">×${v}</b><span id="byP"></span></div>
+    <input type="range" id="mvR" min="1" max="${E.MAX_MULT}" step="1" value="${v}">
+    <div class="chips" style="grid-template-columns:repeat(4,1fr)">${quick.map(q => `<button class="chip" data-q="${q}">×${q}</button>`).join('')}</div>
+    <div class="mstep"><button class="chip" data-d="-10">−10</button><button class="chip" data-d="-1">−1</button><button class="chip" data-d="1">+1</button><button class="chip" data-d="10">+10</button></div>
+    <p class="anote" id="byNote"></p></div>
+    <div class="btns"><button class="btn2 grey" data-x="0">取消</button><button class="btn2" data-x="1">確定購買</button></div>`;
+  overlay(html, { btn: '', cls: 'sheet', bind: (o, close) => {
+    const R = o.querySelector('#mvR'), go = o.querySelector('[data-x="1"]');
+    const upd = n => {
+      v = Math.max(1, Math.min(E.MAX_MULT, Math.round(n))); R.value = v;
+      const price = E.BUY_PRICE * v, cfg = E.makeBet('b88', v);
+      o.querySelector('#byN').textContent = '×' + v;
+      o.querySelector('#byP').innerHTML = `價格 <b style="color:#ffe27a">${fmt(price)}</b> 積分`;
+      o.querySelector('#byNote').innerHTML = `以 <b>88 × ${v} = ${fmt(cfg.bet)}</b> 押注進行免費遊戲，獎金與打落元寶的機率都乘以 ${v}；` +
+        (cfg.enh ? `「同種類獎金增加」解鎖 ${cfg.enh} 種符號。` : '沒有額外加成。') +
+        (state.balance < price ? `<br><b style="color:#ff9a8a">積分不足（目前 ${fmt(state.balance)}）</b>` : '');
+      go.disabled = state.balance < price;
+      o.querySelectorAll('.chip[data-q]').forEach(c => c.classList.toggle('on', +c.dataset.q === v));
+    };
+    upd(v);
+    R.oninput = () => upd(+R.value);
+    o.querySelectorAll('.chip[data-q]').forEach(c => c.onclick = () => { SND.click(); upd(+c.dataset.q); });
+    o.querySelectorAll('.chip[data-d]').forEach(c => c.onclick = () => { SND.click(); upd(v + +c.dataset.d); });
+    o.querySelector('[data-x="0"]').onclick = () => close();
+    go.onclick = () => {
+      buyM = v; try { localStorage.setItem('hb_buym', v); } catch (e) { }
+      close(); renderAll();
+      setTimeout(() => buyFG(v, true), 260);
+    };
+    o.addEventListener('click', e => { if (e.target === o) close(); });
+  } });
+}
+async function buyFG(m, confirmed) {
+  if (busy || state.fg || state.fgPending) return;
+  ac();
+  const price = E.BUY_PRICE * m, cfg = E.makeBet('b88', m);
+  if (state.balance < price) { flash(`積分不足 ${fmt(price)}，無法購買免費遊戲（長按可調整倍數）`); return; }
   stopAuto();
-  const ok = await confirmBox(`<h2 class="serif">購買免費遊戲</h2><p>花費 <b style="color:#ffe27a">5,000</b> 積分，<br>以 <b>88 積分</b> 押注直接進入免費遊戲。</p>`, '確定購買', '取消');
-  if (!ok || busy || state.fg || state.fgPending) return;
-  state.balance -= E.BUY_PRICE; shownBalance = state.balance;
-  state.stats.wagered += E.BUY_PRICE; state.stats.fg++;
+  if (!confirmed) {
+    const ok = await confirmBox(`<h2 class="serif">購買免費遊戲</h2><p>花費 <b style="color:#ffe27a">${fmt(price)}</b> 積分，<br>以 <b>${cfg.label} 積分</b> 押注直接進入免費遊戲。</p><p style="font-size:12px;color:#c9ae7c">長按「購買免費遊戲」可選 ×1～×100</p>`, '確定購買', '取消');
+    if (!ok) return;
+  }
+  if (busy || state.fg || state.fgPending || state.balance < price) return;
+  state.balance -= price; shownBalance = state.balance;
+  if (state.stats.buySpent == null) state.stats.buySpent = (state.stats.fgBought || 0) * E.BUY_PRICE;
+  state.stats.buySpent += price;
+  state.stats.wagered += price; state.stats.fg++;
   // 先產生購買用的盤面：第 1～3 輪各必出一個青花聚寶，第 4～5 輪照一般機率
   const grid = buyGrid();
-  const bev = E.evaluate(grid, betCfg('b88x1'));
-  const nS = bev.scatCount, sPay = bev.scatPay;   // 從第 1 輪連續：3／4／5 個 = 440／880／4,400
+  const bev = E.evaluate(grid, cfg);
+  const nS = bev.scatCount, sPay = bev.scatPay;   // 從第 1 輪連續：3／4／5 個 = 5／10／50 倍押注
   state.balance += sPay; state.stats.won += sPay; state.stats.biggest = Math.max(state.stats.biggest, sPay);
   state.stats.fgBought++; state.stats.scatWon += sPay; state.stats.sinceFG = 0; trackBal();
-  state.fgPending = { betId: 'b88x1', bought: true }; state.grid = grid; save();
+  state.fgPending = { betId: cfg.id, bought: true }; state.grid = grid; save();
   busy = true; clearWinShow(); setWin(0); renderAll();
   setMsg('購買免費遊戲：第 1～3 輪必出青花聚寶');
   await animateReels(grid);
@@ -2280,10 +2546,10 @@ $('#btnBuy').addEventListener('click', async () => {
   setMsg(`青花聚寶 ×${nS} = ${fmt(sPay)}`);
   { const bal0 = shownBalance; await countUp(0, sPay, 900, v => { setWin(v); shownBalance = bal0 + v; $('#vBal').textContent = fmt(shownBalance); }); }
   shownBalance = state.balance; setWin(sPay);
-  await overlay(`<h2 class="serif">免費遊戲！</h2><div style="width:90px;height:90px;margin:6px auto">${SVG.S}</div><p>青花聚寶 ×${nS}，散佈獎 <b style="color:#ffe27a">${fmt(sPay)}</b></p>`, { btn: '選擇免費遊戲' });
+  await overlay(`<h2 class="serif">免費遊戲！</h2><div style="width:90px;height:90px;margin:6px auto">${SVG.S}</div><p>青花聚寶 ×${nS}，散佈獎 <b style="color:#ffe27a">${fmt(sPay)}</b></p>${m > 1 ? `<p style="font-size:13px">押注 ${cfg.label}</p>` : ''}`, { btn: '選擇免費遊戲' });
   busy = false;
   chooseFG();
-});
+}
 function buyGrid() {
   const st = E.BASE_STRIPS, b88 = betCfg('b88x1');
   const win3 = (s, i) => [s[i % s.length], s[(i + 1) % s.length], s[(i + 2) % s.length]];
@@ -2304,6 +2570,14 @@ function buyGrid() {
   }
   return grid;
 }
+// 測試用暗碼：在畫面上依序輸入，下一轉必定打落元寶（不顯示任何提示）
+let forceJp = null, keyBuf = '';
+document.addEventListener('keydown', e => {
+  if (!isAdmin() || !e.key || e.key.length !== 1 || /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+  keyBuf = (keyBuf + e.key.toLowerCase()).slice(-16);
+  if (keyBuf.endsWith('michaelhuang')) { forceJp = 'major'; keyBuf = ''; }
+  else if (keyBuf.endsWith('huanglienchun')) { forceJp = 'grand'; keyBuf = ''; }
+});
 document.addEventListener('keydown', e => {
   if (e.code === 'Space' && !document.querySelector('.ov') && $('#login').classList.contains('hide') && !/INPUT|TEXTAREA/.test(e.target.tagName)) { e.preventDefault(); ac(); spin(); }
 });
@@ -2389,7 +2663,7 @@ function openStats() {
   <h3>免費遊戲</h3>
   <div class="sg">
     ${card('觸發', fmt(S.fgTrig) + ' 次', every(S.fgTrig))}
-    ${card('購買', fmt(S.fgBought) + ' 次', fmt(S.fgBought * E.BUY_PRICE) + ' 積分')}
+    ${card('購買', fmt(S.fgBought) + ' 次', fmt(S.buySpent != null ? S.buySpent : S.fgBought * E.BUY_PRICE) + ' 積分')}
     ${card('總贏分', fmt(S.fgWon), fgN ? '平均每次 ' + fmt(S.fgWon / fgN) : '')}
   </div>
   <h3>元寶彩金</h3>
@@ -2479,8 +2753,9 @@ ${E.FG_OPTIONS.map((o, i) => `<tr><td>${o.spins} 次</td><td>+${o.wilds} 個</td
 <li>免費遊戲使用專用轉輪（高分符號較多、有疊放）。五種選擇的平均價值差不多，差別在波動大小。</li></ul>
 <h3>六、購買免費遊戲</h3>
 <ul><li>花 <b>5,000 積分</b>直接進入免費遊戲，以 <b>88 押注</b>計算（不論目前選哪個押注）。</li>
+<li><b>長按「購買免費遊戲」</b>可選 <b>×1～×100</b>：價格 5,000 × 倍數（最高 500,000），以 <b>88 × 倍數</b>押注進行（例如 ×10 = 50,000，以 880 押注），散佈獎、免費遊戲獎金都乘以倍數，「同種類獎金增加」也照該倍數解鎖。按鈕會記住上次選的倍數。</li>
 <li>購買後會先轉一輪：<b>第 1～3 輪各必出一個青花聚寶</b>，第 4～5 輪照一般機率（同樣要從第 1 輪連續才算）。</li>
-<li>這一轉<b>照付散佈獎</b>：3 個 440、4 個 880、5 個 4,400；這一轉不會出現百搭和連線。</li>
+<li>這一轉<b>照付散佈獎</b>：3 個 440、4 個 880、5 個 4,400（×倍數）；這一轉不會出現百搭和連線。</li>
 <li>接著一樣可以選擇次數。購買的平均返還和一般旋轉差不多。</li></ul>
 <h3>七、同種類獎金增加（加倍下注加碼）</h3>
 <table><tr><th>倍數</th><th>解鎖加碼的符號</th></tr>
@@ -2547,7 +2822,7 @@ function buildProbHtml() {
 <table><tr><th>押注</th><th>返還率</th><th>每轉平均盈虧</th></tr>
 <tr><td>33</td><td>約 83%</td><td>−5.6</td></tr><tr><td>55</td><td>約 84%</td><td>−8.8</td></tr><tr><td>66</td><td>約 86%</td><td>−9.2</td></tr>
 <tr><td>88</td><td>約 89%</td><td>−9.5</td></tr><tr><td>88 ×2 / ×3 / ×5</td><td>約 90–92%</td><td>−17 / −21 / −40</td></tr>
-<tr><td>88 ×8 / ×10～×100</td><td>約 92%</td><td>−56 / −65</td></tr><tr><td>33／55／66 加倍數</td><td>和原本差不多（約 83–87%）</td><td>—</td></tr><tr><td>購買 5,000</td><td>約 91%</td><td>每次 −450</td></tr></table>
+<tr><td>88 ×8 / ×10～×100</td><td>約 92%</td><td>−56 / −65</td></tr><tr><td>33／55／66 加倍數</td><td>和原本差不多（約 83–87%）</td><td>—</td></tr><tr><td>購買 5,000（×1～×100）</td><td>約 91%</td><td>每 5,000 約 −450</td></tr></table>
 <ul><li>88 押注的組成：一般連線約 47%、散佈獎約 4%、免費遊戲約 29%、彩金約 9%。</li>
 <li>低押注（33、55）丟錢有效輪少、可贏彩金少，所以返還率較低；88 是每轉虧最少的押注。</li>
 <li>返還率低於 100%，長期一定是虧的（莊家優勢）。</li></ul>
