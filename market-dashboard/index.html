@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>金融市場監控</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ================= 登入 / 註冊 ================= -->
+<section id="authView" class="auth-view">
+  <div class="auth-card">
+    <div class="brand">
+      <div class="brand-mark">MW</div>
+      <div>
+        <div class="brand-name">Market Watch</div>
+        <div class="brand-sub">金融市場監控儀表板</div>
+      </div>
+    </div>
+
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab active" data-tab="login" role="tab">登入</button>
+      <button class="auth-tab" data-tab="register" role="tab">註冊</button>
+    </div>
+
+    <form id="loginForm" class="auth-form" autocomplete="on">
+      <label>帳號<input name="account" required autocomplete="username"></label>
+      <label>密碼<input name="password" type="password" required autocomplete="current-password"></label>
+      <button class="btn btn-primary" type="submit">登入</button>
+    </form>
+
+    <form id="registerForm" class="auth-form hidden" autocomplete="off">
+      <label>帳號<input name="account" required placeholder="3–30 個英文、數字或 _ . -" autocomplete="username"></label>
+      <label>密碼<input name="password" type="password" required placeholder="至少 6 個字元" autocomplete="new-password"></label>
+      <label>確認密碼<input name="confirm" type="password" required autocomplete="new-password"></label>
+      <button class="btn btn-primary" type="submit">註冊</button>
+    </form>
+
+    <div id="authMsg" class="auth-msg"></div>
+
+    <details class="api-setting">
+      <summary>後端網址設定</summary>
+      <input id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+      <button id="saveApiUrl" class="btn btn-ghost" type="button">儲存</button>
+    </details>
+  </div>
+</section>
+
+<!-- ================= 主畫面 ================= -->
+<section id="appView" class="app-view hidden">
+  <header class="topbar">
+    <div class="brand small">
+      <div class="brand-mark">MW</div>
+      <div class="brand-name">Market Watch</div>
+    </div>
+    <nav class="sections" id="sectionNav">
+      <button class="nav-btn active" data-section="market">市場監控</button>
+      <button class="nav-btn" data-section="macro">總經與板塊分析</button>
+      <button class="nav-btn" data-section="research">個股研究</button>
+      <button class="nav-btn" data-section="screener">選股篩選器</button>
+    </nav>
+    <div class="top-right">
+      <span class="clock" id="clock">--:--:--</span>
+      <span class="user" id="userName"></span>
+      <button class="nav-btn nav-help" data-section="help" title="額度限制與網站說明">說明</button>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">登出</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 市場監控 -->
+    <div class="section" id="section-market">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <h1>市場監控</h1>
+          <span class="status" id="statusText"><span class="dot"></span>連線中…</span>
+          <div class="usage help" id="usageBox">
+            <span class="usage-label">今日 API 呼叫</span>
+            <span class="usage-num" id="usageNum">— / 20,000</span>
+            <span class="usage-bar"><i id="usageBar"></i></span>
+            <button type="button" class="help-btn" aria-label="額度說明">?</button>
+            <div class="help-pop">
+              <b>今日 API 呼叫</b>：後端（GAS）今天向外部報價網站（Yahoo、證交所）發出的請求次數，所有使用者、所有分頁合計，以台北時間每日歸零。<br><br>
+              <b>免費額度上限：每天 20,000 次</b>（Google 免費帳號 UrlFetch 配額；Workspace 帳號為 100,000 次）。超過後當天報價會停在最後一筆，隔天自動恢復。<br><br>
+              <b>計次規則</b>（每向外部網站發出 1 個請求算 1 次）
+              <ul>
+                <li>Yahoo 標的（匯率／國外／指數／興櫃）每 20 檔合併 1 次：1–20 檔 1 次、21–40 檔 2 次、41–60 檔 3 次…</li>
+                <li>台股上市／上櫃每 40 檔合併 1 次</li>
+                <li>Yahoo 漏回的代碼會逐檔補抓，每檔 +1（清單中有下市或錯誤代碼時特別耗額度）</li>
+                <li>當日走勢小圖：每 3 分鐘 1 次（Yahoo 每 20 檔 1 次）</li>
+                <li>點開歷史走勢圖：1 次（備用網址重試再 +1）</li>
+                <li>新增標的時驗證代碼：1–2 次</li>
+                <li>個股研究：每查一檔約 6–14 次</li>
+                <li>選股篩選器：後端每晚排程約 10 次；第一次建置歷史資料約 600 次（只發生一次，分多次排程完成）；網頁篩選本身不耗額度</li>
+                <li>開啟「總經與板塊分析」：約 35–45 次（各區塊有 2 分鐘～6 小時快取，快取內重開幾乎不耗額度；隱藏的字卡不抓）</li>
+              </ul>
+              <b>不計次</b>：快取期間內的重複查詢（報價 8 秒、走勢 2 分鐘、歷史圖 10 分鐘）、虛擬貨幣（瀏覽器直連 Binance）。<br><br>
+              <b>單人估算（預設清單）</b>
+              <ul><li>30 秒更新：開 24 小時約 6,200 次</li><li>10 秒更新：開 24 小時約 17,800 次</li></ul>
+              例：Yahoo 標的 32 檔＋台股 10 檔 → 每次更新 3 次，30 秒更新開 24 小時約 8,640 次。<br>
+              分頁切到背景時自動暫停更新；多分頁／多裝置同時開會倍增。<br>
+              Google 實際的重置時間可能和台北午夜略有差異，此數字為估算。
+            </div>
+          </div>
+        </div>
+        <div class="toolbar-right">
+          <label class="ctl">更新頻率
+            <select id="intervalSel">
+              <option value="5">5 秒</option>
+              <option value="10">10 秒</option>
+              <option value="30" selected>30 秒</option>
+              <option value="60">60 秒</option>
+            </select>
+          </label>
+          <label class="ctl">漲跌色
+            <select id="colorSel">
+              <option value="tw">紅漲綠跌</option>
+              <option value="us">綠漲紅跌</option>
+            </select>
+          </label>
+          <button class="btn btn-ghost btn-sm" id="editBtn" title="拖曳調整標的與區塊順序、刪除標的">✎ 編輯</button>
+          <button class="btn btn-ghost btn-sm" id="refreshBtn" title="立即更新">↻ 更新</button>
+        </div>
+      </div>
+      <div class="edit-hint hidden" id="editHint">編輯模式：拖曳標的調整順序；拖曳區塊標題（⠿）移動整個區塊；按紅色 × 刪除。完成後再按一次「完成」。</div>
+      <div class="grid" id="marketGrid"></div>
+    </div>
+
+    <!-- 總經與板塊分析（預留） -->
+    <div class="section hidden" id="section-macro">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <h1>總經與板塊分析</h1>
+          <span class="status" id="macroStatus"><span class="dot"></span>點開時自動更新</span>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-ghost btn-sm hidden" id="macroReset" title="還原預設的字卡順序、寬度與顯示">還原預設</button>
+          <button class="btn btn-ghost btn-sm" id="macroEdit" title="拖曳調整字卡順序、設定寬度或隱藏">✎ 編輯版面</button>
+          <button class="btn btn-ghost btn-sm" id="macroRefresh" title="重新抓取所有區塊（30 秒內重複按會沿用快取）">↻ 重新整理</button>
+        </div>
+      </div>
+      <div class="edit-hint hidden" id="macroEditHint">編輯版面：按住字卡標題列拖曳調整順序；右側可設定寬度或取消「顯示」隱藏字卡（隱藏的字卡不會抓資料）。完成後按「✓ 完成」，版面會存到你的帳號。</div>
+      <div class="macro-grid" id="macroGrid"></div>
+      <p class="macro-note">
+        資料來源：鉅亨網、CNBC、Yahoo Finance、臺灣證券交易所、FinMind、FRED（聖路易聯準銀行）、紐約聯準銀行、聯準會、alternative.me。
+        只在開啟此頁或按「重新整理」時抓取，不會在背景持續更新。僅供參考，不構成投資建議。
+      </p>
+    </div>
+    <!-- 個股研究 -->
+    <div class="section hidden" id="section-research">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <h1>個股研究</h1>
+          <span class="status" id="rsStatus"><span class="dot"></span>輸入代號開始</span>
+        </div>
+      </div>
+      <form class="rs-search" id="rsForm" autocomplete="off">
+        <input id="rsInput" placeholder="台股代號（2330、6488）、美股代號（NVDA、TSM），或其他市場（7011 JP、0700 HK）">
+        <button class="btn btn-primary" type="submit">查詢</button>
+      </form>
+      <div class="rs-chips" id="rsChips"></div>
+      <div id="rsBody">
+        <div class="placeholder">
+          <h2>完整個股檔案</h2>
+          <p>走勢與成交量、技術分析、歷史波動度、估值（本益比歷史百分位）、成長與獲利、月營收、籌碼、相對強弱、分析師觀點、股利與公司簡介，<br>每個面向依固定規則判斷多空，並寫出判斷依據。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 選股篩選器 -->
+    <div class="section hidden" id="section-screener">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <h1>選股篩選器</h1>
+          <span class="status" id="scrStatus"><span class="dot"></span>點開時載入</span>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-ghost btn-sm" id="scrReload" title="重新下載全市場資料（每天晚上自動更新）">↻ 重新載入</button>
+        </div>
+      </div>
+      <div class="edit-hint" id="scrNote" style="background:#fff8e1;border-color:#f0d58a;color:#8a6400"></div>
+      <div class="scr-presets-wrap">
+        <span class="muted">常用條件：</span><div id="scrPresets" class="scr-presets"></div>
+      </div>
+      <div class="scr-layout">
+        <aside class="panel scr-side">
+          <div class="panel-head"><h2 class="panel-title">篩選條件</h2></div>
+          <div class="panel-body">
+            <div id="scrForm"></div>
+            <div class="scr-btns">
+              <button class="btn btn-primary" id="scrApply">開始篩選</button>
+              <button class="btn btn-ghost btn-sm" id="scrSave" title="把目前條件存成快速按鈕">★ 存為常用</button>
+              <button class="btn btn-ghost btn-sm" id="scrClear">清除條件</button>
+            </div>
+          </div>
+        </aside>
+        <section class="panel scr-main">
+          <div class="panel-head"><h2 class="panel-title">篩選結果</h2><div id="scrActive" class="scr-active"></div></div>
+          <div class="panel-body" id="scrResult"><div class="panel-msg">載入中…</div></div>
+        </section>
+      </div>
+      <p class="macro-note">範圍：上市＋上櫃普通股與 ETF。資料來源：臺灣證券交易所、櫃買中心（每日收盤後由後端自動更新；融資約 21:00 公布）。
+        本益比、殖利率、淨值比為交易所公布值；月營收為最近一期公告。點代號可開啟個股研究。</p>
+    </div>
+    <!-- 說明 -->
+    <div class="section hidden" id="section-help">
+      <div class="toolbar">
+        <div class="toolbar-left"><h1>說明</h1></div>
+        <div class="seg help-tabs">
+          <button data-h="quota">額度限制</button><button data-h="guide">網站說明</button>
+        </div>
+      </div>
+      <article class="panel help-doc" id="helpDoc"></article>
+    </div>
+  </main>
+
+  <footer class="foot">
+    資料來源：證交所 MIS、Yahoo Finance、Binance。部分市場報價可能延遲，僅供參考，不構成投資建議。
+  </footer>
+</section>
+
+<!-- ================= 走勢圖視窗 ================= -->
+<div id="chartModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title">
+        <span id="mName" class="m-name"></span>
+        <span id="mCode" class="m-code"></span>
+        <span id="mPrice" class="m-price"></span>
+        <span id="mPct" class="pct"></span>
+      </div>
+      <button class="icon-btn" id="mClose" title="關閉 (Esc)">×</button>
+    </div>
+    <div class="modal-ctrl">
+      <div class="seg" id="segInterval">
+        <button data-v="1d" class="on">日</button><button data-v="1wk">週</button><button data-v="1mo">月</button>
+      </div>
+      <div class="seg" id="segRange">
+        <button data-v="3">3月</button><button data-v="6">6月</button><button data-v="12">1年</button><button data-v="36" class="on">3年</button><button data-v="0">全部</button>
+      </div>
+      <div class="seg" id="segType">
+        <button data-v="candle" class="on">K線</button><button data-v="line">折線</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="chkVol" checked> 成交量</label>
+      <button class="btn btn-ghost btn-sm" id="techBtn">📈 技術分析</button>
+    </div>
+    <div class="tech-bar hidden" id="techBar">
+      <label class="chk sma5"><input type="checkbox" data-ind="sma5" checked> SMA5</label>
+      <label class="chk sma10"><input type="checkbox" data-ind="sma10" checked> SMA10</label>
+      <label class="chk sma20"><input type="checkbox" data-ind="sma20" checked> SMA20</label>
+      <label class="chk sma60"><input type="checkbox" data-ind="sma60" checked> SMA60</label>
+      <label class="chk sma120"><input type="checkbox" data-ind="sma120" checked> SMA120</label>
+      <span class="sep"></span>
+      <label class="chk"><input type="checkbox" data-ind="kd" checked> KD(9,3,3)</label>
+      <label class="chk"><input type="checkbox" data-ind="macd" checked> MACD(12,26,9)</label>
+    </div>
+    <div class="chart-wrap">
+      <div id="chartLegend" class="legend"></div>
+      <div id="chartBox" class="chart-box"></div>
+      <div id="chartMsg" class="chart-msg">載入中…</div>
+    </div>
+    <div class="modal-foot">滑鼠滾輪縮放、按住拖曳左右移動；手機可用雙指縮放。</div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://unpkg.com/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script src="app.js"></script>
+<script src="macro.js"></script>
+<script src="research.js"></script>
+<script src="screener.js"></script>
+<script src="help.js"></script>
+</body>
+</html>
