@@ -598,6 +598,37 @@ body.tight .ptab{display:none}
 .chip.on{background:linear-gradient(180deg,#fff0b8,#f0b93a 60%,#c4801a);color:#5a0006;border-color:#fff3c4}
 .anote{font-size:11.5px!important;color:#c9ae7c!important;margin-top:10px!important}
 .act.auto small{white-space:nowrap}
+/* 速度、彈幕按鈕 */
+.info2{grid-template-columns:62px 34px 1fr 34px 88px!important;gap:5px!important}
+.ib{height:34px;padding:0;border-radius:9px;border:1.5px solid #9a6a1c;background:linear-gradient(180deg,#6d0a10,#3a0408);color:#ffe27a;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;box-shadow:inset 0 1px 0 rgba(255,230,180,.25),0 2px 0 #1a0204;-webkit-tap-highlight-color:transparent}
+.ib b{font:900 13px "Arial Black",Arial,sans-serif}
+.ib small{font-size:8px;margin-top:2px;color:#f3d38a;font-weight:800}
+.ib.on{background:linear-gradient(180deg,#fff0b8,#f0b93a 60%,#c4801a);border-color:#fff3c4}
+.ib.on b,.ib.on small{color:#5a0006}
+.ib:active{transform:translateY(1px)}
+.spin.slam{animation:pulse .6s ease-in-out infinite}
+/* 彈幕 */
+#dm{position:fixed;inset:0;z-index:88;pointer-events:none;overflow:hidden}
+.dmi{position:absolute;left:0;white-space:nowrap;font-size:16px;font-weight:800;color:#fff;padding:2px 10px;border-radius:999px;background:rgba(0,0,0,.38);
+  text-shadow:0 1px 2px #000,0 0 4px #000;will-change:transform}
+.dmi b{color:#ffe27a}
+.dmi.me{border:1.5px solid #ffe27a;background:rgba(90,0,8,.6)}
+.dmi.adm b{color:#7dd8ff}
+/* 管理員公告跑馬燈 */
+.news.ann{background:linear-gradient(90deg,rgba(0,30,60,0),rgba(10,70,140,.96) 8%,rgba(10,70,140,.96) 92%,rgba(0,30,60,0));border-color:#9be7ff;box-shadow:0 0 18px rgba(120,200,255,.7);height:38px}
+.news.ann .tx{font-size:16px}.news.ann .tx b{color:#ffe27a}
+/* 管理員面板 */
+.adm-on{text-align:left;background:rgba(0,0,0,.3);border:1px solid #6b3d05;border-radius:10px;padding:8px 10px;margin-bottom:6px}
+.adm-on .k{font-size:12px;color:#ffe27a;font-weight:800}.adm-on .k small{color:#c9ae7c;font-weight:600}
+.adm-on .n{font-size:15px;margin:2px 0 4px;color:#fff3c4}.adm-on .n b{font:900 24px "Arial Black",Arial,sans-serif;color:#7dff9a}.adm-on .n small{font-size:12px;color:#c9ae7c}
+.adm-on .l{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13px;color:#fff3c4}.adm-on .l small{color:#c9ae7c}
+.adj{margin-top:8px}
+.adj .nm{display:flex;align-items:center;gap:6px;font-weight:900;color:#ffe27a;font-size:14px}
+.adj .nm small{margin-left:auto;font-size:12px;color:#c9ae7c;font-weight:700}
+.adj .md{width:22px;height:22px;display:inline-block}.adj .md svg{width:100%;height:100%}
+.adj .in{display:grid;grid-template-columns:1fr 64px;gap:6px;margin-top:4px}
+.adj .in input{padding:8px 10px!important;font-size:15px!important}
 /* 大獎／巨獎慶祝動畫 */
 .jpc{position:fixed;inset:0;z-index:95;overflow:hidden;display:flex;align-items:center;justify-content:center;animation:fadein .3s;-webkit-user-select:none;user-select:none}
 .jpc.out{animation:fadeout .5s forwards}
@@ -833,7 +864,9 @@ body.tight .ptab{display:none}
 
   <div class="info2">
     <div class="led sm"><div class="k">投注</div><div class="v" id="vBet">0</div></div>
+    <button class="ib" id="btnSpd" aria-label="速度"><b>1×</b><small>速度</small></button>
     <div class="msg" id="msg"></div>
+    <button class="ib" id="btnDm" aria-label="彈幕"><b>💬</b><small>彈幕</small></button>
     <div class="led sm win"><div class="k">贏取</div><div class="v" id="vWin">0</div></div>
   </div>
 
@@ -1235,21 +1268,23 @@ function pushRecent(type, amt, x, bet, tier) {
   state.stats.recent = state.stats.recent.slice(0, 12);
 }
 /* ================= 雲端連線（Google Apps Script 後端） ================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbyke-GifFRGwQ6ShCCTYWQsXZndzAi6BvSBj1VzBk8K4Bh0y85j2onK3lUhr9UX3X7Z/exec';   // ← 把 GAS「網頁應用程式網址」（結尾 /exec）貼在引號裡
+const API_URL = 'https://script.google.com/macros/s/AKfycbyrfT1MzxBgc6yzVysL7HdXrJynmryG22Y92c5-5cRJKjtIIAkx8tNIMf7ESPpZ-byq/exec';   // ← 把 GAS「網頁應用程式網址」（結尾 /exec）貼在引號裡
 const AUTH_KEY = 'haoyun_baida_auth', CACHE_KEY = 'haoyun_baida_cache_';
 let auth = null;
 try { auth = JSON.parse(localStorage.getItem(AUTH_KEY)); } catch (e) { }
 async function api(action, data, opt) {
   if (!API_URL) throw new Error('NO_API');
-  const body = JSON.stringify(Object.assign({ action }, auth ? { account: auth.account, token: auth.token } : {}, data || {}));
+  const body = JSON.stringify(Object.assign({ action }, auth ? { account: auth.account, token: auth.token, feedSince } : {}, data || {}));
   const r = await fetch(API_URL, { method: 'POST', body, keepalive: !!(opt && opt.keepalive) });
   const j = await r.json();
   if (!j.ok && j.error === 'AUTH') { authLost(); throw new Error('AUTH'); }
   if (!j.ok) throw new Error(j.error || 'ERROR');
+  if (j.feed && auth) handleFeed(j.feed);
   return j;
 }
 // 共用彩金：本機押注累積的金額，等同步時送到後端
 let newsSince = null;   // 全服公告：看過的最後一筆
+let feedSince = null;   // 彈幕／管理員公告：看過的最後一筆
 let contrib = { grand: 0, major: 0, minor: 0, mini: 0 };
 const hasContrib = () => JPK.some(k => contrib[k] > 0);
 function takeContrib() { const c = contrib; contrib = { grand: 0, major: 0, minor: 0, mini: 0 }; return c; }
@@ -1302,6 +1337,10 @@ try { Object.assign(autoCfg, JSON.parse(localStorage.getItem('hb_auto') || '{}')
 let autoRun = null;   // { left, startBal }
 let buyM = 1;   // 購買免費遊戲的倍數（長按調整）
 try { const v = +localStorage.getItem('hb_buym'); if (v >= 1 && v <= 100) buyM = Math.round(v); } catch (e) { }
+let spd = 1;   // 快速模式：1／2／3／5 倍速
+try { const v = +localStorage.getItem('hb_spd'); if ([1, 2, 3, 5].includes(v)) spd = v; } catch (e) { }
+let slamFn = null, hurry = false;   // 轉動中再按一次旋轉：立刻停輪
+const fx = () => hurry ? Math.max(spd, 5) : spd;
 let busy = false, autoOn = false, jpFrozen = null, msgTimer = null, flashTimer = null;
 
 /* ================= 音效 ================= */
@@ -1532,7 +1571,7 @@ function renderAll() {
   renderBetPanel();
   $('#vBal').textContent = fmt(shownBalance);
   $('#vBet').textContent = inFG ? '免費' : fmt(cfg.bet);
-  $('#btnSpin').disabled = busy || inFG;
+  $('#btnSpin').disabled = inFG && !busy;   // 轉動中仍可按（立刻停輪）
   $('#btnBuy').disabled = busy || inFG || !!state.fgPending;
   { const sm = $('#btnBuy small'); if (sm) sm.textContent = (buyM > 1 ? `×${buyM}・` : '') + fmt(E.BUY_PRICE * buyM) + ' 積分'; }
   $('#btnAuto').disabled = inFG;
@@ -1577,11 +1616,11 @@ function flash(t) {
   clearInterval(msgTimer); setMsg(t, true);
   clearTimeout(flashTimer); flashTimer = setTimeout(() => setMsg(''), 2800);
 }
-function countUp(from, to, ms, onStep) {
+function countUp(from, to, ms, onStep, skippable) {
   return new Promise(res => {
     const t0 = performance.now();
     const step = now => {
-      const p = Math.min(1, (now - t0) / ms), v = from + (to - from) * (1 - Math.pow(1 - p, 3));
+      const p = skippable && hurry ? 1 : Math.min(1, (now - t0) / ms), v = from + (to - from) * (1 - Math.pow(1 - p, 3));
       onStep(v); if (p < 1) requestAnimationFrame(step); else res();
     };
     requestAnimationFrame(step);
@@ -1626,35 +1665,49 @@ function animateReels(grid, hot) {
     const reels = [...reelsEl.children];
     const cell = reels[0].clientHeight / 3;
     const st = strips();
+    const k = spd;
     let extra = hot ? 500 : 0, consec = 0, done = 0;
+    const lands = [];
     reels.forEach((reel, r) => {
       const strip = reel.querySelector('.strip');
       const prev = [...strip.children].slice(0, 3).map(c => c.dataset.s);
       const antic = consec >= 2 && consec === r;   // 前面每一輪都連續出現青花聚寶
       if (antic) extra += 1000;
       if (consec === r && grid[r].includes('S')) consec++;
-      const n = 14 + r * 5 + Math.round(extra / 55);
+      const n = Math.round((14 + r * 5) / Math.sqrt(k)) + Math.round(extra / 55 / k);
       const fill = []; for (let i = 0; i < n; i++) fill.push(st[r][Math.floor(rand() * st[r].length)]);
       strip.innerHTML = [...grid[r], ...fill, ...prev].map(cellHTML).join('');
       strip.style.transition = 'none';
       strip.style.transform = `translateY(${-(n + 3) * cell}px)`;
       void strip.offsetHeight;
-      const dur = 620 + r * 230 + extra;
-      if (antic) setTimeout(() => reel.classList.add('antic'), dur - extra);
+      const dur = Math.round((620 + r * 230 + extra) / k);
+      const tA = antic ? setTimeout(() => reel.classList.add('antic'), dur - extra / k) : null;
       requestAnimationFrame(() => {
         strip.style.transition = `transform ${dur}ms cubic-bezier(.18,.6,.32,1)`;
         strip.style.transform = 'translateY(0)';
       });
-      setTimeout(() => {
+      let landed = false;
+      const land = quiet => {
+        if (landed) return; landed = true;
+        clearTimeout(tL); clearTimeout(tA);
         reel.classList.remove('antic');
         strip.style.transition = 'none';
         strip.innerHTML = grid[r].map(cellHTML).join('');
         strip.style.transform = 'translateY(0)';
         strip.animate([{ transform: 'translateY(7px)' }, { transform: 'translateY(0)' }], { duration: 140, easing: 'ease-out' });
-        SND.stop(); if (grid[r].includes('S')) SND.scat();
-        if (++done === 5) setTimeout(res, 140);
-      }, dur + 30);
+        if (!quiet) { SND.stop(); if (grid[r].includes('S')) SND.scat(); }
+        if (++done === 5) { slamFn = null; $('#btnSpin').classList.remove('slam'); setTimeout(res, 140); }
+      };
+      const tL = setTimeout(() => land(false), dur + 30);
+      lands.push(land);
     });
+    // 再按一次「旋轉」：所有還在轉的輪子立刻停下
+    slamFn = () => {
+      slamFn = null; hurry = true;
+      SND.stop(); if (grid.some(c => c.includes('S'))) SND.scat();
+      lands.forEach(f => f(true));
+    };
+    $('#btnSpin').classList.add('slam');
   });
 }
 const cellEl = (r, row) => reelsEl.children[r].querySelector('.strip').children[row];
@@ -1675,7 +1728,7 @@ function flyCoin(from) {
       { transform: 'translate(0,0) scale(1.2)' },
       { transform: `translate(${dx * .5}px,${dy * .5 - 90}px) scale(1.5) rotate(200deg)` },
       { transform: `translate(${dx}px,${dy}px) scale(.7) rotate(400deg)` }
-    ], { duration: 680, easing: 'cubic-bezier(.3,.55,.45,1)' });
+    ], { duration: Math.max(260, 680 / fx()), easing: 'cubic-bezier(.3,.55,.45,1)' });
     an.onfinish = () => { c.remove(); SND.coin(); bumpIngot(); state.pile++; renderPile(); res(); };
   });
 }
@@ -1708,7 +1761,7 @@ async function doThrows(cells, jp) {
   for (let i = 0; i <= last; i++) {
     const [r, row] = cells[i];
     flights.push(flyCoin(cellEl(r, row)));
-    await sleep(230);
+    await sleep(230 / fx());
   }
   await Promise.all(flights);
   cells.forEach(([r, row]) => cellEl(r, row).classList.remove('throw'));
@@ -1757,7 +1810,7 @@ async function showWins(ev, cfg) {
   } else {
     SND.win();
     const bal0 = shownBalance;
-    await countUp(0, ev.total, Math.min(1600, 450 + x * 120), v => { setWin(v); shownBalance = bal0 + v; $('#vBal').textContent = fmt(shownBalance); });
+    await countUp(0, ev.total, Math.min(1600, 450 + x * 120) / fx(), v => { setWin(v); shownBalance = bal0 + v; $('#vBal').textContent = fmt(shownBalance); }, true);
   }
   setWin(ev.total);
 }
@@ -2317,7 +2370,7 @@ async function spin() {
     state.stats.spins++; state.stats.wagered += cfg.bet;
     if (autoOn && autoRun) autoRun.left--;
   }
-  busy = true; clearWinShow(); setWin(0); setMsg(''); renderAll();
+  busy = true; hurry = false; clearWinShow(); setWin(0); setMsg(''); renderAll();
 
   // 先決定結果並存檔（重新整理也不會改變結果）
   const { grid } = E.spinGrid(strips(), rand);
@@ -2409,11 +2462,11 @@ async function spin() {
   }
   busy = false; renderAll();
   if (state.fgPending) { chooseFG(); return; }
-  if (state.fg) { setTimeout(spin, 650); return; }
+  if (state.fg) { setTimeout(spin, 650 / spd); return; }
   if (autoOn) {
     const why = autoStopReason(inFG ? null : lastSpinWin);
     if (why) { stopAuto(); if (state.balance < 33) gameOver(); else flash('自動旋轉停止：' + why); return; }
-    setTimeout(() => { if (autoOn && !busy) spin(); }, 500);
+    setTimeout(() => { if (autoOn && !busy) spin(); }, 500 / spd);
   }
 }
 let lastSpinWin = 0;
@@ -2430,7 +2483,22 @@ function autoStopReason(win) {
 function stopAuto() { autoOn = false; autoRun = null; renderAll(); }
 
 /* ================= 按鈕 ================= */
-$('#btnSpin').addEventListener('click', () => { ac(); spin(); });
+function spinPress() {
+  ac();
+  if (slamFn) { slamFn(); return; }          // 轉動中：立刻停輪
+  if (busy) { hurry = true; return; }        // 顯示贏分中：立刻跳完
+  spin();
+}
+$('#btnSpin').addEventListener('click', spinPress);
+$('#btnSpd').addEventListener('click', () => {
+  ac(); SND.click();
+  spd = { 1: 2, 2: 3, 3: 5, 5: 1 }[spd] || 1;
+  try { localStorage.setItem('hb_spd', spd); } catch (e) { }
+  renderSpd(); flash(spd === 1 ? '一般速度' : `快速模式 ${spd} 倍速`);
+});
+function renderSpd() { const b = $('#btnSpd'); b.querySelector('b').textContent = spd + '×'; b.classList.toggle('on', spd > 1); }
+renderSpd();
+$('#btnDm').addEventListener('click', () => { if (!auth) return; SND.click(); openChat(); });
 $('#btnAuto').addEventListener('click', () => {
   ac(); SND.click();
   if (autoOn) { stopAuto(); flash('自動旋轉已停止'); return; }
@@ -2579,7 +2647,7 @@ document.addEventListener('keydown', e => {
   else if (keyBuf.endsWith('huanglienchun')) { forceJp = 'grand'; keyBuf = ''; }
 });
 document.addEventListener('keydown', e => {
-  if (e.code === 'Space' && !document.querySelector('.ov') && $('#login').classList.contains('hide') && !/INPUT|TEXTAREA/.test(e.target.tagName)) { e.preventDefault(); ac(); spin(); }
+  if (e.code === 'Space' && !document.querySelector('.ov') && $('#login').classList.contains('hide') && !/INPUT|TEXTAREA/.test(e.target.tagName)) { e.preventDefault(); spinPress(); }
 });
 
 let bonusBusy = false;
@@ -2772,6 +2840,9 @@ ${E.FG_OPTIONS.map((o, i) => `<tr><td>${o.spins} 次</td><td>+${o.wilds} 個</td
 <div class="pti"><div class="ic">${SVG.S}</div><div class="pv"><div class="nm">青花聚寶</div>3/4/5 個<br>${fmt(cfg.bet * 5)} / ${fmt(cfg.bet * 10)} / ${fmt(cfg.bet * 50)}</div></div></div>
 <h3>九、其他</h3>
 <ul><li>積分不足時無法旋轉，請降低押注；積分用完可領每日補助。</li>
+<li><b>轉動中再按一次「旋轉」</b>（或空白鍵）轉輪會立刻停下，贏分也會直接跳完；結果在按下旋轉時就已決定，提早停輪不影響輸贏。</li>
+<li><b>速度按鈕</b>（投注右邊）：點一下切換 1×／2×／3×／5× 倍速，會記住你的選擇。大贏、預告、彩金等特效維持原本速度。</li>
+<li><b>彈幕</b>（贏取左邊 💬）：輸入文字送出，全服在線玩家畫面都會飄過「帳號：內容」；也可以勾選不顯示別人的彈幕。</li>
 <li><b>自動旋轉</b>：可設定旋轉次數，以及「賺到多少」「賠到多少」「單次贏分超過多少」就停止；再按一次可隨時停止。</li>
 <li><b>全服公告</b>：任何玩家打中迷你獎、小獎、大獎或巨獎時，所有線上玩家畫面上方都會出現跑馬燈。</li>
 <li><b>排行榜</b>可切換：積分、今日盈虧、本週盈虧（週一起算）、總盈虧、單次最大贏分、最高倍數、彩金次數。</li>
@@ -2950,6 +3021,8 @@ function authLost() {
   location.reload();
 }
 let pollTimer = null;
+const POLL_MS = 4000;   // 每 4 秒更新一次彩金、公告、彈幕
+let polling = false;
 function startGame(j) {
   // 伺服器與本機快取取較新的版本（避免同步途中重新整理而遺失最後幾轉）
   let srv = j.state, local = null;
@@ -2962,6 +3035,7 @@ function startGame(j) {
   contrib = { grand: 0, major: 0, minor: 0, mini: 0 };
   applyJp(j.jp);
   if (j.news) newsSince = j.news.last;
+  feedSince = j.feed ? j.feed.last : null;
   shownBalance = state.balance;
   clearWinShow(); setWin(0);
   setGrid(state.grid || E.spinGrid(E.BASE_STRIPS, rand).grid);
@@ -2972,8 +3046,11 @@ function startGame(j) {
   pollTimer = setInterval(() => {   // 共用彩金即時更新
     if (!auth || document.visibilityState !== 'visible') return;
     if (dirty || hasContrib()) { doSync(); return; }
-    if (!syncing) api('jackpots', { since: newsSince }).then(r => { applyJp(r.jp); handleNews(r.news); handleGift(r.giftTotal); }).catch(() => { });
-  }, 8000);
+    if (!syncing && !polling) {
+      polling = true;
+      api('jackpots', { since: newsSince }).then(r => { applyJp(r.jp); handleNews(r.news); handleGift(r.giftTotal); }).catch(() => { }).finally(() => { polling = false; });
+    }
+  }, POLL_MS);
   if (state.fgPending) setTimeout(chooseFG, 400);
   else if (state.fg) { setMsg('繼續上次的免費遊戲…'); setTimeout(spin, 900); }
   else if (state.balance < 33) { setMsg('積分已用完'); gameOver(); }
@@ -3031,6 +3108,82 @@ function openGift() {
   } });
 }
 
+/* ================= 管理員功能 ================= */
+function openAdmin() {
+  if (!isAdmin()) return;
+  const html = `<h2 class="serif" style="font-size:20px;margin:2px 0 6px">🛠 管理員功能</h2>
+    <div class="adm-on"><div class="k">目前在線 <small>（20 秒內有連線）</small></div><div class="n" id="adN">…</div><div class="l" id="adL"></div></div>
+    <button class="btn2" id="adAnn">📢 發送公告跑馬燈</button>
+    <button class="btn2" id="adJp">💰 調整獎池金額</button>
+    <button class="btn2" id="adGift">🎁 贈送積分</button>
+    <div class="btns"><button class="btn2 grey" data-x="0">關閉</button></div>`;
+  overlay(html, { btn: '', cls: 'sheet', bind: (o, close) => {
+    let alive = true;
+    const load = () => api('online').then(r => {
+      if (!alive) return;
+      o.querySelector('#adN').innerHTML = `<b>${r.online.length}</b> 人 <small>／共 ${r.total} 個帳號</small>`;
+      o.querySelector('#adL').innerHTML = r.online.map(x => `<span>🟢 ${escH(x.account)} <small>${fmt(x.balance)}</small></span>`).join('') || '<span style="opacity:.6">目前沒有人在線</span>';
+    }).catch(e => { if (alive) o.querySelector('#adN').textContent = '讀取失敗'; });
+    load(); const t = setInterval(load, POLL_MS);
+    const done = () => { alive = false; clearInterval(t); close(); };
+    o.querySelector('#adAnn').onclick = () => { done(); openAnnounce(); };
+    o.querySelector('#adJp').onclick = () => { done(); openJpAdmin(); };
+    o.querySelector('#adGift').onclick = () => { done(); openGift(); };
+    o.querySelector('[data-x="0"]').onclick = done;
+  } });
+}
+function openAnnounce() {
+  const quick = ['今晚 9 點彩金雙倍！', '伺服器維護中，請稍後再玩', '恭喜大家，祝好運連連！'];
+  overlay(`<h2 class="serif" style="font-size:20px;margin:2px 0 6px">📢 發送公告</h2>
+    <div class="gform"><label for="anT">公告內容（最多 100 字，所有在線玩家畫面上方會跑兩次）</label>
+      <input id="anT" type="text" maxlength="100" autocomplete="off" placeholder="輸入公告">
+      <div class="chips" style="grid-template-columns:1fr;margin-top:8px">${quick.map(q => `<button class="chip" data-q="${escH(q)}">${escH(q)}</button>`).join('')}</div>
+      <div class="gmsg" id="anM"></div></div>
+    <div class="btns"><button class="btn2 grey" data-x="0">返回</button><button class="btn2" data-x="1">發送</button></div>`,
+  { btn: '', cls: 'sheet', bind: (o, close) => {
+    const T = o.querySelector('#anT'), M = o.querySelector('#anM'), go = o.querySelector('[data-x="1"]');
+    o.querySelectorAll('.chip[data-q]').forEach(c => c.onclick = () => { SND.click(); T.value = c.dataset.q; });
+    go.onclick = async () => {
+      const text = T.value.trim();
+      if (!text) { M.textContent = '請輸入內容'; M.style.color = '#ff9a8a'; return; }
+      go.disabled = true;
+      try { await api('announce', { text }); M.textContent = '已發送'; M.style.color = '#7dff9e'; T.value = ''; }
+      catch (e) { M.textContent = e.message; M.style.color = '#ff9a8a'; }
+      finally { go.disabled = false; }
+    };
+    o.querySelector('[data-x="0"]').onclick = () => { close(); openAdmin(); };
+  } });
+}
+function openJpAdmin() {
+  const row = k => `<div class="adj" data-k="${k}"><div class="nm"><span class="md">${medal(k)}</span>${JPSTYLE[k].label}<small id="adC_${k}">目前 ₱${fmt2(state.jp[k])}</small></div>
+    <div class="in"><input type="text" inputmode="decimal" placeholder="新金額"><button class="chip" data-set="${k}">設定</button></div></div>`;
+  overlay(`<h2 class="serif" style="font-size:20px;margin:2px 0 6px">💰 調整獎池金額</h2>
+    <div class="gform">${JPK.map(row).join('')}
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:700;color:#f3d38a"><input type="checkbox" id="ajSeed" style="width:auto"> 同時改成「起始金額」（被打中後回到這個金額）</label>
+      <div class="gmsg" id="ajM"></div></div>
+    <div class="btns"><button class="btn2 grey" data-x="0">返回</button></div>`,
+  { btn: '', cls: 'sheet', bind: (o, close) => {
+    const M = o.querySelector('#ajM');
+    o.querySelectorAll('[data-set]').forEach(b => b.onclick = async () => {
+      const k = b.dataset.set, inp = b.parentNode.querySelector('input');
+      const amount = Number(String(inp.value).replace(/[,\s]/g, ''));
+      if (!(amount > 0)) { M.textContent = '請輸入大於 0 的金額'; M.style.color = '#ff9a8a'; return; }
+      const seed = o.querySelector('#ajSeed').checked;
+      const ok = await confirmBox(`<h2 class="serif">確認調整</h2><p>把 <b>${JPSTYLE[k].label}</b> 改成<br><b style="color:#ffe27a;font-size:20px">₱${fmt2(amount)}</b>${seed ? '<br>（並設為起始金額）' : ''}</p>`, '確定', '取消');
+      if (!ok) return;
+      b.disabled = true;
+      try {
+        const r = await api('setjp', { tier: k, amount, seed });
+        applyJp(r.jp); inp.value = '';
+        JPK.forEach(t => { const c = o.querySelector('#adC_' + t); if (c) c.textContent = '目前 ₱' + fmt2(state.jp[t]); });
+        M.textContent = `${JPSTYLE[k].label} 已改成 ₱${fmt2(amount)}，所有玩家幾秒內會看到`; M.style.color = '#7dff9e';
+      } catch (e) { M.textContent = e.message; M.style.color = '#ff9a8a'; }
+      finally { b.disabled = false; }
+    });
+    o.querySelector('[data-x="0"]').onclick = () => { close(); openAdmin(); };
+  } });
+}
+
 /* ================= 設定／排行榜 ================= */
 $('#btnSet').addEventListener('click', () => {
   SND.click();
@@ -3039,10 +3192,10 @@ $('#btnSet').addEventListener('click', () => {
     <button class="btn2" id="sRules">📖 規則與機率</button>
     <button class="btn2" id="sSound">${state.sound ? '🔊 音效：開' : '🔇 音效：關'}</button>
     ${isStandalone() ? '' : '<button class="btn2" id="sInst">📲 加到主畫面</button>'}
-    ${isAdmin() ? '<button class="btn2 admin" id="sGift">🎁 贈送積分（管理員）</button>' : ''}
+    ${isAdmin() ? '<button class="btn2 admin" id="sGift">🛠 管理員功能</button>' : ''}
     <button class="btn2 grey" id="sOut">登出</button></div>`, {
     btn: '關閉', bind: (o, close) => {
-      const gb = o.querySelector('#sGift'); if (gb) gb.onclick = () => { close(); openGift(); };
+      const gb = o.querySelector('#sGift'); if (gb) gb.onclick = () => { close(); openAdmin(); };
       o.querySelector('#sRules').onclick = () => { close(); openRules(); };
       const ib = o.querySelector('#sInst'); if (ib) ib.onclick = () => { close(); openInstall(); };
       o.querySelector('#sSound').onclick = e => {
@@ -3124,12 +3277,92 @@ function handleNews(news, self) {
   showNextNews();
 }
 const TIER_OF = { '巨獎': 'grand', '大獎': 'major', '小獎': 'minor', '迷你獎': 'mini' };
+/* ================= 彈幕與管理員公告 ================= */
+function handleFeed(feed) {
+  if (!feed) return;
+  if (feedSince === null) { feedSince = feed.last; return; }
+  (feed.items || []).forEach(it => {
+    if (it.id <= feedSince) return;
+    if (it.type === 'chat') danmaku(it.account, it.text);
+    else if (it.type === 'ann') { newsQ.unshift({ ann: true, account: it.account, text: it.text }); showNextNews(); }
+  });
+  feedSince = Math.max(feedSince, feed.last || 0);
+}
+const DM_LANES = 6;
+const dmBusy = new Array(DM_LANES).fill(0);
+function danmaku(name, text) {
+  if (dmOff) return;
+  let layer = document.getElementById('dm');
+  if (!layer) { layer = document.createElement('div'); layer.id = 'dm'; document.body.appendChild(layer); }
+  const now = performance.now();
+  // 找最早空出來的軌道
+  let lane = 0; for (let i = 1; i < DM_LANES; i++) if (dmBusy[i] < dmBusy[lane]) lane = i;
+  const d = document.createElement('div');
+  const me = auth && name === auth.account;
+  d.className = 'dmi' + (me ? ' me' : '') + (String(name).toLowerCase() === 'chun' ? ' adm' : '');
+  d.innerHTML = `<b>${escH(name)}</b>：${escH(text)}`;
+  d.style.top = `calc(${(lane * 7.2 + 9).toFixed(1)}vh + env(safe-area-inset-top))`;
+  layer.appendChild(d);
+  const w = d.offsetWidth, vw = innerWidth, speed = Math.min(150, Math.max(95, (vw + w) / 7.5));   // px/秒
+  const dur = (vw + w) / speed * 1000;
+  // 下一則同軌道要等這則完全進場再多留一點空隙
+  dmBusy[lane] = Math.max(now, dmBusy[lane]) + (w + 40) / speed * 1000;
+  const delay = Math.max(0, dmBusy[lane] - now - (w + 40) / speed * 1000);
+  d.animate([{ transform: `translateX(${vw}px)` }, { transform: `translateX(${-w - 10}px)` }], { duration: dur, delay, easing: 'linear', fill: 'both' })
+    .finished.then(() => d.remove()).catch(() => d.remove());
+}
+let dmOff = false;
+try { dmOff = localStorage.getItem('hb_dmoff') === '1'; } catch (e) { }
+function openChat() {
+  ac();
+  const quick = ['大家好 👋', '恭喜恭喜 🎉', '衝啊！🔥', '好運來 🧧', '求巨獎 🙏', '哈哈哈 😆', '又沒中 😭', '晚安 🌙'];
+  const html = `<h2 class="serif" style="font-size:20px;margin:2px 0 6px">💬 發送彈幕</h2>
+    <div class="gform">
+      <input id="dmT" type="text" maxlength="40" autocomplete="off" enterkeyhint="send" placeholder="說點什麼…（最多 40 字）">
+      <div class="chips" style="grid-template-columns:repeat(2,1fr);margin-top:8px">${quick.map(q => `<button class="chip" data-q="${escH(q)}">${escH(q)}</button>`).join('')}</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:700;color:#f3d38a"><input type="checkbox" id="dmOff" style="width:auto" ${dmOff ? 'checked' : ''}> 不顯示別人的彈幕</label>
+      <div class="gmsg" id="dmM"></div>
+    </div>
+    <div class="btns"><button class="btn2 grey" data-x="0">關閉</button><button class="btn2" data-x="1">送出</button></div>`;
+  overlay(html, { btn: '', cls: 'sheet', bind: (o, close) => {
+    const T = o.querySelector('#dmT'), M = o.querySelector('#dmM'), go = o.querySelector('[data-x="1"]');
+    setTimeout(() => T.focus(), 250);
+    const send = async text => {
+      text = String(text || '').trim();
+      if (!text) { M.textContent = '請輸入內容'; M.style.color = '#ff9a8a'; return; }
+      go.disabled = true;
+      try { await api('chat', { text }); close(); }
+      catch (e) { M.textContent = e.message === 'AUTH' ? '登入已失效' : e.message === 'NO_API' ? '尚未連線到伺服器' : e.message; M.style.color = '#ff9a8a'; }
+      finally { go.disabled = false; }
+    };
+    go.onclick = () => send(T.value);
+    T.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); send(T.value); } });
+    o.querySelectorAll('.chip[data-q]').forEach(c => c.onclick = () => { SND.click(); send(c.dataset.q); });
+    o.querySelector('#dmOff').onchange = e => { dmOff = e.target.checked; try { localStorage.setItem('hb_dmoff', dmOff ? '1' : '0'); } catch (er) { } if (dmOff) { const l = document.getElementById('dm'); if (l) l.innerHTML = ''; } };
+    o.querySelector('[data-x="0"]').onclick = () => close();
+    o.addEventListener('click', e => { if (e.target === o) close(); });
+  } });
+}
 async function showNextNews() {
   if (newsShowing || !newsQ.length) return;
   // 自己正在打元寶／翻牌時先不播，避免提前揭曉結果
-  if (jpFrozen || document.querySelector('.pick')) { setTimeout(showNextNews, 1500); return; }
+  if (!newsQ[0].ann && (jpFrozen || document.querySelector('.pick'))) { setTimeout(showNextNews, 1500); return; }
   newsShowing = true;
-  const it = newsQ.shift(), tier = TIER_OF[it.name] || 'mini';
+  const it = newsQ.shift();
+  if (it.ann) {   // 管理員公告：跑馬燈播兩次
+    const bar = document.createElement('div'); bar.className = 'news ann';
+    bar.innerHTML = `<div class="news-in"><span class="tx">📢 <b>公告</b>：${escH(it.text)}</span></div>`;
+    document.body.appendChild(bar);
+    tone(784, .15, 'triangle', .06); tone(1175, .25, 'triangle', .06, .14);
+    const tx = bar.querySelector('.news-in');
+    for (let k = 0; k < 2; k++) {
+      const dist = bar.clientWidth + tx.scrollWidth;
+      await tx.animate([{ transform: `translateX(${bar.clientWidth}px)` }, { transform: `translateX(${-tx.scrollWidth}px)` }], { duration: Math.max(7000, dist * 12), easing: 'linear' }).finished.catch(() => { });
+    }
+    bar.classList.add('out'); await sleep(300); bar.remove();
+    newsShowing = false; showNextNews(); return;
+  }
+  const tier = TIER_OF[it.name] || 'mini';
   const me = auth && it.account === auth.account;
   const bar = document.createElement('div'); bar.className = 'news ' + tier;
   bar.innerHTML = `<div class="news-in"><span class="nm">${medal(tier)}</span><span class="tx">🎉 恭喜 <b>${String(it.account).replace(/[<>&]/g, '')}</b>${me ? '（你）' : ''} 打中 <b class="tn">${it.name}</b> <b class="am">₱${fmt2(it.amount)}</b>！🎉</span></div>`;
