@@ -3,7 +3,7 @@
  * 部署 GAS 後，把「網頁應用程式網址」貼到下方 API_URL
  * （或在登入頁「後端網址設定」輸入，會存在瀏覽器）
  * ========================================================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbz35pNHvzl0htXyj6lZxjK6Dkf8oi574fS-4ka04ttBvptF1fB8SYOwtHjqDd5BYbUy/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbytSzg5v_uhEr4LfdBVA2Hs9jH3KNgK-IhEeyTYY5VOpEGAgBdlrTyeFhKqgUBsBw4_/exec';
 
 /* ---------- 類別設定（含輸入規則說明） ---------- */
 const CATS = [
@@ -134,7 +134,15 @@ function initAuth() {
     if (f.password.value.length < 6) return authMsg('密碼至少 6 個字元', 'err');
     if (f.password.value !== f.confirm.value) return authMsg('兩次輸入的密碼不一致', 'err');
     await withBusy(f, async () => {
-      await api('register', { account, password: f.password.value });
+      const reg = await api('register', { account, password: f.password.value });
+      if (reg.pending) {
+        // 一般帳號需等管理員審核：切回登入頁並提示
+        $$('.auth-tab').forEach(x => x.classList.toggle('active', x.dataset.tab === 'login'));
+        $('#loginForm').classList.remove('hidden');
+        $('#registerForm').classList.add('hidden');
+        $('#loginForm').account.value = account;
+        throw Object.assign(new Error('註冊成功！帳號需等待管理員審核通過後才能登入。'), { notice: true });
+      }
       const r = await api('login', { account, password: f.password.value });
       onLoggedIn(r.token, r.account);
     });
@@ -146,7 +154,7 @@ async function withBusy(form, fn) {
   btn.disabled = true;
   authMsg('處理中…');
   try { await fn(); authMsg(''); form.reset(); }
-  catch (err) { authMsg(err.message, 'err'); }
+  catch (err) { authMsg(err.message, err.notice ? 'ok' : 'err'); if (err.notice) form.reset(); }
   finally { btn.disabled = false; }
 }
 
@@ -189,6 +197,7 @@ async function showApp() {
     const r = await api('watchlist');
     state.items = r.items;
     state.settings = r.settings || {};
+    state.admin = !!r.admin;
     const order = (r.settings && r.settings.cardOrder) || '';
     state.cardOrder = order ? order.split(',') : null;
     renderGrid();

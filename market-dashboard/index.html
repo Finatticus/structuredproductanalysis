@@ -66,7 +66,7 @@
       <span class="clock" id="clock">--:--:--</span>
       <span class="user" id="userName"></span>
       <button class="nav-btn nav-help" data-section="help" title="額度限制與網站說明">說明</button>
-      <button class="btn btn-ghost btn-sm" id="logoutBtn">登出</button>
+      <button class="nav-btn nav-help" data-section="settings" title="帳號、登出與管理">⚙ 設定</button>
     </div>
   </header>
 
@@ -205,6 +205,33 @@
       <p class="macro-note">範圍：上市＋上櫃普通股與 ETF。資料來源：臺灣證券交易所、櫃買中心（每日收盤後由後端自動更新；融資約 21:00 公布）。
         本益比、殖利率、淨值比為交易所公布值；月營收為最近一期公告。點代號可開啟個股研究。</p>
     </div>
+    <!-- 設定 -->
+    <div class="section hidden" id="section-settings">
+      <div class="toolbar"><div class="toolbar-left"><h1>設定</h1></div></div>
+      <div class="set-grid">
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">帳號</h2></div>
+          <div class="panel-body">
+            <div class="kpis">
+              <div class="kpi"><div class="kpi-l">目前帳號</div><div class="kpi-v" id="setAccount"></div></div>
+              <div class="kpi"><div class="kpi-l">身分</div><div class="kpi-v sm" id="setRole"></div></div>
+            </div>
+            <p class="foot-note">登入有效 6 小時，使用中會自動延長。清單與版面設定存在你的帳號，換電腦登入也一樣。</p>
+            <button class="btn btn-ghost" id="logoutBtn">登出</button>
+          </div>
+        </section>
+        <section class="panel hidden" id="setAdmin">
+          <div class="panel-head"><h2 class="panel-title">帳號審核（管理員）</h2><span id="setPendingCount" class="muted"></span>
+            <div class="panel-tools"><button class="btn btn-ghost btn-sm" id="setReload">↻ 重新整理</button></div></div>
+          <div class="panel-body">
+            <div id="setUsers"></div>
+            <p class="foot-note">新註冊的帳號需經管理員「通過」才能登入。「停用」會讓已登入的使用者最慢 5 分鐘內被登出；「刪除」會移除帳號與其資料（僅限未通過的帳號），之後可用同名重新註冊。
+              審核狀態記錄在試算表 Account 工作頁的 D 欄。</p>
+          </div>
+        </section>
+      </div>
+    </div>
+
     <!-- 說明 -->
     <div class="section hidden" id="section-help">
       <div class="toolbar">
@@ -275,5 +302,6 @@
 <script src="research.js"></script>
 <script src="screener.js"></script>
 <script src="help.js"></script>
+<script src="settings.js"></script>
 </body>
 </html>

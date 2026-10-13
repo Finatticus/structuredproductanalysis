@@ -584,6 +584,13 @@ main { max-width: 1440px; margin: 0 auto; padding: 20px 24px 8px; }
   .nav-help { padding: 4px 8px; }
 }
 
+/* 設定 */
+.set-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; max-width: 980px; }
+.set-grid .panel { grid-column: auto; }
+.set-tbl tr.pending td { background: #fff8e1; }
+.set-act { white-space: nowrap; }
+.set-act .btn { padding: 4px 10px; font-size: 12px; margin-right: 4px; }
+
 /* 預留區 */
 .placeholder {
   background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius);

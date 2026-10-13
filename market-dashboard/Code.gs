@@ -14,6 +14,10 @@
 /* ======================== 設定 ======================== */
 const SPREADSHEET_ID = '';            // 若腳本是從試算表「擴充功能 → Apps Script」建立，留空即可
 const ACCOUNT_SHEET = 'Account';
+const ADMIN_ACCOUNT = 'michael';   // 管理員帳號：不需審核，可在「設定」審核其他人
+// Account 工作頁 D 欄（審核狀態）：空白＝待審核、通過、拒絕、停用；只有「通過」與管理員可以登入
+const ST_APPROVED = '通過', ST_REJECTED = '拒絕', ST_DISABLED = '停用';
+const STATUS_CACHE_SEC = 300;     // 審核狀態快取，停用後最慢 5 分鐘生效
 const TOKEN_TTL_SEC = 21600;          // 登入有效 6 小時（CacheService 上限）
 const QUOTE_CACHE_SEC = 8;            // 報價快取秒數，多人/多分頁共用以節省 UrlFetch 配額
 const WATCH_HEADERS = ['類別', '代碼', '顯示名稱', '資料來源', '新增時間'];
@@ -99,12 +103,21 @@ function route_(req) {
   switch (req.action) {
     case 'register': return register_(req.account, req.password);
     case 'login':    return login_(req.account, req.password);
+    case 'adminUsers': {
+      requireAdmin_(req.token);
+      return { ok: true, users: listUsers_() };
+    }
+    case 'adminReview': {
+      requireAdmin_(req.token);
+      reviewUser_(String(req.account || ''), String(req.decision || ''));
+      return { ok: true, users: listUsers_() };
+    }
     case 'logout':
       if (req.token) CacheService.getScriptCache().remove('tok_' + req.token);
       return { ok: true };
     case 'watchlist': {
       const acc = auth_(req.token);
-      return { ok: true, account: acc, items: getWatchlist_(acc), settings: getSettings_(acc) };
+      return { ok: true, account: acc, admin: isAdmin_(acc), items: getWatchlist_(acc), settings: getSettings_(acc) };
     }
     case 'reorder': {
       const acc = auth_(req.token);
@@ -177,12 +190,12 @@ function register_(account, password) {
     if (ss.getSheetByName(account)) throw new Error('此帳號名稱已被使用');
 
     const salt = Utilities.getUuid().replace(/-/g, '').slice(0, 16);
-    sh.appendRow([account, salt + '$' + sha256_(salt + password), new Date()]);
-    createUserSheet_(account);
+    sh.appendRow([account, salt + '$' + sha256_(salt + password), new Date(), '']);
+    if (isAdmin_(account)) createUserSheet_(account); // 一般帳號的工作頁在審核通過、第一次登入時才建立
   } finally {
     lock.releaseLock();
   }
-  return { ok: true };
+  return { ok: true, pending: !isAdmin_(account) };
 }
 
 function login_(account, password) {
@@ -196,9 +209,82 @@ function login_(account, password) {
   if (!ok) throw new Error('帳號或密碼錯誤');
 
   const realName = String(sh.getRange(row, 1).getValue());
+  const status = String(sh.getRange(row, 4).getValue() || '').trim();
+  if (!isAdmin_(realName) && status !== ST_APPROVED) throw new Error(statusMessage_(status));
   const token = Utilities.getUuid();
   CacheService.getScriptCache().put('tok_' + token, realName, TOKEN_TTL_SEC);
-  return { ok: true, token: token, account: realName };
+  return { ok: true, token: token, account: realName, admin: isAdmin_(realName) };
+}
+
+function isAdmin_(account) {
+  return String(account || '').trim().toLowerCase() === ADMIN_ACCOUNT.toLowerCase();
+}
+
+function statusMessage_(status) {
+  if (status === ST_REJECTED) return '此帳號未通過審核，請聯絡管理員';
+  if (status === ST_DISABLED) return '此帳號已被停用，請聯絡管理員';
+  return '帳號審核中，請等待管理員審核通過後再登入';
+}
+
+/** 帳號目前是否可使用（快取 5 分鐘） */
+function accountAllowed_(account) {
+  if (isAdmin_(account)) return true;
+  const cache = CacheService.getScriptCache();
+  const key = 'st_' + account.toLowerCase();
+  let st = cache.get(key);
+  if (st == null) {
+    const sh = accountSheet_();
+    const row = findAccountRow_(sh, account);
+    st = row ? String(sh.getRange(row, 4).getValue() || '').trim() || 'pending' : 'none';
+    cache.put(key, st, STATUS_CACHE_SEC);
+  }
+  return st === ST_APPROVED;
+}
+
+function requireAdmin_(token) {
+  const acc = auth_(token);
+  if (!isAdmin_(acc)) throw new Error('需要管理員權限');
+  return acc;
+}
+
+function listUsers_() {
+  const sh = accountSheet_();
+  const last = sh.getLastRow();
+  if (last < 2) return [];
+  return sh.getRange(2, 1, last - 1, 4).getValues().filter(function (r) { return r[0] !== ''; }).map(function (r) {
+    const created = r[2] instanceof Date ? r[2].getTime() : (Date.parse(r[2]) || null);
+    return {
+      account: String(r[0]), created: created, admin: isAdmin_(r[0]),
+      status: isAdmin_(r[0]) ? 'admin' : (String(r[3] || '').trim() || 'pending'),
+    };
+  });
+}
+
+/** decision：approve 通過、reject 拒絕、disable 停用、delete 刪除（只限未通過的帳號） */
+function reviewUser_(account, decision) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const sh = accountSheet_();
+    const row = findAccountRow_(sh, account);
+    if (!row) throw new Error('查無此帳號：' + account);
+    if (isAdmin_(account)) throw new Error('不能變更管理員帳號');
+    const cur = String(sh.getRange(row, 4).getValue() || '').trim();
+    if (decision === 'delete') {
+      if (cur === ST_APPROVED) throw new Error('已通過的帳號請先停用再刪除');
+      const realName = String(sh.getRange(row, 1).getValue());
+      sh.deleteRow(row);
+      const us = ss_().getSheetByName(realName);
+      if (us && realName !== ACCOUNT_SHEET) ss_().deleteSheet(us);
+    } else {
+      const v = { approve: ST_APPROVED, reject: ST_REJECTED, disable: ST_DISABLED }[decision];
+      if (!v) throw new Error('未知的審核動作');
+      sh.getRange(row, 4).setValue(v);
+    }
+    CacheService.getScriptCache().remove('st_' + account.toLowerCase());
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function auth_(token) {
@@ -206,6 +292,12 @@ function auth_(token) {
   const acc = token ? cache.get('tok_' + token) : null;
   if (!acc) {
     const err = new Error('登入已逾時，請重新登入');
+    err.code = 'AUTH';
+    throw err;
+  }
+  if (!accountAllowed_(acc)) { // 被停用或拒絕的帳號，既有登入也會失效
+    cache.remove('tok_' + token);
+    const err = new Error('此帳號目前無法使用，請聯絡管理員');
     err.code = 'AUTH';
     throw err;
   }
@@ -233,6 +325,7 @@ function accountSheet_() {
     sh.getRange(1, 1, 1, 3).setValues([['帳號', '密碼', '建立時間']]).setFontWeight('bold');
     sh.setFrozenRows(1);
   }
+  if (sh.getRange(1, 4).getValue() === '') sh.getRange(1, 4).setValue('審核狀態').setFontWeight('bold');
   return sh;
 }
 
