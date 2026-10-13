@@ -1,7 +1,7 @@
 // 好運百搭 Service Worker：快取遊戲檔案，讓主畫面 App 開啟更快。
 // 遊戲資料（Google Apps Script）一律走網路，不快取。
 // 更新遊戲檔案後，把 VERSION 改一個數字，玩家下次打開就會拿到新版。
-const VERSION = 'hb-v8';
+const VERSION = 'hb-v9';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 
 self.addEventListener('install', e => {

@@ -598,6 +598,21 @@ body.tight .ptab{display:none}
 .chip.on{background:linear-gradient(180deg,#fff0b8,#f0b93a 60%,#c4801a);color:#5a0006;border-color:#fff3c4}
 .anote{font-size:11.5px!important;color:#c9ae7c!important;margin-top:10px!important}
 .act.auto small{white-space:nowrap}
+/* ×10 長按自訂倍數 */
+.bb{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.bb.bigm{position:relative}
+.bb .lp{position:absolute;top:-6px;right:-3px;font-style:normal;font-size:8px;line-height:1;padding:2px 3px;border-radius:5px;background:#ffe27a;color:#5a0006;font-weight:900;pointer-events:none}
+.mv{display:flex;align-items:baseline;justify-content:center;gap:10px;margin:6px 0 4px}
+.mv b{font:900 34px "Arial Black",Arial,sans-serif;color:#ffe27a;text-shadow:0 0 12px rgba(255,200,80,.6)}
+.mv span{font-size:13px;color:#f3d38a}
+#mvR{width:100%;margin:8px 0 12px;accent-color:#f0b93a;height:28px}
+.mstep{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+/* 管理員贈送 */
+.gform{text-align:left}
+.gform label{display:block;font-size:12.5px;color:#ffe27a;font-weight:800;margin:10px 2px 4px}
+.gform input{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1.5px solid #9a6a1c;background:#1d0205;color:#fff3c4;font-size:16px;font-weight:700}
+.gform .gmsg{min-height:18px;font-size:12.5px;margin-top:8px;text-align:center}
+.btn2.admin{background:linear-gradient(180deg,#2c6fd6,#123a7a);color:#fff}
 /* 排行榜分頁 */
 .lbtabs{display:flex;gap:5px;overflow-x:auto;padding:8px 10px;background:#2a0408;border-bottom:1px solid #6b3d05;position:sticky;top:57px;z-index:2;scrollbar-width:none}
 .lbtabs::-webkit-scrollbar{display:none}
@@ -820,11 +835,15 @@ body.tight .ptab{display:none}
   // 倍數押注：套用在所選的基本押注上（例：33 ×2 = 66）；有效輪與彩金資格看基本押注，加碼看倍數
   const MULTS = [1, 2, 3, 5, 8, 10];
   const MULT_ENH = { 1: 0, 2: 1, 3: 2, 5: 3, 8: 4, 10: 5 };
+  const MAX_MULT = 100;
   function makeBet(baseId, m) {
     const base = BETS.find(b => b.id === baseId && !b.enh) || BETS.find(b => b.id === 'b88');
-    if (!(m in MULT_ENH)) m = 1;
+    m = Math.round(Number(m)) || 1;
+    // ×10～×100：長按 ×10 自訂的倍數，加成與 ×10 相同（返還率一致）
+    if (!(m in MULT_ENH) && !(m >= 10 && m <= MAX_MULT)) m = 1;
+    const enh = m in MULT_ENH ? MULT_ENH[m] : MULT_ENH[10];
     return { id: base.id + 'x' + m, base: base.id, m, bet: base.bet * m, label: m > 1 ? `${base.bet}×${m}` : `${base.bet}`,
-      sub: base.sub, active: base.active, enh: MULT_ENH[m], jp: base.jp };
+      sub: base.sub, active: base.active, enh, jp: base.jp };
   }
   const BUY_PRICE = 5000; // 以 88 押注計算的免費遊戲
 
@@ -1006,7 +1025,7 @@ body.tight .ptab{display:none}
   function rollJackpot(throws, betCfg, rnd) {
     const p = P_THROW * betCfg.bet / BASE_BET;
     for (let i = 0; i < throws; i++) {
-      if (rnd() < p) {
+      if (rnd() < Math.min(p, 1)) {
         const elig = betCfg.jp;
         const tw = elig.reduce((s, k) => s + JP[k].w, 0);
         let x = rnd() * tw;
@@ -1018,7 +1037,7 @@ body.tight .ptab{display:none}
   }
 
   root.SlotEngine = {
-    PAY, SCAT_PAY, ENH_ORDER, BASE_BET, BETS, MULTS, MULT_ENH, makeBet, BUY_PRICE, FG_OPTIONS, JP, P_THROW,
+    PAY, SCAT_PAY, ENH_ORDER, BASE_BET, BETS, MULTS, MULT_ENH, MAX_MULT, makeBet, BUY_PRICE, FG_OPTIONS, JP, P_THROW,
     BASE_STRIPS, FREE_STRIPS, stripsFor, spinGrid, evaluate, rollJackpot
   };
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -1171,7 +1190,7 @@ function pushRecent(type, amt, x, bet, tier) {
   state.stats.recent = state.stats.recent.slice(0, 12);
 }
 /* ================= 雲端連線（Google Apps Script 後端） ================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbyHS83Xz_gkman413OqhwtFrKO_7Q6CXB95RlFJSkhHwMHKtFP9gvrRxYzeFLVZTaos/exec';   // ← 把 GAS「網頁應用程式網址」（結尾 /exec）貼在引號裡
+const API_URL = 'https://script.google.com/macros/s/AKfycbw1kf8DA2oSjhx737sx6QUEnnYpM2gUs98Juqi7zubv-MyO3VO548hfvkg-KL4rDx3m/exec';   // ← 把 GAS「網頁應用程式網址」（結尾 /exec）貼在引號裡
 const AUTH_KEY = 'haoyun_baida_auth', CACHE_KEY = 'haoyun_baida_cache_';
 let auth = null;
 try { auth = JSON.parse(localStorage.getItem(AUTH_KEY)); } catch (e) { }
@@ -1218,7 +1237,7 @@ async function doSync(keepalive) {
   const c = takeContrib();
   try {
     const j = await api('sync', { state: packState(), contrib: c, since: newsSince }, { keepalive: keepalive === true });
-    applyJp(j.jp); handleNews(j.news); setNet(dirty ? 'pending' : 'ok');
+    applyJp(j.jp); handleNews(j.news); handleGift(j.giftTotal); setNet(dirty ? 'pending' : 'ok');
   } catch (e) {
     addContrib(c);
     if (e.message !== 'AUTH') { dirty = true; setNet('err'); clearTimeout(syncTimer); syncTimer = setTimeout(doSync, 8000); }
@@ -1226,7 +1245,7 @@ async function doSync(keepalive) {
 }
 async function claimJackpot(tier, fallback) {
   const c = takeContrib();
-  try { const j = await api('claim', { tier, contrib: c, since: newsSince }); applyJp(j.jp); handleNews(j.news, true); return Number(j.amount) || fallback; }
+  try { const j = await api('claim', { tier, contrib: c, since: newsSince }); applyJp(j.jp); handleNews(j.news, true); handleGift(j.giftTotal); return Number(j.amount) || fallback; }
   catch (e) { addContrib(c); state.jp[tier] = E.JP[tier].seed; return fallback; }
 }
 state = defState();
@@ -1291,17 +1310,68 @@ function renderBetPanel() {
   $('#row1').innerHTML = E.BETS.filter(b => !b.enh).map(b =>
     `<button class="bb ${cfg.base === b.id ? 'sel' : ''}" data-base="${b.id}" ${lock ? 'disabled' : ''}><div class="n">${b.bet}</div><div class="s">百搭 ${b.sub}</div></button>`).join('');
   const baseBet = E.BETS.find(b => b.id === cfg.base).bet;
-  $('#row2').innerHTML = E.MULTS.filter(m => m > 1).map(m =>
-    `<button class="bb ${cfg.m === m ? 'sel' : ''}" data-m="${m}" ${lock ? 'disabled' : ''}><div class="n">×${m}</div><div class="s">${fmt(baseBet * m)} 積分</div></button>`).join('');
+  if (cfg.m >= 10) bigM = cfg.m;
+  $('#row2').innerHTML = E.MULTS.filter(m => m > 1).map(m => {
+    const big = m === 10, mm = big ? bigM : m;
+    return `<button class="bb ${big ? 'bigm' : ''} ${cfg.m === mm ? 'sel' : ''}" data-m="${mm}" ${lock ? 'disabled' : ''}><div class="n">×${mm}</div><div class="s">${fmt(baseBet * mm)} 積分</div>${big ? '<i class="lp">長按</i>' : ''}</button>`;
+  }).join('');
 }
+// ×10 按鈕長按可自訂 ×10～×100
+let bigM = 10;
+try { const v = +localStorage.getItem('hb_bigm'); if (v >= 10 && v <= E.MAX_MULT) bigM = Math.round(v); } catch (e) { }
+let lpTimer = null, lpFired = false;
+$('#panel').addEventListener('pointerdown', e => {
+  const btn = e.target.closest('.bb.bigm'); lpFired = false;
+  if (!btn || btn.disabled) return;
+  clearTimeout(lpTimer);
+  lpTimer = setTimeout(() => { lpFired = true; if (navigator.vibrate) try { navigator.vibrate(15); } catch (er) { } openMultSheet(); }, 480);
+});
+['pointerup', 'pointerleave', 'pointercancel'].forEach(t => $('#panel').addEventListener(t, () => clearTimeout(lpTimer)));
+$('#panel').addEventListener('contextmenu', e => { if (e.target.closest('.bb')) e.preventDefault(); });
 $('#panel').addEventListener('click', e => {
   const btn = e.target.closest('.bb'); if (!btn || btn.disabled) return;
+  if (lpFired) { lpFired = false; return; }   // 長按後放開不算點擊
   if (busy || state.fg || state.fgPending) return;
   const cur = betCfg(state.betId);
   if (btn.dataset.base) state.betId = E.makeBet(btn.dataset.base, cur.m).id;
   else { const m = +btn.dataset.m; state.betId = E.makeBet(cur.base, cur.m === m ? 1 : m).id; }
   save(); SND.click(); renderAll();
 });
+function openMultSheet() {
+  if (busy || state.fg || state.fgPending) return;
+  const cur = betCfg(state.betId), baseBet = E.BETS.find(b => b.id === cur.base).bet;
+  let v = cur.m >= 10 ? cur.m : bigM;
+  const quick = [10, 20, 30, 50, 80, 100];
+  const html = `<h2 class="serif" style="font-size:20px;margin:2px 0 4px">自訂倍數</h2>
+    <div class="as"><div class="mv"><b id="mvN">×${v}</b><span id="mvB">押注 ${fmt(baseBet * v)} 積分</span></div>
+    <input type="range" id="mvR" min="10" max="${E.MAX_MULT}" step="1" value="${v}">
+    <div class="chips">${quick.map(q => `<button class="chip" data-q="${q}">×${q}</button>`).join('')}</div>
+    <div class="mstep"><button class="chip" data-d="-10">−10</button><button class="chip" data-d="-1">−1</button><button class="chip" data-d="1">+1</button><button class="chip" data-d="10">+10</button></div>
+    <p class="anote">×10 以上的加成與 ×10 相同（福袋、元寶、錢袋、寶船、金龍 5 連 ×3），返還率不變；押注越大，打落元寶的機率也同比提高。</p></div>
+    <div class="btns"><button class="btn2 grey" data-x="0">取消</button><button class="btn2" data-x="1">使用這個倍數</button></div>`;
+  overlay(html, { btn: '', cls: 'sheet', bind: (o, close) => {
+    const R = o.querySelector('#mvR');
+    const upd = n => {
+      v = Math.max(10, Math.min(E.MAX_MULT, Math.round(n))); R.value = v;
+      o.querySelector('#mvN').textContent = '×' + v;
+      o.querySelector('#mvB').textContent = `押注 ${fmt(baseBet * v)} 積分`;
+      o.querySelectorAll('.chip[data-q]').forEach(c => c.classList.toggle('on', +c.dataset.q === v));
+    };
+    upd(v);
+    R.oninput = () => upd(+R.value);
+    o.querySelectorAll('.chip[data-q]').forEach(c => c.onclick = () => { SND.click(); upd(+c.dataset.q); });
+    o.querySelectorAll('.chip[data-d]').forEach(c => c.onclick = () => { SND.click(); upd(v + +c.dataset.d); });
+    o.querySelector('[data-x="0"]').onclick = () => close();
+    o.querySelector('[data-x="1"]').onclick = () => {
+      close();
+      if (busy || state.fg || state.fgPending) return;
+      bigM = v; try { localStorage.setItem('hb_bigm', v); } catch (e) { }
+      state.betId = E.makeBet(betCfg(state.betId).base, v).id;
+      save(); SND.click(); renderAll();
+    };
+    o.addEventListener('click', e => { if (e.target === o) close(); });
+  } });
+}
 
 /* 依螢幕大小自動調整轉輪尺寸，整個遊戲放進一個畫面 */
 function fit() {
@@ -1425,6 +1495,31 @@ function renderAll() {
     const f = state.fg, o = E.FG_OPTIONS[f.opt];
     $('#fgban').innerHTML = `免費 <b>${Math.min(f.played + (busy ? 0 : 1), f.spinsTotal)}</b>/<b>${f.spinsTotal}</b> ｜ +${o.wilds}百搭 ｜ 累計 <b>${fmt(f.total)}</b>`;
   }
+  if (srvGift > (Number(state.stats.gift) || 0)) setTimeout(tryGift, 60);
+}
+
+/* ================= 管理員贈送（入帳） ================= */
+// 後端只記「贈送總額」；本機記錄已收到多少（stats.gift），差額就是新的贈送，不會漏也不會重複
+let srvGift = 0;
+function handleGift(total) {
+  if (typeof total === 'number' && isFinite(total)) srvGift = Math.max(srvGift, total);
+  tryGift();
+}
+function tryGift() {
+  if (!auth || !state || !state.stats) return;
+  const diff = Math.round(srvGift - (Number(state.stats.gift) || 0));
+  if (diff <= 0) return;
+  if (busy || state.fg || state.fgPending || document.querySelector('.ov')) return;   // 轉動／免費遊戲／有視窗時稍後再入帳
+  state.stats.gift = srvGift; state.balance += diff;
+  trackBal(); save();
+  const bal0 = shownBalance;
+  SND.big(); coinRain(36);
+  if (autoOn) { shownBalance = state.balance; renderAll(); setMsg(`🎁 管理員贈送 ${fmt(diff)} 積分`); return; }
+  overlay(`<h2 class="serif">🎁 管理員贈送</h2><p>你收到管理員贈送的積分</p><div class="big" id="gfAmt">0</div>`, { btn: '收下' });
+  const el = document.getElementById('gfAmt');
+  countUp(0, diff, 1400, v => { if (el) el.textContent = fmt(v); shownBalance = bal0 + v; $('#vBal').textContent = fmt(shownBalance); })
+    .then(() => { shownBalance = state.balance; renderAll(); });
+  setMsg('選擇押注，按「旋轉」開始');
 }
 function setWin(v) { $('#vWin').textContent = fmt(v); }
 function setMsg(t, bad) {
@@ -2164,7 +2259,7 @@ $('#btnBuy').addEventListener('click', async () => {
   ac();
   if (state.balance < E.BUY_PRICE) { flash('積分不足 5,000，無法購買免費遊戲'); return; }
   stopAuto();
-  const ok = await confirmBox(`<h2 class="serif">免費遊戲</h2><p>花費 <b style="color:#ffe27a">5,000</b> 積分，<br>以 <b>88 積分</b> 押注直接進入免費遊戲。</p>`, '確定購買', '取消');
+  const ok = await confirmBox(`<h2 class="serif">購買免費遊戲</h2><p>花費 <b style="color:#ffe27a">5,000</b> 積分，<br>以 <b>88 積分</b> 押注直接進入免費遊戲。</p>`, '確定購買', '取消');
   if (!ok || busy || state.fg || state.fgPending) return;
   state.balance -= E.BUY_PRICE; shownBalance = state.balance;
   state.stats.wagered += E.BUY_PRICE; state.stats.fg++;
@@ -2228,15 +2323,16 @@ async function gameOver() {
       trackBal(); save();
       SND.big(); coinRain(50);
       const bal0 = shownBalance;
-      const p = overlay(`<h2 class="serif">每日補助</h2><p>積分用完了，今天送你</p><div class="big" id="bnAmt">0</div><p style="font-size:12px;color:#c9ae7c">每天（台灣時間）積分不足時可領一次</p>`, { btn: '收下' });
+      const used = r.used || 1, lim = r.limit || 3, left = r.left != null ? r.left : lim - used;
+      const p = overlay(`<h2 class="serif">每日補助</h2><p>積分用完了，送你今天第 <b style="color:#ffe27a">${used}</b> 次補助</p><div class="big" id="bnAmt">0</div><p style="font-size:12px;color:#c9ae7c">${left > 0 ? `今天還可以再領 ${left} 次（每天最多 ${lim} 次）` : `這是今天最後一次，明天（台灣時間 00:00 後）再領`}</p>`, { btn: '收下' });
       const el = document.getElementById('bnAmt');
       await countUp(0, r.amount, 1600, v => { if (el) el.textContent = fmt(v); shownBalance = bal0 + v; $('#vBal').textContent = fmt(shownBalance); });
       shownBalance = state.balance; renderAll();
       await p;
       setMsg('選擇押注，按「旋轉」開始');
     } else if (r.reason === 'TODAY_DONE') {
-      setMsg('積分已用完，明天可再領 10,000');
-      overlay(`<h2 class="serif">積分已用完</h2><p>今天的補助已經領過了。<br><b style="color:#ffe27a">明天（台灣時間 00:00 後）</b>重新打開遊戲，可以再領 10,000 積分。</p><p style="font-size:12px;color:#c9ae7c">可以到「設定」查看排行榜。</p>`, { btn: '知道了' });
+      setMsg('積分已用完，明天可再領 50,000');
+      overlay(`<h2 class="serif">積分已用完</h2><p>今天 ${r.limit || 3} 次補助都領完了。<br><b style="color:#ffe27a">明天（台灣時間 00:00 後）</b>重新打開遊戲，可以再領 50,000 積分（每天 ${r.limit || 3} 次）。</p><p style="font-size:12px;color:#c9ae7c">可以到「設定」查看排行榜。</p>`, { btn: '知道了' });
     }
   } catch (e) {
     if (e.message !== 'AUTH') overlay(`<h2 class="serif">積分已用完</h2><p>目前無法連線領取每日補助，請稍後再試。</p>`, { btn: '知道了' });
@@ -2308,6 +2404,7 @@ function openStats() {
     ${card('預告 ≥45倍', fmt(S.omens) + ' 次')}
     ${card('最長連續沒中', fmt(S.maxLoseStreak) + ' 轉', '目前 ' + fmt(S.loseStreak) + ' 轉')}
     ${card('每日補助', fmt(S.bonus || 0), state.lastBonus ? '最後領取 ' + state.lastBonus : '')}
+    ${S.gift ? card('管理員贈送', fmt(S.gift)) : ''}
     ${card('距上次免費遊戲', fmt(S.sinceFG) + ' 轉')}
     ${card('距上次彩金', fmt(S.sinceJP) + ' 轉')}
   </div>
@@ -2338,7 +2435,7 @@ function openRules(tab) {
 <li>同一輪出現多個相同符號時，組合數相乘。例如第 1 輪 2 個、第 2 輪 1 個、第 3 輪 2 個金龍 = 2×1×2 = <b>4 組</b>，獎金 ×4。</li>
 <li>每個符號只取最長的連線計算；不同符號的獎金相加。</li>
 <li>每個帳號註冊時有 <b>100,000</b> 積分（₱1 = 1 積分），<b>不能重置</b>。</li>
-<li><b>每日補助</b>：積分不足 33（最低押注）時，每天（台灣時間）可領一次 <b>10,000</b> 積分；用完當天就不能再領，隔天打開遊戲會自動發放。</li>
+<li><b>每日補助</b>：積分不足 33（最低押注）時可領 <b>50,000</b> 積分，<b>每天（台灣時間）最多 3 次</b>；3 次都用完後，隔天打開遊戲會自動發放。</li>
 <li>積分與所有紀錄會邊玩邊自動存到雲端，換裝置登入也能接續。同一個帳號同時只能在一台裝置登入。</li>
 </ul>
 <h3>二、押注與「有效輪」</h3>
@@ -2348,9 +2445,9 @@ function openRules(tab) {
 <tr><td>66</td><td>66</td><td>第 3–5 輪</td><td>迷你、小、大</td></tr>
 <tr><td>88</td><td>88</td><td>第 2–5 輪</td><td>全部（含巨獎）</td></tr>
 </table>
-<ul><li><b>倍數押注</b>：×2、×3、×5、×8、×10 乘在你選的基本押注上，例如 33 ×2 = 66、55 ×10 = 550、88 ×5 = 440。</li>
+<ul><li><b>倍數押注</b>：×2、×3、×5、×8、×10 乘在你選的基本押注上，例如 33 ×2 = 66、55 ×10 = 550、88 ×5 = 440。</li><li><b>長按 ×10</b> 可自訂 <b>×10～×100</b>（例如 88 ×50 = 4,400）；×10 以上的加碼都和 ×10 相同，返還率也一樣。按鈕會記住你上次選的倍數。</li>
 <li>有效輪與可贏彩金<b>看基本押注</b>；倍數決定「同種類獎金增加」的加碼（見第七點），並讓獎金與打落元寶的機率同比例提高。</li></ul>
-<ul><li>先選基本押注（33／55／66／88），再視需要選倍數（×2～×10）；再按一次已選的倍數可取消，回到 ×1。</li><li>轉輪上方亮起的「百搭」標記，代表該輪的百搭可以丟錢打元寶。</li>
+<ul><li>先選基本押注（33／55／66／88），再視需要選倍數（×2～×10，長按 ×10 可到 ×100）；再按一次已選的倍數可取消，回到 ×1。</li><li>轉輪上方亮起的「百搭」標記，代表該輪的百搭可以丟錢打元寶。</li>
 <li>所有獎金依押注等比例換算（以 88 積分為基準）。</li></ul>
 <h3>三、百搭</h3>
 <ul><li>百搭只出現在<b>第 2～5 輪</b>，可代替<b>青花聚寶以外</b>的所有符號。</li>
@@ -2388,7 +2485,7 @@ ${E.FG_OPTIONS.map((o, i) => `<tr><td>${o.spins} 次</td><td>+${o.wilds} 個</td
 <h3>七、同種類獎金增加（加倍下注加碼）</h3>
 <table><tr><th>倍數</th><th>解鎖加碼的符號</th></tr>
 <tr><td>×2</td><td>福袋</td></tr><tr><td>×3</td><td>福袋、元寶</td></tr><tr><td>×5</td><td>福袋、元寶、錢袋</td></tr>
-<tr><td>×8</td><td>＋寶船</td></tr><tr><td>×10</td><td>五種全部（＋金龍）</td></tr></table>
+<tr><td>×8</td><td>＋寶船</td></tr><tr><td>×10～×100</td><td>五種全部（＋金龍）</td></tr></table>
 <ul><li>解鎖的符號<b>連成 5 個</b>時，獎金變 <b>3 倍</b>，再乘上押注倍數；3 連、4 連不加碼。</li>
 <li>例：88 押注福袋 5 連賠 100 → 選 ×2 時加碼 3 倍 = 300 → 再乘 2 倍 = <b>600</b>。基本押注 33 選 ×2 時同樣有加碼，金額依 33 換算。</li>
 <li>百搭代替湊成的 5 連<b>也算加碼</b>。例：88 ×10 時，福袋 + 4 輪百搭、共 2 組 → 1,000 × 2 組 × 3 = <b>6,000</b>。</li>
@@ -2450,7 +2547,7 @@ function buildProbHtml() {
 <table><tr><th>押注</th><th>返還率</th><th>每轉平均盈虧</th></tr>
 <tr><td>33</td><td>約 83%</td><td>−5.6</td></tr><tr><td>55</td><td>約 84%</td><td>−8.8</td></tr><tr><td>66</td><td>約 86%</td><td>−9.2</td></tr>
 <tr><td>88</td><td>約 89%</td><td>−9.5</td></tr><tr><td>88 ×2 / ×3 / ×5</td><td>約 90–92%</td><td>−17 / −21 / −40</td></tr>
-<tr><td>88 ×8 / ×10</td><td>約 92%</td><td>−56 / −65</td></tr><tr><td>33／55／66 加倍數</td><td>和原本差不多（約 83–87%）</td><td>—</td></tr><tr><td>購買 5,000</td><td>約 91%</td><td>每次 −450</td></tr></table>
+<tr><td>88 ×8 / ×10～×100</td><td>約 92%</td><td>−56 / −65</td></tr><tr><td>33／55／66 加倍數</td><td>和原本差不多（約 83–87%）</td><td>—</td></tr><tr><td>購買 5,000</td><td>約 91%</td><td>每次 −450</td></tr></table>
 <ul><li>88 押注的組成：一般連線約 47%、散佈獎約 4%、免費遊戲約 29%、彩金約 9%。</li>
 <li>低押注（33、55）丟錢有效輪少、可贏彩金少，所以返還率較低；88 是每轉虧最少的押注。</li>
 <li>返還率低於 100%，長期一定是虧的（莊家優勢）。</li></ul>
@@ -2600,16 +2697,64 @@ function startGame(j) {
   pollTimer = setInterval(() => {   // 共用彩金即時更新
     if (!auth || document.visibilityState !== 'visible') return;
     if (dirty || hasContrib()) { doSync(); return; }
-    if (!syncing) api('jackpots', { since: newsSince }).then(r => { applyJp(r.jp); handleNews(r.news); }).catch(() => { });
+    if (!syncing) api('jackpots', { since: newsSince }).then(r => { applyJp(r.jp); handleNews(r.news); handleGift(r.giftTotal); }).catch(() => { });
   }, 8000);
   if (state.fgPending) setTimeout(chooseFG, 400);
   else if (state.fg) { setMsg('繼續上次的免費遊戲…'); setTimeout(spin, 900); }
   else if (state.balance < 33) { setMsg('積分已用完'); gameOver(); }
   else setMsg(`歡迎，${j.account}！選擇押注，按「旋轉」開始`);
+  srvGift = 0; handleGift(j.giftTotal);
 }
 // 離開頁面前把最後的資料送出
 window.addEventListener('pagehide', () => { if (auth && (dirty || hasContrib())) doSync(true); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && auth && (dirty || hasContrib())) doSync(true); });
+
+/* ================= 管理員：贈送積分 ================= */
+const escH = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const isAdmin = () => !!(auth && String(auth.account).toLowerCase() === 'chun');
+let lastGiftTarget = '';
+function openGift() {
+  if (!isAdmin()) return;
+  const quick = [10000, 50000, 100000, 500000, 1000000, 10000000];
+  const html = `<h2 class="serif" style="font-size:20px;margin:2px 0 4px">🎁 贈送積分</h2>
+    <div class="gform">
+      <label for="gfT">贈送給哪個帳號</label>
+      <input id="gfT" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="輸入帳號" value="${escH(lastGiftTarget)}">
+      <div class="chips" style="grid-template-columns:1fr;margin-top:6px"><button class="chip" id="gfMe">送給自己（${escH(auth.account)}）</button></div>
+      <label for="gfA">金額</label>
+      <input id="gfA" type="text" inputmode="numeric" placeholder="例如 50000">
+      <div class="chips" style="margin-top:6px">${quick.map(q => `<button class="chip" data-q="${q}">${q >= 10000 ? fmt(q / 10000) + ' 萬' : fmt(q)}</button>`).join('')}</div>
+      <div class="gmsg" id="gfM"></div>
+    </div>
+    <div class="btns"><button class="btn2 grey" data-x="0">關閉</button><button class="btn2" data-x="1">確定贈送</button></div>`;
+  overlay(html, { btn: '', cls: 'sheet', bind: (o, close) => {
+    const T = o.querySelector('#gfT'), A = o.querySelector('#gfA'), M = o.querySelector('#gfM'), go = o.querySelector('[data-x="1"]');
+    const num = () => Number(String(A.value).replace(/[,\s]/g, ''));
+    const msg = (t, ok) => { M.textContent = t; M.style.color = ok ? '#7dff9e' : '#ff9a8a'; };
+    A.oninput = () => { const n = num(); if (n > 0) A.value = fmt(n); o.querySelectorAll('.chip[data-q]').forEach(c => c.classList.toggle('on', +c.dataset.q === n)); };
+    o.querySelector('#gfMe').onclick = () => { SND.click(); T.value = auth.account; };
+    o.querySelectorAll('.chip[data-q]').forEach(c => c.onclick = () => { SND.click(); A.value = fmt(+c.dataset.q); A.oninput(); });
+    o.querySelector('[data-x="0"]').onclick = () => close();
+    go.onclick = async () => {
+      const target = T.value.trim(), amount = num();
+      if (!target) return msg('請輸入帳號');
+      if (!(amount > 0) || Math.floor(amount) !== amount) return msg('請輸入正整數金額');
+      const ok = await confirmBox(`<h2 class="serif">確認贈送</h2><p>要送 <b style="color:#ffe27a">${fmt(amount)}</b> 積分給<br><b style="font-size:18px">${escH(target)}</b> 嗎？</p>`, '確定', '取消');
+      if (!ok) return;
+      go.disabled = true; msg('贈送中…', true);
+      try {
+        const r = await api('gift', { target, amount });
+        if (!r.ok) throw new Error(r.error || '贈送失敗');
+        lastGiftTarget = r.target;
+        msg(`已送出 ${fmt(r.amount)} 積分給 ${r.target}${r.self ? '' : '（對方下次連線時入帳）'}`, true);
+        SND.click(); A.value = ''; A.oninput();
+        if (r.self) { close(); setTimeout(() => handleGift(r.giftTotal), 320); }
+      } catch (e) {
+        msg(e.message === 'AUTH' ? '登入已失效' : e.message);
+      } finally { go.disabled = false; }
+    };
+  } });
+}
 
 /* ================= 設定／排行榜 ================= */
 $('#btnSet').addEventListener('click', () => {
@@ -2619,8 +2764,10 @@ $('#btnSet').addEventListener('click', () => {
     <button class="btn2" id="sRules">📖 規則與機率</button>
     <button class="btn2" id="sSound">${state.sound ? '🔊 音效：開' : '🔇 音效：關'}</button>
     ${isStandalone() ? '' : '<button class="btn2" id="sInst">📲 加到主畫面</button>'}
+    ${isAdmin() ? '<button class="btn2 admin" id="sGift">🎁 贈送積分（管理員）</button>' : ''}
     <button class="btn2 grey" id="sOut">登出</button></div>`, {
     btn: '關閉', bind: (o, close) => {
+      const gb = o.querySelector('#sGift'); if (gb) gb.onclick = () => { close(); openGift(); };
       o.querySelector('#sRules').onclick = () => { close(); openRules(); };
       const ib = o.querySelector('#sInst'); if (ib) ib.onclick = () => { close(); openInstall(); };
       o.querySelector('#sSound').onclick = e => {
