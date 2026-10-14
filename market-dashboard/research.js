@@ -52,8 +52,15 @@ async function loadResearch(sym) {
     recent = [{ s: r.data.code, n: r.data.name }].concat(recent.filter(x => x.s !== r.data.code)).slice(0, 8);
     store.set(RS_RECENT_KEY, JSON.stringify(recent));
     renderRsChips();
-    st.className = 'status live';
-    st.innerHTML = '<span class="dot"></span>資料時間 ' + new Date().toLocaleTimeString('zh-TW', { hour12: false });
+    const d = r.data, hm = ts => new Date(ts).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    if (d.stale) {
+      // 後端來源失敗：整份沿用最後成功資料，或只有 Yahoo 欄位（估值、分析師…）沿用
+      st.className = 'status err';
+      st.innerHTML = '<span class="dot"></span>' + esc(d.filled ? `${d.stale}，部分欄位沿用 ${hm(d.filledAt)} 的資料` : `${d.stale}，顯示 ${hm(d.updated)} 的資料`);
+    } else {
+      st.className = 'status live';
+      st.innerHTML = '<span class="dot"></span>資料時間 ' + hm(d.updated || Date.now());
+    }
   } catch (err) {
     st.className = 'status err';
     st.innerHTML = '<span class="dot"></span>' + esc(err.message);

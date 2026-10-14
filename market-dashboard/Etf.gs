@@ -24,19 +24,21 @@ const US_ETFS = [
 ];
 
 function etf_(part, code, force) {
-  if (part === 'detail') return etfDetail_(String(code || '').trim().toUpperCase());
+  if (part === 'detail') {
+    const c = String(code || '').trim().toUpperCase();
+    if (!c) throw new Error('請輸入 ETF 代號');
+    return withBackup_('etfd_' + c, function () { return etfDetail_(c); }); // Code.gs：失敗時回傳最後成功資料
+  }
   const fn = { tw: etfTw_, high: etfHigh_, us: etfUs_ }[part];
   if (!fn) throw new Error('未知的 ETF 區塊：' + part);
-  const cache = CacheService.getScriptCache();
   const key = 'etf_' + part;
-  const hit = cache.get(key);
+  const hit = cacheGetBig_(key);
   if (hit) {
     const old = JSON.parse(hit);
     if (!force || Date.now() - old.updated < 30000) return old;
   }
-  const data = fn();
-  data.updated = Date.now();
-  try { cache.put(key, JSON.stringify(data), ETF_TTL[part]); } catch (e) { /* 太大不快取 */ }
+  const data = withBackup_(key, function () { const d = fn(); d.updated = Date.now(); return d; });
+  if (!data.stale) cachePutBig_(key, JSON.stringify(data), ETF_TTL[part]);
   return data;
 }
 
@@ -85,23 +87,78 @@ function etfPrune_(store, kind, keep) {
 }
 
 /* ======================== 台股 ETF 總覽 ======================== */
-function etfMisAll_() {
-  const res = fetch_('https://mis.twse.com.tw/stock/data/all_etf.txt?' + Date.now(),
-    { muteHttpExceptions: true, headers: { 'User-Agent': UA, Referer: 'https://mis.twse.com.tw/stock/etf_nav.jsp' } });
-  const j = JSON.parse(okText_(res) || '{}');
+const ETF_MIS_FIELDS = ['code', 'name', 'units', 'dUnits', 'price', 'nav', 'prem', 'prevNav', 'date', 'time'];
+let ETF_MIS_STALE_ = ''; // 本次執行用的是備援資料時，記錄原因
+
+function etfMisParse_(text) {
+  let j;
+  try { j = JSON.parse(text || '{}'); } catch (e) { return []; }
   const rows = [];
+  const n = function (v) { const f = parseFloat(String(v).replace(/,/g, '')); return isFinite(f) ? f : null; };
   (j.a1 || []).forEach(function (g) {
     (g.msgArray || []).forEach(function (x) {
-      const n = function (v) { const f = parseFloat(String(v).replace(/,/g, '')); return isFinite(f) ? f : null; };
+      if (!x || !x.a) return;
       rows.push({
-        code: String(x.a).trim(), name: String(x.b).replace(/\(.*$/, '').replace(/（.*$/, '').trim(),
+        code: String(x.a).trim(), name: String(x.b || '').replace(/\(.*$/, '').replace(/（.*$/, '').trim(),
         units: n(x.c), dUnits: n(x.d), price: n(x.e), nav: n(x.f), prem: n(x.g), prevNav: n(x.h),
         date: String(x.i || ''), time: String(x.j || ''),
       });
     });
   });
-  if (!rows.length) throw new Error('證交所 ETF 資料暫時無法取得');
   return rows;
+}
+
+/**
+ * 證交所 MIS 全部 ETF 即時資料。
+ *  - 共用快取 60 秒（總覽、高股息、個別 ETF 都會用到，避免短時間重複打 MIS 被限流）
+ *  - 失敗時換網址再試，最多 3 次
+ *  - 仍失敗就用 _etf 工作頁保存的最後成功資料（ETF_MIS_STALE_ 記錄原因）
+ */
+function etfMisAll_() {
+  const hit = cacheGetBig_('etf_mis');
+  if (hit) return JSON.parse(hit);
+  const urls = [
+    'https://mis.twse.com.tw/stock/data/all_etf.txt?' + Date.now(),
+    'https://mis.twse.com.tw/stock/data/all_etf.txt',
+    'http://mis.twse.com.tw/stock/data/all_etf.txt?_=' + Date.now(),
+  ];
+  let rows = [], why = '';
+  for (let i = 0; i < urls.length && !rows.length; i++) {
+    if (i) Utilities.sleep(1200);
+    const res = fetch_(urls[i], { muteHttpExceptions: true, headers: { 'User-Agent': UA, Referer: 'https://mis.twse.com.tw/stock/etf_nav.jsp', Accept: 'application/json, text/plain, */*' } });
+    const code = res.getResponseCode();
+    rows = code === 200 ? etfMisParse_(res.getContentText()) : [];
+    if (!rows.length) why = code === 200 ? '回應沒有 ETF 資料，可能是盤前清檔或維護中' : code === 599 ? '連線失敗' : 'HTTP ' + code;
+  }
+  if (rows.length) {
+    cachePutBig_('etf_mis', JSON.stringify(rows), 60);
+    // 每 10 分鐘最多寫一次工作頁，當作可跨天保留的備援
+    const cache = CacheService.getScriptCache();
+    if (!cache.get('etf_mis_saved')) {
+      try {
+        etfPut_(etfStoreAll_(), 'MIS|last', { at: Date.now(), rows: rows.map(function (r) { return ETF_MIS_FIELDS.map(function (f) { return r[f]; }); }) });
+      } catch (e) { /* 超過單格上限就略過 */ }
+      cache.put('etf_mis_saved', '1', 600);
+    }
+    return rows;
+  }
+  const store = etfStoreAll_();
+  const last = store.map['MIS|last'] && JSON.parse(store.map['MIS|last'].v);
+  if (last && last.rows && last.rows.length) {
+    ETF_MIS_STALE_ = '證交所 ETF 資料暫時無法取得（' + why + '），顯示 ' +
+      Utilities.formatDate(new Date(last.at), 'Asia/Taipei', 'MM/dd HH:mm') + ' 的資料';
+    return last.rows.map(function (a) { const o = {}; ETF_MIS_FIELDS.forEach(function (f, i) { o[f] = a[i]; }); return o; });
+  }
+  throw new Error('證交所 ETF 資料暫時無法取得（' + why + '）');
+}
+
+/** 在 Apps Script 編輯器執行：檢查 GAS 主機抓證交所 ETF 資料的實際狀況（看「執行紀錄」） */
+function testEtfMis() {
+  const res = UrlFetchApp.fetch('https://mis.twse.com.tw/stock/data/all_etf.txt?' + Date.now(),
+    { muteHttpExceptions: true, headers: { 'User-Agent': UA, Referer: 'https://mis.twse.com.tw/stock/etf_nav.jsp' } });
+  const text = res.getContentText();
+  Logger.log('HTTP ' + res.getResponseCode() + '，長度 ' + text.length + '，解析出 ' + etfMisParse_(text).length + ' 檔');
+  Logger.log(text.slice(0, 500));
 }
 
 function etfType_(code) {
@@ -115,10 +172,12 @@ function etfTw_() {
   const ds = date.slice(0, 4) + '-' + date.slice(4, 6) + '-' + date.slice(6, 8);
   // 單位數快照：同一天覆寫（盤中與收盤後的單位數相同，存最新即可）
   const store = etfStoreAll_();
-  const snap = {};
-  rows.forEach(function (r) { if (r.units != null) snap[r.code] = [r.units, r.nav || r.prevNav]; });
-  etfPut_(store, 'U|' + ds, snap);
-  etfPrune_(store, 'U');
+  if (!ETF_MIS_STALE_) { // 備援資料不寫快照
+    const snap = {};
+    rows.forEach(function (r) { if (r.units != null) snap[r.code] = [r.units, r.nav || r.prevNav]; });
+    etfPut_(store, 'U|' + ds, snap);
+    etfPrune_(store, 'U');
+  }
   const hist = etfSnapshots_(store, 'U');
   const back = function (k) { return hist.length > k ? hist[hist.length - 1 - k].v : null; };
   const h5 = back(5), h20 = back(20);
@@ -128,7 +187,7 @@ function etfTw_() {
     return nav ? Math.round((r.units - h[r.code][0]) * nav / 1e6) / 100 : null; // 億元
   };
   return {
-    date: ds, snapDays: hist.length,
+    date: ds, snapDays: hist.length, stale: ETF_MIS_STALE_ || undefined,
     rows: rows.map(function (r) {
       const nav = r.nav || r.prevNav;
       return [r.code, r.name, etfType_(r.code), r.price, r.nav, r.prem,
@@ -328,9 +387,11 @@ function etfDetail_(code) {
   const isTw = /^\d{4,6}[A-Z]?$/.test(code);
   let ysym = code, misRow = null;
   if (isTw) {
-    const all = etfMisAll_();
-    misRow = all.filter(function (r) { return r.code === code; })[0];
-    if (!misRow) throw new Error('證交所查無此 ETF：' + code);
+    // 證交所失敗時仍可用 Yahoo 顯示其餘資料（折溢價、申贖等會空白）
+    let all = [];
+    try { all = etfMisAll_(); } catch (e) { ETF_MIS_STALE_ = String(e.message || e); }
+    misRow = all.filter(function (r) { return r.code === code; })[0] || null;
+    if (!misRow && all.length && !ETF_MIS_STALE_) throw new Error('證交所查無此 ETF：' + code);
     // 先試 .TW，沒有資料再試 .TWO
     ysym = code + '.TW';
   }
@@ -388,7 +449,8 @@ function etfDetail_(code) {
   }
   const fee = (fp.feesExpensesInvestment && raw_(fp.feesExpensesInvestment, 'annualReportExpenseRatio')) || raw_(ks, 'annualReportExpenseRatio');
   return {
-    code: code, ysym: ysym, tw: isTw, name: isTw ? misRow.name : (qs.price && (qs.price.shortName || qs.price.longName)) || ch.name,
+    code: code, ysym: ysym, tw: isTw, name: (misRow && misRow.name) || (qs.price && (qs.price.shortName || qs.price.longName)) || ch.name,
+    misStale: ETF_MIS_STALE_ || undefined,
     currency: ch.currency, family: fp.family || null, category: fp.categoryName || null, type: isTw ? etfType_(code) : null,
     mis: misRow, aum: raw_(sd, 'totalAssets'), fee: fee, yahooYield: raw_(sd, 'yield'), nav: raw_(sd, 'navPrice'),
     holdings: holdings, sectors: sectors, holdPrev: hs.prev || null, holdCurDate: hs.cur ? hs.cur.d : null,
@@ -441,6 +503,7 @@ function etfHigh_() {
     });
   } catch (e) { /* 費用率非必要 */ }
   return {
+    stale: ETF_MIS_STALE_ || undefined,
     rows: list.map(function (c) {
       const m = byCode[c], ch = charts[c] || {}, f = fees[c] || {};
       const nav = m.nav || m.prevNav;

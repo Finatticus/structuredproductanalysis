@@ -43,11 +43,20 @@ async function etfLoad(tab, force) {
     etfS.data[tab] = (await api('etf', { part: tab, force: !!force })).data;
     etfS.loadedAt[tab] = Date.now();
     if (etfS.tab === tab) etfRender(tab);
-    etfStatus('已更新 · ' + new Date().toLocaleTimeString('zh-TW', { hour12: false }), 'live');
+    etfStaleStatus(etfS.data[tab]);
   } catch (err) {
     if (!etfS.data[tab]) body.innerHTML = `<div class="panel-msg err">載入失敗：${esc(err.message)}</div>`;
     etfStatus('更新失敗：' + err.message, 'err');
   }
+}
+
+/** 後端回傳備援資料（stale）或部分欄位沿用舊資料（filled）時顯示黃燈與原因 */
+function etfStaleStatus(d) {
+  const t = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+  const why = d && (d.stale || d.misStale);
+  if (!why) return etfStatus('已更新 · ' + t, 'live');
+  const at = d.filledAt || (d.stale && !d.misStale ? d.updated : null);
+  etfStatus(`${why}${at ? `（沿用 ${new Date(at).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' })} 的資料）` : ''} · 按「↻ 更新」重試`, 'err');
 }
 
 function etfStatus(text, cls = '') {
@@ -222,7 +231,7 @@ async function etfOpen(code, force) {
     try { recent = JSON.parse(store.get('mw_etf_recent') || '[]'); } catch { recent = []; }
     store.set('mw_etf_recent', JSON.stringify([code].concat(recent.filter(x => x !== code)).slice(0, 8)));
     if (etfS.cur === code) etfRenderDetail(d);
-    etfStatus('已更新 · ' + new Date().toLocaleTimeString('zh-TW', { hour12: false }), 'live');
+    etfStaleStatus(d);
   } catch (err) {
     $('#etfDetail').innerHTML = `<div class="panel-msg err">${esc(err.message)}</div>`;
     etfStatus(err.message, 'err');

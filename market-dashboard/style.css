@@ -720,3 +720,55 @@ details.method ul { padding-left: 18px; margin: 2px 0; }
 .hold-wait { background: var(--surface-2); border: 1px dashed var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.7; color: var(--text-2); margin-bottom: 10px; }
 .hold-wrap { max-height: 520px; overflow-y: auto; }
 .hold-wrap thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+
+/* =========================================================
+ * 投資組合
+ * ========================================================= */
+#pfBody > .panel-msg { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.pf-kpis { margin-bottom: 14px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.pf-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.pf-tbl td, .pf-tbl th { padding: 6px 7px; }
+.pf-tbl tr.pf-cash td { color: var(--text-2); }
+.pf-tbl tr.sel td { background: var(--primary-soft); }
+.pf-tbl th.click { cursor: pointer; }
+.pf-sym { font-size: 12px; border-bottom: none !important; }
+.pf-scroll { max-height: 480px; overflow-y: auto; }
+.pf-scroll thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.pf-warn { background: #fff4d6; color: #8a6400; border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+.pf-empty { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 40px 20px; text-align: center; color: var(--text-2); line-height: 1.8; }
+.pf-empty h3 { margin: 0 0 6px; color: var(--text); }
+.pf-tg { width: 72px; border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; text-align: right; font: inherit; }
+.pf-mtbl { font-size: 12px; }
+.pf-mtbl td, .pf-mtbl th { padding: 4px 5px; }
+.pf-mtbl td.heat { text-align: center; border: 2px solid #fff; border-radius: 4px; font-variant-numeric: tabular-nums; }
+.pf-mbars { display: flex; align-items: flex-end; gap: 4px; height: 170px; padding-top: 6px; }
+.pf-mbar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+.pf-mbar i { display: block; width: 100%; max-width: 30px; background: var(--primary); border-radius: 4px 4px 0 0; min-height: 1px; }
+.pf-mbar.proj i { background: repeating-linear-gradient(45deg, #e67e22, #e67e22 4px, #f3b77c 4px, #f3b77c 8px); }
+.pf-mbar span { font-size: 10.5px; color: var(--text-3); margin-top: 4px; white-space: nowrap; }
+.pf-mbar-sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 6px; }
+.pf-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+.pf-form label, .pf-set label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--text-2); }
+.pf-form input, .pf-form select, .pf-set input, .pf-set select, .pf-cash-row input, .pf-q {
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 13px; background: var(--surface); color: var(--text); min-width: 0; }
+.pf-form .pf-f-wide { grid-column: 1 / -1; }
+.pf-f-btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pf-del { color: #b3261e; }
+.pf-form .pf-f-amt { display: none; }
+.pf-form.is-div .pf-f-amt { display: flex; }
+.pf-form.is-div .pf-f-price, .pf-form.is-div .pf-f-fee { display: none; }
+.pf-form.is-stock .pf-f-price, .pf-form.is-stock .pf-f-fee, .pf-form.is-stock .pf-f-tax, .pf-form.is-stock .pf-f-fx { display: none; }
+.pf-form.is-tw .pf-f-fx { display: none; }
+.pf-set { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px 12px; align-items: end; }
+.pf-set .chk { flex-direction: row; font-size: 12.5px; }
+.pf-cash-set { display: grid; gap: 6px; margin-bottom: 8px; }
+.pf-cash-row { display: grid; grid-template-columns: 90px 1fr; gap: 6px; max-width: 340px; }
+.pf-io { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pf-q { width: 200px; }
+@media (max-width: 900px) {
+  .pf-grid .panel { grid-column: span 12 !important; }
+}
+@media (max-width: 560px) {
+  .pf-form { grid-template-columns: 1fr; }
+  .pf-q { width: 140px; }
+}

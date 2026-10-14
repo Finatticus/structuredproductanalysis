@@ -50,7 +50,9 @@ function marketSeg(tools, key, uiKey) {
   seg(tools, [['tse', '上市'], ['otc', '上櫃']], macro.ui[uiKey], v => {
     macro.ui[uiKey] = v;
     saveMacroUi();
-    if (macro.data[apiPart(key)]) renderPart(key); else loadPart(key, false);
+    const d = macro.data[apiPart(key)];
+    if (d) renderPart(key);
+    if (!d || d.cached) loadPart(key, false); // 瀏覽器快取的舊資料也要更新
   });
 }
 
@@ -178,7 +180,9 @@ function setMacroEditing(on) {
     // 結束編輯：重新顯示的字卡若還沒資料就載入；圖表依新寬度重畫
     MACRO_PARTS.forEach(p => {
       if (macroLayout().hide.includes(p.key)) return;
-      if (macro.data[apiPart(p.key)]) renderPart(p.key); else loadPart(p.key, false);
+      const d = macro.data[apiPart(p.key)];
+      if (d) renderPart(p.key);
+      if (!d || d.cached) loadPart(p.key, false);
     });
   }
 }
@@ -202,14 +206,51 @@ function macroActive() {
 async function loadMacro(force) {
   if (!state.token) return;
   if (!force && macro.loadedAt) { macroStaleCheck(); macroResumeRetries(); return; }
+  const first = !macro.loadedAt;
   macro.loadedAt = Date.now();
   macroStaleCheck();
   applyMacroLayout();
   macro.retry.forEach(r => clearTimeout(r.timer));
   macro.retry.clear();
   const visible = MACRO_PARTS.filter(p => !macroLayout().hide.includes(p.key)); // 隱藏的字卡不抓，省額度
+  // 重新整理網頁後第一次進入：先顯示瀏覽器裡存的上次資料，再在背景更新
+  if (first) macro.fromCache = macroCacheRestore(visible);
   macroUpdateStatus();
   await Promise.all(visible.map(p => loadPart(p.key, force)));
+  macro.fromCache = 0;
+  macroUpdateStatus();
+}
+
+/* ---------- 瀏覽器快取（localStorage，每個帳號、每個區塊各存一份） ---------- */
+const MACRO_CACHE_MAX_AGE = 3 * 86400000; // 超過 3 天的快取不顯示
+function macroCacheKey(part) { return `mw_mc_${state.account || ''}_${part}`; }
+
+function macroCacheSave(part, data) {
+  if (!data || data.stale) return;
+  try { localStorage.setItem(macroCacheKey(part), JSON.stringify(data)); }
+  catch {
+    // 空間不足：清掉其他帳號的總經快取後再試一次
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('mw_mc_') && !k.startsWith(`mw_mc_${state.account || ''}_`)).forEach(k => localStorage.removeItem(k));
+      localStorage.setItem(macroCacheKey(part), JSON.stringify(data));
+    } catch { /* 放棄，不影響使用 */ }
+  }
+}
+
+function macroCacheRestore(visible) {
+  let n = 0;
+  visible.forEach(p => {
+    [p.key, p.key + '_otc'].forEach(part => {
+      if (macro.data[part]) return;
+      let d = null;
+      try { d = JSON.parse(store.get(macroCacheKey(part)) || 'null'); } catch { d = null; }
+      if (!d || !d.updated || Date.now() - d.updated > MACRO_CACHE_MAX_AGE) return;
+      d.cached = true;
+      macro.data[part] = d;
+      if (part === apiPart(p.key)) { renderPart(p.key); n++; }
+    });
+  });
+  return n;
 }
 
 /** 排隊執行：同時最多 MACRO_CONCURRENCY 個 */
@@ -249,6 +290,7 @@ async function loadPart(key, force) {
     macro.data[part] = r.data;
     macro.retry.delete(key);
     renderPart(key);
+    macroCacheSave(part, r.data);
     return true;
   } catch (err) {
     if (!state.token) return false; // 已登出（登入逾時）就不再重試
@@ -313,7 +355,7 @@ function macroUpdateStatus() {
     st.innerHTML = `<span class="dot"></span>${fail} 個區塊載入失敗 · 自動重試中${busy ? `（${busy} 個請求進行中）` : ''}`;
   } else if (busy) {
     st.className = 'status';
-    st.innerHTML = `<span class="dot"></span>更新中…（${total - busy}/${total}）`;
+    st.innerHTML = `<span class="dot"></span>${macro.fromCache ? '先顯示上次資料，背景更新中' : '更新中'}…（${total - busy}/${total}）`;
   } else {
     st.className = 'status live';
     st.innerHTML = '<span class="dot"></span>已更新 · ' + time;
@@ -327,7 +369,10 @@ function renderPart(key) {
   (macro.charts[key] || []).forEach(c => c.remove());
   macro.charts[key] = [];
   const pt = $('.panel-time', panel);
-  pt.textContent = d.updated ? (d.stale ? '資料 ' : '更新 ') + new Date(d.updated).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '';
+  const ut = d.updated ? new Date(d.updated) : null;
+  const old = ut && Date.now() - d.updated > 12 * 3600000;
+  pt.textContent = ut ? (d.cached ? '上次資料 ' : d.stale ? '資料 ' : '更新 ') +
+    (old ? `${ut.getMonth() + 1}/${ut.getDate()} ` : '') + ut.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '';
   pt.classList.remove('warn');
   pt.title = '';
   delete pt.dataset.countdown;

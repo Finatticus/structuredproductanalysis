@@ -5,10 +5,20 @@
  *      Macro.gs（get_、okText_、yahooSession_、FINMIND_TOKEN）
  */
 
-function research_(raw) {
+const RESEARCH_TTL = 600; // 同一檔 10 分鐘內重複查詢直接用快取
+
+function research_(raw, force) {
   const s = String(raw || '').trim().toUpperCase().replace(/\s+/g, ' ');
   if (!s) throw new Error('請輸入股票代號');
-  return /^\d{4,6}[A-Z]?$/.test(s) ? researchTw_(s) : researchYahoo_(s);
+  const key = 'rs_' + s;
+  if (!force) {
+    const hit = cacheGetBig_(key);
+    if (hit) return JSON.parse(hit);
+  }
+  // Code.gs withBackup_：整個失敗 → 回傳最後成功資料；Yahoo 認證失敗造成欄位空白 → 用最後成功資料補上
+  const data = withBackup_(key, function () { return /^\d{4,6}[A-Z]?$/.test(s) ? researchTw_(s) : researchYahoo_(s); });
+  if (!data.stale) cachePutBig_(key, JSON.stringify(data), RESEARCH_TTL);
+  return data;
 }
 
 function fmId_(dataset, id, start) {
@@ -49,7 +59,10 @@ function yahooSummary_(ysym, modules) {
     let res = q(yahooSession_(false));
     if (res.getResponseCode() === 401 || res.getResponseCode() === 403) res = q(yahooSession_(true));
     return JSON.parse(res.getContentText()).quoteSummary.result[0] || {};
-  } catch (e) { return {}; }
+  } catch (e) {
+    YAHOO_DEGRADED_ = YAHOO_DEGRADED_ || 'Yahoo 資料暫時無法取得';
+    return {};
+  }
 }
 
 function raw_(o, k) {

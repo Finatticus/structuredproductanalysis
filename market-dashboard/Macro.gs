@@ -19,9 +19,8 @@ function macro_(part, force, acc) {
     flow: macroFlow_, flow_otc: macroFlowOtc_, calendar: macroCalendar_, twmacro: macroTwMacro_, earnings: macroEarnings_,
   };
   if (!parts[part]) throw new Error('未知的區塊：' + part);
-  const cache = CacheService.getScriptCache();
   const key = 'm_' + part + (part === 'earnings' ? '_' + acc : ''); // 財報日曆依各人自選清單
-  const hit = cache.get(key);
+  const hit = cacheGetBig_(key);
   if (hit) {
     const old = JSON.parse(hit);
     if (!force || Date.now() - old.updated < MACRO_FORCE_MIN_MS) return old;
@@ -31,7 +30,7 @@ function macro_(part, force, acc) {
     data = parts[part](acc);
   } catch (err) {
     // 來源暫時失敗：回傳最近一次成功的資料（標記 stale），前端照常顯示並在背景重試
-    const backup = hit || cache.get('ms_' + key);
+    const backup = hit || cacheGetBig_('ms_' + key);
     if (!backup) throw err;
     const old = JSON.parse(backup);
     old.stale = String((err && err.message) || err).slice(0, 120);
@@ -39,10 +38,8 @@ function macro_(part, force, acc) {
   }
   data.updated = Date.now();
   const text = JSON.stringify(data);
-  try {
-    cache.put(key, text, MACRO_TTL[part]);
-    cache.put('ms_' + key, text, 21600); // 備援副本，保留 6 小時
-  } catch (e) { /* 超過 100KB 不快取 */ }
+  cachePutBig_(key, text, MACRO_TTL[part]);
+  cachePutBig_('ms_' + key, text, 21600); // 備援副本，保留 6 小時
   return data;
 }
 
@@ -724,21 +721,47 @@ function flowData_(mkt) {
 
 /* ======================== 財報日曆（自選清單） ======================== */
 /** Yahoo 需要 cookie + crumb 才能查財報日期；取得後快取 6 小時 */
+/**
+ * Yahoo cookie + crumb。依序嘗試多個 cookie 來源與兩個 API 主機；全部失敗時改用上次成功的組合
+ * （crumb 通常可用很久），並在 10 分鐘內不再重試，避免每個請求都卡在認證上。
+ */
 function yahooSession_(renew) {
   const cache = CacheService.getScriptCache();
+  const props = PropertiesService.getScriptProperties();
   if (!renew) {
     const hit = cache.get('ysess');
     if (hit) return JSON.parse(hit);
   }
-  const r1 = fetch_('https://fc.yahoo.com', { muteHttpExceptions: true, followRedirects: false, headers: { 'User-Agent': UA } });
-  let sc = r1.getAllHeaders()['Set-Cookie'] || [];
-  if (!Array.isArray(sc)) sc = [sc];
-  const cookie = sc.map(function (c) { return String(c).split(';')[0]; }).join('; ');
-  const r2 = fetch_('https://query1.finance.yahoo.com/v1/test/getcrumb', { muteHttpExceptions: true, headers: { 'User-Agent': UA, Cookie: cookie } });
-  const crumb = r2.getResponseCode() === 200 ? r2.getContentText().trim() : '';
-  if (!crumb || /[<\s]/.test(crumb)) throw new Error('Yahoo 認證失敗（HTTP ' + r2.getResponseCode() + '）');
-  const s = { cookie: cookie, crumb: crumb };
+  const last = props.getProperty('ysessLast');
+  if (cache.get('ysessFail')) {
+    YAHOO_DEGRADED_ = 'Yahoo 認證暫時失敗';
+    if (last && !renew) return JSON.parse(last);
+    throw new Error('Yahoo 認證暫時失敗，稍後自動重試');
+  }
+  let s = null, why = '';
+  const cookieUrls = ['https://fc.yahoo.com', 'https://finance.yahoo.com/', 'https://login.yahoo.com/'];
+  for (let i = 0; i < cookieUrls.length && !s; i++) {
+    const r1 = fetch_(cookieUrls[i], { muteHttpExceptions: true, followRedirects: false, headers: { 'User-Agent': UA } });
+    let sc = r1.getAllHeaders()['Set-Cookie'] || [];
+    if (!Array.isArray(sc)) sc = [sc];
+    const cookie = sc.map(function (c) { return String(c).split(';')[0]; }).filter(function (c) { return c; }).join('; ');
+    if (!cookie) { why = '取不到 cookie'; continue; }
+    ['query1', 'query2'].some(function (host) {
+      const r2 = fetch_('https://' + host + '.finance.yahoo.com/v1/test/getcrumb', { muteHttpExceptions: true, headers: { 'User-Agent': UA, Cookie: cookie } });
+      const crumb = r2.getResponseCode() === 200 ? r2.getContentText().trim() : '';
+      if (crumb && !/[<\s]/.test(crumb)) { s = { cookie: cookie, crumb: crumb }; return true; }
+      why = 'HTTP ' + r2.getResponseCode();
+      return false;
+    });
+  }
+  if (!s) {
+    cache.put('ysessFail', '1', 600);
+    YAHOO_DEGRADED_ = 'Yahoo 認證失敗（' + why + '）';
+    if (last && !renew) return JSON.parse(last);
+    throw new Error('Yahoo 認證失敗（' + why + '）');
+  }
   cache.put('ysess', JSON.stringify(s), 21600);
+  props.setProperty('ysessLast', JSON.stringify(s));
   return s;
 }
 

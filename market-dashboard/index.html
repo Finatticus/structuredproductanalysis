@@ -58,6 +58,7 @@
     </div>
     <nav class="sections" id="sectionNav">
       <button class="nav-btn active" data-section="market">市場監控</button>
+      <button class="nav-btn" data-section="portfolio">投資組合</button>
       <button class="nav-btn" data-section="macro">總經與板塊分析</button>
       <button class="nav-btn" data-section="research">個股研究</button>
       <button class="nav-btn" data-section="screener">選股篩選器</button>
@@ -209,6 +210,17 @@
       <p class="macro-note">範圍：上市＋上櫃普通股與 ETF。資料來源：臺灣證券交易所、櫃買中心（每日收盤後由後端自動更新；融資約 21:00 公布）。
         本益比、殖利率、淨值比為交易所公布值；月營收為最近一期公告。點代號可開啟個股研究。</p>
     </div>
+    <!-- 投資組合 -->
+    <div class="section hidden" id="section-portfolio">
+      <div class="toolbar">
+        <div class="toolbar-left"><h1>投資組合</h1><span class="status" id="pfStatus"><span class="dot"></span>點開時載入</span></div>
+        <div class="toolbar-right"><button class="btn btn-ghost btn-sm" id="pfRefresh" title="重新抓取報價、歷史價格、配息與匯率">↻ 更新</button></div>
+      </div>
+      <div class="seg etf-tabs" id="pfTabs"></div>
+      <div id="pfBody"><div class="panel-msg">載入中…</div></div>
+      <p class="macro-note">報價：證交所 MIS（台股）、Yahoo Finance（國外、匯率、歷史價格與配息）。損益、股利、績效皆依你輸入的交易紀錄估算，稅費與實際入帳可能有差異，請以券商對帳單為準。</p>
+    </div>
+
     <!-- ETF 專區 -->
     <div class="section hidden" id="section-etf">
       <div class="toolbar">
@@ -357,6 +369,7 @@
 <script src="research.js"></script>
 <script src="screener.js"></script>
 <script src="etf.js"></script>
+<script src="portfolio.js"></script>
 <script src="backtest.js"></script>
 <script src="help.js"></script>
 <script src="settings.js"></script>

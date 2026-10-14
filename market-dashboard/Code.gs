@@ -142,7 +142,11 @@ function route_(req) {
     }
     case 'research': {
       auth_(req.token);
-      return { ok: true, data: research_(req.symbol), usage: getUsage_() }; // 定義於 Research.gs
+      return { ok: true, data: research_(req.symbol, !!req.force), usage: getUsage_() }; // 定義於 Research.gs
+    }
+    case 'portfolio': {
+      const acc = auth_(req.token);
+      return { ok: true, data: portfolio_(acc, req), usage: getUsage_() }; // 定義於 Portfolio.gs
     }
     case 'etf': {
       auth_(req.token);
@@ -826,6 +830,83 @@ function getUsage_() {
   }
   const today = Utilities.formatDate(new Date(), USAGE_TZ, 'yyyy-MM-dd');
   return { date: today, count: u.d === today ? u.n : 0, limit: URLFETCH_DAILY_LIMIT };
+}
+
+/* ======================== 大型快取與備援 ======================== */
+// CacheService 單筆上限 100KB：超過時切成多段存（以字元數切，中文 3 位元組也不會超過）
+const BIG_CHUNK = 30000;
+
+function cacheGetBig_(key) {
+  const cache = CacheService.getScriptCache();
+  const head = cache.get(key);
+  if (!head || head.indexOf('~chunks:') !== 0) return head;
+  const n = +head.slice(8);
+  const keys = [];
+  for (let i = 0; i < n; i++) keys.push(key + '~' + i);
+  const parts = cache.getAll(keys);
+  let s = '';
+  for (let i = 0; i < n; i++) {
+    if (parts[keys[i]] == null) return null;
+    s += parts[keys[i]];
+  }
+  return s;
+}
+
+function cachePutBig_(key, text, ttl) {
+  const cache = CacheService.getScriptCache();
+  try {
+    if (text.length <= BIG_CHUNK) { cache.put(key, text, ttl); return; }
+    const n = Math.ceil(text.length / BIG_CHUNK);
+    if (n > 30) return; // 約 900KB 以上不快取
+    const obj = {};
+    for (let i = 0; i < n; i++) obj[key + '~' + i] = text.substr(i * BIG_CHUNK, BIG_CHUNK);
+    cache.putAll(obj, ttl);
+    cache.put(key, '~chunks:' + n, ttl);
+  } catch (e) { /* 快取失敗不影響主流程 */ }
+}
+
+// 本次執行中 Yahoo 認證或 quoteSummary 是否失敗（資料可能缺欄位）
+let YAHOO_DEGRADED_ = '';
+
+function isEmptyVal_(v) {
+  if (v == null || v === '') return true;
+  if (Array.isArray(v)) return v.length === 0;
+  if (typeof v === 'object') return Object.keys(v).every(function (k) { return v[k] == null; });
+  return false;
+}
+
+/**
+ * 執行 fn 並保存一份「最後成功資料」（6 小時）：
+ *  - fn 失敗 → 回傳備援並標記 stale（錯誤訊息）
+ *  - fn 成功但 Yahoo 認證失敗造成部分欄位空白 → 用備援補上這些欄位，標記 filled
+ */
+function withBackup_(key, fn) {
+  const bk = 'bk_' + key;
+  YAHOO_DEGRADED_ = '';
+  let data;
+  try {
+    data = fn();
+  } catch (err) {
+    const b = cacheGetBig_(bk);
+    if (!b) throw err;
+    const old = JSON.parse(b);
+    old.stale = String((err && err.message) || err).slice(0, 160);
+    return old;
+  }
+  if (!data || typeof data !== 'object') return data;
+  if (!data.updated) data.updated = Date.now();
+  if (YAHOO_DEGRADED_) {
+    const b = cacheGetBig_(bk);
+    if (b) {
+      const old = JSON.parse(b);
+      const filled = Object.keys(old).filter(function (k) { return k !== 'updated' && isEmptyVal_(data[k]) && !isEmptyVal_(old[k]); });
+      filled.forEach(function (k) { data[k] = old[k]; });
+      if (filled.length) { data.filled = filled; data.filledAt = old.updated; data.stale = YAHOO_DEGRADED_; }
+    }
+    return data; // 不完整的資料不覆蓋備援
+  }
+  if (!data.stale) cachePutBig_(bk, JSON.stringify(data), 21600);
+  return data;
 }
 
 /* ======================== 工具 ======================== */
