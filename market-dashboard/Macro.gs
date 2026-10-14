@@ -488,7 +488,7 @@ function parseFomc_(html) {
 // 到 https://finmindtrade.com 免費註冊後，把 token 貼在這裡可大幅提高成功率（不填也能用，會改走交易所備援）。
 // FinMind token：建議放在「專案設定 → 指令碼屬性」的 FINMIND_TOKEN（優先使用），並把下面這行清空。
 // 網頁使用瀏覽器資料引擎時，Macro.gs 會和網頁一起上傳；token 寫在這裡會被看到。
-const FINMIND_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoicG9zdGxlODQxMjIwQGdtYWlsLmNvbSIsImVtYWlsIjoicG9zdGxlODQxMjIwQGdtYWlsLmNvbSIsInRva2VuX3ZlcnNpb24iOjB9.T58Ouf5sDSu_NEAL1Gok2bwlLWOLQg3CA6UABRu_eqA';
+const FINMIND_TOKEN = ''; // 已移到指令碼屬性 FINMIND_TOKEN
 function finmindToken_() {
   try { return PropertiesService.getScriptProperties().getProperty('FINMIND_TOKEN') || FINMIND_TOKEN; } catch (e) { return FINMIND_TOKEN; }
 }

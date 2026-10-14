@@ -164,6 +164,10 @@ function route_(req) {
       auth_(req.token);
       return { ok: true, data: research_(req.symbol, !!req.force), usage: getUsage_() }; // 定義於 Research.gs
     }
+    case 'relay': {
+      auth_(req.token);
+      return { ok: true, data: relay_(String(req.url || '')) };
+    }
     case 'diag': {
       auth_(req.token);
       return { ok: true, data: diag_(!!req.probe) };
@@ -860,7 +864,8 @@ const PROXY_HOSTS = [
   'mis.twse.com.tw', 'www.twse.com.tw', 'openapi.twse.com.tw', 'www.tpex.org.tw',
   'fred.stlouisfed.org', 'api.finmindtrade.com', 'api.nasdaq.com', 'api.cnyes.com', 'news.cnyes.com',
   'www.moneydj.com', 'www.federalreserve.gov', 'www.cnbc.com', 'www.cbc.gov.tw', 'ws.ndc.gov.tw', 'data.gov.tw',
-  'nfs.faireconomy.media', 'markets.newyorkfed.org', 'api.alternative.me', 'home.treasury.gov', 'api.stlouisfed.org',
+  'markets.newyorkfed.org', 'api.alternative.me', 'home.treasury.gov', 'api.stlouisfed.org',
+  // nfs.faireconomy.media 不經中繼站：它擋 Cloudflare 主機，Google 直連反而可以
 ];
 let PROXY_CFG_ = null;
 let QUOTA_HIT_ = false; // 本次執行碰到 Google 每日對外請求上限
@@ -884,6 +889,30 @@ function viaProxy_(url) {
   if (!p.url || PROXY_HOSTS.indexOf(hostOf_(url)) < 0) return url;
   return p.url + '/?key=' + encodeURIComponent(p.key) + '&url=' + encodeURIComponent(url);
 }
+
+/**
+ * 代抓：少數網站擋 Cloudflare 主機但不擋 Google（例如 Forex Factory），瀏覽器引擎抓不到時請後端直連代抓。
+ * 只限白名單、結果快取 30 分鐘（多人共用），幾乎不耗額度。
+ */
+const RELAY_ALLOW = ['nfs.faireconomy.media'];
+function relay_(url) {
+  if (RELAY_ALLOW.indexOf(hostOf_(url)) < 0) throw new Error('不允許代抓此網站');
+  const key = 'relay_' + url;
+  const hit = cacheGetBig_(key);
+  if (hit) return JSON.parse(hit);
+  countFetch_(1);
+  let r;
+  try { r = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { 'User-Agent': UA } }); } catch (e) {
+    if (isQuotaError_(e)) noteQuota_();
+    throw new Error('代抓失敗：' + hostOf_(url));
+  }
+  const out = { status: r.getResponseCode(), text: r.getContentText() };
+  if (out.status === 200) cachePutBig_(key, JSON.stringify(out), 1800);
+  return out;
+}
+
+/** 經中繼站時被對方拒絕或中繼站出錯的狀態碼：改由 Google 直連再試一次（有些網站擋 Cloudflare 但不擋 Google） */
+function proxyRejected_(code) { return code === 403 || code === 429 || code === 401 || code >= 500; }
 
 /** Google 每日 UrlFetch 上限（一般帳號 20,000 次）用完時的錯誤 */
 function isQuotaError_(e) {
@@ -948,6 +977,9 @@ function fetch_(url, opt) {
       if (target === url || isQuotaError_(e)) throw e;
       r = UrlFetchApp.fetch(url, opt); // 中繼站連不上：改直接連線
     }
+    if (target !== url && proxyRejected_(r.getResponseCode())) {
+      try { r = UrlFetchApp.fetch(url, opt); countFetch_(1); } catch (e2) { /* 保留中繼站的回應 */ }
+    }
     r = noteRes_(r);
     const ms = Date.now() - t;
     HOST_LOG_.push([host, ms, r.getResponseCode()]);
@@ -978,6 +1010,15 @@ function fetchAll_(reqs) {
   const t = Date.now();
   try {
     const res = UrlFetchApp.fetchAll(idx.map(function (i) { return Object.assign({}, reqs[i], { url: viaProxy_(reqs[i].url) }); }));
+    // 經中繼站被拒（403／429／5xx）的請求：改由 Google 直連再送一批
+    const again = [];
+    res.forEach(function (r, k) { if (viaProxy_(reqs[idx[k]].url) !== reqs[idx[k]].url && proxyRejected_(r.getResponseCode())) again.push(k); });
+    if (again.length) {
+      countFetch_(again.length);
+      try {
+        UrlFetchApp.fetchAll(again.map(function (k) { return reqs[idx[k]]; })).forEach(function (r2, j) { res[again[j]] = r2; });
+      } catch (e2) { /* 保留中繼站的回應 */ }
+    }
     const ms = Date.now() - t; // 整批的時間（無法區分個別請求）
     res.forEach(function (r, k) {
       out[idx[k]] = noteRes_(r);

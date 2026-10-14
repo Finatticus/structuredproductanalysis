@@ -112,7 +112,25 @@ self.Utilities = {
 function proxied(u) {
   return CTX.proxy.url + '/?key=' + encodeURIComponent(CTX.proxy.key || '') + '&url=' + encodeURIComponent(u);
 }
+// 允許瀏覽器跨站讀取（CORS）的網站：用使用者自己的網路直接連，比繞中繼站快，也不會被當成資料中心流量限流
+// （實測證交所網站從台灣直連 0.04–1 秒、經 Cloudflare 曾達 19 秒）
+const DIRECT_HOSTS = ['www.twse.com.tw', 'api.alternative.me'];
+function hostName(u) { const m = String(u).match(/^https?:\/\/([^\/?#:]+)/i); return m ? m[1].toLowerCase() : ''; }
+
 function xfetch(url, opt) {
+  opt = opt || {};
+  const hasCookie = Object.keys(opt.headers || {}).some(k => /^cookie$/i.test(k));
+  if (DIRECT_HOSTS.indexOf(hostName(url)) >= 0 && !hasCookie && !CTX.prefetched[url]) {
+    try {
+      const r = xfetchVia(url, url, opt);
+      if (r.getResponseCode() < 500 && r.getResponseCode() !== 403 && r.getResponseCode() !== 429) return r;
+    } catch (e) { /* 直連失敗：改經中繼站 */ }
+  }
+  return xfetchVia(url, null, opt);
+}
+
+/** target = null 時經中繼站 */
+function xfetchVia(url, target, opt) {
   opt = opt || {};
   // 主執行緒已平行抓好的內容（見 engine.js 的預先抓取）
   const pre = CTX.prefetched[url];
@@ -121,16 +139,17 @@ function xfetch(url, opt) {
     return { getResponseCode: () => pre.status, getContentText: () => pre.text, getAllHeaders: () => ({}), getHeaders: () => ({}), getBlob() { throw new Error('不支援'); } };
   }
   const x = new XMLHttpRequest();
-  x.open(String(opt.method || 'GET').toUpperCase(), proxied(url), false);
+  x.open(String(opt.method || 'GET').toUpperCase(), target || proxied(url), false);
   x.timeout = 15000;
-  const h = opt.headers || {};
+  const h = target ? {} : (opt.headers || {}); // 直連時不加自訂標頭（避免預檢）
   Object.keys(h).forEach(k => {
     if (/^cookie$/i.test(k)) x.setRequestHeader('X-Cookie', h[k]); // 瀏覽器不能帶跨站 Cookie，由中繼站轉成 Cookie
     else if (/^accept$/i.test(k)) x.setRequestHeader('Accept', h[k]);
     // User-Agent、Referer、Origin 由中繼站依網站自動加上
   });
-  try { x.send(opt.payload || null); } catch (e) { hostFailed(url); throw new Error('無法開啟網址：' + url); }
-  if (x.status === 0) { hostFailed(url); throw new Error('無法開啟網址：' + url); }
+  // 直連失敗不暫停該網站（呼叫端會改經中繼站再試）；經中繼站也失敗才暫停
+  try { x.send(opt.payload || null); } catch (e) { if (!target) hostFailed(url); throw new Error('無法開啟網址：' + url); }
+  if (x.status === 0) { if (!target) hostFailed(url); throw new Error('無法開啟網址：' + url); }
   const status = x.status, text = x.responseText;
   if (opt.muteHttpExceptions === false && status >= 400) throw new Error('Request failed for ' + url + ' returned code ' + status);
   const xsc = x.getResponseHeader('X-Set-Cookie');
@@ -189,6 +208,7 @@ self.onmessage = e => {
       CTX.prefetched = ctx.prefetched || {};
     }
     if (!CTX.proxy || !CTX.proxy.url) throw new Error('未設定資料中繼站');
+    if (ctx && ctx.prefetched) CTX.prefetched = ctx.prefetched;
     load(version);
     if (typeof self[fn] !== 'function' || !/^(macro_|cal_|calPlan_)$/.test(fn)) throw new Error('不支援的功能：' + fn);
     const data = JSON.parse(JSON.stringify(self[fn].apply(null, args || [])));

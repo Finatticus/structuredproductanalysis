@@ -58,11 +58,15 @@ function nqUrl_(kind, d) { return 'https://api.nasdaq.com/api/calendar/' + kind 
  * 瀏覽器引擎用：列出這個區塊接下來要逐一抓的網址（還沒快取的），
  * 讓瀏覽器先平行抓好再交給引擎計算（引擎只能逐一同步請求）。
  */
+const FF_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
+
 function calPlan_(part) {
   const W = calWeeks_();
   const list = part === 'econ' ? calEconDays_(W).map(function (d) { return ['economicevents', d]; })
     : part === 'usearn' ? calEarnDays_(W).map(function (d) { return ['earnings', d]; }) : [];
-  return list.filter(function (x) { return !cacheGetBig_('nq_' + x[0] + '_' + x[1]); }).map(function (x) { return nqUrl_(x[0], x[1]); });
+  const urls = list.filter(function (x) { return !cacheGetBig_('nq_' + x[0] + '_' + x[1]); }).map(function (x) { return nqUrl_(x[0], x[1]); });
+  if (part === 'econ') urls.unshift(FF_URL);
+  return urls;
 }
 /** kind = economicevents | earnings；dates = 美東日期 yyyy-MM-dd。回傳 { 日期: rows 或 null（失敗） } */
 function nqDays_(kind, dates) {
@@ -225,7 +229,7 @@ function calEcon_() {
   const props = PropertiesService.getScriptProperties();
   // 美東日期：涵蓋上週一～下下週一（台北週一凌晨 = 美東週日）
   const etDays = calEconDays_(W);
-  const ffRes = fetch_('https://nfs.faireconomy.media/ff_calendar_thisweek.json', { muteHttpExceptions: true, headers: { 'User-Agent': UA } });
+  const ffRes = fetch_(FF_URL, { muteHttpExceptions: true, headers: { 'User-Agent': UA } });
   const nqByDay = nqDays_('economicevents', etDays);
   const nqOk = etDays.filter(function (d) { return nqByDay[d]; }).length;
   const nqAll = nqLabelPairs_(nqEconRows_(nqByDay));

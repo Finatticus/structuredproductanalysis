@@ -169,7 +169,21 @@ const direct = { misBadUntil: 0 }; // 證交所即時報價最近失敗：3 分�
 
 function proxyOn() { return !!(state.proxy && state.proxy.url); }
 
+// 允許瀏覽器跨站讀取的網站：直接連（用使用者自己的網路，不繞中繼站）
+const DIRECT_HOSTS = ['www.twse.com.tw', 'api.alternative.me'];
+
 async function pget(u, timeout = DIRECT_TIMEOUT_MS) {
+  const host0 = new URL(u).hostname;
+  if (DIRECT_HOSTS.includes(host0)) {
+    const t0 = Date.now();
+    try {
+      const ctl = new AbortController();
+      const tm = setTimeout(() => ctl.abort(), timeout);
+      const r = await fetch(u, { signal: ctl.signal }).finally(() => clearTimeout(tm));
+      logApi({ at: t0, action: '直連 ' + host0 + '（不經中繼站）', total: Date.now() - t0, server: null, hosts: { [host0]: [1, Date.now() - t0, r.ok ? 0 : 1] }, ok: r.ok, err: r.ok ? '' : 'HTTP ' + r.status });
+      if (r.ok) return await r.text();
+    } catch { /* 改經中繼站 */ }
+  }
   const ctl = new AbortController();
   const tm = setTimeout(() => ctl.abort(), timeout);
   const t0 = Date.now();

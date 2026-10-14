@@ -1,8 +1,8 @@
 /**
  * 個股研究 — 後端（在 Apps Script 新增指令碼檔「Research」貼上）
- * 台股：FinMind（需 Macro.gs 的 FINMIND_TOKEN）＋ Yahoo 走勢；美股／其他：Yahoo Finance
+ * 台股：FinMind（token 放在指令碼屬性 FINMIND_TOKEN）＋ Yahoo 走勢；美股／其他：Yahoo Finance
  * 依賴 Code.gs（fetch_、fetchAll_、getHistory_、resolveSymbol_、toYahoo_、getQuotes_）
- *      Macro.gs（get_、okText_、yahooSession_、FINMIND_TOKEN）
+ *      Macro.gs（get_、okText_、yahooSession_、finmindToken_）
  */
 
 const RESEARCH_TTL = 600; // 同一檔 10 分鐘內重複查詢直接用快取

@@ -410,6 +410,7 @@ const HELP_GUIDE = `
 <ul>
   <li>在瀏覽器背景執行緒（不會讓畫面卡住）直接執行<b>同一份</b>後端程式（Code.gs、Macro.gs、Calendar.gs），對外請求經中繼站。計算邏輯只有一份，結果與後端一致；失敗時自動改走後端（後端還有 6 小時備援資料）。</li>
   <li>使用條件：已設定中繼站，且網頁以 http/https 開啟（例如 GitHub Pages）。<b>直接雙擊 index.html（file://）時無法使用</b>，這些字卡會自動改走後端。</li>
+  <li>有些網站擋 Cloudflare 的主機：證交所網站改由瀏覽器直接連（除權息從 19 秒降到 1.7 秒）；Forex Factory 改請後端代抓；後端經中繼站被拒時自動改由 Google 直連再試。</li>
   <li>需要和網頁一起上傳：<code>engine.js</code>、<code>engine-worker.js</code>、<code>Code.gs</code>、<code>Macro.gs</code>、<code>Calendar.gs</code>。上傳前先把 FinMind token 移到指令碼屬性（見下方步驟 3）。</li>
 </ul>
 <h4>設定步驟（照順序做一次）</h4>

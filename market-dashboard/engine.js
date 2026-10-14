@@ -10,6 +10,8 @@ const ENGINE_POOL = 3;
 const ENGINE_VERSION = '20261015';
 const ENGINE_PROPS_KEY = 'mw_eng_props';
 const engine = { workers: [], queue: [], seq: 0, pending: new Map(), failed: false, ctxExtra: {} };
+// 會擋 Cloudflare 主機、但不擋 Google 的網站：經中繼站抓不到時改請後端代抓（後端白名單見 Code.gs RELAY_ALLOW）
+const RELAY_HOSTS = ['nfs.faireconomy.media'];
 
 /** 可用條件：有中繼站、瀏覽器支援 Worker、不是直接開檔案（file:// 無法載入背景程式） */
 function engineOn() {
@@ -98,7 +100,12 @@ async function engineCallPlanned(fn, args, label, planPart) {
     const one = async () => {
       while (queue.length) {
         const u = queue.shift();
-        try { pre[u] = { status: 200, text: await pget(u, 15000) }; } catch { /* 抓不到就讓引擎自己再試 */ }
+        try { pre[u] = { status: 200, text: await pget(u, 15000) }; } catch {
+          // 擋 Cloudflare 主機的網站（例如 Forex Factory）：請後端代抓（後端快取 30 分鐘，幾乎不耗額度）
+          if (RELAY_HOSTS.some(h => u.includes(h))) {
+            try { const r = (await api('relay', { url: u })).data; if (r.status === 200) pre[u] = r; } catch { /* 讓引擎自己處理 */ }
+          }
+        }
       }
     };
     await Promise.all(Array.from({ length: Math.min(6, urls.length) }, one));
