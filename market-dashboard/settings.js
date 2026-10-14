@@ -73,6 +73,8 @@ function renderDiag(d) {
           ? '瀏覽器資料引擎：無法啟動（請確認 engine-worker.js、Code.gs、Macro.gs、Calendar.gs 有和網頁一起上傳）；目前改由後端處理。'
           : '瀏覽器資料引擎：未啟用（瀏覽器不支援）；目前改由後端處理。');
   }
+  if (d.fredKey === false) verdict.push('FRED_KEY：未設定。美國經濟數據只能走 FRED 網站，網站對程式請求常常沒回應而一直重試；請在指令碼屬性加入 FRED_KEY（免費，見說明頁）。');
+  else if (d.fredKey) verdict.push('FRED_KEY：已設定，美國經濟數據走 FRED 官方 API（按「實測」可確認金鑰是否有效）。');
   if (d.probe) {
     const bad = d.probe.filter(p => p.err || p.code !== 200), slow = d.probe.filter(p => !p.err && p.code === 200 && p.ms > 5000);
     if (bad.length) verdict.push(`實測連不上或被拒絕：${bad.map(p => `${p.name}（${p.err ? '連線失敗' : 'HTTP ' + p.code}）`).join('、')}。這些來源很可能限流或封鎖 Google 主機，相關資料會改用備援或沿用舊資料。`);

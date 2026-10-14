@@ -1232,7 +1232,7 @@ const DIAG_PROBES = [
  * 一律回傳：暫停中的來源、近 1 小時各來源的請求次數／平均與最長耗時／失敗次數
  */
 function diag_(probe) {
-  const out = { down: hostsDown_(), at: Date.now(), proxy: !!proxyCfg_().url };
+  const out = { down: hostsDown_(), at: Date.now(), proxy: !!proxyCfg_().url, fredKey: !!fredKey_() };
   try { const q = CacheService.getScriptCache().get('quota_out'); out.quotaOut = q ? +q : null; } catch (e) { out.quotaOut = null; }
   try { out.triggers = ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); }); } catch (e) { out.triggers = null; }
   let log = [];
@@ -1248,7 +1248,10 @@ function diag_(probe) {
   });
   out.stats = stat;
   if (probe) {
-    out.probe = DIAG_PROBES.map(function (p) {
+    // 有 FRED_KEY 時另外實測 FRED 官方 API（網址含金鑰，只回傳主機與狀態碼，不回傳網址）
+    const fk = fredKey_();
+    const probes = DIAG_PROBES.concat(fk ? [['FRED 官方 API（美國經濟數據）', 'https://api.stlouisfed.org/fred/series/observations?series_id=UNRATE&limit=1&file_type=json&api_key=' + encodeURIComponent(fk)]] : []);
+    out.probe = probes.map(function (p) {
       const t = Date.now();
       let code = '', err = '', size = 0;
       try {

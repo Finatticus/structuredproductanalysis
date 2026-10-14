@@ -45,6 +45,7 @@ function partCache_(key, ttl, force, fn) {
   }
   data.updated = Date.now();
   const text = JSON.stringify(data);
+  if (data.stale) { cachePutBig_(key, text, Math.min(ttl, 300)); return data; } // 用的是舊資料：只快取 5 分鐘，之後再試
   cachePutBig_(key, text, ttl);
   cachePutBig_('ms_' + key, text, 21600); // 備援副本，保留 6 小時
   return data;
@@ -933,6 +934,25 @@ function fredParse_(text, viaApi) {
     .map(function (r) { return [r[0], parseFloat(r[1])]; });
 }
 
+/** 每個數列上次成功的結果存在指令碼屬性（保留到下次成功），來源失敗時沿用，不會整張表變成錯誤 */
+function econBackup_(id, row) {
+  const p = PropertiesService.getScriptProperties(), k = 'fredbk_' + id;
+  try {
+    if (row) { p.setProperty(k, JSON.stringify(row)); return row; }
+    const s = p.getProperty(k);
+    return s ? JSON.parse(s) : null;
+  } catch (e) { return null; }
+}
+
+/** 抓不到時的原因（給使用者看得懂的說明） */
+function econWhy_(codes, key) {
+  if (!key) return '未設定 FRED_KEY：FRED 網站對程式請求常常沒回應，請在指令碼屬性加入 FRED_KEY（見說明）';
+  if (codes.indexOf(400) >= 0 || codes.indexOf(403) >= 0) return 'FRED API 拒絕（HTTP ' + (codes.indexOf(400) >= 0 ? 400 : 403) + '）：FRED_KEY 可能打錯或已失效，請到 fredaccount.stlouisfed.org 確認';
+  if (codes.indexOf(429) >= 0) return 'FRED API 暫時限流（HTTP 429），稍後自動重試';
+  if (codes.indexOf(599) >= 0 || codes.indexOf(0) >= 0) return 'FRED API 連線逾時或暫停中，稍後自動重試';
+  return 'FRED API 暫時無法取得（HTTP ' + codes.join('/') + '）';
+}
+
 function macroEcon_() {
   const cosd = Utilities.formatDate(new Date(Date.now() - 4 * 365 * 86400000), 'UTC', 'yyyy-MM-dd');
   const key = fredKey_();
@@ -941,10 +961,13 @@ function macroEcon_() {
       ? 'https://api.stlouisfed.org/fred/series/observations?series_id=' + s.id + '&api_key=' + encodeURIComponent(key) + '&file_type=json&observation_start=' + cosd
       : 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=' + s.id + '&cosd=' + cosd);
   }));
-  let okCount = 0;
+  let okCount = 0, oldCount = 0;
+  const codes = [];
   const rows = ECON_SERIES.map(function (s, i) {
     try {
-      let pts = fredParse_(okText_(res[i]), !!key);
+      const text = okText_(res[i]);
+      if (text == null) throw new Error('HTTP ' + (res[i] ? res[i].getResponseCode() : 0));
+      let pts = fredParse_(text, !!key);
       if (s.tf === 'yoy') pts = pts.slice(12).map(function (p, j) { return [p[0], (p[1] / pts[j][1] - 1) * 100]; });
       else if (s.tf === 'diff') pts = pts.slice(1).map(function (p, j) { return [p[0], p[1] - pts[j][1]]; });
       else if (s.tf === 'k') pts = pts.map(function (p) { return [p[0], p[1] / 1000]; });
@@ -953,16 +976,23 @@ function macroEcon_() {
       if (!n) throw new Error('沒有資料');
       okCount++;
       const r1 = function (v) { return Math.round(v * 100) / 100; };
-      return {
+      return econBackup_(s.id, {
         name: s.name, unit: s.unit, freq: s.freq, id: s.id,
         date: tail[n - 1][0], latest: r1(tail[n - 1][1]), prev: n > 1 ? r1(tail[n - 2][1]) : null,
         series: tail.map(function (p) { return r1(p[1]); }),
-      };
+      });
     } catch (e) {
+      const c = res[i] ? res[i].getResponseCode() : 0;
+      if (codes.indexOf(c) < 0) codes.push(c);
+      const old = econBackup_(s.id);
+      if (old) { oldCount++; return old; } // 沿用上次成功的數值（經濟數據一個月才更新一次，影響很小）
       return { name: s.name, unit: s.unit, freq: s.freq, id: s.id, err: true };
     }
   });
-  // 全部失敗：視為失敗（改用上次成功的資料並自動重試），不要回傳整張都是錯誤的表
-  if (!okCount) throw new Error('FRED 經濟數據暫時無法取得' + (key ? '' : '（建議設定 FRED_KEY，見說明）'));
-  return { rows: rows, api: !!key };
+  const why = econWhy_(codes, key);
+  // 全部失敗又沒有舊資料：視為失敗（前端沿用上次的資料並自動重試）
+  if (!okCount && !oldCount) throw new Error(why);
+  const out = { rows: rows, api: !!key };
+  if (!okCount) out.stale = why; // 全部都是舊資料：照常顯示，背景繼續重試
+  return out;
 }
