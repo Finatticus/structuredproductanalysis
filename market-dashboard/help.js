@@ -40,6 +40,8 @@ const HELP_QUOTA = `
     <tr><td class="nm">新增標的</td><td>每次 1–2 次</td><td>驗證代碼是否存在</td></tr>
     <tr><td class="nm">總經與板塊分析</td><td>每次重新整理約 35–45 次</td><td>只在第一次開啟時自動抓，之後按「↻ 重新整理」才抓；各字卡另有暫存；隱藏的字卡不抓</td></tr>
     <tr><td class="nm">個股研究</td><td>每查一檔約 6–14 次</td><td>台股約 14 次、美股約 6 次</td></tr>
+    <tr><td class="nm">ETF 專區</td><td>總覽 1 次、美股約 5 次、個別 ETF 約 4–6 次、高股息比較約 25 次</td><td>只在打開分頁或按更新時抓；高股息比較暫存 6 小時</td></tr>
+    <tr><td class="nm">回測與策略</td><td>每載入一個標的 1–2 次</td><td>回測、參數掃描都在瀏覽器計算，不耗額度</td></tr>
     <tr><td class="nm">選股篩選器</td><td>每晚約 10 次<br>第一次建置約 600 次</td><td>建置只發生一次，分散在多次排程；網頁上篩選本身不耗額度</td></tr>
     <tr><td class="nm">虛擬貨幣</td><td>0</td><td>瀏覽器直接連 Binance，不經過 GAS</td></tr>
   </tbody>
@@ -105,7 +107,7 @@ const HELP_GUIDE = `
 <nav class="help-toc">
   <a href="#g-overview">1. 功能總覽</a><a href="#g-account">2. 帳號與資料儲存</a><a href="#g-common">3. 畫面共通操作</a>
   <a href="#g-market">4. 市場監控</a><a href="#g-macro">5. 總經與板塊分析</a><a href="#g-research">6. 個股研究</a>
-  <a href="#g-screener">7. 選股篩選器</a><a href="#g-sources">8. 資料來源與更新時間</a><a href="#g-deploy">9. 部署與更新</a>
+  <a href="#g-screener">7. 選股篩選器</a><a href="#g-etf">7-1. ETF 專區</a><a href="#g-bt">7-2. 回測與策略</a><a href="#g-sources">8. 資料來源與更新時間</a><a href="#g-deploy">9. 部署與更新</a>
   <a href="#g-sheet">10. 試算表結構</a><a href="#g-faq">11. 常見問題與疑難排解</a><a href="#g-disclaimer">12. 免責聲明</a>
 </nav>
 
@@ -117,6 +119,8 @@ const HELP_GUIDE = `
     <tr><td class="nm">總經與板塊分析</td><td>新聞、跨資產、板塊輪動、經濟／財報日曆、美債、FOMC、台股籌碼、資金流向、景氣與央行、美國經濟數據</td><td>第一次開啟時自動更新，之後按「↻ 重新整理」；超過 1 小時會提醒</td></tr>
     <tr><td class="nm">個股研究</td><td>輸入代號，查看單一股票的完整檔案與各面向多空判斷</td><td>每次查詢時即時抓取</td></tr>
     <tr><td class="nm">選股篩選器</td><td>以 60 多項條件篩選上市＋上櫃股票，存常用條件、一鍵加入自選</td><td>後端每天 21:40 自動更新</td></tr>
+    <tr><td class="nm">ETF 專區</td><td>台股 ETF 總覽（折溢價、規模、申贖資金流）、高股息比較、美股 ETF 資金流、個別 ETF（成分股、產業、持股變化、配息）、持股重疊比較</td><td>打開分頁時抓，之後按「↻ 更新」</td></tr>
+    <tr><td class="nm">回測與策略</td><td>選標的回測 8 種策略並與買進持有比較，含停損停利、交易成本、參數掃描</td><td>載入標的時抓一次價格，回測在瀏覽器計算</td></tr>
     <tr><td class="nm">說明</td><td>額度限制與網站說明（本頁）</td><td>—</td></tr>
   </tbody>
 </table></div>
@@ -230,6 +234,7 @@ const HELP_GUIDE = `
     <tr><td class="nm">美國經濟數據</td><td>CPI、核心 CPI、核心 PCE 年增率、失業率、非農新增、實質 GDP、初領失業金、密大消費者信心，含前值、變化與近 13 期走勢；點名稱開 FRED 完整歷史</td><td>FRED</td><td>6 小時</td></tr>
   </tbody>
 </table></div>
+<p>每張字卡右上的 <b>↻</b> 可只更新該字卡（30 秒內重複按會沿用快取）。FOMC 字卡下方可展開「機率怎麼算出來的？」查看模型方法。</p>
 <h4>編輯版面</h4>
 <p>按「✎ 編輯版面」：字卡縮成清單，按住標題列拖曳調整順序；右側可設定寬度（1/3～全寬）或取消「顯示」隱藏字卡（隱藏的不抓資料）；「還原預設」回到原始排列；完成後按「✓ 完成」。版面存在帳號。</p>
 <h4>注意事項</h4>
@@ -309,6 +314,29 @@ const HELP_GUIDE = `
 </ul>
 <p class="muted">資料範圍：上市＋上櫃普通股與 ETF（不含興櫃）。資料為每日收盤後更新，非盤中即時；融資約 21:00 公布。歷史未滿 250 個交易日時，年線、52 週新高等條件暫時不完整，頁面上方會提示。</p>
 
+<h3 id="g-etf">7-1. ETF 專區</h3>
+<div class="tbl-wrap"><table class="mtbl help-tbl">
+  <thead><tr><th>分頁</th><th>內容</th></tr></thead>
+  <tbody>
+    <tr><td class="nm">台股 ETF 總覽</td><td>上市櫃全部 ETF（約 360 檔）：成交價、投信預估淨值、折溢價（|≥1%| 黃底提醒）、規模、今日申贖金額（受益權單位數變化 × 淨值），5／20 日資金流（需累積每日快照）；資金流入／流出前 5、溢價最高／折價最深；可依類型（股票、債券、主動式、槓桿、反向、期貨商品、國外）篩選、搜尋、排序</td></tr>
+    <tr><td class="nm">高股息比較</td><td>0056、00878、00919、00929、00713、00915、00918、00934、00939、00940、00701、00731：殖利率（近 12 月配息 ÷ 股價）、配息頻率、最近除息、1 年價格與含息報酬、3 月含息報酬、規模、申贖、折溢價、費用率</td></tr>
+    <tr><td class="nm">美股 ETF</td><td>30 檔主要 ETF（大盤、類股、債券、商品、比特幣、槓桿反向）：價格、1D／1M／YTD、規模、1／5／20 日資金流（流通單位數變化 × 淨值，估算）</td></tr>
+    <tr><td class="nm">個別 ETF</td><td>規模、費用率、殖利率、含息報酬；前十大成分股與權重（台股顯示中文名）、產業權重、持股變化（與上次記錄比較）、價格 vs 含息報酬走勢、配息紀錄與當次殖利率、受益權單位數走勢；可開走勢圖、加入自選</td></tr>
+    <tr><td class="nm">持股重疊</td><td>比較兩檔 ETF 前十大成分股與產業權重的重疊度（共同持股取較小權重加總），避免重複持有同一批股票</td></tr>
+  </tbody>
+</table></div>
+
+<h3 id="g-bt">7-2. 回測與策略</h3>
+<ol>
+  <li>輸入代號（台股、美股、日股等）按「載入」，取得近 10 年日線（含還原權息價與配息）。</li>
+  <li>設定期間、初始資金、成交方式（隔日開盤較實際／當日收盤）、手續費折扣（0.6＝6 折）、滑價、是否含息、台股是否整張交易。台股交易稅自動套用（股票 0.3%、ETF 0.1%）。</li>
+  <li>加入策略（可多個）：均線交叉、站上均線、KD 交叉（可限低檔買進）、MACD 柱翻正、RSI 超賣反彈、突破新高（海龜通道）、布林通道回歸、定期定額；除定期定額外都可加停損、停利、移動停損。</li>
+  <li>按「執行回測」：自動加入「買進持有」作為基準，比較總報酬、年化報酬、最大回撤、夏普值、卡瑪比、波動度、交易次數、勝率、平均獲利／虧損、獲利因子、平均持有天數、在場時間、最終資產。</li>
+  <li>點比較表的任一列，可看該策略的進出場箭頭、交易明細（含出場原因）；另有累積報酬走勢、回撤圖與年度報酬表。</li>
+  <li>均線交叉、突破新高可用「參數掃描」看 5×5 組參數的年化報酬熱力圖，點格子即可套用；請選周圍也穩定的區域，避免過度最佳化。</li>
+</ol>
+<p class="muted">定期定額的年化報酬為 XIRR；最大回撤、夏普值以時間加權報酬計算。回測無法反映漲跌停無法成交、流動性等所有實務細節，過去績效不代表未來。</p>
+
 <h3 id="g-sources">8. 資料來源與更新時間</h3>
 <div class="tbl-wrap"><table class="mtbl help-tbl">
   <thead><tr><th>來源</th><th>提供的資料</th><th>大約更新時間（台北）</th></tr></thead>
@@ -330,8 +358,8 @@ const HELP_GUIDE = `
 <div class="tbl-wrap"><table class="mtbl help-tbl">
   <thead><tr><th>放到 Apps Script（後端）</th><th>放到網頁資料夾（前端）</th></tr></thead>
   <tbody><tr>
-    <td><code>Code.gs</code>（帳號、報價、走勢）<br><code>Macro.gs</code>（總經與板塊分析）<br><code>Research.gs</code>（個股研究）<br><code>Screener.gs</code>（選股篩選器）</td>
-    <td><code>index.html</code>、<code>style.css</code>、<code>app.js</code>、<code>macro.js</code>、<code>research.js</code>、<code>screener.js</code>、<code>help.js</code></td>
+    <td><code>Code.gs</code>（帳號、報價、走勢）<br><code>Macro.gs</code>（總經與板塊分析）<br><code>Research.gs</code>（個股研究）<br><code>Screener.gs</code>（選股篩選器）<br><code>Etf.gs</code>（ETF 專區、回測價格）</td>
+    <td><code>index.html</code>、<code>style.css</code>、<code>app.js</code>、<code>macro.js</code>、<code>research.js</code>、<code>screener.js</code>、<code>etf.js</code>、<code>backtest.js</code>、<code>help.js</code>、<code>settings.js</code></td>
   </tr></tbody>
 </table></div>
 <h4>9.2 第一次部署</h4>

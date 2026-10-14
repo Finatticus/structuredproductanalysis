@@ -52,6 +52,9 @@ function screenerDaily() {
   } finally {
     lock.releaseLock();
   }
+  // 順便記錄 ETF 受益權單位數快照（ETF 專區的 5／20 日資金流用），沒開網頁也會每天累積
+  try { etf_('tw', null, true); } catch (e) { /* Etf.gs 未安裝或資料暫時無法取得 */ }
+  try { etf_('us', null, true); } catch (e) { /* ignore */ }
 }
 
 /* ======================== 儲存 ======================== */

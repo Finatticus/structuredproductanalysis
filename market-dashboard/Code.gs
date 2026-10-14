@@ -144,6 +144,14 @@ function route_(req) {
       auth_(req.token);
       return { ok: true, data: research_(req.symbol), usage: getUsage_() }; // 定義於 Research.gs
     }
+    case 'etf': {
+      auth_(req.token);
+      return { ok: true, data: etf_(String(req.part || ''), req.code, !!req.force), usage: getUsage_() }; // 定義於 Etf.gs
+    }
+    case 'bars': {
+      auth_(req.token);
+      return { ok: true, data: bars_(req.symbol, req.years), usage: getUsage_() }; // 定義於 Etf.gs（回測用）
+    }
     case 'screener': {
       auth_(req.token);
       return { ok: true, data: screenerTable_() }; // 定義於 Screener.gs

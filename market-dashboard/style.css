@@ -600,6 +600,85 @@ main { max-width: 1440px; margin: 0 auto; padding: 20px 24px 8px; }
 .status.warn { color: #8a6400; }
 .stale-tag { font-size: 12px; font-weight: 600; color: #8a6400; background: #fff4d6; border: 1px solid #f0d58a; border-radius: 999px; padding: 3px 10px; }
 
+/* 總經字卡：獨立更新、方法說明 */
+.panel-refresh { width: 26px; height: 26px; font-size: 14px; }
+.panel-refresh:disabled { opacity: .4; cursor: wait; }
+.macro-grid.editing .panel-refresh { display: none; }
+details.method { margin-top: 12px; font-size: 12.5px; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+details.method summary { cursor: pointer; font-weight: 600; color: var(--primary); }
+details.method ol { padding-left: 20px; margin: 8px 0 4px; line-height: 1.7; }
+details.method ul { padding-left: 18px; margin: 2px 0; }
+
+/* =========================================================
+ * ETF 專區
+ * ========================================================= */
+.etf-tabs { margin-bottom: 14px; flex-wrap: wrap; }
+.etf-tabs button { padding: 7px 16px; font-size: 13.5px; font-weight: 600; }
+.etf-panel { display: block; }
+.etf-minis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 14px 0; }
+.etf-mini { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px 10px; }
+.etf-mini .sub-h { margin: 6px 0; font-size: 12.5px; }
+.etf-mini-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; padding: 3px 0; cursor: pointer; }
+.etf-mini-row:hover { color: var(--primary); }
+.etf-filter { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 6px 0 10px; }
+.etf-filter input { border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 13px; }
+.mtbl.etf-tbl tr[data-open] { cursor: pointer; }
+.mtbl.etf-tbl tr[data-open]:hover td { background: var(--surface-2); }
+.mtbl.etf-tbl td a { color: var(--primary); text-decoration: none; font-weight: 600; }
+.mtbl.etf-tbl th.click { cursor: pointer; }
+.mtbl.etf-tbl th.sel { color: var(--primary); }
+.prem-warn { background: #fff4d6; color: #8a6400 !important; font-weight: 600; }
+.mtbl td.best, .mtbl.bt-tbl td.best { background: var(--primary-soft); font-weight: 700; }
+.etf-detail { margin-top: 6px; }
+.hbars { display: grid; gap: 6px; }
+.hbar { display: grid; grid-template-columns: minmax(120px, 38%) 1fr 64px; align-items: center; gap: 10px; font-size: 13px; }
+.hbar-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbar-t { height: 10px; background: #eef1f5; border-radius: 5px; overflow: hidden; }
+.hbar-t i { display: block; height: 100%; background: var(--primary); border-radius: 5px; }
+.hbar b { text-align: right; font-variant-numeric: tabular-nums; }
+#ovForm input { flex: 1; min-width: 0; }
+
+/* =========================================================
+ * 回測與策略
+ * ========================================================= */
+.bt-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 16px; align-items: start; }
+.bt-layout > .panel { grid-column: auto; }
+.bt-side { position: sticky; top: 66px; max-height: calc(100vh - 80px); display: flex; flex-direction: column; }
+.bt-side .panel-body { overflow-y: auto; }
+.bt-main { display: grid; gap: 16px; min-width: 0; }
+.bt-main > *, #btResult > .panel, #btScanOut > .panel { min-width: 0; }
+#btResult { display: grid; gap: 16px; }
+.bt-main .panel { grid-column: auto; }
+.bt-row { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+.bt-row input, .bt-row select { flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; background: #fff; }
+.bt-info { font-size: 12px; margin: 4px 0 10px; }
+.bt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.bt-grid label, .bt-params label { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--text-2); }
+.bt-grid input, .bt-grid select, .bt-params input { border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font-size: 12.5px; background: var(--surface-2); min-width: 0; width: 100%; }
+.bt-side .chk { margin: 4px 0; }
+.bt-strat { border: 1px solid var(--border); border-left: 4px solid var(--c); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: var(--surface-2); }
+.bt-strat-h { display: flex; align-items: center; gap: 6px; }
+.bt-strat-h b { flex: 1; font-size: 13px; }
+.bt-strat-h .icon-btn { width: 24px; height: 24px; font-size: 14px; }
+.bt-desc { font-size: 11.5px; margin: 3px 0 6px; line-height: 1.5; }
+.bt-params { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.bt-run { width: 100%; margin-top: 10px; padding: 10px; position: sticky; bottom: -14px; }
+.mtbl.bt-tbl tr[data-k] { cursor: pointer; }
+.mtbl.bt-tbl tr.sel td { background: #fff8e1; }
+.dotc { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.mtbl.bt-scan td.heat { text-align: center; cursor: pointer; line-height: 1.4; border: 2px solid #fff; }
+.mtbl.bt-scan td.heat:hover { outline: 2px solid var(--primary); outline-offset: -2px; }
+@media (max-width: 1000px) {
+  .bt-layout { grid-template-columns: 1fr; }
+  .bt-side { position: static; max-height: none; }
+}
+
+/* 選單項目較多時：縮小間距、隱藏捲軸（仍可左右滑動） */
+.sections { scrollbar-width: none; }
+.sections::-webkit-scrollbar { display: none; }
+.nav-btn { padding: 8px 11px; }
+@media (min-width: 761px) and (max-width: 1280px) { .topbar { gap: 14px; } .nav-btn { padding: 7px 8px; font-size: 13px; } .clock { display: none; } }
+
 /* 預留區 */
 .placeholder {
   background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius);

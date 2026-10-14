@@ -63,6 +63,7 @@ function initMacro() {
         <h2 class="panel-title">${p.title}</h2>
         <div class="panel-tools"></div>
         <span class="panel-time"></span>
+        <button class="icon-btn panel-refresh" data-refresh title="只更新這張字卡">↻</button>
         <div class="panel-edit">
           <select data-w title="字卡寬度">${SPAN_OPTS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
           <label class="chk"><input type="checkbox" data-show checked> 顯示</label>
@@ -72,6 +73,14 @@ function initMacro() {
     </section>`).join('');
   $('.nav-btn[data-section="macro"]').addEventListener('click', () => loadMacro(false));
   $('#macroRefresh').addEventListener('click', () => loadMacro(true));
+  // 各字卡獨立更新（後端 30 秒內重複按會沿用快取）
+  grid.addEventListener('click', e => {
+    const b = e.target.closest('[data-refresh]');
+    if (!b) return;
+    const key = b.closest('.panel').dataset.part;
+    b.disabled = true;
+    loadPart(key, true).finally(() => { b.disabled = false; });
+  });
   setInterval(macroStaleCheck, 60000);
   $('#colorSel').addEventListener('change', () => MACRO_PARTS.forEach(p => renderPart(p.key)));
 
@@ -545,7 +554,22 @@ function renderFomc(d, body) {
     <div class="tbl-wrap"><table class="mtbl">
       <thead><tr><th>會議日期</th><th class="num">會後隱含利率</th><th class="num">較目前累計</th><th>最可能目標區間</th></tr></thead>
       <tbody>${rows}</tbody></table></div>
-    <div class="foot-note">依 CBOT 30 天期聯邦基金期貨價格推算（CME FedWatch 方法，1 碼 = 25bp）；會議日期取自聯準會官網。期貨含期限溢酬，機率僅供參考。</div>`;
+    <details class="method">
+      <summary>機率怎麼算出來的？（模型方法與說明）</summary>
+      <ol>
+        <li><b>資料</b>：CBOT「30 天期聯邦基金期貨」（代號 ZQ）各月份合約價格。合約到期時以<b>該月每日有效聯邦基金利率（EFFR）的平均值</b>結算，因此「100 − 期貨價格」＝市場預期的該月平均利率。</li>
+        <li><b>拆解會議前後的利率</b>（CME FedWatch 方法）：會議月份的平均利率是「會議前利率 × 會議前天數 ＋ 會議後利率 × 會議後天數」÷ 當月天數。
+          <ul>
+            <li>若<b>下個月沒有會議</b>：下個月合約的隱含利率就是本次會議後的利率，再反推會議前利率。</li>
+            <li>若下個月也有會議：用上一次會議推算出的會後利率（第一次會議則用前一個無會議月份的合約或目前 EFFR）當作會議前利率，再反推會議後利率。</li>
+            <li>決議日當天仍適用舊利率，新利率自隔天生效。</li>
+          </ul></li>
+        <li><b>換算機率</b>：隱含變動幅度 ÷ 25bp（1 碼）＝預期調整的碼數。例如隱含 +5.3bp ＝ 0.21 碼，代表「升 1 碼」約 21%、「維持」約 79%（在相鄰兩種結果之間線性分配）。之後的會議以「相對目前利率的累計變動」計算目標區間分布。</li>
+        <li><b>和 CME FedWatch 的差異</b>：CME 使用自家即時報價與更細的規則；本頁價格來自 Yahoo（可能延遲），目前利率用紐約聯準銀行公布的前一營業日 EFFR，因此數字可能有幾個百分點差異。</li>
+        <li><b>限制</b>：期貨價格含「期限溢酬」與避險需求，不等於真正的機率；只考慮相鄰兩種結果（例如維持或升 1 碼），無法反映「一次調 2 碼」等尾端情境；臨時會議不在模型內。</li>
+      </ol>
+      <div class="foot-note">會議日期取自聯準會官網；1 碼 = 25bp（0.25 個百分點）。僅供參考。</div>
+    </details>`;
 }
 
 /* =========================================================

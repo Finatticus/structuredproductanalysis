@@ -61,6 +61,8 @@
       <button class="nav-btn" data-section="macro">總經與板塊分析</button>
       <button class="nav-btn" data-section="research">個股研究</button>
       <button class="nav-btn" data-section="screener">選股篩選器</button>
+      <button class="nav-btn" data-section="etf">ETF 專區</button>
+      <button class="nav-btn" data-section="backtest">回測與策略</button>
     </nav>
     <div class="top-right">
       <span class="clock" id="clock">--:--:--</span>
@@ -207,6 +209,57 @@
       <p class="macro-note">範圍：上市＋上櫃普通股與 ETF。資料來源：臺灣證券交易所、櫃買中心（每日收盤後由後端自動更新；融資約 21:00 公布）。
         本益比、殖利率、淨值比為交易所公布值；月營收為最近一期公告。點代號可開啟個股研究。</p>
     </div>
+    <!-- ETF 專區 -->
+    <div class="section hidden" id="section-etf">
+      <div class="toolbar">
+        <div class="toolbar-left"><h1>ETF 專區</h1><span class="status" id="etfStatus"><span class="dot"></span>點開時載入</span></div>
+        <div class="toolbar-right"><button class="btn btn-ghost btn-sm" id="etfRefresh" title="重新抓取目前分頁的資料">↻ 更新</button></div>
+      </div>
+      <div class="seg etf-tabs" id="etfTabs"></div>
+      <section class="panel etf-panel"><div class="panel-body" id="etfBody"><div class="panel-msg">載入中…</div></div></section>
+      <p class="macro-note">資料來源：臺灣證券交易所 ETF 即時淨值、Yahoo Finance。只在打開分頁或按「↻ 更新」時抓取。折溢價、成分股、規模等可能與投信公告略有時間差，投資前請以投信公開說明書與官網為準。</p>
+    </div>
+
+    <!-- 回測與策略 -->
+    <div class="section hidden" id="section-backtest">
+      <div class="toolbar">
+        <div class="toolbar-left"><h1>回測與策略</h1><span class="status" id="btStatus"><span class="dot"></span>輸入標的後按「載入」</span></div>
+      </div>
+      <div class="bt-layout">
+        <aside class="panel bt-side">
+          <div class="panel-head"><h2 class="panel-title">回測設定</h2></div>
+          <div class="panel-body">
+            <div class="bt-row"><input id="btSymbol" placeholder="代號：0050、2330、NVDA、7011 JP"><button class="btn btn-primary btn-sm" id="btLoad">載入</button></div>
+            <div id="btInfo" class="bt-info muted">載入後可回測近 10 年資料</div>
+            <div class="bt-grid">
+              <label>開始日期<input type="date" id="btStart"></label>
+              <label>結束日期<input type="date" id="btEnd"></label>
+              <label>初始資金<input type="number" id="btCapital" step="10000"></label>
+              <label>成交方式<select id="btFill"><option value="open">隔日開盤（較實際）</option><option value="close">當日收盤</option></select></label>
+              <label>手續費折扣<input type="number" id="btFeeDisc" step="0.05" min="0" max="1" title="0.6 = 6 折；1 = 原價 0.1425%"></label>
+              <label>滑價 %（單邊）<input type="number" id="btSlip" step="0.05" min="0"></label>
+              <label>無風險利率 %<input type="number" id="btRf" step="0.1"></label>
+            </div>
+            <label class="chk"><input type="checkbox" id="btAdj"> 含息（還原權息，配息再投入）</label>
+            <label class="chk"><input type="checkbox" id="btLot"> 台股以整張（1,000 股）交易</label>
+            <div class="foot-note" id="btTaxNote">台股交易稅：股票 0.3%、ETF 0.1%（賣出時）</div>
+            <div class="sub-h">策略（可多個一起比較）</div>
+            <div id="btStrats"></div>
+            <div class="bt-row">
+              <select id="btAdd"></select>
+              <button class="btn btn-ghost btn-sm" id="btPreset" title="均線交叉、突破新高、KD（含停損）、定期定額">常用組合</button>
+            </div>
+            <button class="btn btn-primary bt-run" id="btRun">▶ 執行回測</button>
+          </div>
+        </aside>
+        <div class="bt-main">
+          <div id="btScanOut"></div>
+          <div id="btResult"><div class="placeholder"><h2>策略回測</h2><p>選擇標的與策略後按「執行回測」，會與「買進持有」比較報酬率、最大回撤、勝率、交易次數等，<br>並可用「參數掃描」找出穩定的參數區間。</p></div></div>
+        </div>
+      </div>
+      <p class="macro-note">回測以歷史日線模擬，已計入手續費、交易稅與滑價，但無法反映流動性、漲跌停無法成交、除權息當日價格跳動等所有實務細節。過去績效不代表未來表現，僅供研究參考。</p>
+    </div>
+
     <!-- 設定 -->
     <div class="section hidden" id="section-settings">
       <div class="toolbar"><div class="toolbar-left"><h1>設定</h1></div></div>
@@ -303,6 +356,8 @@
 <script src="macro.js"></script>
 <script src="research.js"></script>
 <script src="screener.js"></script>
+<script src="etf.js"></script>
+<script src="backtest.js"></script>
 <script src="help.js"></script>
 <script src="settings.js"></script>
 </body>
