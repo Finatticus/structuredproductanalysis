@@ -26,9 +26,23 @@ function macro_(part, force, acc) {
     const old = JSON.parse(hit);
     if (!force || Date.now() - old.updated < MACRO_FORCE_MIN_MS) return old;
   }
-  const data = parts[part](acc);
+  let data;
+  try {
+    data = parts[part](acc);
+  } catch (err) {
+    // 來源暫時失敗：回傳最近一次成功的資料（標記 stale），前端照常顯示並在背景重試
+    const backup = hit || cache.get('ms_' + key);
+    if (!backup) throw err;
+    const old = JSON.parse(backup);
+    old.stale = String((err && err.message) || err).slice(0, 120);
+    return old;
+  }
   data.updated = Date.now();
-  try { cache.put(key, JSON.stringify(data), MACRO_TTL[part]); } catch (e) { /* 超過 100KB 不快取 */ }
+  const text = JSON.stringify(data);
+  try {
+    cache.put(key, text, MACRO_TTL[part]);
+    cache.put('ms_' + key, text, 21600); // 備援副本，保留 6 小時
+  } catch (e) { /* 超過 100KB 不快取 */ }
   return data;
 }
 

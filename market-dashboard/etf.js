@@ -9,6 +9,7 @@ const etfS = {
   tab: 'tw', data: {}, loadedAt: {}, detail: {}, charts: [],
   tw: { type: '', q: '', sort: ['aum', -1] }, high: { sort: ['yld', -1] }, us: { sort: ['aum', -1] },
   cur: null, ovA: '0056', ovB: '00878',
+  hold: { k: 1, only: true, q: '', sort: ['w', -1] }, // 完整持股表：比較基準、只看有增減、搜尋、排序
 };
 const ETF_TABS = [['tw', '台股 ETF 總覽'], ['high', '高股息比較'], ['us', '美股 ETF'], ['detail', '個別 ETF'], ['overlap', '持股重疊']];
 const ETF_TYPES = ['股票', '債券', '主動式', '槓桿', '反向', '期貨／商品', '國外'];
@@ -291,6 +292,8 @@ function etfRenderDetail(d) {
         <div class="panel-body">${d.sectors.length ? `<div class="hbars">${d.sectors.map(s => `
           <div class="hbar"><span class="hbar-n">${SECTOR_ZH[s[0]] || s[0]}</span><span class="hbar-t"><i style="width:${(s[1] / d.sectors[0][1]) * 100}%;background:#6d4bc4"></i></span><b>${numTxt(s[1] * 100, 1)}%</b></div>`).join('')}</div>` : '<div class="panel-msg">無產業權重資料</div>'}</div></section>
 
+      <section class="panel" style="--span:12" id="etfHoldPanel"></section>
+
       <section class="panel" style="--span:7"><div class="panel-head"><h2 class="panel-title">價格與含息報酬（近 3 年）</h2></div>
         <div class="panel-body"><div class="chart-legend"><span style="--c:#1f4e8c">股價</span><span style="--c:#e67e22">還原權息（含息再投入）</span></div>
           <div class="mini-chart tall" id="etfPx"></div>
@@ -311,7 +314,109 @@ function etfRenderDetail(d) {
     try { await addToWatchlist(cat, d.code); b.textContent = '✓ 已在自選'; } catch (err) { b.disabled = false; toast('加入失敗：' + err.message); }
   });
   $('#etfChartBtn').addEventListener('click', () => openChart({ category: cat, symbol: d.code, name: d.name, source: 'yahoo:' + d.ysym }));
+  etfRenderHold(d);
   etfDetailCharts(d);
+}
+
+/* ---------- 完整持股與增減（MoneyDJ 每日持股 + 後端快照比較） ---------- */
+const HOLD_COLS = [['sym', '成分股', false], ['w', '權重%'], ['sh', '目前庫存'], ['ds', '增減'], ['dp', '增減%'], ['amt', '估計金額']];
+
+function etfRenderHold(d) {
+  const el = $('#etfHoldPanel');
+  if (!el) return;
+  const h = d.hold, cfg = etfS.hold;
+  const head = sub => `<div class="panel-head"><h2 class="panel-title">完整持股與增減</h2>${sub || ''}<div class="panel-tools"></div></div>`;
+  if (!h || h.err || !h.rows) {
+    el.innerHTML = head() + `<div class="panel-body"><div class="panel-msg">${h && h.err ? '持股明細暫時無法取得：' + esc(h.err) : '查無完整持股資料（MoneyDJ 未提供此 ETF）'}</div></div>`;
+    return;
+  }
+  const m = d.mis || {};
+  const nav = m.nav || m.prevNav;
+  // 規模：台股用證交所單位數 × 淨值；美股用 Yahoo 總資產（美元）
+  const aum = d.tw ? (m.units && nav ? m.units * nav : null) : d.aum;
+  const unitOf = sym => (d.tw && /^\d{4,6}[A-Z]?$/.test(sym) ? 1000 : 1); // 台股以「張」顯示
+  const cmps = h.cmp || [];
+  if (cmps.length && !cmps.some(c => c.k === cfg.k)) cfg.k = cmps[0].k;
+  const cmp = cmps.find(c => c.k === cfg.k);
+  const chg = new Map((cmp ? cmp.rows : []).map(r => [r[0], r]));
+  const cur = new Map(h.rows.map(r => [r[0], r]));
+  // 每股價值估算 = 權重 × 規模 ÷ 股數（成分股報價不另外抓）
+  const px = (w, sh) => (isNum(w) && sh && aum ? (w / 100) * aum / sh : null);
+  let rows = h.rows.map(r => {
+    const c = chg.get(r[0]);
+    const ds = c ? c[2] : 0;
+    const prev = c ? c[3] : r[3];
+    return { sym: r[0], name: r[1], w: r[2], sh: r[3], ds, prev, isNew: !!c && c[3] == null, out: false,
+      dp: c && prev ? ds / prev * 100 : c ? null : 0, amt: ds ? ds * px(r[2], r[3]) : 0 };
+  });
+  (cmp ? cmp.rows : []).filter(r => !cur.has(r[0])).forEach(r => rows.push({
+    sym: r[0], name: r[1], w: null, sh: 0, ds: r[2], prev: r[3], isNew: false, out: true, dp: -100, amt: r[2] * px(r[5], r[3]),
+  }));
+  const up = rows.filter(r => r.ds > 0), dn = rows.filter(r => r.ds < 0);
+  const sumAmt = arr => arr.reduce((s, r) => s + (isNum(r.amt) ? r.amt : 0), 0);
+  // 同期受益權單位數變化：持股增減幅度接近它，多半是申購買回造成的被動增減
+  let unitChg = null;
+  if (cmp && d.unitsHist && d.unitsHist.length) {
+    const at = ds => d.unitsHist.filter(x => x[0] <= ds).pop();
+    const a = at(cmp.date), b = at(h.date);
+    if (a && b && a[0] !== b[0] && a[1]) unitChg = (b[1] / a[1] - 1) * 100;
+  }
+  const q = cfg.q.toUpperCase();
+  let list = rows.filter(r => (!cfg.only || !cmp || r.ds) && (!q || r.sym.toUpperCase().includes(q) || r.name.toUpperCase().includes(q)));
+  list = etfSorted(list, cfg);
+  const amtTxt = v => (!isNum(v) || !v ? '—' : d.tw ? signTxt(v / 1e8, 2) + ' 億' : signTxt(v / 1e6, 1) + ' M');
+  const shTxt = (v, sym) => (isNum(v) ? numTxt(v / unitOf(sym), unitOf(sym) > 1 && Math.abs(v) < 10000 ? 3 : 0) : '—');
+  const top = (arr, dir) => arr.slice().sort((a, b) => dir * ((b.amt || 0) - (a.amt || 0))).slice(0, 5)
+    .map(r => `<div class="etf-mini-row"><span>${esc(r.name)} <span class="muted">${esc(r.sym)}</span></span><b class="${dirCls(r.ds)}">${shTxt(r.ds, r.sym)}</b></div>`).join('') || '<div class="muted">—</div>';
+  const unitLbl = d.tw ? '張' : '股';
+  const dateNote = cmp ? `${cmp.date} → ${h.date}${cmp.exact ? '' : `（${cmp.want || ''} 無快照，改用最近一筆）`}` : '';
+  el.innerHTML = head(`<span class="muted">資料日 ${esc(h.date)}・${h.rows.length} 檔</span>`) + `<div class="panel-body">
+    ${cmp ? `
+      <div class="kpis">
+        <div class="kpi"><div class="kpi-l">比較區間</div><div class="kpi-v" style="font-size:15px">${esc(cmp.label)}</div><div class="kpi-s">${esc(dateNote)}</div></div>
+        <div class="kpi"><div class="kpi-l">增持</div><div class="kpi-v up">${up.length}<small> 檔</small></div><div class="kpi-s">估計 ${amtTxt(sumAmt(up))}</div></div>
+        <div class="kpi"><div class="kpi-l">減持</div><div class="kpi-v down">${dn.length}<small> 檔</small></div><div class="kpi-s">估計 ${amtTxt(sumAmt(dn))}</div></div>
+        <div class="kpi"><div class="kpi-l">新進／剔除</div><div class="kpi-v">${rows.filter(r => r.isNew).length} / ${rows.filter(r => r.out).length}</div></div>
+        ${isNum(unitChg) ? `<div class="kpi"><div class="kpi-l">同期受益權單位數</div><div class="kpi-v ${dirCls(unitChg)}">${signTxt(unitChg, 2, '%')}</div><div class="kpi-s">申購買回造成的被動增減</div></div>` : ''}
+      </div>
+      <div class="etf-minis etf-minis-2">
+        <div class="etf-mini"><div class="sub-h">增持金額前 5（${unitLbl}）</div>${top(up, 1)}</div>
+        <div class="etf-mini"><div class="sub-h">減持金額前 5（${unitLbl}）</div>${top(dn, -1)}</div>
+      </div>` : `<div class="hold-wait">${h.monthly
+        ? '美股 ETF 持股每月公布一次，已記錄本期資料；下次公布後即可看到與上期的增減。'
+        : `已開始記錄此 ETF 的每日持股（目前 ${h.snaps + 1} 筆）。下一個交易日起可看「前 1 個交易日」增減，累積 6 個交易日後可看「前 5 個交易日」。
+           建議在 Apps Script 執行一次 <b>setupEtf</b>，沒開網頁也會每天自動記錄。`}</div>`}
+    <div class="etf-filter">
+      ${cmps.length > 1 ? `<div class="seg seg-sm" id="holdK">${cmps.map(c => `<button data-v="${c.k}" class="${c.k === cfg.k ? 'on' : ''}">${esc(c.label)}</button>`).join('')}</div>` : ''}
+      ${cmp ? `<label class="chk"><input type="checkbox" id="holdOnly" ${cfg.only ? 'checked' : ''}> 只看有增減</label>` : ''}
+      <input id="holdQ" placeholder="搜尋成分股" value="${esc(cfg.q)}">
+      <span class="muted">${list.length} 檔</span>
+    </div>
+    <div class="tbl-wrap hold-wrap"><table class="mtbl etf-tbl" id="holdTbl">
+      <thead><tr>${HOLD_COLS.filter(c => cmp || !['ds', 'dp', 'amt'].includes(c[0])).map(c => etfTh(cfg, c[0], c[0] === 'sh' ? `${c[1]}（${unitLbl}）` : c[0] === 'ds' ? `${c[1]}（${unitLbl}）` : c[1], c[2] !== false)).join('')}</tr></thead>
+      <tbody>${list.length ? list.map(r => `<tr>
+        <td class="nm">${esc(r.name)} <span class="muted">${esc(r.sym === r.name ? '' : r.sym)}</span>${r.isNew ? ' <span class="tag ok">新進</span>' : r.out ? ' <span class="tag bad">剔除</span>' : ''}</td>
+        <td class="num">${isNum(r.w) ? numTxt(r.w, 2) : '—'}</td>
+        <td class="num strong">${shTxt(r.sh, r.sym)}</td>
+        ${cmp ? `<td class="num ${dirCls(r.ds)}">${r.ds ? (r.ds > 0 ? '+' : '') + shTxt(r.ds, r.sym) : '—'}</td>
+        <td class="num ${dirCls(r.ds)}">${r.isNew ? '新進' : r.ds ? signTxt(r.dp, 2, '%') : '—'}</td>
+        <td class="num ${dirCls(r.amt)}">${amtTxt(r.amt)}</td>` : ''}</tr>`).join('')
+        : `<tr><td colspan="6" class="muted">${cmp ? '此區間持股股數沒有變化' : '—'}</td></tr>`}</tbody>
+    </table></div>
+    <div class="foot-note">來源：MoneyDJ（投信公告的全部持股與股數${d.tw ? '，資料日通常是前一個交易日' : '，美股每月更新'}）。「目前庫存」為 ETF 持有的${d.tw ? '張數（1 張 = 1,000 股；期貨為口數）' : '股數'}；
+      增減 = 與比較日快照的差。估計金額 = 增減股數 × 估計股價（權重 × 規模 ÷ 股數），僅供參考。
+      持股增減幅度若都接近「同期受益權單位數」變化，代表是申購買回造成的等比例增減，偏離較大的才是經理人主動調整（主動式 ETF 尤其值得看）。</div>
+  </div>`;
+  $$('#holdK button').forEach(b => b.addEventListener('click', () => { cfg.k = +b.dataset.v; etfRenderHold(d); }));
+  const only = $('#holdOnly');
+  if (only) only.addEventListener('change', () => { cfg.only = only.checked; etfRenderHold(d); });
+  const qi = $('#holdQ');
+  qi.addEventListener('input', () => { cfg.q = qi.value.trim(); clearTimeout(qi._t); qi._t = setTimeout(() => { etfRenderHold(d); const n = $('#holdQ'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250); });
+  $$('#holdTbl th[data-sort]').forEach(th => th.addEventListener('click', () => {
+    const k = th.dataset.sort;
+    cfg.sort = [k, cfg.sort[0] === k ? -cfg.sort[1] : -1];
+    etfRenderHold(d);
+  }));
 }
 
 function etfDetailCharts(d) {
@@ -345,7 +450,7 @@ function etfRenderOverlap() {
       <input id="ovA" value="${esc(etfS.ovA)}" placeholder="ETF A，例如 0056"><input id="ovB" value="${esc(etfS.ovB)}" placeholder="ETF B，例如 00878">
       <button class="btn btn-primary" type="submit">比較</button>
     </form>
-    <div id="ovOut"><div class="panel-msg">輸入兩檔 ETF，比較前十大成分股的重疊程度，避免買了兩檔其實持有同一批股票</div></div>`;
+    <div id="ovOut"><div class="panel-msg">輸入兩檔 ETF，比較成分股的重疊程度（有完整持股時比較全部持股），避免買了兩檔其實持有同一批股票</div></div>`;
   $('#ovForm').addEventListener('submit', async e => {
     e.preventDefault();
     const a = $('#ovA').value.trim().toUpperCase(), b = $('#ovB').value.trim().toUpperCase();
@@ -359,8 +464,18 @@ function etfRenderOverlap() {
   });
 }
 
+/** 重疊比較用的持股：兩檔都有完整持股就用完整持股，否則都用前十大（代號統一去掉 .TW） */
+function ovHoldings(A, B) {
+  const full = A.hold && A.hold.rows && B.hold && B.hold.rows;
+  const pick = d => (full ? d.hold.rows.filter(r => isNum(r[2])).map(r => [r[0], r[1], r[2] / 100])
+    : d.holdings.map(h => [String(h[0]).replace(/\.TWO?$/, ''), h[1], h[2] || 0]));
+  return { full, a: pick(A), b: pick(B) };
+}
+
 function etfRenderOverlapResult(A, B) {
-  const ma = new Map(A.holdings.map(h => [h[0], h])), mb = new Map(B.holdings.map(h => [h[0], h]));
+  const H = ovHoldings(A, B);
+  const scope = H.full ? '全部持股' : '前十大持股';
+  const ma = new Map(H.a.map(h => [h[0], h])), mb = new Map(H.b.map(h => [h[0], h]));
   const common = [...ma.keys()].filter(k => mb.has(k)).map(k => ({ s: k, n: ma.get(k)[1], a: ma.get(k)[2], b: mb.get(k)[2] }))
     .sort((x, y) => Math.min(y.a, y.b) - Math.min(x.a, x.b));
   const ov = common.reduce((s, x) => s + Math.min(x.a, x.b), 0);
@@ -368,15 +483,15 @@ function etfRenderOverlapResult(A, B) {
   const secOv = [...new Set([...secA.keys(), ...secB.keys()])].reduce((s, k) => s + Math.min(secA.get(k) || 0, secB.get(k) || 0), 0);
   $('#ovOut').innerHTML = `
     <div class="kpis">
-      <div class="kpi"><div class="kpi-l">前十大持股重疊</div><div class="kpi-v">${numTxt(ov * 100, 1)}%</div><div class="kpi-s">共同持股 ${common.length} 檔</div></div>
+      <div class="kpi"><div class="kpi-l">${scope}重疊</div><div class="kpi-v">${numTxt(ov * 100, 1)}%</div><div class="kpi-s">共同持股 ${common.length} 檔</div></div>
       <div class="kpi"><div class="kpi-l">產業權重重疊</div><div class="kpi-v">${numTxt(secOv * 100, 1)}%</div></div>
-      <div class="kpi"><div class="kpi-l">${esc(A.code)} 前十大合計</div><div class="kpi-v">${numTxt(A.holdings.reduce((s, h) => s + h[2], 0) * 100, 1)}%</div></div>
-      <div class="kpi"><div class="kpi-l">${esc(B.code)} 前十大合計</div><div class="kpi-v">${numTxt(B.holdings.reduce((s, h) => s + h[2], 0) * 100, 1)}%</div></div>
+      <div class="kpi"><div class="kpi-l">${esc(A.code)} 持股檔數</div><div class="kpi-v">${H.a.length}</div><div class="kpi-s">比較範圍權重合計 ${numTxt(H.a.reduce((s, h) => s + h[2], 0) * 100, 1)}%</div></div>
+      <div class="kpi"><div class="kpi-l">${esc(B.code)} 持股檔數</div><div class="kpi-v">${H.b.length}</div><div class="kpi-s">比較範圍權重合計 ${numTxt(H.b.reduce((s, h) => s + h[2], 0) * 100, 1)}%</div></div>
     </div>
     <div class="tbl-wrap"><table class="mtbl"><thead><tr><th>共同持股</th><th class="num">${esc(A.code)} 權重</th><th class="num">${esc(B.code)} 權重</th><th class="num">重疊</th></tr></thead>
       <tbody>${common.length ? common.map(x => `<tr><td class="nm">${esc(holdName(x.s, x.n))}</td><td class="num">${numTxt(x.a * 100, 2)}%</td><td class="num">${numTxt(x.b * 100, 2)}%</td><td class="num strong">${numTxt(Math.min(x.a, x.b) * 100, 2)}%</td></tr>`).join('')
-        : '<tr><td colspan="4" class="muted">前十大成分股沒有重疊</td></tr>'}</tbody></table></div>
-    <div class="foot-note">重疊度 = 共同持股在兩檔 ETF 中「較小權重」的加總（只比較前十大成分股，實際重疊可能更高）。產業重疊同理。重疊度高代表分散效果有限。</div>`;
+        : `<tr><td colspan="4" class="muted">${scope}沒有重疊</td></tr>`}</tbody></table></div>
+    <div class="foot-note">重疊度 = 共同持股在兩檔 ETF 中「較小權重」的加總（比較範圍：${scope}${H.full ? '，來源 MoneyDJ' : '，實際重疊可能更高'}）。產業重疊同理。重疊度高代表分散效果有限。</div>`;
 }
 
 initEtf();

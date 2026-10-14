@@ -294,6 +294,8 @@ main { max-width: 1440px; margin: 0 auto; padding: 20px 24px 8px; }
 .panel-title::before { content: ""; width: 4px; height: 16px; border-radius: 2px; background: var(--primary); }
 .panel-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-left: auto; }
 .panel-time { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.panel-time.warn { color: #8a6400; cursor: help; }
+.panel-msg [data-countdown] { font-size: 12px; color: #8a6400; }
 .panel-body { padding: 12px 16px 14px; }
 .panel { display: flex; flex-direction: column; }
 /* 新聞填滿與左側同列的高度，內容過多時捲動 */
@@ -713,3 +715,8 @@ details.method ul { padding-left: 18px; margin: 2px 0; }
   .modal-box { height: 100vh; border-radius: 0; }
   .modal-ctrl, .tech-bar { padding: 8px 12px; gap: 8px; }
 }
+.etf-minis-2 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.etf-minis-2 .etf-mini-row { cursor: default; }
+.hold-wait { background: var(--surface-2); border: 1px dashed var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.7; color: var(--text-2); margin-bottom: 10px; }
+.hold-wrap { max-height: 520px; overflow-y: auto; }
+.hold-wrap thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; }

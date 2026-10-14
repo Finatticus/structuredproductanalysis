@@ -82,6 +82,9 @@ function initMacro() {
     loadPart(key, true).finally(() => { b.disabled = false; });
   });
   setInterval(macroStaleCheck, 60000);
+  setInterval(macroTick, 1000);
+  document.addEventListener('visibilitychange', macroResumeRetries);
+  $$('.nav-btn').forEach(b => b.addEventListener('click', () => setTimeout(macroResumeRetries, 0)));
   $('#colorSel').addEventListener('change', () => MACRO_PARTS.forEach(p => renderPart(p.key)));
 
   $('#macroEdit').addEventListener('click', () => setMacroEditing(!macro.editing));
@@ -180,41 +183,140 @@ function setMacroEditing(on) {
   }
 }
 
+/* ---------- 載入與自動重試 ----------
+ * 同時最多 MACRO_CONCURRENCY 個請求（12 張字卡同時打後端，GAS 同時執行數與證交所限流都容易出錯）；
+ * 失敗或拿到後端的備援舊資料時，自動排程重試（5→10→20→30→60 秒，10 次後每 5 分鐘），直到成功。
+ * 只在停留在此頁、且分頁在前景時重試，切走就暫停、回來立即補做。 */
+const MACRO_CONCURRENCY = 4;
+const MACRO_RETRY_S = [5, 10, 20, 30, 60];
+macro.inflight = new Set();  // 正在請求的字卡
+macro.retry = new Map();     // 字卡 → { n: 已失敗次數, at: 下次重試時間, timer, msg }
+macro.queue = [];
+macro.running = 0;
+
+function macroActive() {
+  return !document.hidden && !$('#section-macro').classList.contains('hidden');
+}
+
 /** 只有第一次進入此頁自動抓；之後由使用者按「↻ 重新整理」 */
 async function loadMacro(force) {
   if (!state.token) return;
-  if (!force && macro.loadedAt) { macroStaleCheck(); return; }
+  if (!force && macro.loadedAt) { macroStaleCheck(); macroResumeRetries(); return; }
   macro.loadedAt = Date.now();
   macroStaleCheck();
-  const st = $('#macroStatus');
-  st.className = 'status';
-  st.innerHTML = '<span class="dot"></span>更新中…';
   applyMacroLayout();
+  macro.retry.forEach(r => clearTimeout(r.timer));
+  macro.retry.clear();
   const visible = MACRO_PARTS.filter(p => !macroLayout().hide.includes(p.key)); // 隱藏的字卡不抓，省額度
-  const results = await Promise.allSettled(visible.map(p => loadPart(p.key, force)));
-  const fail = results.filter(r => r.status === 'rejected' || r.value === false).length;
-  st.className = 'status ' + (fail ? 'err' : 'live');
-  st.innerHTML = '<span class="dot"></span>' + (fail ? `${fail} 個區塊載入失敗 · ` : '已更新 · ') +
-    new Date().toLocaleTimeString('zh-TW', { hour12: false });
+  macroUpdateStatus();
+  await Promise.all(visible.map(p => loadPart(p.key, force)));
+}
+
+/** 排隊執行：同時最多 MACRO_CONCURRENCY 個 */
+function macroSlot(fn) {
+  return new Promise((resolve, reject) => {
+    macro.queue.push(() => fn().then(resolve, reject));
+    macroPump();
+  });
+}
+function macroPump() {
+  while (macro.running < MACRO_CONCURRENCY && macro.queue.length) {
+    const job = macro.queue.shift();
+    macro.running++;
+    job().finally(() => { macro.running--; macroPump(); });
+  }
 }
 
 async function loadPart(key, force) {
+  if (macro.inflight.has(key)) return true;
   const panel = $(`.panel[data-part="${key}"]`);
   const part = apiPart(key);
+  const old = macro.retry.get(key);
+  if (old) clearTimeout(old.timer);
+  macro.inflight.add(key);
   panel.classList.add('loading');
-  if (!macro.data[part]) $('.panel-body', panel).innerHTML = '<div class="panel-msg">載入中…</div>';
+  if (!macro.data[part]) $('.panel-body', panel).innerHTML = `<div class="panel-msg">${old ? `重新載入中…（第 ${old.n + 1} 次）` : '載入中…'}</div>`;
+  macroUpdateStatus();
   try {
-    const r = await api('macro', { part, force: !!force });
+    const r = await macroSlot(() => api('macro', { part, force: !!force }));
+    if (r.data.stale) {
+      // 後端來源失敗，回傳的是之前成功的資料：先顯示，背景繼續重試
+      if (!macro.data[part] || (macro.data[part].updated || 0) <= r.data.updated) macro.data[part] = r.data;
+      macroScheduleRetry(key, '資料來源暫時無法取得，先顯示之前的資料（' + r.data.stale + '）');
+      renderPart(key);
+      return false;
+    }
     macro.data[part] = r.data;
+    macro.retry.delete(key);
     renderPart(key);
     return true;
   } catch (err) {
-    $('.panel-body', panel).innerHTML =
-      `<div class="panel-msg err">載入失敗：${esc(err.message)}<br><button class="btn btn-ghost btn-sm" data-retry>重試</button></div>`;
-    $('[data-retry]', panel).addEventListener('click', () => loadPart(key, true));
+    if (!state.token) return false; // 已登出（登入逾時）就不再重試
+    macroScheduleRetry(key, err.message);
+    if (macro.data[part]) renderPart(key); // 保留上次成功的內容
+    else $('.panel-body', panel).innerHTML =
+      `<div class="panel-msg err">載入失敗：${esc(err.message)}<br><span data-countdown></span><br><button class="btn btn-ghost btn-sm" data-retry>立即重試</button></div>`;
+    macroTick();
+    const b = $('[data-retry]', panel);
+    if (b) b.addEventListener('click', () => loadPart(key, false));
     return false;
   } finally {
+    macro.inflight.delete(key);
     panel.classList.remove('loading');
+    macroUpdateStatus();
+  }
+}
+
+function macroScheduleRetry(key, msg) {
+  const prev = macro.retry.get(key);
+  const n = (prev ? prev.n : 0) + 1;
+  const sec = n > 10 ? 300 : MACRO_RETRY_S[Math.min(n, MACRO_RETRY_S.length) - 1];
+  const r = { n, msg, at: Date.now() + sec * 1000, timer: null };
+  r.timer = setTimeout(() => macroRetryNow(key), sec * 1000);
+  macro.retry.set(key, r);
+}
+
+function macroRetryNow(key) {
+  const r = macro.retry.get(key);
+  if (!r) return;
+  if (macroLayout().hide.includes(key)) { macro.retry.delete(key); macroUpdateStatus(); return; }
+  if (!macroActive()) { r.waiting = true; macroTick(); return; } // 回到此頁時再做
+  loadPart(key, false); // 非強制：後端若已有新快取就直接用，不多耗額度
+}
+
+/** 切回此頁或分頁回到前景：已到期（或等待中）的重試立即執行 */
+function macroResumeRetries() {
+  if (!macroActive()) return;
+  macro.retry.forEach((r, key) => { if (r.waiting || r.at <= Date.now()) { r.waiting = false; macroRetryNow(key); } });
+}
+
+/** 每秒更新倒數文字 */
+function macroTick() {
+  macro.retry.forEach((r, key) => {
+    const panel = $(`.panel[data-part="${key}"]`);
+    if (!panel || macro.inflight.has(key)) return;
+    const s = Math.max(0, Math.ceil((r.at - Date.now()) / 1000));
+    const txt = r.waiting ? '更新失敗，回到此頁時重試' : `更新失敗，${s} 秒後重試（第 ${r.n} 次）`;
+    $$('[data-countdown]', panel).forEach(el => { el.textContent = txt; });
+  });
+}
+
+function macroUpdateStatus() {
+  const st = $('#macroStatus');
+  if (!st || !macro.loadedAt) return;
+  const total = MACRO_PARTS.filter(p => !macroLayout().hide.includes(p.key)).length;
+  const fail = [...macro.retry.keys()].filter(k => !macroLayout().hide.includes(k)).length;
+  const busy = macro.inflight.size;
+  const time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+  if (fail) {
+    st.className = 'status err';
+    st.innerHTML = `<span class="dot"></span>${fail} 個區塊載入失敗 · 自動重試中${busy ? `（${busy} 個請求進行中）` : ''}`;
+  } else if (busy) {
+    st.className = 'status';
+    st.innerHTML = `<span class="dot"></span>更新中…（${total - busy}/${total}）`;
+  } else {
+    st.className = 'status live';
+    st.innerHTML = '<span class="dot"></span>已更新 · ' + time;
   }
 }
 
@@ -224,7 +326,17 @@ function renderPart(key) {
   if (!d || !panel) return;
   (macro.charts[key] || []).forEach(c => c.remove());
   macro.charts[key] = [];
-  $('.panel-time', panel).textContent = d.updated ? '更新 ' + new Date(d.updated).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '';
+  const pt = $('.panel-time', panel);
+  pt.textContent = d.updated ? (d.stale ? '資料 ' : '更新 ') + new Date(d.updated).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '';
+  pt.classList.remove('warn');
+  pt.title = '';
+  delete pt.dataset.countdown;
+  if (macro.retry.has(key)) {
+    // 失敗但有舊資料：時間後面接倒數
+    pt.classList.add('warn');
+    pt.title = macro.retry.get(key).msg || '';
+    pt.innerHTML = `${esc(pt.textContent)} · <span data-countdown></span>`;
+  }
   const tools = $('.panel-tools', panel), body = $('.panel-body', panel);
   tools.innerHTML = '';
   try {

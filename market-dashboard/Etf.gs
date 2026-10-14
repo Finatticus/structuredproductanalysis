@@ -75,11 +75,13 @@ function etfSnapshots_(store, kind) {
     .map(function (k) { return { d: k.slice(2), v: JSON.parse(store.map[k].v) }; });
 }
 
-/** 只保留最近 70 筆快照，避免工作頁無限變大 */
-function etfPrune_(store, kind) {
+/** 只保留最近 keep 筆快照（預設 70），避免工作頁無限變大 */
+function etfPrune_(store, kind, keep) {
   const keys = Object.keys(store.map).filter(function (k) { return k.indexOf(kind + '|') === 0; }).sort();
-  const extra = keys.slice(0, Math.max(0, keys.length - 70)).map(function (k) { return store.map[k].row; }).sort(function (a, b) { return b - a; });
+  const extra = keys.slice(0, Math.max(0, keys.length - (keep || 70))).map(function (k) { return store.map[k].row; }).sort(function (a, b) { return b - a; });
+  if (!extra.length) return;
   extra.forEach(function (r) { store.sh.deleteRow(r); });
+  store.map = etfStoreAll_().map; // 刪列後列號會位移，重新讀取
 }
 
 /* ======================== 台股 ETF 總覽 ======================== */
@@ -186,6 +188,140 @@ function etfReturns_(ch) {
   };
 }
 
+/* ======================== 完整持股與股數（MoneyDJ） ======================== */
+// 台股 ETF：投信每日公告的全部持股與股數（資料日通常是前一個交易日）；美股 ETF：每月更新一次
+// 來源沒有歷史查詢，所以每次查詢與每日排程（setupEtf）都存一筆快照在 _etf（P|代號|日期），用來算 1／5 個交易日增減
+const ETF_HOLD_KEEP = 12;          // 每檔保留最近 12 筆持股快照
+const ETF_TRACK_MAX = 40;          // 每日排程最多追蹤幾檔
+const ETF_TRACK_DAYS = 60;         // 超過 60 天沒人查詢的 ETF 不再追蹤
+const ETF_TRACK_DEFAULT = ['0050', '0056', '00878', '00919', '00929', '006208'];
+
+function etfFullHoldings_(code, isTw) {
+  const url = 'https://www.moneydj.com/ETF/X/Basic/Basic0007B.xdjhtm?etfid=' + encodeURIComponent(isTw ? code + '.TW' : code);
+  const html = okText_(fetch_(url, { muteHttpExceptions: true, headers: { 'User-Agent': UA } }));
+  if (!html) return null;
+  const dm = html.match(/資料日期[：:]\s*(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+  if (!dm) return null;
+  const date = dm[1] + '-' + ('0' + dm[2]).slice(-2) + '-' + ('0' + dm[3]).slice(-2);
+  const rows = [];
+  const re = /<td class="col05">([\s\S]*?)<\/td>\s*<td class="col06">([\s\S]*?)<\/td>\s*<td class="col07">([\s\S]*?)<\/td>/g;
+  let m;
+  while ((m = re.exec(html))) {
+    const label = decodeHtml_(m[1].replace(/<[^>]*>/g, ''));
+    const pm = label.match(/^(.*)\(([^()]+)\)\s*$/);
+    const name = pm ? pm[1].trim() : label;
+    const sym = pm ? pm[2].replace(/\.(TW|TWO|US)$/i, '') : label; // 債券、期貨等沒有代號，以名稱識別
+    const w = parseFloat(m[2].replace(/,/g, ''));
+    const sh = parseFloat(m[3].replace(/,/g, ''));
+    rows.push([sym, name, isFinite(w) ? w : null, isFinite(sh) ? sh : null]); // 代號、名稱、權重%、持有股數（期貨為口數）
+  }
+  return rows.length ? { date: date, rows: rows } : null;
+}
+
+/** 抓一次並存成快照（同一資料日不重複存） */
+function etfHoldSnap_(store, code, isTw) {
+  const full = etfFullHoldings_(code, isTw);
+  if (!full) return null;
+  const k = 'P|' + code + '|' + full.date;
+  if (!store.map[k]) {
+    // 只在寫入工作頁時上鎖（抓網頁時不鎖，fetch_ 的計數也會用到同一把鎖）
+    const lock = LockService.getScriptLock();
+    const locked = lock.tryLock(10000);
+    try {
+      store.map = etfStoreAll_().map; // 其他執行可能剛寫入，重新讀取列號
+      if (!store.map[k]) {
+        try { etfPut_(store, k, full.rows); } catch (e) { /* 單格超過 5 萬字（極大型 ETF）就不存 */ }
+        etfPrune_(store, 'P|' + code, ETF_HOLD_KEEP);
+      }
+    } finally {
+      if (locked) lock.releaseLock();
+    }
+  }
+  return full;
+}
+
+/**
+ * 與 1／5 個交易日前的快照比較。tdays = 交易日清單（升冪，台股用 Yahoo 日線日期）；
+ * 美股（月資料）傳 null，改成與前一筆快照比較。剛好那天沒有快照時，用更早最近的一筆並標示實際日期。
+ */
+function etfHoldDiff_(store, code, full, tdays) {
+  const snaps = etfSnapshots_(store, 'P|' + code)
+    .map(function (s) { return { d: s.d.slice(code.length + 1), v: s.v }; })
+    .filter(function (s) { return s.d < full.date; });
+  if (!snaps.length) return { snaps: 0, cmp: [] };
+  const target = function (k) {
+    let i = tdays.length - 1;
+    while (i >= 0 && tdays[i] > full.date) i--;
+    if (i < 0) return null;
+    if (tdays[i] !== full.date) i++; // 資料日不在清單中：從下一格起算
+    return i - k >= 0 ? tdays[i - k] : null;
+  };
+  const diff = function (base) {
+    const now = {}, old = {};
+    full.rows.forEach(function (r) { now[r[0]] = r; });
+    base.v.forEach(function (r) { old[r[0]] = r; });
+    const out = [];
+    Object.keys(Object.assign({}, old, now)).forEach(function (sym) {
+      const a = old[sym], b = now[sym];
+      const sa = a ? a[3] || 0 : 0, sb = b ? b[3] || 0 : 0;
+      if (sa === sb) return;
+      // 代號、名稱、股數增減、原股數（新進為 null）、新權重（移出為 null）、原權重
+      out.push([sym, (b || a)[1], sb - sa, a ? sa : null, b ? b[2] : null, a ? a[2] : null]);
+    });
+    return out;
+  };
+  const cmp = [], seen = {};
+  if (!tdays || !tdays.length) {
+    const base = snaps[snaps.length - 1];
+    cmp.push({ k: 0, label: '上次公布', want: null, date: base.d, exact: true, rows: diff(base) });
+  } else {
+    [[1, '前 1 個交易日'], [5, '前 5 個交易日']].forEach(function (kv) {
+      const t = target(kv[0]);
+      if (!t) return;
+      const older = snaps.filter(function (s) { return s.d <= t; });
+      const base = older.length ? older[older.length - 1] : null;
+      if (!base || seen[base.d]) return;
+      seen[base.d] = 1;
+      cmp.push({ k: kv[0], label: kv[1], want: t, date: base.d, exact: base.d === t, rows: diff(base) });
+    });
+  }
+  return { snaps: snaps.length, cmp: cmp };
+}
+
+/** 記錄查詢過的 ETF，給每日排程追蹤 */
+function etfTrack_(code) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const t = JSON.parse(props.getProperty('etfTrack') || '{}');
+    t[code] = Date.now();
+    props.setProperty('etfTrack', JSON.stringify(t));
+  } catch (e) { /* ignore */ }
+}
+
+/** 每日排程：替追蹤中的 ETF 存持股快照（沒人開網頁也會累積，1／5 日增減才算得出來） */
+function etfHoldDaily() {
+  const props = PropertiesService.getScriptProperties();
+  let t = {};
+  try { t = JSON.parse(props.getProperty('etfTrack') || '{}'); } catch (e) { t = {}; }
+  const cut = Date.now() - ETF_TRACK_DAYS * 86400000;
+  Object.keys(t).forEach(function (c) { if (t[c] < cut) delete t[c]; });
+  props.setProperty('etfTrack', JSON.stringify(t));
+  const list = ETF_TRACK_DEFAULT.concat(Object.keys(t).sort(function (a, b) { return t[b] - t[a]; }))
+    .filter(function (c, i, a) { return a.indexOf(c) === i; }).slice(0, ETF_TRACK_MAX);
+  const store = etfStoreAll_();
+  list.forEach(function (c) {
+    try { etfHoldSnap_(store, c, /^\d{4,6}[A-Z]?$/.test(c)); } catch (e) { /* 單檔失敗略過 */ }
+  });
+}
+
+/** 在編輯器執行一次：建立每日持股快照排程（台北 09 點與 21 點各一次，資料日相同不會重複存） */
+function setupEtf() {
+  ScriptApp.getProjectTriggers().forEach(function (tr) { if (tr.getHandlerFunction() === 'etfHoldDaily') ScriptApp.deleteTrigger(tr); });
+  ScriptApp.newTrigger('etfHoldDaily').timeBased().everyDays(1).atHour(9).inTimezone('Asia/Taipei').create();
+  ScriptApp.newTrigger('etfHoldDaily').timeBased().everyDays(1).atHour(21).inTimezone('Asia/Taipei').create();
+  etfHoldDaily();
+}
+
 /* ======================== 個別 ETF ======================== */
 function etfDetail_(code) {
   if (!code) throw new Error('請輸入 ETF 代號');
@@ -218,8 +354,21 @@ function etfDetail_(code) {
   const sectors = (th.sectorWeightings || []).map(function (o) { const k = Object.keys(o)[0]; return [k, raw_(o, k)]; })
     .filter(function (x) { return x[1] > 0; }).sort(function (a, b) { return b[1] - a[1]; });
 
-  // 持股變化：和上次記錄的前十大比較
+  // 完整持股與股數（MoneyDJ）＋ 1／5 個交易日前的增減
   const store = etfStoreAll_();
+  let hold = null;
+  try {
+    const full = etfHoldSnap_(store, code, isTw);
+    if (full) {
+      const dif = etfHoldDiff_(store, code, full, isTw ? ch.t : null);
+      hold = { date: full.date, rows: full.rows, snaps: dif.snaps, cmp: dif.cmp, monthly: !isTw };
+    }
+  } catch (e) {
+    hold = { err: String((e && e.message) || e) };
+  }
+  etfTrack_(code);
+
+  // 持股變化：和上次記錄的前十大比較
   const hk = 'H|' + code;
   const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
   let hs = store.map[hk] ? JSON.parse(store.map[hk].v) : {};
@@ -244,6 +393,7 @@ function etfDetail_(code) {
     mis: misRow, aum: raw_(sd, 'totalAssets'), fee: fee, yahooYield: raw_(sd, 'yield'), nav: raw_(sd, 'navPrice'),
     holdings: holdings, sectors: sectors, holdPrev: hs.prev || null, holdCurDate: hs.cur ? hs.cur.d : null,
     ret: etfReturns_(ch), chart: { t: ch.t, c: ch.c, a: ch.a }, divs: ch.divs.slice(-24).reverse(), unitsHist: unitsHist,
+    hold: hold,
   };
 }
 
