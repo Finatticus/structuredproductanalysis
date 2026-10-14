@@ -64,6 +64,7 @@
       <button class="nav-btn" data-section="research">個股研究</button>
       <button class="nav-btn" data-section="screener">選股篩選器</button>
       <button class="nav-btn" data-section="etf">ETF 專區</button>
+      <button class="nav-btn" data-section="fut">期貨專區</button>
       <button class="nav-btn" data-section="backtest">回測與策略</button>
     </nav>
     <div class="top-right">
@@ -255,6 +256,28 @@
       <p class="macro-note">資料來源：臺灣證券交易所 ETF 即時淨值、Yahoo Finance。只在打開分頁或按「↻ 更新」時抓取。折溢價、成分股、規模等可能與投信公告略有時間差，投資前請以投信公開說明書與官網為準。</p>
     </div>
 
+    <!-- 期貨專區 -->
+    <div class="section hidden" id="section-fut">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <h1>期貨專區</h1>
+          <span class="status" id="futStatus"><span class="dot"></span>第一次開啟時自動更新</span>
+          <span class="stale-tag hidden" id="futStale"></span>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-ghost btn-sm hidden" id="futReset" title="還原預設的字卡順序、寬度與顯示">還原預設</button>
+          <button class="btn btn-ghost btn-sm" id="futEdit" title="拖曳調整字卡順序、設定寬度或隱藏">✎ 編輯版面</button>
+          <button class="btn btn-ghost btn-sm" id="futRefresh" title="重新抓取所有區塊（30 秒內重複按會沿用快取）">↻ 重新整理</button>
+        </div>
+      </div>
+      <div class="edit-hint hidden" id="futEditHint">編輯版面：按住字卡標題列拖曳調整順序；右側可設定寬度或取消「顯示」隱藏字卡（隱藏的字卡不會抓資料）。完成後按「✓ 完成」，版面會存到你的帳號。</div>
+      <div class="macro-grid" id="futGrid"></div>
+      <p class="macro-note">
+        資料來源：臺灣期貨交易所（即時行情、三大法人、大額交易人、選擇權）、Yahoo Finance（美國期貨）、美國商品期貨交易委員會 CFTC（持倉報告）。
+        即時行情在交易時段、停留此頁時自動更新；其他字卡第一次開啟時抓取，之後按「重新整理」。期貨為高槓桿商品，僅供參考，不構成投資建議。
+      </p>
+    </div>
+
     <!-- 回測與策略 -->
     <div class="section hidden" id="section-backtest">
       <div class="toolbar">
@@ -400,6 +423,7 @@
 <script src="cal.js"></script>
 <script src="screener.js"></script>
 <script src="etf.js"></script>
+<script src="futures.js"></script>
 <script src="portfolio.js"></script>
 <script src="backtest.js"></script>
 <script src="help.js"></script>

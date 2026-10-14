@@ -180,6 +180,10 @@ function route_(req) {
       const acc = auth_(req.token);
       return { ok: true, data: portfolio_(acc, req), usage: getUsage_() }; // 定義於 Portfolio.gs
     }
+    case 'fut': {
+      auth_(req.token);
+      return { ok: true, data: fut_(String(req.part || ''), !!req.force), usage: getUsage_() }; // 定義於 Futures.gs
+    }
     case 'etf': {
       auth_(req.token);
       return { ok: true, data: etf_(String(req.part || ''), req.code, !!req.force), usage: getUsage_() }; // 定義於 Etf.gs
@@ -865,6 +869,7 @@ const PROXY_HOSTS = [
   'fred.stlouisfed.org', 'api.finmindtrade.com', 'api.nasdaq.com', 'api.cnyes.com', 'news.cnyes.com',
   'www.moneydj.com', 'www.federalreserve.gov', 'www.cnbc.com', 'www.cbc.gov.tw', 'ws.ndc.gov.tw', 'data.gov.tw',
   'markets.newyorkfed.org', 'api.alternative.me', 'home.treasury.gov', 'api.stlouisfed.org',
+  'openapi.taifex.com.tw', 'www.taifex.com.tw', 'mis.taifex.com.tw',
   // nfs.faireconomy.media 不經中繼站：它擋 Cloudflare 主機，Google 直連反而可以
 ];
 let PROXY_CFG_ = null;
@@ -1225,6 +1230,8 @@ const DIAG_PROBES = [
   ['FRED 網站（無金鑰時用）', 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10&cosd=2026-01-01'],
   ['鉅亨網新聞', 'https://api.cnyes.com/media/api/v1/newslist/category/headline?limit=1'],
   ['Nasdaq（日曆）', 'https://api.nasdaq.com/api/calendar/economicevents?date=2026-01-05'],
+  ['期交所（期貨專區）', 'https://openapi.taifex.com.tw/v1/PutCallRatio'],
+  ['CFTC（持倉報告）', 'https://publicreporting.cftc.gov/resource/6dca-aqww.json?$limit=1'],
 ];
 
 /**

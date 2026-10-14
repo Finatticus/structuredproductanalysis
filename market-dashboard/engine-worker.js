@@ -1,13 +1,13 @@
 /* =========================================================
  * 瀏覽器資料引擎（Web Worker）
- * 在瀏覽器背景執行緒載入「同一份」後端程式（Code.gs、Macro.gs、Calendar.gs），把 Google 專屬服務換成瀏覽器版本：
+ * 在瀏覽器背景執行緒載入「同一份」後端程式（Code.gs、Macro.gs、Calendar.gs、Futures.gs），把 Google 專屬服務換成瀏覽器版本：
  *  - UrlFetchApp：同步 XHR，一律經資料中繼站（Cloudflare Worker）→ 不經 Google、不吃 Google 額度、不會被擋
  *  - CacheService：記憶體（本分頁有效）；PropertiesService：由主執行緒存在 localStorage
  *  - Utilities：日期格式、時區換算、CSV 解析等
  * 計算邏輯只有一份，前後端結果一致；試算表相關功能（自選清單、持股）由主執行緒提供資料。
  * 由 engine.js 建立與呼叫，不要直接在頁面載入。
  * ========================================================= */
-const ENGINE_FILES = ['Code.gs', 'Macro.gs', 'Calendar.gs'];
+const ENGINE_FILES = ['Code.gs', 'Macro.gs', 'Calendar.gs', 'Futures.gs'];
 const CTX = { proxy: null, props: {}, watchlist: [], txns: [], prefetched: {} };
 
 /* ---------- CacheService（記憶體） ---------- */
@@ -114,7 +114,7 @@ function proxied(u) {
 }
 // 允許瀏覽器跨站讀取（CORS）的網站：用使用者自己的網路直接連，比繞中繼站快，也不會被當成資料中心流量限流
 // （實測證交所網站從台灣直連 0.04–1 秒、經 Cloudflare 曾達 19 秒）
-const DIRECT_HOSTS = ['www.twse.com.tw', 'api.alternative.me'];
+const DIRECT_HOSTS = ['www.twse.com.tw', 'api.alternative.me', 'publicreporting.cftc.gov'];
 function hostName(u) { const m = String(u).match(/^https?:\/\/([^\/?#:]+)/i); return m ? m[1].toLowerCase() : ''; }
 
 function xfetch(url, opt) {
@@ -210,7 +210,7 @@ self.onmessage = e => {
     if (!CTX.proxy || !CTX.proxy.url) throw new Error('未設定資料中繼站');
     if (ctx && ctx.prefetched) CTX.prefetched = ctx.prefetched;
     load(version);
-    if (typeof self[fn] !== 'function' || !/^(macro_|cal_|calPlan_)$/.test(fn)) throw new Error('不支援的功能：' + fn);
+    if (typeof self[fn] !== 'function' || !/^(macro_|cal_|calPlan_|fut_)$/.test(fn)) throw new Error('不支援的功能：' + fn);
     const data = JSON.parse(JSON.stringify(self[fn].apply(null, args || [])));
     self.postMessage({ id, ok: true, data, ms: Date.now() - t0, log: self.__eng.takeLog(), props: CTX.props });
   } catch (err) {

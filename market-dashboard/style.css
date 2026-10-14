@@ -797,3 +797,21 @@ body.color-us .set-diag .ok { color: var(--up); }
 .set-diag .bad { color: #b3261e; }
 .set-diag .tag.ok { color: #137a48; } .set-diag .tag.bad { color: #b3261e; } .set-diag .tag.warn { color: #8a6400; }
 .diag-verdict { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.8; margin-bottom: 12px; }
+
+/* ---------- 期貨專區 ---------- */
+.mtbl tr.sub td { color: var(--text-2); font-size: 12px; }
+.mtbl tr.click { cursor: pointer; }
+.mtbl tr.click:hover td { background: var(--surface-2); }
+.fut-two { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
+@media (max-width: 900px) { .fut-two { grid-template-columns: 1fr; } }
+svg.optdist { width: 100%; height: auto; }
+svg.optdist .gl { stroke: #e3e8ef; }
+svg.optdist .ax { font-size: 10px; fill: var(--text-3); }
+svg.optdist .ax.strong { fill: var(--text); font-weight: 700; }
+svg.optdist rect.oc { fill: #9bb8e0; }
+svg.optdist rect.op { fill: #f3c08a; }
+svg.optdist rect.oc.hot { fill: #1f4e8c; }
+svg.optdist rect.op.hot { fill: #d9730d; }
+svg.optdist line.spot { stroke: #c62828; stroke-dasharray: 4 3; }
+.cotbar { position: relative; height: 8px; min-width: 80px; border-radius: 4px; background: linear-gradient(90deg, #d5ecdf, #eef1f5 40%, #eef1f5 60%, #f6d5d5); }
+.cotbar i { position: absolute; top: -3px; width: 4px; height: 14px; margin-left: -2px; border-radius: 2px; background: var(--primary); }

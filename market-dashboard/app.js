@@ -3,7 +3,7 @@
  * 部署 GAS 後，把「網頁應用程式網址」貼到下方 API_URL
  * （或在登入頁「後端網址設定」輸入，會存在瀏覽器）
  * ========================================================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbx-e4pMtVEvtKJGMgJQWp7Y-EATqWfJ8ASF8IDE316JdTNhvUu2gbcpnF59EbPASPHS/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzNih2zUeevv2yQ9QvFik8YjFmf0VnKSluXK5DWj-s1jcuQ9xdB2y7MqdORzh-gV-eI/exec';
 
 /* ---------- 類別設定（含輸入規則說明） ---------- */
 const CATS = [
@@ -170,7 +170,7 @@ const direct = { misBadUntil: 0 }; // 證交所即時報價最近失敗：3 分�
 function proxyOn() { return !!(state.proxy && state.proxy.url); }
 
 // 允許瀏覽器跨站讀取的網站：直接連（用使用者自己的網路，不繞中繼站）
-const DIRECT_HOSTS = ['www.twse.com.tw', 'api.alternative.me'];
+const DIRECT_HOSTS = ['www.twse.com.tw', 'api.alternative.me', 'publicreporting.cftc.gov'];
 
 async function pget(u, timeout = DIRECT_TIMEOUT_MS) {
   const host0 = new URL(u).hostname;

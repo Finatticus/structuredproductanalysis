@@ -7,7 +7,7 @@
  * 依賴 app.js（state, proxyOn, logApi, store）
  * ========================================================= */
 const ENGINE_POOL = 3;
-const ENGINE_VERSION = '20261016';
+const ENGINE_VERSION = '20261017';
 const ENGINE_PROPS_KEY = 'mw_eng_props';
 const engine = { workers: [], queue: [], seq: 0, pending: new Map(), failed: false, ctxExtra: {} };
 // 會擋 Cloudflare 主機、但不擋 Google 的網站：經中繼站抓不到時改請後端代抓（後端白名單見 Code.gs RELAY_ALLOW）
