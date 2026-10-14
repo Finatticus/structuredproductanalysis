@@ -60,6 +60,23 @@ function marketSeg(tools, key, uiKey) {
 
 function initMacro() { macro.init(); }
 
+/**
+ * 上櫃信用交易／法人：櫃買中心只能逐日查，開啟時後端只先補最近幾天（幾秒內顯示），
+ * 歷史還沒補齊（filling）時，這裡在背景請後端一次補較多天，完成後自動更新字卡（每個分頁每區塊最多一次）。
+ */
+const otcFillDone = {};
+function otcFill(key, d) {
+  const part = apiPart(key);
+  if (!d || !d.filling || !/_otc$/.test(part) || otcFillDone[part]) return;
+  otcFillDone[part] = true;
+  apiBg('macro', { part: part + '_fill' }).then(r => {
+    if (!r || !r.data) return;
+    macro.data[part] = r.data;
+    macro.cacheSave(part, r.data);
+    if (apiPart(key) === part) renderPart(key);
+  }).catch(() => { otcFillDone[part] = false; }); // 失敗：下次開啟再試
+}
+
 /* ---------- 共用小工具 ---------- */
 const isNum = v => v != null && isFinite(v);
 const pctTxt = v => (isNum(v) ? (v > 0 ? '+' : '') + v.toFixed(2) + '%' : '—');
@@ -390,6 +407,7 @@ function renderFomc(d, body) {
  * ========================================================= */
 function renderMargin(d, body, tools, key) {
   marketSeg(tools, key, 'marginMkt');
+  otcFill(key, d);
   const n = d.d.length;
   const last = i => (n - 1 - i >= 0 ? n - 1 - i : null);
   const v = (arr, i) => (last(i) == null ? null : arr[last(i)]);
@@ -408,7 +426,7 @@ function renderMargin(d, body, tools, key) {
       <div class="kpi"><div class="kpi-l">券資比</div><div class="kpi-v">${numTxt(ratio(0))}%</div><div class="kpi-s ${dirCls(dr)}">日 ${signTxt(dr, 2, ' 個百分點')}</div></div>
     </div>
     ${n > 2 ? `<div class="chart-legend"><span style="--c:#e8a317">融資餘額（億，右軸）</span><span style="--c:#1f4e8c">${esc(d.idxName || '加權指數')}（左軸）</span></div><div class="mini-chart tall" id="marginChart"></div>` : ''}
-    <div class="foot-note">資料日 ${esc(d.d[n - 1])}，來源 ${esc(d.src)}。${d.filling ? `<b>歷史資料逐步補齊中（目前 ${n} 個交易日，每次開啟會再補一些）。</b>` : ''}交易所約於交易日晚間公布當日餘額。融資快速增加常代表散戶追價、籌碼轉弱；指數下跌時融資大減則可能是斷頭賣壓。</div>`;
+    <div class="foot-note">資料日 ${esc(d.d[n - 1])}，來源 ${esc(d.src)}。${d.filling ? `<b>歷史資料逐步補齊中（目前 ${n} 個交易日${otcFillDone[apiPart(key)] ? '，正在背景補齊，完成後自動更新' : '，每次開啟會再補一些'}）。</b>` : ''}交易所約於交易日晚間公布當日餘額。融資快速增加常代表散戶追價、籌碼轉弱；指數下跌時融資大減則可能是斷頭賣壓。</div>`;
   $('.foot-note', body).insertAdjacentHTML('beforebegin', marginTable(d)); // 圖表下方、說明上方
   if (n <= 2) return;
   const LWC = window.LightweightCharts;
@@ -450,6 +468,7 @@ function marginTable(d) {
  * ========================================================= */
 function renderInst(d, body, tools, key) {
   marketSeg(tools, key, 'instMkt');
+  otcFill(key, d);
   const rows = d.rows || [];
   const lastN = k => rows.slice(-k);
   const sum = (arr, f) => arr.reduce((s, r) => s + (r[f] || 0), 0);
@@ -502,7 +521,7 @@ function renderInst(d, body, tools, key) {
       </tbody></table></div>
     <div class="sub-h">近兩週每日明細</div>
     <div class="tbl-wrap"><table class="mtbl">${head}<tbody>${detail}</tbody></table></div>
-    <div class="foot-note">單位：新台幣億元，資料日 ${esc(latest.d)}，來源 ${esc(d.src || '')}。外資含外資自營商，自營商含自行買賣與避險。${d.filling ? `<b>歷史資料逐步補齊中（目前 ${rows.length} 個交易日）。</b>` : ''}</div>`;
+    <div class="foot-note">單位：新台幣億元，資料日 ${esc(latest.d)}，來源 ${esc(d.src || '')}。外資含外資自營商，自營商含自行買賣與避險。${d.filling ? `<b>歷史資料逐步補齊中（目前 ${rows.length} 個交易日${otcFillDone[apiPart(key)] ? '，正在背景補齊，完成後自動更新' : ''}）。</b>` : ''}</div>`;
 }
 
 /* =========================================================

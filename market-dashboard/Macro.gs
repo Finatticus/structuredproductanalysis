@@ -18,6 +18,16 @@ function macro_(part, force, acc) {
     margin_otc: macroMarginOtc_, inst_otc: macroInstOtc_,
     flow: macroFlow_, flow_otc: macroFlowOtc_, twmacro: macroTwMacro_,
   };
+  // 上櫃信用交易／法人的「背景補齊歷史」：前端先拿到最近幾天的資料顯示，再呼叫這裡把較舊的日子補齊並更新快取
+  const fill = { margin_otc_fill: 'margin_otc', inst_otc_fill: 'inst_otc' }[part];
+  if (fill) {
+    const data = fill === 'margin_otc' ? macroMarginOtc_(true) : macroInstOtc_(true);
+    data.updated = Date.now();
+    const text = JSON.stringify(data);
+    cachePutBig_('m_' + fill, text, MACRO_TTL[fill]);
+    cachePutBig_('ms_m_' + fill, text, 21600);
+    return data;
+  }
   if (!parts[part]) throw new Error('未知的區塊：' + part);
   return partCache_('m_' + part, MACRO_TTL[part], force, function () { return parts[part](acc); });
 }
@@ -598,9 +608,10 @@ function macroInst_() {
 /* ======================== 逐日資料（上櫃、證交所備援） ======================== */
 // 櫃買中心沒有歷史區間 API；證交所備援也只能逐日查。查過的日子永久存在「指令碼屬性」，之後只補新日期；
 // 每次開啟最多補 per 天，第一次先有約一個月，之後幾次開啟補到 keep 個交易日。
+// 上櫃（margin、inst）：一般開啟只補最近 quick 天（一批平行抓完、幾秒內顯示），較舊的歷史由前端另外呼叫「背景補齊」（fill 天）
 const DAY_SRC = {
-  margin: { prop: 'otc_margin', keep: 120, per: 25, batch: 5, pause: 300 },      // 上櫃信用交易
-  inst: { prop: 'otc_inst', keep: 30, per: 25, batch: 5, pause: 300 },          // 上櫃三大法人
+  margin: { prop: 'otc_margin', keep: 120, per: 25, quick: 8, fill: 60, batch: 8, pause: 300 }, // 上櫃信用交易
+  inst: { prop: 'otc_inst', keep: 30, per: 25, quick: 8, fill: 30, batch: 8, pause: 300 },     // 上櫃三大法人
   tse_margin: { prop: 'tse_margin', keep: 120, per: 20, batch: 3, pause: 1200 }, // 證交所有頻率限制，慢一點
   tse_inst: { prop: 'tse_inst', keep: 30, per: 20, batch: 3, pause: 1200 },
 };
@@ -651,9 +662,10 @@ function dayParse_(kind, text) {
   return [r2(f), r2(it), r2(dl), r2(row['合計'] != null ? row['合計'] : f + it + dl)];
 }
 
-/** 回傳 [[YYYY-MM-DD, values...], ...]（由舊到新） */
-function dayHistory_(kind) {
+/** 回傳 [[YYYY-MM-DD, values...], ...]（由舊到新）；fill = true 時一次補較多天（背景補齊用） */
+function dayHistory_(kind, fill) {
   const cfg = DAY_SRC[kind];
+  const per = fill ? (cfg.fill || cfg.per) : (cfg.quick || cfg.per);
   const props = PropertiesService.getScriptProperties();
   let st = {};
   try { st = JSON.parse(props.getProperty(cfg.prop) || '{}'); } catch (e) { st = {}; }
@@ -675,7 +687,7 @@ function dayHistory_(kind) {
     return !st.d[ds] && st.x.indexOf(ds) < 0;
   }).filter(function (ds, i) {
     return have < cfg.keep || ds >= recent || i < 5; // 已有足夠歷史時，只補最近的日子
-  }).slice(0, cfg.per);
+  }).slice(0, per);
 
   chunk_(missing, cfg.batch).forEach(function (batch, bi) {
     if (bi) Utilities.sleep(cfg.pause);
@@ -699,14 +711,24 @@ function dayHistory_(kind) {
   return dates.map(function (d) { return [d].concat(keep[d]); });
 }
 
-function macroMarginOtc_() {
-  const h = dayHistory_('margin');
+function macroMarginOtc_(fill) {
+  const h = dayHistory_('margin', fill);
   if (!h.length) throw new Error('櫃買中心信用交易資料暫時無法取得');
+  // 櫃買指數（疊圖用）：FinMind 歷史（帶 token，避免共用 IP 被限流）＋櫃買中心本月每日指數補最新幾天
   const idx = {};
+  const ir = fetchAll_([
+    get_('https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=TPEx&start_date=' + h[0][0] +
+      (finmindToken_() ? '&token=' + encodeURIComponent(finmindToken_()) : '')),
+    get_('https://www.tpex.org.tw/openapi/v1/tpex_daily_trading_index'),
+  ]);
+  try { JSON.parse(okText_(ir[0])).data.forEach(function (x) { idx[x.date] = x.close; }); } catch (e) { /* 指數疊圖非必要 */ }
   try {
-    JSON.parse(okText_(fetchAll_([get_('https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=TPEx&start_date=' + h[0][0])])[0]))
-      .data.forEach(function (x) { idx[x.date] = x.close; });
-  } catch (e) { /* 指數疊圖非必要 */ }
+    JSON.parse(okText_(ir[1])).forEach(function (x) {
+      const m = String(x.Date || '').match(/^(\d{3})(\d{2})(\d{2})$/); // 民國年
+      const v = parseFloat(x.TPExIndex);
+      if (m && isFinite(v)) idx[(+m[1] + 1911) + '-' + m[2] + '-' + m[3]] = v;
+    });
+  } catch (e) { /* ignore */ }
   return {
     src: '櫃買中心（上櫃）',
     idxName: '櫃買指數',
@@ -719,8 +741,8 @@ function macroMarginOtc_() {
   };
 }
 
-function macroInstOtc_() {
-  const h = dayHistory_('inst');
+function macroInstOtc_(fill) {
+  const h = dayHistory_('inst', fill);
   if (!h.length) throw new Error('櫃買中心三大法人資料暫時無法取得');
   return {
     src: '櫃買中心',
@@ -766,7 +788,7 @@ function flowData_(mkt) {
   try {
     const arr = JSON.parse(okText_(fetch_(mkt === 'tse'
       ? 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'
-      : 'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes', { muteHttpExceptions: true, headers: { 'User-Agent': UA } })));
+      : 'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes', { muteHttpExceptions: true, headers: { 'User-Agent': UA } }))); // 上櫃用精簡版收盤行情（約 0.36MB；完整版近 5MB）
     arr.forEach(function (x) {
       const c = String(x.Code || x.SecuritiesCompanyCode || '').trim();
       const p = parseFloat(x.ClosingPrice || x.Close);
