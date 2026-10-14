@@ -3,7 +3,7 @@
  * 部署 GAS 後，把「網頁應用程式網址」貼到下方 API_URL
  * （或在登入頁「後端網址設定」輸入，會存在瀏覽器）
  * ========================================================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbytSzg5v_uhEr4LfdBVA2Hs9jH3KNgK-IhEeyTYY5VOpEGAgBdlrTyeFhKqgUBsBw4_/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxmjCcRPitTDcK3bzCkwItqQIJ5aqCmqZODfwsiuJH25xx_Tg3uW5ahv47bC_8W8M9H/exec';
 
 /* ---------- 類別設定（含輸入規則說明） ---------- */
 const CATS = [
@@ -60,6 +60,8 @@ const state = {
   intraday: {},       // source -> {c:[收盤價...], prev}
   intradayTimer: null,
   cardOrder: null,    // ['fx','tw',...]
+  paused: new Set(),  // 停止更新的區塊
+  feedsOn: false,     // 是否正在抓報價
   editing: false,
   sortables: [],
 };
@@ -88,15 +90,32 @@ async function api(action, data = {}) {
     });
     j = await res.json();
   } catch (err) {
-    // 最常見原因：GAS 部署的存取權不是「所有人」，請求被導向 Google 登入頁
-    throw new Error('無法連線後端：請確認 GAS 部署的「存取權」設為「所有人」，且網址以 /exec 結尾');
+    // 網路中斷，或 GAS 部署存取權不是「所有人」（請求被導向 Google 登入頁）
+    throw Object.assign(new Error('無法連線後端（請確認網路，或 GAS 部署存取權為「所有人」）'), { retry: true });
   }
   if (j.usage) updateUsage(j.usage);
   if (!j.ok) {
     if (j.code === 'AUTH') { logout(true); }
-    throw new Error(j.error || '伺服器錯誤');
+    throw Object.assign(new Error(cleanMsg(j.error || '伺服器錯誤')), { retry: j.code === 'RETRY' });
   }
   return j;
+}
+
+/** 去掉錯誤訊息中冗長的網址（例如 GAS 的「無法開啟網址：https://…」） */
+function cleanMsg(m) {
+  return String(m).replace(/無法開啟網址[:：]?\s*\S*/g, '資料來源連線失敗').replace(/\s*https?:\/\/\S+/g, '').trim();
+}
+
+/** 遇到暫時性錯誤自動重試（最多 3 次，間隔 2、4、6 秒） */
+async function apiRetry(action, data, onRetry) {
+  for (let i = 1; ; i++) {
+    try { return await api(action, data); }
+    catch (err) {
+      if (!err.retry || i > 3) throw err;
+      if (onRetry) onRetry(i);
+      await new Promise(r => setTimeout(r, 2000 * i));
+    }
+  }
 }
 
 /* =========================================================
@@ -198,6 +217,7 @@ async function showApp() {
     state.items = r.items;
     state.settings = r.settings || {};
     state.admin = !!r.admin;
+    state.paused = new Set(String(state.settings.pausedCats || '').split(',').filter(Boolean));
     const order = (r.settings && r.settings.cardOrder) || '';
     state.cardOrder = order ? order.split(',') : null;
     renderGrid();
@@ -211,7 +231,9 @@ function initApp() {
   $$('.nav-btn').forEach(b => b.addEventListener('click', () => {
     $$('.nav-btn').forEach(x => x.classList.toggle('active', x === b));
     $$('.section').forEach(s => s.classList.toggle('hidden', s.id !== 'section-' + b.dataset.section));
+    syncFeeds();
   }));
+  $('#pauseAllBtn').addEventListener('click', togglePauseAll);
   $('#logoutBtn').addEventListener('click', () => logout());
   $('#refreshBtn').addEventListener('click', () => { pollQuotes(); loadIntraday(); });
   $('#editBtn').addEventListener('click', () => setEditing(!state.editing));
@@ -234,9 +256,7 @@ function initApp() {
     document.body.classList.toggle('color-us', e.target.value === 'us');
   });
 
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && state.token) pollQuotes();
-  });
+  document.addEventListener('visibilitychange', syncFeeds);
   document.addEventListener('click', e => {
     if (!e.target.closest('.help')) $$('.help.open').forEach(h => h.classList.remove('open'));
   });
@@ -258,7 +278,10 @@ function renderGrid() {
     card.innerHTML = `
       <div class="card-head">
         <div class="card-title">${cat.title}<span class="card-meta" data-meta></span></div>
-        <button class="icon-btn" data-act="add" title="新增標的">+</button>
+        <div class="card-btns">
+          <button class="icon-btn" data-act="pause" title="停止更新此區塊">⏸</button>
+          <button class="icon-btn" data-act="add" title="新增標的">+</button>
+        </div>
       </div>
       <form class="add-form hidden">
         <div class="add-row">
@@ -284,11 +307,13 @@ function renderGrid() {
       if (!form.classList.contains('hidden')) form.symbol.focus();
     });
     $('.help-btn', card).addEventListener('click', e => e.currentTarget.parentElement.classList.toggle('open'));
+    $('[data-act=pause]', card).addEventListener('click', () => togglePause(cat.key));
     $('.add-form', card).addEventListener('submit', e => onAdd(e, cat.key));
 
     renderRows(cat.key);
   });
   grid.classList.toggle('editing', state.editing);
+  applyPauseUI();
   initSortables();
   initMasonry();
 }
@@ -394,44 +419,123 @@ function fmtPrice(p, cat) {
 /* =========================================================
  * 資料來源
  * ========================================================= */
-function startFeeds() {
-  stopFeeds();
-  pollQuotes();
-  restartPolling();
-  connectCrypto();
-  loadIntraday();
-  state.intradayTimer = setInterval(() => { if (!document.hidden) loadIntraday(); }, 180000);
+/** 只有「正在看市場監控頁」時才抓報價：沒開網頁、分頁在背景、切到其他頁都不呼叫 */
+function marketActive() {
+  return !!state.token && !document.hidden && !$('#section-market').classList.contains('hidden');
 }
 
-function stopFeeds() {
-  clearInterval(state.pollTimer);
+function isPaused(cat) { return state.paused.has(cat); }
+function activeItems() { return state.items.filter(i => !isPaused(i.category)); }
+
+function startFeeds() {
+  stopFeeds();
+  restartPolling();
+  state.intradayTimer = setInterval(() => { if (marketActive()) loadIntraday(); }, 180000);
+  syncFeeds();
+}
+
+/** 依目前是否在市場監控頁，開始或停止所有報價（含虛擬貨幣連線） */
+function syncFeeds() {
+  if (!state.token) return;
+  if (marketActive()) {
+    if (state.feedsOn) return;
+    state.feedsOn = true;
+    pollQuotes();
+    loadIntraday();
+    connectCrypto();
+  } else if (state.feedsOn) {
+    state.feedsOn = false;
+    closeSockets();
+    setStatus('已暫停（離開市場監控頁時不更新）');
+  }
+}
+
+function closeSockets() {
   clearInterval(state.cryptoPollTimer);
-  clearInterval(state.intradayTimer);
   state.cryptoPollTimer = null;
   state.sockets.forEach(ws => { ws.onclose = null; ws.close(); });
   state.sockets = [];
 }
 
+function stopFeeds() {
+  clearInterval(state.pollTimer);
+  clearInterval(state.intradayTimer);
+  closeSockets();
+  state.feedsOn = false;
+}
+
 function restartPolling() {
   clearInterval(state.pollTimer);
   const sec = parseInt($('#intervalSel').value, 10) || 10;
-  state.pollTimer = setInterval(() => { if (!document.hidden) pollQuotes(); }, sec * 1000);
+  state.pollTimer = setInterval(() => { if (marketActive()) pollQuotes(); }, sec * 1000);
+}
+
+/* --- 各區塊暫停／繼續（存在帳號設定 pausedCats） --- */
+function applyPauseUI() {
+  CATS.forEach(c => {
+    const card = $(`.card[data-cat="${c.key}"]`);
+    if (!card) return;
+    const p = isPaused(c.key);
+    card.classList.toggle('paused', p);
+    const b = $('[data-act=pause]', card);
+    b.textContent = p ? '▶' : '⏸';
+    b.title = p ? '繼續更新此區塊' : '停止更新此區塊';
+    b.classList.toggle('on', p);
+    $('[data-meta]', card).textContent = p ? '已停止更新' : '';
+  });
+  const all = CATS.every(c => isPaused(c.key));
+  const btn = $('#pauseAllBtn');
+  btn.textContent = all ? '▶ 全部繼續' : '⏸ 全部停止';
+  btn.classList.toggle('on', all);
+  requestAnimationFrame(() => $$('#marketGrid .card').forEach(sizeCard));
+}
+
+function setPaused(cats, paused) {
+  const resumed = [];
+  cats.forEach(k => {
+    if (paused) state.paused.add(k);
+    else if (state.paused.delete(k)) resumed.push(k);
+  });
+  applyPauseUI();
+  const value = [...state.paused].join(',');
+  state.settings = Object.assign(state.settings || {}, { pausedCats: value });
+  api('saveSetting', { key: 'pausedCats', value }).catch(() => {});
+  if (cats.includes('crypto') && marketActive()) connectCrypto();
+  if (!paused && resumed.length && marketActive()) {
+    pollQuotes();
+    loadIntraday(state.items.filter(i => resumed.includes(i.category)));
+  }
+  if (paused && !activeItems().length) setStatus('已全部停止更新');
+}
+
+function togglePause(cat) { setPaused([cat], !isPaused(cat)); }
+
+function togglePauseAll() {
+  const all = CATS.every(c => isPaused(c.key));
+  setPaused(CATS.map(c => c.key), !all);
 }
 
 /* --- 匯率 / 台股 / 國外 / 指數：透過 GAS 代抓 --- */
 let polling = false;
 async function pollQuotes() {
-  if (polling || !state.token) return;
-  const sources = [...new Set(state.items.map(i => i.source).filter(s => /^(yahoo|mis):/.test(s)))];
-  if (!sources.length) return;
+  if (polling || !marketActive()) return;
+  const sources = [...new Set(activeItems().map(i => i.source).filter(s => /^(yahoo|mis):/.test(s)))];
+  if (!sources.length) {
+    if (!activeItems().length) setStatus('已全部停止更新');
+    return;
+  }
   polling = true;
+  const now = () => new Date().toLocaleTimeString('zh-TW', { hour12: false });
   try {
     const r = await api('quotes', { sources });
     Object.entries(r.quotes).forEach(([src, q]) => setQuote(src, q));
     state.lastUpdate = new Date();
-    setStatus('即時更新中 · ' + state.lastUpdate.toLocaleTimeString('zh-TW', { hour12: false }), 'live');
+    // 個別失敗只列名稱，下一輪自動再試，不額外重試
+    const failed = (r.failed || []).map(src => (state.items.find(i => i.source === src) || {}).name || src);
+    const tail = failed.length ? ` · 失敗：${failed.slice(0, 3).join('、')}${failed.length > 3 ? ` 等 ${failed.length} 檔` : ''}` : '';
+    setStatus('即時更新中 · ' + now() + tail, failed.length ? 'warn' : 'live');
   } catch (err) {
-    setStatus('更新失敗：' + err.message + '（保留最後報價）', 'err');
+    setStatus('更新失敗 · ' + now() + '（下一輪自動更新）', 'err');
   } finally {
     polling = false;
   }
@@ -448,8 +552,8 @@ function cryptoGroups() {
 }
 
 function connectCrypto() {
-  state.sockets.forEach(ws => { ws.onclose = null; ws.close(); });
-  state.sockets = [];
+  closeSockets();
+  if (!marketActive() || isPaused('crypto')) return; // 不在市場監控頁或已暫停：不連線
   const { spot, fut } = cryptoGroups();
   fetchCryptoRest(); // 先抓一次快照，避免等待 WebSocket 首筆
   if (spot.length) openSocket('wss://stream.binance.com:9443/stream?streams=', spot, 'binance:');
@@ -470,7 +574,7 @@ function openSocket(base, syms, prefix) {
   ws.onclose = () => {
     // 斷線：改用 REST 輪詢，5 秒後重連
     if (!state.cryptoPollTimer) state.cryptoPollTimer = setInterval(fetchCryptoRest, 5000);
-    setTimeout(() => { if (state.token && state.sockets.includes(ws)) connectCrypto(); }, 5000);
+    setTimeout(() => { if (marketActive() && state.sockets.includes(ws)) connectCrypto(); }, 5000);
   };
   state.sockets.push(ws);
 }
@@ -507,7 +611,7 @@ async function detectBinanceMarket(sym) {
  * ========================================================= */
 /** 供個股研究、選股篩選器呼叫：加入自選清單並立即開始報價 */
 async function addToWatchlist(category, symbol, name) {
-  const r = await api('add', { category, symbol, name: name || '' });
+  const r = await apiRetry('add', { category, symbol, name: name || '' });
   state.items.push(r.item);
   if (r.item.quote) state.quotes[r.item.source] = r.item.quote;
   renderRows(category);
@@ -534,7 +638,7 @@ async function onAdd(e, catKey) {
   try {
     let source;
     if (catKey === 'crypto') source = await detectBinanceMarket(symbol.toUpperCase().replace(/[\/\-\s]/g, ''));
-    const r = await api('add', { category: catKey, symbol, name, source });
+    const r = await apiRetry('add', { category: catKey, symbol, name, source }, n => { btn.textContent = `重試中（${n}/3）…`; });
     state.items.push(r.item);
     if (r.item.quote) state.quotes[r.item.source] = r.item.quote;
     renderRows(catKey);
@@ -543,7 +647,7 @@ async function onAdd(e, catKey) {
     form.reset();
     toast(`已新增 ${r.item.name}`);
   } catch (err) {
-    errEl.textContent = err.message;
+    errEl.textContent = `新增失敗：${symbol.toUpperCase()}（${err.message}）`;
   } finally {
     btn.disabled = false;
     btn.textContent = '新增';
@@ -567,7 +671,8 @@ async function onRemove(it) {
  * 當日走勢小圖
  * ========================================================= */
 async function loadIntraday(items = state.items) {
-  if (!state.token) return;
+  if (!marketActive()) return;
+  items = items.filter(i => !isPaused(i.category));
   const gas = [...new Set(items.map(i => i.source).filter(s => /^(yahoo|mis):/.test(s)))];
   const tasks = [];
   if (gas.length) {

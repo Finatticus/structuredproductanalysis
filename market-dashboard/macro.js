@@ -20,7 +20,7 @@ const MACRO_PARTS = [
 const SPAN_OPTS = [[4, '1/3 寬'], [5, '5/12 寬'], [6, '1/2 寬'], [7, '7/12 寬'], [8, '2/3 寬'], [12, '全寬']];
 const PERIODS = [['d1', '1D', 3], ['w1', '1W', 6], ['m1', '1M', 10], ['m3', '3M', 18], ['ytd', 'YTD', 30]];
 const CURVE_COLORS = ['#1f4e8c', '#5aa0e6', '#e67e22', '#a3abb8'];
-const MACRO_RELOAD_MS = 60000; // 一分鐘內切回此頁不重抓
+const MACRO_STALE_MS = 3600000; // 資料超過 1 小時提醒更新（不自動重抓，省額度）
 
 const macro = {
   loadedAt: 0,
@@ -72,6 +72,7 @@ function initMacro() {
     </section>`).join('');
   $('.nav-btn[data-section="macro"]').addEventListener('click', () => loadMacro(false));
   $('#macroRefresh').addEventListener('click', () => loadMacro(true));
+  setInterval(macroStaleCheck, 60000);
   $('#colorSel').addEventListener('change', () => MACRO_PARTS.forEach(p => renderPart(p.key)));
 
   $('#macroEdit').addEventListener('click', () => setMacroEditing(!macro.editing));
@@ -103,6 +104,17 @@ function initMacro() {
         saveMacroLayout();
       },
     });
+  }
+}
+
+/** 資料超過 1 小時：顯示提醒（只看時間，不會自動更新） */
+function macroStaleCheck() {
+  const el = $('#macroStale');
+  const old = macro.loadedAt && Date.now() - macro.loadedAt > MACRO_STALE_MS;
+  el.classList.toggle('hidden', !old);
+  if (old) {
+    const mins = Math.floor((Date.now() - macro.loadedAt) / 60000);
+    el.textContent = `⚠ 資料已是 ${mins >= 120 ? Math.floor(mins / 60) + ' 小時' : mins + ' 分鐘'}前，記得按「↻ 重新整理」`;
   }
 }
 
@@ -159,10 +171,12 @@ function setMacroEditing(on) {
   }
 }
 
+/** 只有第一次進入此頁自動抓；之後由使用者按「↻ 重新整理」 */
 async function loadMacro(force) {
   if (!state.token) return;
-  if (!force && Date.now() - macro.loadedAt < MACRO_RELOAD_MS) return;
+  if (!force && macro.loadedAt) { macroStaleCheck(); return; }
   macro.loadedAt = Date.now();
+  macroStaleCheck();
   const st = $('#macroStatus');
   st.className = 'status';
   st.innerHTML = '<span class="dot"></span>更新中…';

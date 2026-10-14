@@ -166,7 +166,8 @@ function route_(req) {
       auth_(req.token);
       const sources = (req.sources || []).filter(function (s) { return /^(yahoo|mis):/.test(s); });
       const quotes = getQuotes_(sources);
-      return { ok: true, quotes: quotes, serverTime: Date.now(), usage: getUsage_() };
+      const failed = sources.filter(function (s) { return !quotes[s] || quotes[s].price == null; });
+      return { ok: true, quotes: quotes, failed: failed, serverTime: Date.now(), usage: getUsage_() };
     }
     default:
       throw new Error('未知的 action：' + req.action);
@@ -388,6 +389,7 @@ function addSymbol_(account, category, symbol, name, sourceHint) {
   let quote = null;
   if (/^(yahoo|mis):/.test(r.source)) {
     quote = getQuotes_([r.source])[r.source];
+    if ((!quote || quote.price == null) && FETCH_FAILS_) throw retryErr_('資料來源暫時連線失敗');
     if (!quote || quote.price == null) throw new Error('查無報價：' + r.symbol + '，請確認代碼格式');
   }
   const display = String(name || '').trim() || r.name || (quote && quote.name) || r.symbol;
@@ -470,15 +472,19 @@ function resolveSymbol_(category, raw, hint) {
     const code = s.replace(/\.(TW|TWO)$/, '');
     if (!/^[0-9]{4,6}[A-Z]?$/.test(code)) throw new Error('台股格式：4–6 碼股票代號，例如 2330、0050、00878');
     const lc = code.toLowerCase();
+    const f0 = FETCH_FAILS_;
     const mis = fetchQuotesRaw_(['mis:tse_' + lc + '.tw', 'mis:otc_' + lc + '.tw']);
     for (const k in mis) {
       if (mis[k] && mis[k].price != null) return { symbol: code, source: k, name: mis[k].name };
     }
+    // 證交所連不上時不要改用 Yahoo（會把上市櫃股票存成較慢的來源），請前端稍後重試
+    if (FETCH_FAILS_ > f0) throw retryErr_('證交所暫時連線失敗');
     // 興櫃或 MIS 未涵蓋者 → Yahoo
     const y = fetchQuotesRaw_(['yahoo:' + code + '.TWO', 'yahoo:' + code + '.TW']);
     for (const k in y) {
       if (y[k] && y[k].price != null) return { symbol: code, source: k, name: '' };
     }
+    if (FETCH_FAILS_) throw retryErr_('證交所／Yahoo 暫時連線失敗');
     throw new Error('查無此台股代號：' + code);
   }
 
@@ -745,15 +751,47 @@ const URLFETCH_DAILY_LIMIT = 20000;
 const USAGE_TZ = 'Asia/Taipei';
 let usageNow_ = null; // 本次執行已知的最新計數，避免重複讀取
 
+// 本次執行中外部來源失敗的次數（連線錯誤、5xx、429），用來判斷是否值得讓前端重試
+let FETCH_FAILS_ = 0;
+
+/** 連線失敗時的替代回應：狀態碼 599、內容空白，呼叫端照一般失敗處理即可 */
+function failRes_() {
+  FETCH_FAILS_++;
+  return { getResponseCode: function () { return 599; }, getContentText: function () { return ''; }, getAllHeaders: function () { return {}; }, getBlob: function () { return null; } };
+}
+
+function noteRes_(r) {
+  const code = r.getResponseCode();
+  if (code >= 500 || code === 429) FETCH_FAILS_++;
+  return r;
+}
+
 function fetch_(url, opt) {
   countFetch_(1);
-  return UrlFetchApp.fetch(url, opt);
+  try { return noteRes_(UrlFetchApp.fetch(url, opt)); } catch (e) { return failRes_(); }
 }
 
 function fetchAll_(reqs) {
   if (!reqs.length) return [];
   countFetch_(reqs.length); // fetchAll 內每個請求各算 1 次
-  return UrlFetchApp.fetchAll(reqs);
+  try {
+    return UrlFetchApp.fetchAll(reqs).map(noteRes_);
+  } catch (e) {
+    // 其中一個網址連不上會讓整批失敗 → 改成逐一請求，只有失敗的那個回傳 599
+    countFetch_(reqs.length);
+    return reqs.map(function (r) {
+      const o = Object.assign({}, r);
+      delete o.url;
+      try { return noteRes_(UrlFetchApp.fetch(r.url, o)); } catch (e2) { return failRes_(); }
+    });
+  }
+}
+
+/** 暫時性錯誤（資料來源連線失敗）：前端收到 code=RETRY 會自動重試 */
+function retryErr_(msg) {
+  const e = new Error(msg || '資料來源暫時連線失敗');
+  e.code = 'RETRY';
+  return e;
 }
 
 function countFetch_(n) {
