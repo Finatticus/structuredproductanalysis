@@ -271,14 +271,15 @@ function rsCompute(d) {
     } else {
       const s = d.stats || {};
       const chg = isNum(s.shortNow) && s.shortPrev ? (s.shortNow / s.shortPrev - 1) * 100 : null;
-      out.chips = { inst: s.inst, insider: s.insider, shortPct: s.shortPct, shortRatio: s.shortRatio, shortChg: chg };
+      out.chips = { inst: s.inst, insider: s.insider, shortPct: s.shortPct, shortRatio: s.shortRatio, shortChg: chg, shortBase: s.shortBase, shortDate: s.shortDate };
+      const base = s.shortBase === 'shares' ? '占總股數' : '占流通股';
       const high = isNum(s.shortPct) && s.shortPct >= 0.1;
       const tone = isNum(chg) ? (chg <= -10 ? 'bull' : chg >= 10 ? 'bear' : 'neutral') : 'neutral';
       out.verdict.chips = V(high ? '空單偏高' : tone === 'bull' ? '空單減少' : tone === 'bear' ? '空單增加' : '中性', high ? 'warn' : tone,
         [isNum(s.inst) && `機構持股 ${numTxt(s.inst * 100, 1)}%`, isNum(s.insider) && `內部人持股 ${numTxt(s.insider * 100, 2)}%`,
-          isNum(s.shortPct) && `放空比例（占流通股）${numTxt(s.shortPct * 100, 2)}%`, isNum(chg) && `空單較上月 ${signTxt(chg, 1, '%')}`,
+          isNum(s.shortPct) && `放空比例（${base}）${numTxt(s.shortPct * 100, 2)}%`, isNum(chg) && `空單較上期 ${signTxt(chg, 1, '%')}`,
           isNum(s.shortRatio) && `空單回補天數 ${numTxt(s.shortRatio, 1)} 天`],
-        '放空比例 ≥10% 標示空單偏高；空單月減 ≥10% 視為偏多、月增 ≥10% 視為偏空。');
+        '放空比例 ≥10% 標示空單偏高；空單較上期（約半個月公布一次）減少 ≥10% 視為偏多、增加 ≥10% 視為偏空。');
     }
   }
 
@@ -492,9 +493,10 @@ function renderResearch() {
     <div class="kpis">
       <div class="kpi"><div class="kpi-l">機構持股</div><div class="kpi-v">${isNum(CH.inst) ? numTxt(CH.inst * 100, 1) + '%' : '—'}</div></div>
       <div class="kpi"><div class="kpi-l">內部人持股</div><div class="kpi-v">${isNum(CH.insider) ? numTxt(CH.insider * 100, 2) + '%' : '—'}</div></div>
-      <div class="kpi"><div class="kpi-l">放空比例</div><div class="kpi-v">${isNum(CH.shortPct) ? numTxt(CH.shortPct * 100, 2) + '%' : '—'}</div><div class="kpi-s">較上月 ${signTxt(CH.shortChg, 1, '%')}</div></div>
+      <div class="kpi"><div class="kpi-l">放空比例${CH.shortBase === 'shares' ? '（占總股數）' : ''}</div><div class="kpi-v">${isNum(CH.shortPct) ? numTxt(CH.shortPct * 100, 2) + '%' : '—'}</div><div class="kpi-s">較上期 ${signTxt(CH.shortChg, 1, '%')}</div></div>
       <div class="kpi"><div class="kpi-l">回補天數</div><div class="kpi-v">${numTxt(CH.shortRatio, 1)}</div></div>
-    </div>`);
+    </div>
+    <div class="foot-note">機構持股、放空資料${CH.shortDate ? `（放空結算日 ${esc(CH.shortDate)}）` : ''}依交易所每半個月公布；美股沒有台股那樣的每日法人買賣超。</div>`);
 
   // 相對強弱
   if (C.rs) {
@@ -519,7 +521,7 @@ function renderResearch() {
         <div class="tgt-lbl"><span>最低 ${numTxt(A.low)}</span><span>平均 <b>${numTxt(A.mean)}</b>・現價 ${numTxt(C.last)}</span><span>最高 ${numTxt(A.high)}</span></div></div>` : ''}
       ${tot ? `<div class="rec-bar">${[['sb', '強力買進', '#137a48'], ['b', '買進', '#5bb98b'], ['h', '持有', '#c3cad5'], ['s', '賣出', '#e88a8a'], ['ss', '強力賣出', '#c62828']]
         .map(([k, l, col]) => tr[k] ? `<i style="flex:${tr[k]};background:${col}" title="${l} ${tr[k]}">${tr[k]}</i>` : '').join('')}</div>
-        <div class="foot-note" style="margin-top:4px">本月評等分布：強力買進 ${tr.sb}・買進 ${tr.b}・持有 ${tr.h}・賣出 ${tr.s}・強力賣出 ${tr.ss}</div>` : ''}
+        <div class="foot-note" style="margin-top:4px">${A.src === 'Nasdaq' ? '目前評等分布（Nasdaq）' : '本月評等分布'}：${[['sb', '強力買進'], ['b', '買進'], ['h', '持有'], ['s', '賣出'], ['ss', '強力賣出']].filter(([k]) => A.src !== 'Nasdaq' || tr[k]).map(([k, l]) => `${l} ${tr[k]}`).join('・')}</div>` : ''}
       ${A.hist && A.hist.length ? `<div class="tbl-wrap"><table class="mtbl">
         <thead><tr><th>日期</th><th>機構</th><th>評等</th><th class="num">目標價</th></tr></thead>
         <tbody>${A.hist.map(h => `<tr><td class="nm">${tpDate(h.t)}</td><td>${esc(h.firm)}</td><td>${esc(h.from && h.from !== h.to ? h.from + ' → ' : '')}${esc(h.to)}</td><td class="num">${numTxt(h.pt)}</td></tr>`).join('')}</tbody></table></div>` : ''}`);
@@ -545,7 +547,7 @@ function renderResearch() {
       <div class="kpi"><div class="kpi-l">國家</div><div class="kpi-v sm">${esc(pf.country || (isTW ? 'Taiwan' : '—'))}</div></div>
       <div class="kpi"><div class="kpi-l">網站</div><div class="kpi-v sm">${pf.website ? `<a href="${esc(pf.website)}" target="_blank" rel="noopener noreferrer">${esc(pf.website.replace(/^https?:\/\//, ''))}</a>` : '—'}</div></div>
     </div>
-    ${pf.summary ? `<p class="rs-summary">${esc(pf.summary)}</p><div class="foot-note">簡介來源 Yahoo Finance（英文）。</div>` : ''}`);
+    ${pf.summary ? `<p class="rs-summary">${esc(pf.summary)}</p><div class="foot-note">簡介來源 ${pf.src === 'Nasdaq' ? 'Nasdaq' : 'Yahoo Finance'}（英文）。</div>` : ''}`);
 
   $('#rsBody').innerHTML = `<div class="macro-grid rs-grid">${html}</div>`;
   const addBtn = $('#rsAdd');

@@ -308,6 +308,7 @@ main { max-width: 1440px; margin: 0 auto; padding: 20px 24px 8px; }
 .panel .up { color: var(--up); }
 .panel .down { color: var(--down); }
 .foot-note { font-size: 11px; color: var(--text-3); margin-top: 10px; line-height: 1.6; }
+.foot-note.warn { color: #8a6400; }
 .sub-h { font-size: 13px; font-weight: 700; color: var(--text); margin: 14px 0 8px; }
 
 /* 表格 */

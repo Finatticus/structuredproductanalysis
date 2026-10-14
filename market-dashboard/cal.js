@@ -123,7 +123,8 @@ function renderEarnings(d, body) {
         }
         return `<tr><td class="nm"><a href="#" data-rs="${esc(r.symbol)}">${esc(r.name)}</a> <span class="muted">${esc(r.symbol)}</span></td><td>${when}</td><td>${tag}</td></tr>`;
       }).join('')}</tbody></table></div>
-    <div class="foot-note">日期來源 Yahoo Finance（台北時間）。台股多為法說會或董事會日期；查無日期的台股顯示法定公告期限（一般公司：年報 3/31、Q1 5/15、Q2 8/14、Q3 11/14）。</div>`;
+    ${d.note ? `<div class="foot-note warn">${esc(d.note)}</div>` : ''}
+    <div class="foot-note">日期來源 Yahoo Finance（台北時間；美股 Yahoo 沒有日期時改用 Nasdaq，只有日期、不含時間）。台股多為法說會或董事會日期；查無日期的台股顯示法定公告期限（一般公司：年報 3/31、Q1 5/15、Q2 8/14、Q3 11/14）。</div>`;
   calBindResearch(body);
 }
 

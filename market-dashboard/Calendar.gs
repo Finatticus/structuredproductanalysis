@@ -342,27 +342,56 @@ function calEarnings_(acc) {
   });
   if (!items.length) return { rows: [] };
   const syms = items.map(function (it) { return toYahoo_(it.source); });
-  const query = function (sess) {
-    return fetch_('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + syms.map(encodeURIComponent).join(',') +
-      '&fields=earningsTimestamp,earningsTimestampStart,earningsTimestampEnd,isEarningsDateEstimate&crumb=' + encodeURIComponent(sess.crumb),
-      { muteHttpExceptions: true, headers: { 'User-Agent': UA, Cookie: sess.cookie } });
-  };
-  let res = query(yahooSession_(false));
-  if (res.getResponseCode() === 401 || res.getResponseCode() === 403) res = query(yahooSession_(true));
-  if (res.getResponseCode() !== 200) throw new Error('財報日期暫時無法取得（HTTP ' + res.getResponseCode() + '）');
+  // 1) Yahoo（需要 cookie＋crumb 認證；Google／Cloudflare 主機常被拒絕）
   const bySym = {};
-  (JSON.parse(res.getContentText()).quoteResponse.result || []).forEach(function (q) { bySym[q.symbol] = q; });
-  return {
-    rows: items.map(function (it, i) {
-      const q = bySym[syms[i]] || {};
-      const s = q.earningsTimestampStart || q.earningsTimestamp;
-      const e = q.earningsTimestampEnd || s;
-      return {
-        cat: it.category, symbol: it.symbol, name: it.name,
-        start: s ? s * 1000 : null, end: e ? e * 1000 : null, est: !!q.isEarningsDateEstimate,
-      };
-    }),
-  };
+  let yahooErr = '';
+  try {
+    const query = function (sess) {
+      return fetch_('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + syms.map(encodeURIComponent).join(',') +
+        '&fields=earningsTimestamp,earningsTimestampStart,earningsTimestampEnd,isEarningsDateEstimate&crumb=' + encodeURIComponent(sess.crumb),
+        { muteHttpExceptions: true, headers: { 'User-Agent': UA, Cookie: sess.cookie } });
+    };
+    let res = query(yahooSession_(false));
+    if (res.getResponseCode() === 401 || res.getResponseCode() === 403) res = query(yahooSession_(true));
+    if (res.getResponseCode() !== 200) throw new Error('HTTP ' + res.getResponseCode());
+    (JSON.parse(res.getContentText()).quoteResponse.result || []).forEach(function (q) { bySym[q.symbol] = q; });
+  } catch (e) { yahooErr = String((e && e.message) || e); }
+  // 2) 美國上市股票 Yahoo 沒給日期時：改查 Nasdaq（不需要認證）
+  const nqIdx = [];
+  syms.forEach(function (s, i) { if (/^[A-Z][A-Z0-9]{0,5}(-[A-Z])?$/.test(s) && !(bySym[s] && (bySym[s].earningsTimestampStart || bySym[s].earningsTimestamp))) nqIdx.push(i); });
+  const nqTs = {};
+  if (nqIdx.length) {
+    try {
+      fetchAll_(nqIdx.map(function (i) {
+        return { url: 'https://api.nasdaq.com/api/analyst/' + syms[i].replace('-', '.') + '/earnings-date', muteHttpExceptions: true, headers: nqHead_() };
+      })).forEach(function (r, k) {
+        try { const t = nqEarnDate_(JSON.parse(okText_(r)).data); if (t) nqTs[syms[nqIdx[k]]] = t; } catch (e) { /* 這檔沒有 */ }
+      });
+    } catch (e) { /* Nasdaq 也失敗 */ }
+  }
+  const rows = items.map(function (it, i) {
+    const q = bySym[syms[i]] || {};
+    const s = q.earningsTimestampStart || q.earningsTimestamp;
+    const e = q.earningsTimestampEnd || s;
+    if (!s && nqTs[syms[i]]) return { cat: it.category, symbol: it.symbol, name: it.name, start: nqTs[syms[i]], end: nqTs[syms[i]], est: false, dayOnly: true, src: 'Nasdaq' };
+    return {
+      cat: it.category, symbol: it.symbol, name: it.name,
+      start: s ? s * 1000 : null, end: e ? e * 1000 : null, est: !!q.isEarningsDateEstimate,
+    };
+  });
+  // Yahoo 與 Nasdaq 都沒有任何日期：視為失敗（沿用上次的資料並自動重試）
+  if (yahooErr && !Object.keys(nqTs).length && items.some(function (it) { return it.category === 'global'; })) {
+    throw new Error('財報日期暫時無法取得（Yahoo ' + yahooErr + '）');
+  }
+  return { rows: rows, note: yahooErr ? 'Yahoo 財報日期暫時無法取得：美國上市股票改用 Nasdaq；台股先顯示法定公告期限，其他市場暫無日期' : '' };
+}
+
+/** Nasdaq 下次財報日（"Earnings announcement* for AAPL: Nov 02, 2026"）→ 該日 UTC 中午（台北同一天） */
+function nqEarnDate_(d) {
+  const m = d && String(d.announcement || '').match(/:\s*([A-Za-z]{3}) (\d{1,2}), (\d{4})/);
+  if (!m) return null;
+  const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(m[1]);
+  return mon < 0 ? null : Date.UTC(+m[3], mon, +m[2], 12);
 }
 
 /* ======================== 美股重要財報 ======================== */

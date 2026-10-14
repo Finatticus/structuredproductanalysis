@@ -2,7 +2,7 @@
  * 個股研究 — 後端（在 Apps Script 新增指令碼檔「Research」貼上）
  * 台股：FinMind（token 放在指令碼屬性 FINMIND_TOKEN）＋ Yahoo 走勢；美股／其他：Yahoo Finance
  * 依賴 Code.gs（fetch_、fetchAll_、getHistory_、resolveSymbol_、toYahoo_、getQuotes_）
- *      Macro.gs（get_、okText_、yahooSession_、finmindToken_）
+ *      Macro.gs（get_、okText_、yahooSession_、finmindToken_）、Calendar.gs（nqHead_、nqEarnDate_）
  */
 
 const RESEARCH_TTL = 600; // 同一檔 10 分鐘內重複查詢直接用快取
@@ -190,7 +190,14 @@ function nextEarningsOf_(qs) {
   return d && d.raw ? d.raw * 1000 : null;
 }
 
-/* ======================== 美股／其他（Yahoo） ======================== */
+/* ======================== 美股／其他（Yahoo＋Nasdaq） ======================== */
+/**
+ * 資料來源分三層，任何一層失敗都不影響其他：
+ *  1. Yahoo 財報／估值時間序列（fundamentals-timeseries）：不需要認證 → 單季／年度財報、市值、本益比、預估本益比、股價淨值比、PEG
+ *  2. Nasdaq（僅美國上市股票，不需要認證）→ 公司簡介、產業、殖利率、機構持股、放空、分析師目標價、下次財報日
+ *  3. Yahoo quoteSummary（需要 cookie＋crumb 認證；Google／Cloudflare 主機常被 Yahoo 拒絕）→ 有拿到就優先使用
+ * 以前全部依賴第 3 層，認證失敗時市值、本益比、財報、籌碼、簡介都會空白。
+ */
 function researchYahoo_(raw) {
   const r = resolveSymbol_('global', raw);
   const ysym = toYahoo_(r.source);
@@ -200,41 +207,35 @@ function researchYahoo_(raw) {
   const out = { mkt: 'US', code: r.symbol, source: r.source, ysym: ysym };
   Object.assign(out, researchPrices_(r.source, bench));
 
-  const qs = yahooSummary_(ysym, 'price,summaryDetail,defaultKeyStatistics,financialData,assetProfile,recommendationTrend,upgradeDowngradeHistory,calendarEvents');
-  const pr = qs.price || {}, sd = qs.summaryDetail || {}, ks = qs.defaultKeyStatistics || {}, fd = qs.financialData || {};
-  out.name = pr.shortName || pr.longName || q.name || r.symbol;
-  out.currency = pr.currency || null;
-  out.profile = profileOf_(qs);
-  out.industry = out.profile.industry;
-  out.analyst = analystOf_(qs);
-  out.nextEarnings = nextEarningsOf_(qs);
-  out.stats = {
-    mcap: raw_(sd, 'marketCap') || raw_(pr, 'marketCap'), pe: raw_(sd, 'trailingPE'), fpe: raw_(sd, 'forwardPE'),
-    pb: raw_(ks, 'priceToBook'), yld: raw_(sd, 'dividendYield') != null ? raw_(sd, 'dividendYield') * 100 : null,
-    beta: raw_(sd, 'beta'), peg: raw_(ks, 'pegRatio'), roe: raw_(fd, 'returnOnEquity'), de: raw_(fd, 'debtToEquity'),
-    fcf: raw_(fd, 'freeCashflow'), cur: raw_(fd, 'currentRatio'),
-    inst: raw_(ks, 'heldPercentInstitutions'), insider: raw_(ks, 'heldPercentInsiders'),
-    shortPct: raw_(ks, 'shortPercentOfFloat'), shortRatio: raw_(ks, 'shortRatio'),
-    shortNow: raw_(ks, 'sharesShort'), shortPrev: raw_(ks, 'sharesShortPriorMonth'),
-  };
-  out.shares = raw_(ks, 'sharesOutstanding');
-
-  // 財報時間序列（季＋年）
-  const types = ['TotalRevenue', 'GrossProfit', 'OperatingIncome', 'NetIncome', 'DilutedEPS'];
-  const tsTypes = types.map(function (t) { return 'quarterly' + t; }).concat(types.map(function (t) { return 'annual' + t; }));
+  // ---- 第 1、2 層：不需要認證，一次平行抓 ----
+  const usListed = /^[A-Z][A-Z0-9]{0,5}(-[A-Z])?$/.test(ysym); // 美國上市（沒有交易所後綴，例如 AAPL、BRK-B）
+  const nq = ysym.replace('-', '.');
+  const finTypes = ['TotalRevenue', 'GrossProfit', 'OperatingIncome', 'NetIncome', 'DilutedEPS'];
+  const valTypes = ['trailingMarketCap', 'trailingPeRatio', 'trailingForwardPeRatio', 'trailingPbRatio', 'trailingPegRatio'];
+  const tsTypes = finTypes.map(function (t) { return 'quarterly' + t; }).concat(finTypes.map(function (t) { return 'annual' + t; }), valTypes);
   const p1 = Math.floor(Date.now() / 1000) - 7 * 365 * 86400, p2 = Math.floor(Date.now() / 1000);
-  const series = {};
+  const reqs = [
+    get_('https://query2.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/' + encodeURIComponent(ysym) +
+      '?type=' + tsTypes.join(',') + '&period1=' + p1 + '&period2=' + p2),
+    get_('https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(ysym) + '?range=10y&interval=3mo&events=div'),
+  ];
+  const NQ = usListed ? [
+    'quote/' + nq + '/summary?assetclass=stocks', 'company/' + nq + '/company-profile', 'quote/' + nq + '/short-interest?assetClass=stocks',
+    'company/' + nq + '/institutional-holdings?limit=1&type=TOTAL', 'analyst/' + nq + '/targetprice', 'analyst/' + nq + '/earnings-date',
+  ] : [];
+  NQ.forEach(function (x) { reqs.push({ url: 'https://api.nasdaq.com/api/' + x, muteHttpExceptions: true, headers: nqHead_() }); });
+  let res = [];
+  try { res = fetchAll_(reqs); } catch (e) { res = []; }
+  const nqData = function (i) { try { return JSON.parse(okText_(res[2 + i])).data || null; } catch (e) { return null; } };
+
+  // 財報與估值時間序列
+  const series = {}, val = {};
   try {
-    const sess = yahooSession_(false);
-    const res = fetch_('https://query2.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/' + encodeURIComponent(ysym) +
-      '?type=' + tsTypes.join(',') + '&period1=' + p1 + '&period2=' + p2 + '&crumb=' + encodeURIComponent(sess.crumb),
-      { muteHttpExceptions: true, headers: { 'User-Agent': UA, Cookie: sess.cookie } });
-    (JSON.parse(res.getContentText()).timeseries.result || []).forEach(function (x) {
+    (JSON.parse(okText_(res[0])).timeseries.result || []).forEach(function (x) {
       const t = x.meta.type[0];
-      (x[t] || []).forEach(function (p) {
-        if (!p) return;
-        (series[p.asOfDate] = series[p.asOfDate] || {})[t] = p.reportedValue.raw;
-      });
+      const pts = (x[t] || []).filter(function (p) { return p && p.reportedValue; });
+      if (valTypes.indexOf(t) >= 0) { if (pts.length) val[t] = pts[pts.length - 1].reportedValue.raw; return; }
+      pts.forEach(function (p) { (series[p.asOfDate] = series[p.asOfDate] || {})[t] = p.reportedValue.raw; });
     });
   } catch (e) { /* 財報非必要 */ }
   const pick = function (prefix) {
@@ -248,11 +249,97 @@ function researchYahoo_(raw) {
 
   // 股利（近 10 年）
   try {
-    const j = JSON.parse(okText_(fetch_('https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(ysym) + '?range=10y&interval=3mo&events=div',
-      { muteHttpExceptions: true, headers: { 'User-Agent': UA } })));
-    const dv = (j.chart.result[0].events || {}).dividends || {};
+    const dv = (JSON.parse(okText_(res[1])).chart.result[0].events || {}).dividends || {};
     out.div = Object.keys(dv).map(function (k) { return { t: dv[k].date * 1000, cash: r2_(dv[k].amount) }; })
       .sort(function (a, b) { return b.t - a.t; });
   } catch (e) { out.div = []; }
+
+  // ---- 第 3 層：Yahoo quoteSummary（需要認證，失敗回傳 {}） ----
+  const qs = yahooSummary_(ysym, 'price,summaryDetail,defaultKeyStatistics,financialData,assetProfile,recommendationTrend,upgradeDowngradeHistory,calendarEvents');
+  const pr = qs.price || {}, sd = qs.summaryDetail || {}, ks = qs.defaultKeyStatistics || {}, fd = qs.financialData || {};
+  const sum = (nqData(0) || {}).summaryData || {}, prof = nqData(1) || {}, own = (nqData(3) || {}).ownershipSummary || {};
+  const sv = function (o, k) { return o && o[k] && o[k].value != null ? o[k].value : null; };
+  const shortRows = ((nqData(2) || {}).shortInterestTable || {}).rows || [];
+
+  out.name = pr.shortName || pr.longName || q.name || sv(prof, 'CompanyName') || r.symbol;
+  out.currency = pr.currency || q.currency || (usListed ? 'USD' : null);
+  out.profile = profileOf_(qs);
+  if (!out.profile.summary && sv(prof, 'CompanyDescription')) {
+    out.profile = {
+      sector: sv(prof, 'Sector'), industry: sv(prof, 'Industry'), summary: sv(prof, 'CompanyDescription'),
+      employees: null, website: sv(prof, 'CompanyUrl'), country: sv(prof, 'Region'), src: 'Nasdaq',
+    };
+  }
+  out.industry = out.profile.industry || sv(sum, 'Industry');
+  out.analyst = analystOf_(qs) || nqAnalyst_(nqData(4));
+  out.nextEarnings = nextEarningsOf_(qs) || nqEarnDate_(nqData(5));
+
+  const first = function () { for (let i = 0; i < arguments.length; i++) if (arguments[i] != null && isFinite(arguments[i])) return arguments[i]; return null; };
+  const ownShares = nqNum_(sv(own, 'ShareoutstandingTotal'));
+  const shares = first(raw_(ks, 'sharesOutstanding'), ownShares != null ? ownShares * 1e6 : null);
+  const sNow = shortRows[0] ? nqNum_(shortRows[0].interest) : null, sPrev = shortRows[1] ? nqNum_(shortRows[1].interest) : null;
+  const instPct = nqNum_(sv(own, 'SharesOutstandingPCT'));
+  const yFloat = raw_(ks, 'shortPercentOfFloat');
+  out.stats = {
+    mcap: first(raw_(sd, 'marketCap'), raw_(pr, 'marketCap'), nqNum_(sv(sum, 'MarketCap')), val.trailingMarketCap),
+    pe: first(raw_(sd, 'trailingPE'), val.trailingPeRatio),
+    fpe: first(raw_(sd, 'forwardPE'), val.trailingForwardPeRatio),
+    pb: first(raw_(ks, 'priceToBook'), val.trailingPbRatio),
+    yld: raw_(sd, 'dividendYield') != null ? raw_(sd, 'dividendYield') * 100 : nqNum_(sv(sum, 'Yield')),
+    beta: first(raw_(sd, 'beta'), betaOf_(out.price, out.bench)),
+    peg: first(raw_(ks, 'pegRatio'), val.trailingPegRatio),
+    roe: raw_(fd, 'returnOnEquity'), de: raw_(fd, 'debtToEquity'), fcf: raw_(fd, 'freeCashflow'), cur: raw_(fd, 'currentRatio'),
+    inst: first(raw_(ks, 'heldPercentInstitutions'), instPct != null ? instPct / 100 : null),
+    insider: raw_(ks, 'heldPercentInsiders'),
+    shortPct: first(yFloat, sNow && shares ? sNow / shares : null),
+    shortBase: yFloat != null ? 'float' : sNow && shares ? 'shares' : null, // 放空比例的分母：流通股（Yahoo）或總股數（Nasdaq 換算）
+    shortRatio: first(raw_(ks, 'shortRatio'), shortRows[0] ? +shortRows[0].daysToCover : null),
+    shortNow: first(raw_(ks, 'sharesShort'), sNow), shortPrev: first(raw_(ks, 'sharesShortPriorMonth'), sPrev),
+    shortDate: raw_(ks, 'sharesShort') == null && shortRows[0] ? shortRows[0].settlementDate : null,
+  };
+  out.shares = shares;
+  // 備援來源已補齊主要欄位：不算「Yahoo 資料不完整」（可正常存為備援、不顯示警告）
+  if (YAHOO_DEGRADED_ && out.stats.mcap != null && out.q.length && (out.profile.summary || !usListed)) YAHOO_DEGRADED_ = '';
   return out;
+}
+
+/** Nasdaq 的文字數字（"$1,234.5"、"76.56%"、"N/A"）→ 數字 */
+function nqNum_(s) {
+  if (s == null) return null;
+  const v = parseFloat(String(s).replace(/[$,%\s]/g, ''));
+  return isFinite(v) ? v : null;
+}
+
+/** Nasdaq 分析師目標價 → 與 analystOf_ 相同格式（Nasdaq 只有買進／持有／賣出三級） */
+function nqAnalyst_(d) {
+  const c = d && d.consensusOverview;
+  if (!c) return null;
+  const n = (c.buy || 0) + (c.hold || 0) + (c.sell || 0);
+  if (!c.priceTarget && !n) return null;
+  return {
+    mean: c.priceTarget || null, high: c.highPriceTarget || null, low: c.lowPriceTarget || null,
+    rec: null, key: null, n: n || null, trend: n ? { sb: 0, b: c.buy || 0, h: c.hold || 0, s: c.sell || 0, ss: 0 } : null, hist: [], src: 'Nasdaq',
+  };
+}
+
+/** 近一年日報酬對基準指數的 Beta（quoteSummary 拿不到時自行計算） */
+function betaOf_(price, bench) {
+  try {
+    if (!price || !bench) return null;
+    const bm = {};
+    bench.t.forEach(function (t, i) { bm[t] = bench.c[i]; });
+    const xs = [], ys = [];
+    let pi = -1;
+    for (let i = Math.max(0, price.t.length - 253); i < price.t.length; i++) {
+      if (bm[price.t[i]] == null) continue;
+      if (pi >= 0 && price.c[pi]) { ys.push(price.c[i] / price.c[pi] - 1); xs.push(bm[price.t[i]] / bm[price.t[pi]] - 1); }
+      pi = i;
+    }
+    if (xs.length < 120) return null;
+    const avg = function (a) { return a.reduce(function (s, v) { return s + v; }, 0) / a.length; };
+    const mx = avg(xs), my = avg(ys);
+    let cov = 0, vx = 0;
+    for (let i = 0; i < xs.length; i++) { cov += (xs[i] - mx) * (ys[i] - my); vx += (xs[i] - mx) * (xs[i] - mx); }
+    return vx ? Math.round(cov / vx * 100) / 100 : null;
+  } catch (e) { return null; }
 }

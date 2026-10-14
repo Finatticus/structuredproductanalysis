@@ -3,8 +3,14 @@
  * ========================================================= */
 const HELP_QUOTA = `
 <h2>額度限制總覽</h2>
-<p>本網站的資料大多由後端（Google Apps Script，以下簡稱 GAS）代為向外部網站抓取，因此會受到三類限制：
+<p>沒有設定資料中繼站時，資料大多由後端（Google Apps Script，以下簡稱 GAS）代為向外部網站抓取，因此會受到三類限制：
 <b>GAS 平台配額</b>、<b>各資料來源的次數限制</b>、<b>資料存放容量</b>。下列數字以一般免費 Google 帳號為準。</p>
+<div class="help-callout">
+  <b>已設定資料中繼站（見「網站說明 8-1」）時</b>：市場監控的報價與走勢、投資組合的報價與歷史資料、總經頁大部分字卡、財金日曆全部字卡，
+  都改由<b>瀏覽器</b>經中繼站直接抓，<b>完全不用 GAS 額度</b>。仍經後端的只有：個股研究、ETF 專區、回測載入價格、選股器排程、
+  總經的信用交易／法人／台灣景氣，以及帳號與清單讀寫。單人每天通常只用掉 UrlFetch 的 1–5%。
+  中繼站本身（Cloudflare 免費方案）每天 100,000 次請求，單人約用 3,000–10,000 次。
+</div>
 
 <div class="help-callout">
   <b>真正需要留意的只有三項</b>
@@ -13,7 +19,7 @@ const HELP_QUOTA = `
     <li><b>FinMind 每小時 600 次</b>：主要取決於「個股研究」查詢台股的次數。</li>
     <li><b>GAS 排程每天總執行時間 90 分鐘</b>：只有「選股篩選器」第一次建置歷史資料當天用得較多。</li>
   </ol>
-  單人正常使用（白天開著、看幾次總經頁、查幾檔個股）：每天約用掉 UrlFetch 的 15–40%、FinMind 不到 5%、排程約 2%。
+  沒有中繼站時，單人正常使用（白天開著、看幾次總經頁、查幾檔個股）：每天約用掉 UrlFetch 的 15–40%、FinMind 不到 5%、排程約 2%。
 </div>
 
 <h3 id="q-gas">一、Google Apps Script 平台配額</h3>
@@ -32,15 +38,15 @@ const HELP_QUOTA = `
 
 <h4>UrlFetch 用量明細（「今日 API 呼叫」顯示的就是這一項）</h4>
 <div class="tbl-wrap"><table class="mtbl help-tbl">
-  <thead><tr><th>功能</th><th>用量</th><th>說明</th></tr></thead>
+  <thead><tr><th>功能</th><th>用量（沒有中繼站時）</th><th>說明</th></tr></thead>
   <tbody>
-    <tr><td class="nm">市場監控（預設 30 秒更新）</td><td>停留 8 小時約 2,100 次<br>停留 24 小時約 6,200 次</td><td>Yahoo 標的每 20 檔合併 1 次、台股上市櫃每 40 檔合併 1 次；10 秒更新約為 3 倍</td></tr>
-    <tr><td class="nm">當日走勢小圖</td><td>每天約 160–480 次</td><td>每 3 分鐘 1 次（Yahoo 每 20 檔 1 次）</td></tr>
+    <tr><td class="nm">市場監控（預設 30 秒更新）</td><td>停留 8 小時約 2,100 次<br>停留 24 小時約 6,200 次<br><span class="muted">有中繼站：0</span></td><td>Yahoo 標的每 20 檔合併 1 次、台股上市櫃每 40 檔合併 1 次；10 秒更新約為 3 倍</td></tr>
+    <tr><td class="nm">當日走勢小圖</td><td>每天約 160–480 次<br><span class="muted">有中繼站：0</span></td><td>每 3 分鐘 1 次（Yahoo 每 20 檔 1 次）</td></tr>
     <tr><td class="nm">點開歷史走勢圖</td><td>每次 1–2 次</td><td>同一檔 10 分鐘內重開不另計</td></tr>
     <tr><td class="nm">新增標的</td><td>每次 1–2 次</td><td>驗證代碼是否存在</td></tr>
-    <tr><td class="nm">總經與板塊分析</td><td>每次重新整理約 35–45 次</td><td>只在第一次開啟時自動抓，之後按「↻ 重新整理」才抓；各字卡另有暫存；隱藏的字卡不抓</td></tr>
-    <tr><td class="nm">個股研究</td><td>每查一檔約 6–14 次</td><td>台股約 14 次、美股約 6 次</td></tr>
-    <tr><td class="nm">投資組合</td><td>開啟時 1 次讀取＋持股、匯率、基準各 1 次歷史資料（快取 30 分鐘）；報價每 60 秒 1 次</td><td>只在停留此頁時更新報價</td></tr>
+    <tr><td class="nm">總經與板塊分析</td><td>每次重新整理約 35–45 次<br><span class="muted">有中繼站：約 5–10 次（只剩信用交易、法人、台灣景氣）</span></td><td>只在第一次開啟時自動抓，之後按「↻ 重新整理」才抓；各字卡另有暫存；隱藏的字卡不抓</td></tr>
+    <tr><td class="nm">個股研究</td><td>每查一檔約 10–16 次</td><td>台股約 14 次、美股約 12 次（Yahoo＋Nasdaq）；同一檔 10 分鐘內重查用快取</td></tr>
+    <tr><td class="nm">投資組合</td><td>開啟時 1 次讀取＋持股、匯率、基準各 1 次歷史資料（快取 30 分鐘）；報價每 60 秒 1 次<br><span class="muted">有中繼站：只剩讀寫交易紀錄</span></td><td>只在停留此頁時更新報價</td></tr>
     <tr><td class="nm">ETF 專區</td><td>總覽 1 次、美股約 5 次、個別 ETF 約 4–6 次、高股息比較約 25 次</td><td>只在打開分頁或按更新時抓；高股息比較暫存 6 小時</td></tr>
     <tr><td class="nm">回測與策略</td><td>每載入一個標的 1–2 次</td><td>回測、參數掃描都在瀏覽器計算，不耗額度</td></tr>
     <tr><td class="nm">選股篩選器</td><td>每晚約 10 次<br>第一次建置約 600 次</td><td>建置只發生一次，分散在多次排程；網頁上篩選本身不耗額度</td></tr>
@@ -57,9 +63,12 @@ const HELP_QUOTA = `
     <tr><td class="nm">櫃買中心</td><td>未公開，原則同證交所</td><td>上櫃信用交易、法人、資金流向、選股器</td><td>已控制間隔</td></tr>
     <tr><td class="nm">Yahoo Finance</td><td>未公開；被判定過量時回應「請求太多」（429）</td><td>匯率、國外股票、指數、歷史走勢圖、財報日曆、個股研究</td><td>有暫存，通常不會；Google 伺服器 IP 多人共用，偶爾可能短暫被擋</td></tr>
     <tr><td class="nm">Binance</td><td>每個 IP 每分鐘約 6,000 單位權重</td><td>虛擬貨幣（從你的瀏覽器直接連線）</td><td>用的是你自己的網路，不佔 GAS 額度，遠低於上限</td></tr>
-    <tr><td class="nm">Forex Factory</td><td>官方要求不要頻繁抓取（每 5 分鐘不超過約 2 次）</td><td>經濟日曆（本週）</td><td>已暫存 1 小時，不會碰到</td></tr>
+    <tr><td class="nm">Forex Factory</td><td>官方要求不要頻繁抓取（每 5 分鐘不超過約 2 次）</td><td>經濟日曆（本週）</td><td>由後端代抓並暫存 30 分鐘（多人共用），不會碰到</td></tr>
+    <tr><td class="nm">FRED 官方 API</td><td>每把金鑰每分鐘 120 次</td><td>美國經濟數據（每次 8 次）</td><td>暫存 6 小時，不會碰到</td></tr>
+    <tr><td class="nm">Nasdaq</td><td>未公開</td><td>經濟日曆、美股財報日程、美股個股研究（簡介、分析師、放空、機構持股）</td><td>逐日資料有暫存（過去日期 6 小時），不會碰到</td></tr>
+    <tr><td class="nm">Cloudflare Workers（資料中繼站）</td><td>免費方案每天 100,000 次</td><td>瀏覽器與後端經中繼站的所有請求</td><td>單人約 3,000–10,000 次；有邊緣快取，多人共用時更省</td></tr>
     <tr><td class="nm">alternative.me</td><td>每分鐘 60 次</td><td>加密恐懼貪婪指數</td><td>不會碰到</td></tr>
-    <tr><td class="nm">FRED、紐約聯準銀行、聯準會、中央銀行、國發會、鉅亨網、CNBC</td><td>未公開限制</td><td>總經頁各字卡</td><td>皆有暫存（3 分鐘至 6 小時），不會碰到</td></tr>
+    <tr><td class="nm">美國財政部、紐約聯準銀行、聯準會、中央銀行、國發會、鉅亨網、CNBC</td><td>未公開限制</td><td>總經頁各字卡</td><td>皆有暫存（3 分鐘至 6 小時），不會碰到</td></tr>
   </tbody>
 </table></div>
 
@@ -78,11 +87,11 @@ const HELP_QUOTA = `
 <div class="tbl-wrap"><table class="mtbl help-tbl">
   <thead><tr><th>超過的項目</th><th>影響</th><th>恢復時間</th></tr></thead>
   <tbody>
-    <tr><td class="nm">UrlFetch 每日上限</td><td>報價停在最後一筆並顯示「更新失敗」，總經頁、個股研究、走勢圖無法更新；虛擬貨幣不受影響</td><td>隔天自動恢復（Google 重置時間可能和台北午夜略有差距）</td></tr>
+    <tr><td class="nm">UrlFetch 每日上限</td><td>經後端的資料無法更新（個股研究、ETF、選股器等）；沒有中繼站時報價也會停在最後一筆。有中繼站時，市場監控、投資組合、總經大部分字卡、財金日曆不受影響；虛擬貨幣一律不受影響</td><td>隔天自動恢復（Google 重置時間可能和台北午夜略有差距）</td></tr>
     <tr><td class="nm">FinMind 每小時上限</td><td>總經頁上市資料改用證交所備援；個股研究缺少估值歷史、財報、月營收等</td><td>下一個小時</td></tr>
     <tr><td class="nm">排程每日 90 分鐘</td><td>選股器當天停止補資料／更新</td><td>隔天自動繼續</td></tr>
     <tr><td class="nm">證交所／櫃買中心封鎖 IP</td><td>台股報價、類股、選股器暫時抓不到</td><td>通常數分鐘至數小時</td></tr>
-    <tr><td class="nm">Yahoo 429</td><td>國外報價、走勢暫時失敗（保留最後報價）</td><td>通常數分鐘</td></tr>
+    <tr><td class="nm">Yahoo 429／認證失敗</td><td>國外報價、走勢暫時失敗（保留最後報價）；Yahoo 認證失敗時，個股研究與財報日曆自動改用 Yahoo 免認證資料與 Nasdaq</td><td>通常數分鐘</td></tr>
   </tbody>
 </table></div>
 
@@ -253,7 +262,7 @@ const HELP_GUIDE = `
   <thead><tr><th>字卡</th><th>內容</th><th>來源</th><th>暫存</th></tr></thead>
   <tbody>
     <tr><td class="nm">經濟日曆</td><td>上週／本週／下週（可切換或全部顯示、可篩國家）的重要事件：時間（台北）、實際值、預期、前值。實際值高於預期標 ▲、低於預期標 ▼（不代表利多或利空）</td><td>本週 Forex Factory 高影響事件；實際值、上週與下週為 Nasdaq 各國重點數據；FOMC、台灣央行</td><td>30 分鐘（過去日期 6 小時）</td></tr>
-    <tr><td class="nm">財報日曆（自選清單）</td><td>自選清單中台股與國外股票的下次財報或法說日期；台股查無日期時顯示法定公告期限（年報 3/31、Q1 5/15、Q2 8/14、Q3 11/14）</td><td>Yahoo Finance</td><td>6 小時</td></tr>
+    <tr><td class="nm">財報日曆（自選清單）</td><td>自選清單中台股與國外股票的下次財報或法說日期；台股查無日期時顯示法定公告期限（年報 3/31、Q1 5/15、Q2 8/14、Q3 11/14）</td><td>Yahoo Finance（美股 Yahoo 抓不到時改用 Nasdaq）</td><td>6 小時</td></tr>
     <tr><td class="nm">美股重要財報</td><td>本週／下週市值 100 億美元以上公司的財報：盤前／盤後、EPS 預估、已公布者的實際 EPS 與驚喜幅度、去年同期；★ 標示自選與持股</td><td>Nasdaq</td><td>1 小時</td></tr>
     <tr><td class="nm">台股除權息預告</td><td>上市＋上櫃近期除權息：現金股利、配股；標示自選（★）與投資組合持股，並估算持股可領現金股利</td><td>證交所、櫃買中心</td><td>1 小時</td></tr>
     <tr><td class="nm">市場重要日期</td><td>未來 120 天：台股／美股休市、台指期與美股選擇權結算（四巫日）、MSCI 季度調整、FOMC 與台灣央行會議、月營收與財報申報期限</td><td>證交所休市表；其餘依規則推算</td><td>6 小時</td></tr>
@@ -279,14 +288,30 @@ const HELP_GUIDE = `
     <tr><td class="nm">成長</td><td>最新一季營收與 EPS 對去年同季：兩者都 ≥10% 成長、都 ≤−5% 衰退，其餘持平／分歧</td></tr>
     <tr><td class="nm">獲利能力</td><td>最新一季毛利率、營業利益率對前 4 季平均：都提高 ≥1 個百分點改善、都下降 ≥1 惡化</td></tr>
     <tr><td class="nm">籌碼（台股）</td><td>外資＋投信 20 日淨買賣占成交量 &gt;3% 加分、&lt;−3% 減分；外資持股比例 20 日增減 &gt;0.3 個百分點加減分；融資 20 日增 &gt;5% 但股價下跌減分</td></tr>
-    <tr><td class="nm">籌碼（美股）</td><td>放空比例 ≥10% 標示空單偏高；空單月減 ≥10% 偏多、月增 ≥10% 偏空</td></tr>
+    <tr><td class="nm">籌碼（美股）</td><td>機構持股、內部人持股、放空比例、回補天數。放空比例 ≥10% 標示空單偏高；空單較上期（約半個月公布一次）減少 ≥10% 偏多、增加 ≥10% 偏空</td></tr>
     <tr><td class="nm">相對強弱</td><td>近 3 個月與 6 個月相對大盤（加權指數／S&P 500／日經等）的超額報酬：都 &gt;3% 強於大盤、都 &lt;−3% 弱於大盤</td></tr>
     <tr><td class="nm">分析師</td><td>平均目標價較現價高 ≥15% 且平均評等 ≤2.2 為樂觀；目標價低於現價或評等 ≥3 為保守；不足 3 位標示「樣本少」</td></tr>
     <tr><td class="nm">波動度</td><td>20 日歷史波動度在近一年的百分位：≥80 偏高、≤20 偏低（只代表風險大小，不代表多空）</td></tr>
   </tbody>
 </table></div>
-<p>字卡內容：價格走勢（K 線、MA20／60／120／240、成交量，3 月～全部）、技術分析（指標表＋RSI／MACD 圖）、歷史波動度（HV20／HV60）、估值（本益比歷史與 10／25／50／75／90 百分位帶）、成長與獲利（單季 EPS 長條、三種利潤率走勢、近 8 季表）、月營收（台股，13 個月＋年增率）、籌碼、相對強弱（含強弱線）、分析師（目標價區間、評等分布、近期評等異動）、股利紀錄、公司簡介（Yahoo 英文）。</p>
-<p class="muted">資料：台股 FinMind（需 token）＋證交所＋Yahoo；美股與其他市場 Yahoo Finance。美股的歷史本益比以「股價 ÷ 近四季 EPS」重建；興櫃股票沒有本益比資料，估值顯示「資料不足」。</p>
+<p>字卡內容：價格走勢（K 線、MA20／60／120／240、成交量，3 月～全部）、技術分析（指標表＋RSI／MACD 圖）、歷史波動度（HV20／HV60）、估值（本益比歷史與 10／25／50／75／90 百分位帶）、成長與獲利（單季 EPS 長條、三種利潤率走勢、近 8 季表）、月營收（台股，13 個月＋年增率）、籌碼、相對強弱（含強弱線）、分析師（目標價區間、評等分布、近期評等異動）、股利紀錄、公司簡介（英文）。</p>
+<p class="muted">資料：台股 FinMind（需 token）＋證交所＋Yahoo。美股：Yahoo 財報與估值時間序列（單季／年度財報、市值、本益比、預估本益比、淨值比）＋ Nasdaq（公司簡介、產業、殖利率、機構持股、放空、分析師目標價、下次財報）＋ Yahoo 完整資料（需要認證，抓得到時優先使用，另含員工數、內部人持股、近期評等異動）。
+  其他市場（日、港、韓等）沒有 Nasdaq 資料，簡介、分析師、籌碼只在 Yahoo 認證成功時顯示。Beta 抓不到時以近一年日報酬對大盤自行計算。
+  美股的歷史本益比以「股價 ÷ 近四季 EPS」重建（Yahoo 免認證資料約有近 5 季與 4 個年度）；興櫃股票沒有本益比資料，估值顯示「資料不足」。</p>
+
+<h3 id="g-pf">6-1. 投資組合</h3>
+<div class="tbl-wrap"><table class="mtbl help-tbl">
+  <thead><tr><th>分頁</th><th>內容</th></tr></thead>
+  <tbody>
+    <tr><td class="nm">總覽</td><td>總資產、今日／未實現／已實現損益、累計股利、含息總報酬、XIRR；持股明細（點名稱開個股研究、點代號看走勢）；市值與累計投入走勢</td></tr>
+    <tr><td class="nm">配置與再平衡</td><td>依持股、市場、類型、幣別的比例；集中度與有效分散檔數警示；設定目標比例後試算需買賣的金額與股數（目標存在帳號設定）</td></tr>
+    <tr><td class="nm">已實現損益</td><td>每筆賣出的損益（台幣，含匯差）、勝率、平均獲利／虧損、獲利因子；年度、標的彙總；未實現排行。成本可選平均成本法或先進先出</td></tr>
+    <tr><td class="nm">股利現金流</td><td>依 Yahoo 除息紀錄自動計算（除息前一天的持股 × 每股配息，扣美股預扣稅、二代健保）；過去 12 個月實收與未來 12 個月預估、成本殖利率；可手動新增股利取代自動計算</td></tr>
+    <tr><td class="nm">匯率影響</td><td>外幣部位的台幣損益拆成「股價貢獻」與「匯率貢獻」，各幣別平均買進匯率、已實現匯差、台幣升值 1% 的影響</td></tr>
+    <tr><td class="nm">績效與風險</td><td>時間加權報酬 vs 比較基準（0050／加權／S&amp;P 500／VT）、年化報酬、波動度、最大回撤、β、夏普值、月報酬表、持股相關係數</td></tr>
+    <tr><td class="nm">交易紀錄</td><td>新增／編輯／刪除（台股手續費、交易稅自動帶入）、現金部位、成本法與股利設定、CSV 匯入匯出</td></tr>
+  </tbody></table></div>
+<p>股票分割：Yahoo 有紀錄的分割會自動套用；Yahoo 沒有紀錄的（例如 0050 於 2025 年 1 拆 4）請新增「配股／分割」並填增加的股數。成交價與當日收盤差距過大時，總覽會提示可能漏了分割或配股。</p>
 
 <h3 id="g-screener">7. 選股篩選器</h3>
 <h4>7.1 啟用（只需一次）</h4>
@@ -332,20 +357,6 @@ const HELP_GUIDE = `
 </ul>
 <p class="muted">資料範圍：上市＋上櫃普通股與 ETF（不含興櫃）。資料為每日收盤後更新，非盤中即時；融資約 21:00 公布。歷史未滿 250 個交易日時，年線、52 週新高等條件暫時不完整，頁面上方會提示。</p>
 
-<h3 id="g-pf">6-1. 投資組合</h3>
-<div class="tbl-wrap"><table class="mtbl help-tbl">
-  <thead><tr><th>分頁</th><th>內容</th></tr></thead>
-  <tbody>
-    <tr><td class="nm">總覽</td><td>總資產、今日／未實現／已實現損益、累計股利、含息總報酬、XIRR；持股明細（點名稱開個股研究、點代號看走勢）；市值與累計投入走勢</td></tr>
-    <tr><td class="nm">配置與再平衡</td><td>依持股、市場、類型、幣別的比例；集中度與有效分散檔數警示；設定目標比例後試算需買賣的金額與股數（目標存在帳號設定）</td></tr>
-    <tr><td class="nm">已實現損益</td><td>每筆賣出的損益（台幣，含匯差）、勝率、平均獲利／虧損、獲利因子；年度、標的彙總；未實現排行。成本可選平均成本法或先進先出</td></tr>
-    <tr><td class="nm">股利現金流</td><td>依 Yahoo 除息紀錄自動計算（除息前一天的持股 × 每股配息，扣美股預扣稅、二代健保）；過去 12 個月實收與未來 12 個月預估、成本殖利率；可手動新增股利取代自動計算</td></tr>
-    <tr><td class="nm">匯率影響</td><td>外幣部位的台幣損益拆成「股價貢獻」與「匯率貢獻」，各幣別平均買進匯率、已實現匯差、台幣升值 1% 的影響</td></tr>
-    <tr><td class="nm">績效與風險</td><td>時間加權報酬 vs 比較基準（0050／加權／S&amp;P 500／VT）、年化報酬、波動度、最大回撤、β、夏普值、月報酬表、持股相關係數</td></tr>
-    <tr><td class="nm">交易紀錄</td><td>新增／編輯／刪除（台股手續費、交易稅自動帶入）、現金部位、成本法與股利設定、CSV 匯入匯出</td></tr>
-  </tbody></table></div>
-<p>股票分割：Yahoo 有紀錄的分割會自動套用；Yahoo 沒有紀錄的（例如 0050 於 2025 年 1 拆 4）請新增「配股／分割」並填增加的股數。成交價與當日收盤差距過大時，總覽會提示可能漏了分割或配股。</p>
-
 <h3 id="g-etf">7-1. ETF 專區</h3>
 <div class="tbl-wrap"><table class="mtbl help-tbl">
   <thead><tr><th>分頁</th><th>內容</th></tr></thead>
@@ -376,10 +387,11 @@ const HELP_GUIDE = `
     <tr><td class="nm">臺灣證券交易所（MIS／網站／OpenAPI）</td><td>上市即時報價、類股指數、收盤行情、法人、融資券、本益比、月營收、產業別</td><td>盤中即時；收盤約 14:30；法人約 16:30；融資約 21:00</td></tr>
     <tr><td class="nm">櫃買中心</td><td>上櫃收盤行情、法人、融資券、本益比、月營收</td><td>同上</td></tr>
     <tr><td class="nm">FinMind</td><td>台股個股估值歷史、財報、月營收、法人、融資、外資持股、股利；全市場信用交易與法人</td><td>交易日晚間</td></tr>
-    <tr><td class="nm">Yahoo Finance</td><td>匯率、國外股票、指數、期貨、歷史走勢、板塊 ETF、財報日期、美股基本面與分析師</td><td>依市場即時或延遲 10–20 分鐘</td></tr>
+    <tr><td class="nm">Yahoo Finance</td><td>匯率、國外股票、指數、期貨、歷史走勢、板塊 ETF、財報日期、美股財報與估值、分析師</td><td>依市場即時或延遲 10–20 分鐘</td></tr>
+    <tr><td class="nm">Nasdaq</td><td>經濟日曆（各國重點數據）、美股財報日程、美股公司簡介／分析師目標價／放空／機構持股</td><td>經濟數據公布後數分鐘；放空資料每半個月</td></tr>
     <tr><td class="nm">Binance</td><td>虛擬貨幣即時價格與 K 線</td><td>即時</td></tr>
     <tr><td class="nm">美國財政部</td><td>美債殖利率曲線（每日固定期限殖利率）</td><td>依官方公布（約落後 1 個交易日）</td></tr>
-    <tr><td class="nm">FRED（聖路易聯準銀行）</td><td>美國經濟數據、數據公布日程（備援）</td><td>依官方公布（殖利率約落後 1 個交易日）</td></tr>
+    <tr><td class="nm">FRED（聖路易聯準銀行）</td><td>美國經濟數據、數據公布日程（備援）、美債殖利率（財政部資料失敗時的備援）</td><td>依官方公布（CPI／就業約每月上旬、GDP 每季、初領失業金每週四）</td></tr>
     <tr><td class="nm">聯準會／紐約聯準銀行</td><td>FOMC 會議日期、有效聯邦基金利率與目標區間</td><td>每日</td></tr>
     <tr><td class="nm">國發會／中央銀行</td><td>景氣對策信號、政策利率</td><td>景氣燈號每月約 27 日</td></tr>
     <tr><td class="nm">鉅亨網、CNBC、Forex Factory、alternative.me</td><td>新聞、經濟日曆、加密恐懼貪婪指數</td><td>即時／每日</td></tr>
@@ -422,11 +434,12 @@ const HELP_GUIDE = `
   <li><b>指令碼屬性</b>（Apps Script 齒輪「專案設定」最下方）：
     <code>PROXY_URL</code> = 中繼站網址（結尾不加 /）、<code>PROXY_KEY</code> = KEY 密碼、
     <code>FRED_KEY</code> = FRED 免費 API 金鑰（建議，fredaccount.stlouisfed.org 註冊後「API Keys」申請）、
-    <code>FINMIND_TOKEN</code> = FinMind token（建議）。設好 FINMIND_TOKEN 後把 Macro.gs 裡的 <code>FINMIND_TOKEN</code> 常數清空再部署，避免 token 隨網頁外流。
+    <code>FINMIND_TOKEN</code> = FinMind token（建議）。Macro.gs 裡的 <code>FINMIND_TOKEN</code> 常數保持空白（最新版已清空），token 只放在指令碼屬性，才不會隨網頁外流。
+    屬性名稱大小寫要完全一樣；加完不用重新部署，但網頁要重新整理一次瀏覽器引擎才會拿到 FRED_KEY。
     其他已存在的屬性是程式自己用的，不要刪改。</li>
   <li><b>上傳網頁檔案</b>：全部前端檔案加上 <code>engine.js</code>、<code>engine-worker.js</code>、<code>Code.gs</code>、<code>Macro.gs</code>、<code>Calendar.gs</code>（見「9.1 檔案」）。</li>
   <li><b>Apps Script 執行一次</b> <code>screenerRecheckHolidays</code>（清除舊版因證交所連線失敗誤標的非交易日）。</li>
-  <li><b>確認</b>：網頁登出再登入 →「⚙ 設定 → 連線診斷」應顯示「資料中繼站：已啟用」「瀏覽器資料引擎：已啟用」；「本頁最近的請求」會出現「直連 …」與「瀏覽器 …」紀錄；按「實測各資料來源」應都是「正常」。</li>
+  <li><b>確認</b>：網頁登出再登入 →「⚙ 設定 → 連線診斷」應顯示「資料中繼站：已啟用」「瀏覽器資料引擎：已啟用」「FRED_KEY：已設定」；「本頁最近的請求」會出現「直連 …」與「瀏覽器 …」紀錄；按「實測各資料來源」應都是「正常」（含「FRED 官方 API」）。</li>
 </ol>
 
 <h3 id="g-deploy">9. 部署與更新</h3>
@@ -467,7 +480,8 @@ const HELP_GUIDE = `
     <tr><td class="nm">〈帳號名稱〉工作頁 A:E</td><td>監控清單：類別｜代碼｜顯示名稱｜資料來源｜新增時間（列的順序＝畫面順序）。可直接修改顯示名稱或調整列順序，重新整理網頁即生效；刪除請用網頁或只清除 A:E 內容，不要刪整列</td></tr>
     <tr><td class="nm">〈帳號名稱〉工作頁 G:H</td><td>個人設定：<code>cardOrder</code>（市場監控區塊順序）、<code>pausedCats</code>（停止更新的區塊）、<code>macroLayout</code>（總經頁版面）、<code>screenPresets</code>（選股器常用條件）</td></tr>
     <tr><td class="nm">_daily、_screen（隱藏）</td><td>選股器每日全市場快照與算好的篩選表（壓縮存放），請勿手動修改</td></tr>
-    <tr><td class="nm">指令碼屬性（Apps Script 專案設定）</td><td><code>fetchUsage</code>（今日 API 呼叫計數）、<code>otc_margin</code>／<code>otc_inst</code>（上櫃逐日資料）、<code>tse_margin</code>／<code>tse_inst</code>（證交所備援逐日資料）</td></tr>
+    <tr><td class="nm">指令碼屬性（Apps Script 專案設定）</td><td><b>你自己設定的</b>：<code>PROXY_URL</code>、<code>PROXY_KEY</code>（資料中繼站）、<code>FRED_KEY</code>（FRED API 金鑰）、<code>FINMIND_TOKEN</code>（FinMind token）。<br>
+      <b>程式自己用的（不要刪改）</b>：<code>fetchUsage</code>（今日 API 呼叫計數）、<code>otc_margin</code>／<code>otc_inst</code>（上櫃逐日資料）、<code>tse_margin</code>／<code>tse_inst</code>（證交所備援逐日資料）、<code>ysessLast</code>（Yahoo 認證）、<code>fredbk_…</code>（美國經濟數據各指標的上次成功值），以及 ETF、選股器的資料</td></tr>
   </tbody>
 </table></div>
 
@@ -485,7 +499,8 @@ const HELP_GUIDE = `
     <tr><td class="nm">「連線診斷」顯示 Google 額度已用完</td><td>經後端的資料約 24 小時內恢復。有中繼站時，市場監控、投資組合、總經大部分字卡與財金日曆都不經 Google，不受影響</td></tr>
     <tr><td class="nm">「瀏覽器資料引擎：未啟用（file://）」</td><td>網頁是直接開檔案，改放 GitHub Pages 等網站即可；不改也能用，只是總經、日曆改走後端</td></tr>
     <tr><td class="nm">「瀏覽器資料引擎：無法啟動」</td><td><code>engine-worker.js</code>、<code>Code.gs</code>、<code>Macro.gs</code>、<code>Calendar.gs</code> 沒有和網頁一起上傳</td></tr>
-    <tr><td class="nm">美國經濟數據常常載入失敗</td><td>FRED 網站對程式請求不穩定，設定指令碼屬性 <code>FRED_KEY</code>（免費）改走官方 API</td></tr>
+    <tr><td class="nm">美國經濟數據常常載入失敗</td><td>多半是沒有設定 <code>FRED_KEY</code>：FRED 網站對程式請求常常沒回應。到 fredaccount.stlouisfed.org 免費註冊 →「API Keys」申請 32 字元金鑰 → 加到指令碼屬性 <code>FRED_KEY</code> → 網頁重新整理。字卡會直接寫出失敗原因（未設定金鑰、金鑰無效、限流、逾時）；「連線診斷」可看金鑰是否已設定，按「實測」可確認金鑰能不能用。抓不到時沿用每個指標上次成功的數值</td></tr>
+    <tr><td class="nm">美股個股研究的市值、本益比、籌碼、簡介是空的</td><td>舊版完全依賴 Yahoo 的認證資料，Google／Cloudflare 主機常被 Yahoo 拒絕。新版改用 Yahoo 免認證的財報與估值資料，以及 Nasdaq 的簡介、分析師、放空資料；請確認 <code>Research.gs</code>、<code>Calendar.gs</code> 已更新並部署新版本。日股、港股等非美國股票沒有 Nasdaq 資料，簡介與籌碼仍可能空白</td></tr>
     <tr><td class="nm">報價抓很久、字卡只有框架沒有資料</td><td>多半是 Google 主機被 Yahoo／證交所限流，或 Google 每日 20,000 次外部請求額度用完。根本解法是設定<b>資料中繼站</b>（Cloudflare Workers 免費方案，約 5 分鐘，步驟見 README「十五、資料中繼站」）：報價、走勢改由瀏覽器直接抓、不經 Google，後端其他資料也經中繼站轉送。設定後「設定 → 連線診斷」會顯示「已啟用」</td></tr>
     <tr><td class="nm">報價或字卡更新很慢</td><td>到「⚙ 設定 → 連線診斷」按「實測各資料來源」，看是哪個來源慢或連不上。連不上的來源會自動暫停 3 分鐘並改用備援（台股報價改用 Yahoo），不會讓整個網站卡住；若選股篩選器正在補資料，也會在這裡提示</td></tr>
     <tr><td class="nm">總經頁某張字卡載入失敗</td><td>該資料來源暫時無回應，會自動重試（5→10→20→30→60 秒，之後每 5 分鐘）直到成功，期間先顯示上次成功的資料；也可按「立即重試」。只在停留此頁時重試，不會在背景耗額度</td></tr>
@@ -493,7 +508,7 @@ const HELP_GUIDE = `
     <tr><td class="nm">上櫃資料只有十幾天</td><td>歷史逐日補齊中，多開幾次總經頁就會補滿</td></tr>
     <tr><td class="nm">選股器顯示「尚未啟用」</td><td>還沒在 Apps Script 執行 <code>setupScreener</code></td></tr>
     <tr><td class="nm">選股器顯示「資料建置中」</td><td>第一次建置約需 20–40 分鐘，請稍後再開</td></tr>
-    <tr><td class="nm">個股研究某些字卡顯示「資料不足」</td><td>興櫃、新上市或資料來源未提供該項（例如美股的月營收、興櫃的本益比）</td></tr>
+    <tr><td class="nm">個股研究某些字卡顯示「資料不足」</td><td>興櫃、新上市或資料來源未提供該項（例如美股沒有月營收、興櫃沒有本益比、ETF 沒有財報）</td></tr>
     <tr><td class="nm">今天的台股法人／融資還是前一天</td><td>交易所晚間才公布（法人約 16:30、融資約 21:00）</td></tr>
   </tbody>
 </table></div>

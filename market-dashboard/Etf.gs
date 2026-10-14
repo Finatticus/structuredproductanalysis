@@ -1,6 +1,6 @@
 /**
  * ETF 專區 — 後端（在 Apps Script 新增指令碼檔「Etf」貼上）
- * 依賴 Code.gs（fetch_、fetchAll_、ss_、UA、round_）、Macro.gs（get_、okText_、yahooSession_）
+ * 依賴 Code.gs（fetch_、fetchAll_、ss_、UA、round_）、Macro.gs（get_、okText_、yahooSession_）、Calendar.gs（nqHead_）、Research.gs（nqNum_、yahooSummary_）
  *
  * 資料：
  *  - 證交所 MIS ETF 即時資料（all_etf.txt）：成交價、預估淨值、折溢價、受益權單位數與當日增減
@@ -612,13 +612,31 @@ function etfHigh_() {
 /* ======================== 美股 ETF ======================== */
 function etfUs_() {
   const syms = US_ETFS.map(function (x) { return x[0]; });
-  const sess = yahooSession_(false);
-  const qres = fetch_('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + syms.join(',') +
-    '&fields=regularMarketPrice,regularMarketChangePercent,sharesOutstanding,netAssets,navPrice,ytdReturn,fiftyTwoWeekHigh,fiftyTwoWeekLow&crumb=' + encodeURIComponent(sess.crumb),
-    { muteHttpExceptions: true, headers: { 'User-Agent': UA, Cookie: sess.cookie } });
+  // 1) Yahoo（需要 cookie＋crumb 認證；Google／Cloudflare 主機常被拒絕）→ 流通單位數、淨值、規模
   const q = {};
-  try { JSON.parse(okText_(qres)).quoteResponse.result.forEach(function (x) { q[x.symbol] = x; }); } catch (e) { /* ignore */ }
+  try {
+    const sess = yahooSession_(false);
+    const qres = fetch_('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + syms.join(',') +
+      '&fields=regularMarketPrice,regularMarketChangePercent,sharesOutstanding,netAssets,navPrice,ytdReturn,fiftyTwoWeekHigh,fiftyTwoWeekLow&crumb=' + encodeURIComponent(sess.crumb),
+      { muteHttpExceptions: true, headers: { 'User-Agent': UA, Cookie: sess.cookie } });
+    JSON.parse(okText_(qres)).quoteResponse.result.forEach(function (x) { q[x.symbol] = x; });
+  } catch (e) { /* 改用 Nasdaq */ }
   const perf = sparkPerf_(syms); // Macro.gs：1D／1W／1M／3M／YTD
+  // 2) Yahoo 認證失敗：改用 Nasdaq（不需要認證）的市值 ÷ 前收盤估算流通單位數
+  const miss = syms.filter(function (s) { return !(q[s] && q[s].sharesOutstanding); });
+  if (miss.length) {
+    try {
+      fetchAll_(miss.map(function (s) {
+        return { url: 'https://api.nasdaq.com/api/quote/' + s + '/summary?assetclass=etf', muteHttpExceptions: true, headers: nqHead_() };
+      })).forEach(function (r, i) {
+        try {
+          const sd = JSON.parse(okText_(r)).data.summaryData;
+          const cap = nqNum_(sd.MarketCap && sd.MarketCap.value), prev = nqNum_(sd.PreviousClose && sd.PreviousClose.value);
+          if (cap && prev) q[miss[i]] = Object.assign({}, q[miss[i]], { sharesOutstanding: Math.round(cap / prev), navPrice: prev, netAssets: cap, src: 'Nasdaq' });
+        } catch (e) { /* 這檔沒有 */ }
+      });
+    } catch (e) { /* Nasdaq 也失敗：只顯示價格與績效 */ }
+  }
 
   // 流通單位數快照 → 估算資金流（單位數變化 × 淨值）；一天一筆，歷史從快取讀
   const ds = Utilities.formatDate(new Date(), 'America/New_York', 'yyyy-MM-dd');
