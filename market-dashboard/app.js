@@ -3,7 +3,7 @@
  * 部署 GAS 後，把「網頁應用程式網址」貼到下方 API_URL
  * （或在登入頁「後端網址設定」輸入，會存在瀏覽器）
  * ========================================================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzKwkmYPvRzdnKGt8PDhHXqlsdvIlQ1H7NUHVD-fzwjA3xTo6RjW7U-Tu_SUH0z3Vr0/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbx-e4pMtVEvtKJGMgJQWp7Y-EATqWfJ8ASF8IDE316JdTNhvUu2gbcpnF59EbPASPHS/exec';
 
 /* ---------- 類別設定（含輸入規則說明） ---------- */
 const CATS = [
