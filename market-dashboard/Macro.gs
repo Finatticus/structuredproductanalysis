@@ -7,7 +7,7 @@
 const MACRO_TTL = {
   news: 180, sectors: 120, cross: 120, curve: 1800, fomc: 600, econ: 21600,
   margin: 1800, inst: 1800, margin_otc: 1800, inst_otc: 1800,
-  flow: 1800, flow_otc: 1800, calendar: 3600, twmacro: 21600, earnings: 21600,
+  flow: 1800, flow_otc: 1800, twmacro: 21600,
 };
 const MACRO_FORCE_MIN_MS = 30000; // 強制重新整理的最短間隔，保護額度
 
@@ -16,10 +16,18 @@ function macro_(part, force, acc) {
     news: macroNews_, sectors: macroSectors_, cross: macroCross_, curve: macroCurve_,
     fomc: macroFomc_, margin: macroMargin_, inst: macroInst_, econ: macroEcon_,
     margin_otc: macroMarginOtc_, inst_otc: macroInstOtc_,
-    flow: macroFlow_, flow_otc: macroFlowOtc_, calendar: macroCalendar_, twmacro: macroTwMacro_, earnings: macroEarnings_,
+    flow: macroFlow_, flow_otc: macroFlowOtc_, twmacro: macroTwMacro_,
   };
   if (!parts[part]) throw new Error('未知的區塊：' + part);
-  const key = 'm_' + part + (part === 'earnings' ? '_' + acc : ''); // 財報日曆依各人自選清單
+  return partCache_('m_' + part, MACRO_TTL[part], force, function () { return parts[part](acc); });
+}
+
+/**
+ * 區塊快取（總經、財金日曆共用）：
+ *  - 快取有效期間直接回傳；強制更新在 30 秒內重複按也沿用快取（保護額度）
+ *  - 來源失敗時回傳最近 6 小時內成功的資料（標記 stale），前端照常顯示並在背景重試
+ */
+function partCache_(key, ttl, force, fn) {
   const hit = cacheGetBig_(key);
   if (hit) {
     const old = JSON.parse(hit);
@@ -27,9 +35,8 @@ function macro_(part, force, acc) {
   }
   let data;
   try {
-    data = parts[part](acc);
+    data = fn();
   } catch (err) {
-    // 來源暫時失敗：回傳最近一次成功的資料（標記 stale），前端照常顯示並在背景重試
     const backup = hit || cacheGetBig_('ms_' + key);
     if (!backup) throw err;
     const old = JSON.parse(backup);
@@ -38,7 +45,7 @@ function macro_(part, force, acc) {
   }
   data.updated = Date.now();
   const text = JSON.stringify(data);
-  cachePutBig_(key, text, MACRO_TTL[part]);
+  cachePutBig_(key, text, ttl);
   cachePutBig_('ms_' + key, text, 21600); // 備援副本，保留 6 小時
   return data;
 }
@@ -90,7 +97,9 @@ function macroNews_() {
     }).filter(function (x) { return x.t && x.u; });
   } catch (e) { /* ignore */ }
   tabs.push({ key: 'cnbc', name: 'CNBC（英）', items: cnbc });
-  return { tabs: tabs };
+  // 全部來源都沒資料：視為失敗（改用上次成功的資料並自動重試），不要回傳空框架
+  if (!tabs.some(function (t) { return t.items.length; })) throw new Error('鉅亨網與 CNBC 新聞暫時無法取得');
+  return { tabs: tabs, missing: tabs.filter(function (t) { return !t.items.length; }).map(function (t) { return t.name; }) };
 }
 
 /* ======================== Yahoo 多檔績效 ======================== */
@@ -108,6 +117,18 @@ function sparkPerf_(symbols) {
       });
     } catch (e) { /* ignore */ }
   });
+  // spark 失敗或缺漏的代號：改用 v8 chart 逐檔補抓（格式相同）
+  const miss = symbols.filter(function (s) { return !out[s]; });
+  if (miss.length && miss.length <= 40) {
+    fetchAll_(miss.map(function (s) {
+      return get_('https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(s) + '?range=1y&interval=1d');
+    })).forEach(function (r, i) {
+      try {
+        const p = perfOf_(JSON.parse(okText_(r)).chart.result[0]);
+        if (p) out[miss[i]] = p;
+      } catch (e) { /* ignore */ }
+    });
+  }
   return out;
 }
 
@@ -160,11 +181,15 @@ function macroSectors_() {
     });
   };
   const spy = perf.SPY || {};
+  const usOk = Object.keys(perf).length > syms.length * 0.3;
   const out = {
     us: pick(US_SECTORS, '產業').concat(pick(US_THEMES, '主題')),
     usBench: { sym: 'SPY', name: 'S&P 500', d1: spy.d1, w1: spy.w1, m1: spy.m1, m3: spy.m3, ytd: spy.ytd },
   };
+  if (!usOk) out.usErr = 'Yahoo 美股類股報價暫時無法取得';
   try { Object.assign(out, twSectors_()); } catch (e) { out.twErr = String(e.message || e); }
+  // 美股與台股都沒資料：視為失敗，不要回傳空框架
+  if (!usOk && out.twErr) throw new Error(out.usErr + '；' + out.twErr);
   return out;
 }
 
@@ -217,14 +242,18 @@ function twIndexCloses_(date) {
     if (hit) return JSON.parse(hit);
     const res = fetch_('https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=' + ds + '&type=IND&response=json',
       { muteHttpExceptions: true, headers: { 'User-Agent': UA } });
-    let map = null;
+    const text = okText_(res);
+    if (!text) return {}; // 連線失敗（或來源暫停中）：不要當成非交易日，也不要再往前一天一天試
+    let map = null, parsed = false;
     try {
-      const t = (JSON.parse(okText_(res)).tables || [])[0];
+      const t = (JSON.parse(text).tables || [])[0];
+      parsed = true;
       if (t && t.data && t.data.length) {
         map = {};
         t.data.forEach(function (r) { map[r[0]] = parseFloat(String(r[1]).replace(/,/g, '')); });
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) { /* 不是 JSON：可能被限流 */ }
+    if (!parsed) return {};
     cache.put(key, map ? JSON.stringify(map) : 'none', 21600);
     if (map) return map;
     Utilities.sleep(400); // 證交所有頻率限制，逐筆慢慢查
@@ -247,6 +276,8 @@ function macroCross_() {
   const syms = [];
   CROSS_GROUPS.forEach(function (g) { g[1].forEach(function (x) { syms.push(x[0]); }); });
   const perf = sparkPerf_(syms);
+  // 大多數代號都沒資料（Yahoo 被擋或失敗）：視為失敗，改用上次成功的資料並自動重試
+  if (Object.keys(perf).length < syms.length * 0.3) throw new Error('Yahoo 跨資產報價暫時無法取得（' + Object.keys(perf).length + '／' + syms.length + '）');
   const groups = CROSS_GROUPS.map(function (g) {
     return {
       name: g[0],
@@ -267,19 +298,61 @@ function macroCross_() {
 const TENOR_IDS = ['DGS1MO', 'DGS3MO', 'DGS6MO', 'DGS1', 'DGS2', 'DGS3', 'DGS5', 'DGS7', 'DGS10', 'DGS20', 'DGS30'];
 const TENOR_LABELS = ['1M', '3M', '6M', '1Y', '2Y', '3Y', '5Y', '7Y', '10Y', '20Y', '30Y'];
 
-function macroCurve_() {
-  const cosd = Utilities.formatDate(new Date(Date.now() - 3 * 365 * 86400000), 'UTC', 'yyyy-MM-dd');
+// 美國財政部每日殖利率 CSV 的欄位（與 TENOR_LABELS 同順序）
+const TREASURY_COLS = ['1 Mo', '3 Mo', '6 Mo', '1 Yr', '2 Yr', '3 Yr', '5 Yr', '7 Yr', '10 Yr', '20 Yr', '30 Yr'];
+
+/**
+ * 美國財政部官方每日殖利率（FRED 的 DGS 系列就是轉載這份資料）：回應快、不需金鑰。
+ * 每年一個檔案，抓近 4 年。回傳 { 'yyyy-MM-dd': [各天期] }
+ */
+function treasuryCurve_(cut) {
+  const y = +Utilities.formatDate(new Date(), 'America/New_York', 'yyyy');
+  const years = [y, y - 1, y - 2, y - 3];
+  const res = fetchAll_(years.map(function (yy) {
+    return get_('https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/' + yy +
+      '/all?type=daily_treasury_yield_curve&field_tdr_date_value=' + yy + '&page&_format=csv');
+  }));
+  const out = {};
+  res.forEach(function (r) {
+    const text = okText_(r);
+    if (!text) return;
+    let csv;
+    try { csv = Utilities.parseCsv(text); } catch (e) { return; }
+    const head = (csv[0] || []).map(function (h) { return String(h).replace(/"/g, '').trim(); });
+    const idx = TREASURY_COLS.map(function (c) { return head.indexOf(c); });
+    if (idx[8] < 0) return; // 沒有 10 年期欄位：格式不對
+    csv.slice(1).forEach(function (row) {
+      const m = String(row[0]).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (!m) return;
+      const d = m[3] + '-' + ('0' + m[1]).slice(-2) + '-' + ('0' + m[2]).slice(-2);
+      if (d < cut) return;
+      const v = idx.map(function (j) { if (j < 0) return null; const x = parseFloat(row[j]); return isFinite(x) ? x : null; });
+      if (v[8] != null) out[d] = v;
+    });
+  });
+  return out;
+}
+
+/** 備援：FRED 的固定期限殖利率（FRED 網站對程式請求常常很慢或沒回應） */
+function fredCurve_(cosd) {
   const url = 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=' + TENOR_IDS.join(',') +
     '&cosd=' + TENOR_IDS.map(function () { return cosd; }).join(',');
   const text = okText_(fetch_(url, { muteHttpExceptions: true, headers: { 'User-Agent': UA } }));
-  if (!text) throw new Error('美債殖利率資料暫時無法取得');
+  const byDate = {};
+  if (!text) return byDate;
   const csv = Utilities.parseCsv(text);
   const idx = TENOR_IDS.map(function (id) { return csv[0].indexOf(id); });
-  const byDate = {};
   csv.slice(1).forEach(function (r) {
     const v = idx.map(function (j) { const x = parseFloat(r[j]); return isFinite(x) ? x : null; });
     if (v[8] != null) byDate[r[0]] = v; // 至少要有 10 年期
   });
+  return byDate;
+}
+
+function macroCurve_() {
+  const cosd = Utilities.formatDate(new Date(Date.now() - 3 * 365 * 86400000), 'UTC', 'yyyy-MM-dd');
+  let byDate = treasuryCurve_(cosd), src = '美國財政部';
+  if (Object.keys(byDate).length < 30) { byDate = fredCurve_(cosd); src = 'FRED'; }
   const dates = Object.keys(byDate).sort();
   if (!dates.length) throw new Error('美債殖利率資料暫時無法取得');
   const last = dates[dates.length - 1];
@@ -300,7 +373,7 @@ function macroCurve_() {
     spreads.s305.push(bp(v, '30Y', '5Y'));
   });
   return {
-    tenors: TENOR_LABELS,
+    tenors: TENOR_LABELS, src: src,
     curves: [curve('最新', last), curve('1 週前', back(7)), curve('1 個月前', back(30)), curve('1 年前', back(365))],
     spreads: spreads,
   };
@@ -413,12 +486,17 @@ function parseFomc_(html) {
 /* ======================== 5. 台股信用交易 ======================== */
 // FinMind 免費 API 未帶 token 時依 IP 限流，Google 伺服器 IP 多人共用容易被擋。
 // 到 https://finmindtrade.com 免費註冊後，把 token 貼在這裡可大幅提高成功率（不填也能用，會改走交易所備援）。
+// FinMind token：建議放在「專案設定 → 指令碼屬性」的 FINMIND_TOKEN（優先使用），並把下面這行清空。
+// 網頁使用瀏覽器資料引擎時，Macro.gs 會和網頁一起上傳；token 寫在這裡會被看到。
 const FINMIND_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoicG9zdGxlODQxMjIwQGdtYWlsLmNvbSIsImVtYWlsIjoicG9zdGxlODQxMjIwQGdtYWlsLmNvbSIsInRva2VuX3ZlcnNpb24iOjB9.T58Ouf5sDSu_NEAL1Gok2bwlLWOLQg3CA6UABRu_eqA';
+function finmindToken_() {
+  try { return PropertiesService.getScriptProperties().getProperty('FINMIND_TOKEN') || FINMIND_TOKEN; } catch (e) { return FINMIND_TOKEN; }
+}
 
 function finmind_(dataset, days) {
   const start = Utilities.formatDate(new Date(Date.now() - days * 86400000), 'Asia/Taipei', 'yyyy-MM-dd');
   return get_('https://api.finmindtrade.com/api/v4/data?dataset=' + dataset + '&start_date=' + start +
-    (FINMIND_TOKEN ? '&token=' + encodeURIComponent(FINMIND_TOKEN) : ''));
+    (finmindToken_() ? '&token=' + encodeURIComponent(finmindToken_()) : ''));
 }
 
 /** FinMind 回應 → data 陣列；失敗回傳 null 並記下原因 */
@@ -742,9 +820,11 @@ function yahooSession_(renew) {
   const cookieUrls = ['https://fc.yahoo.com', 'https://finance.yahoo.com/', 'https://login.yahoo.com/'];
   for (let i = 0; i < cookieUrls.length && !s; i++) {
     const r1 = fetch_(cookieUrls[i], { muteHttpExceptions: true, followRedirects: false, headers: { 'User-Agent': UA } });
-    let sc = r1.getAllHeaders()['Set-Cookie'] || [];
+    const hd = r1.getAllHeaders();
+    const viaProxy = hd['X-Set-Cookie'] || hd['x-set-cookie']; // 中繼站已整理成「名稱=值; 名稱=值」
+    let sc = hd['Set-Cookie'] || hd['set-cookie'] || [];
     if (!Array.isArray(sc)) sc = [sc];
-    const cookie = sc.map(function (c) { return String(c).split(';')[0]; }).filter(function (c) { return c; }).join('; ');
+    const cookie = viaProxy ? String(viaProxy) : sc.map(function (c) { return String(c).split(';')[0]; }).filter(function (c) { return c; }).join('; ');
     if (!cookie) { why = '取不到 cookie'; continue; }
     ['query1', 'query2'].some(function (host) {
       const r2 = fetch_('https://' + host + '.finance.yahoo.com/v1/test/getcrumb', { muteHttpExceptions: true, headers: { 'User-Agent': UA, Cookie: cookie } });
@@ -763,151 +843,6 @@ function yahooSession_(renew) {
   cache.put('ysess', JSON.stringify(s), 21600);
   props.setProperty('ysessLast', JSON.stringify(s));
   return s;
-}
-
-function macroEarnings_(acc) {
-  const items = getWatchlist_(acc).filter(function (it) {
-    return (it.category === 'tw' || it.category === 'global') && toYahoo_(it.source);
-  });
-  if (!items.length) return { rows: [] };
-  const syms = items.map(function (it) { return toYahoo_(it.source); });
-  const query = function (sess) {
-    return fetch_('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + syms.map(encodeURIComponent).join(',') +
-      '&fields=earningsTimestamp,earningsTimestampStart,earningsTimestampEnd,isEarningsDateEstimate&crumb=' + encodeURIComponent(sess.crumb),
-      { muteHttpExceptions: true, headers: { 'User-Agent': UA, Cookie: sess.cookie } });
-  };
-  let res = query(yahooSession_(false));
-  if (res.getResponseCode() === 401 || res.getResponseCode() === 403) res = query(yahooSession_(true));
-  if (res.getResponseCode() !== 200) throw new Error('財報日期暫時無法取得（HTTP ' + res.getResponseCode() + '）');
-  const bySym = {};
-  (JSON.parse(res.getContentText()).quoteResponse.result || []).forEach(function (q) { bySym[q.symbol] = q; });
-  return {
-    rows: items.map(function (it, i) {
-      const q = bySym[syms[i]] || {};
-      const s = q.earningsTimestampStart || q.earningsTimestamp;
-      const e = q.earningsTimestampEnd || s;
-      return {
-        cat: it.category, symbol: it.symbol, name: it.name,
-        start: s ? s * 1000 : null, end: e ? e * 1000 : null, est: !!q.isEarningsDateEstimate,
-      };
-    }),
-  };
-}
-
-/* ======================== 經濟日曆 ======================== */
-// FRED 發布日程（美國重要數據）：rid → 名稱、對應 macroEcon_ 的數列（顯示前值）
-const FRED_RELEASES = [
-  [10, 'CPI 消費者物價指數', 'CPIAUCSL'], [50, '非農就業報告（非農／失業率）', 'PAYEMS'], [53, 'GDP 國內生產毛額', 'A191RL1Q225SBEA'],
-  [54, '個人所得與支出（PCE 物價）', 'PCEPILFE'], [9, '零售銷售', ''], [46, 'PPI 生產者物價指數', ''],
-  [192, 'JOLTS 職缺', ''], [180, '初領失業救濟金', 'ICSA'],
-];
-const CAL_CC = { USD: '美國', EUR: '歐元區', JPY: '日本', CNY: '中國', GBP: '英國', TWD: '台灣' };
-const CAL_ZH = {
-  'CPI m/m': 'CPI 月增率', 'CPI y/y': 'CPI 年增率', 'Core CPI m/m': '核心 CPI 月增率', 'Core CPI y/y': '核心 CPI 年增率',
-  'Non-Farm Employment Change': '非農新增就業', 'Unemployment Rate': '失業率', 'Average Hourly Earnings m/m': '平均時薪月增率',
-  'Federal Funds Rate': 'FOMC 利率決議', 'FOMC Statement': 'FOMC 聲明', 'FOMC Press Conference': 'FOMC 記者會',
-  'FOMC Meeting Minutes': 'FOMC 會議紀要', 'FOMC Economic Projections': 'FOMC 經濟預測',
-  'Advance GDP q/q': 'GDP 初值（季增年率）', 'Prelim GDP q/q': 'GDP 修正值', 'Final GDP q/q': 'GDP 終值',
-  'Core PCE Price Index m/m': '核心 PCE 物價月增率', 'Retail Sales m/m': '零售銷售月增率', 'Core Retail Sales m/m': '核心零售銷售月增率',
-  'PPI m/m': 'PPI 月增率', 'Core PPI m/m': '核心 PPI 月增率', 'ISM Manufacturing PMI': 'ISM 製造業 PMI', 'ISM Services PMI': 'ISM 服務業 PMI',
-  'Unemployment Claims': '初領失業金', 'Prelim UoM Consumer Sentiment': '密大消費者信心初值', 'CB Consumer Confidence': '諮商會消費者信心',
-  'JOLTS Job Openings': 'JOLTS 職缺', 'BOJ Policy Rate': '日銀利率決議', 'Main Refinancing Rate': 'ECB 利率決議',
-  'Official Bank Rate': '英國央行利率決議', 'GDP q/y': 'GDP 年增率', 'GDP m/m': 'GDP 月增率', 'GDP q/q': 'GDP 季增率', 'Trade Balance': '貿易收支', 'Industrial Production y/y': '工業生產年增率',
-};
-
-function calZh_(t) {
-  if (CAL_ZH[t]) return CAL_ZH[t];
-  const m = t.match(/^(Fed Chair(?:man)?|ECB President|BOJ Gov|BOE Gov)\s+(\w+)\s+Speaks$/);
-  if (m) return { 'Fed Chair': 'Fed 主席', 'Fed Chairman': 'Fed 主席', 'ECB President': 'ECB 總裁', 'BOJ Gov': '日銀總裁', 'BOE Gov': '英國央行總裁' }[m[1]] + ' ' + m[2] + ' 談話';
-  return t;
-}
-
-/** 台灣央行理監事會：慣例為每季末月（3/6/9/12）第三個星期四 */
-function cbcNextMeetings_(fromDs, count) {
-  const out = [];
-  let y = +fromDs.slice(0, 4);
-  while (out.length < count) {
-    [3, 6, 9, 12].forEach(function (m) {
-      const first = new Date(Date.UTC(y, m - 1, 1));
-      const d = 1 + ((4 - first.getUTCDay() + 7) % 7) + 14; // 第三個週四
-      const ds = y + '-' + ('0' + m).slice(-2) + '-' + ('0' + d).slice(-2);
-      if (ds >= fromDs && out.length < count) out.push(ds);
-    });
-    y++;
-  }
-  return out;
-}
-
-function macroCalendar_() {
-  const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
-  const t0 = Date.parse(today + 'T00:00:00+08:00');
-  const dow = (new Date(today + 'T00:00:00Z').getUTCDay() + 6) % 7; // 週一 = 0
-  const weekStart = t0 - dow * 86400000;           // 本週一 00:00（台北）
-  const nextStart = weekStart + 7 * 86400000;
-  const end = weekStart + 14 * 86400000;
-  const year = +today.slice(0, 4);
-  const years = [year].concat(Utilities.formatDate(new Date(end), 'Asia/Taipei', 'yyyy') !== String(year) ? [year + 1] : []);
-
-  const reqs = [get_('https://nfs.faireconomy.media/ff_calendar_thisweek.json')];
-  FRED_RELEASES.forEach(function (r) {
-    years.forEach(function (yy) { reqs.push(get_('https://fred.stlouisfed.org/releases/calendar?rid=' + r[0] + '&y=' + yy)); });
-  });
-  const res = fetchAll_(reqs);
-  const events = [];
-
-  // 本週：Forex Factory 高影響事件（含預期值、前值）
-  let ffOk = false;
-  try {
-    JSON.parse(okText_(res[0])).forEach(function (x) {
-      ffOk = true;
-      if (x.impact !== 'High' || !CAL_CC[x.country]) return;
-      const ts = Date.parse(x.date);
-      if (!(ts >= weekStart && ts < end)) return;
-      events.push({ ts: ts, cc: x.country, t: calZh_(x.title), en: x.title, fc: x.forecast || '', prev: x.previous || '', src: 'FF' });
-    });
-  } catch (e) { /* ignore */ }
-
-  // FRED 發布日程（下週、或本週 FF 失敗時）
-  let econ = null;
-  try { econ = macro_('econ', false); } catch (e) { /* 前值非必要 */ }
-  const prevOf = function (id) {
-    const r = econ && econ.rows.filter(function (x) { return x.id === id && !x.err; })[0];
-    return r ? r.latest + (r.unit === '%' ? '%' : r.unit ? ' ' + r.unit : '') : '';
-  };
-  let k = 1;
-  FRED_RELEASES.forEach(function (rel) {
-    years.forEach(function () {
-      const html = okText_(res[k++]);
-      if (!html) return;
-      const text = html.replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<[^>]+>/g, '|').replace(/\s+/g, ' ').replace(/(\|\s*)+/g, '|');
-      const re = /(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) ([A-Z][a-z]+ \d{1,2}, \d{4})\|(?:Updated\|)?(\d{1,2}:\d{2} [ap]m)/g;
-      let m;
-      while ((m = re.exec(text))) {
-        const ts = Utilities.parseDate(m[1] + ' ' + m[2], 'America/Chicago', 'MMMM d, yyyy h:mm a').getTime();
-        if (ts < (ffOk ? nextStart : weekStart) || ts >= end) continue;
-        events.push({ ts: ts, cc: 'USD', t: rel[1], fc: '', prev: rel[2] ? prevOf(rel[2]) : '', src: 'FRED' });
-      }
-    });
-  });
-
-  // FOMC（FF 本週已含利率決議時不重複）
-  try {
-    macro_('fomc', false).meetings.forEach(function (mt) {
-      const ts = Utilities.parseDate(mt.end + ' 14:00', 'America/New_York', 'yyyy-MM-dd HH:mm').getTime();
-      if (ts < weekStart || ts >= end) return;
-      const dup = events.some(function (e) { return e.en === 'Federal Funds Rate' && Math.abs(e.ts - ts) < 86400000; });
-      if (!dup) events.push({ ts: ts, cc: 'USD', t: 'FOMC 利率決議' + (mt.sep ? '（含經濟預測）' : ''), fc: '', prev: '', src: 'Fed' });
-    });
-  } catch (e) { /* ignore */ }
-
-  // 台灣央行理監事會（依慣例推估）
-  cbcNextMeetings_(today, 2).forEach(function (ds) {
-    const ts = Date.parse(ds + 'T16:00:00+08:00');
-    if (ts >= weekStart && ts < end) events.push({ ts: ts, cc: 'TWD', t: '台灣央行理監事會（日期依慣例推估）', fc: '', prev: '', src: 'CBC' });
-  });
-
-  events.sort(function (a, b) { return a.ts - b.ts; });
-  return { weekStart: weekStart, nextStart: nextStart, end: end, ff: ffOk, events: events };
 }
 
 /* ======================== 台灣景氣與央行 ======================== */
@@ -979,21 +914,44 @@ const ECON_SERIES = [
   { id: 'UMCSENT', name: '密大消費者信心', unit: '', tf: 'lv', freq: 'M' },
 ];
 
+/**
+ * FRED API 金鑰（免費，https://fredaccount.stlouisfed.org/apikeys 申請），放在指令碼屬性 FRED_KEY。
+ * 有金鑰時走官方 API（api.stlouisfed.org，給程式用的正式管道，穩定快速）；
+ * 沒有時退回 FRED 網站的 CSV 下載（網站對程式請求常常很慢或沒回應）。
+ */
+function fredKey_() {
+  try { return PropertiesService.getScriptProperties().getProperty('FRED_KEY') || ''; } catch (e) { return ''; }
+}
+
+/** FRED 數列 → [[日期, 數值]]（API 或 CSV，依有無金鑰） */
+function fredParse_(text, viaApi) {
+  if (viaApi) {
+    return (JSON.parse(text).observations || []).filter(function (o) { return o.value !== '.' && o.value !== ''; })
+      .map(function (o) { return [o.date, parseFloat(o.value)]; });
+  }
+  return Utilities.parseCsv(text).slice(1).filter(function (r) { return r[1] !== '' && r[1] !== '.'; })
+    .map(function (r) { return [r[0], parseFloat(r[1])]; });
+}
+
 function macroEcon_() {
   const cosd = Utilities.formatDate(new Date(Date.now() - 4 * 365 * 86400000), 'UTC', 'yyyy-MM-dd');
+  const key = fredKey_();
   const res = fetchAll_(ECON_SERIES.map(function (s) {
-    return get_('https://fred.stlouisfed.org/graph/fredgraph.csv?id=' + s.id + '&cosd=' + cosd);
+    return get_(key
+      ? 'https://api.stlouisfed.org/fred/series/observations?series_id=' + s.id + '&api_key=' + encodeURIComponent(key) + '&file_type=json&observation_start=' + cosd
+      : 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=' + s.id + '&cosd=' + cosd);
   }));
+  let okCount = 0;
   const rows = ECON_SERIES.map(function (s, i) {
     try {
-      const csv = Utilities.parseCsv(okText_(res[i]));
-      let pts = csv.slice(1).filter(function (r) { return r[1] !== '' && r[1] !== '.'; })
-        .map(function (r) { return [r[0], parseFloat(r[1])]; });
+      let pts = fredParse_(okText_(res[i]), !!key);
       if (s.tf === 'yoy') pts = pts.slice(12).map(function (p, j) { return [p[0], (p[1] / pts[j][1] - 1) * 100]; });
       else if (s.tf === 'diff') pts = pts.slice(1).map(function (p, j) { return [p[0], p[1] - pts[j][1]]; });
       else if (s.tf === 'k') pts = pts.map(function (p) { return [p[0], p[1] / 1000]; });
       const tail = pts.slice(-13);
       const n = tail.length;
+      if (!n) throw new Error('沒有資料');
+      okCount++;
       const r1 = function (v) { return Math.round(v * 100) / 100; };
       return {
         name: s.name, unit: s.unit, freq: s.freq, id: s.id,
@@ -1004,5 +962,7 @@ function macroEcon_() {
       return { name: s.name, unit: s.unit, freq: s.freq, id: s.id, err: true };
     }
   });
-  return { rows: rows };
+  // 全部失敗：視為失敗（改用上次成功的資料並自動重試），不要回傳整張都是錯誤的表
+  if (!okCount) throw new Error('FRED 經濟數據暫時無法取得' + (key ? '' : '（建議設定 FRED_KEY，見說明）'));
+  return { rows: rows, api: !!key };
 }

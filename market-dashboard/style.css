@@ -772,3 +772,27 @@ details.method ul { padding-left: 18px; margin: 2px 0; }
   .pf-form { grid-template-columns: 1fr; }
   .pf-q { width: 140px; }
 }
+
+/* =========================================================
+ * 財金日曆
+ * ========================================================= */
+.cal-cc { border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; font: inherit; font-size: 12px; background: var(--surface); color: var(--text); }
+.cal-act.hi { color: var(--up); }
+.cal-act.lo { color: var(--down); }
+.mtbl.cal tr.past td .cal-act { color: inherit; }
+.mtbl.cal tr.past td .cal-act.hi { color: var(--up); }
+.mtbl.cal tr.past td .cal-act.lo { color: var(--down); }
+.mtbl.cal tr.cal-mine td { background: #fffbea; }
+.mtbl.cal tr.cal-today td { background: var(--primary-soft); }
+.cal-scroll { max-height: 460px; overflow-y: auto; }
+.cal-scroll thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.earn-alert.cal-ok { background: #e6f5ed; color: #0f5e37; }
+.cal-kpis { margin-bottom: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+
+/* 連線診斷 */
+.set-diag .ok { color: var(--down); }
+body.color-us .set-diag .ok { color: var(--up); }
+.set-diag .warn { color: #a37500; }
+.set-diag .bad { color: #b3261e; }
+.set-diag .tag.ok { color: #137a48; } .set-diag .tag.bad { color: #b3261e; } .set-diag .tag.warn { color: #8a6400; }
+.diag-verdict { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.8; margin-bottom: 12px; }

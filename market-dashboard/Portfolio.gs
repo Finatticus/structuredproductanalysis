@@ -63,7 +63,7 @@ function pfLoad_(acc) {
 }
 
 function pfLock_(fn) {
-  const lock = LockService.getScriptLock();
+  const lock = writeLock_();
   const locked = lock.tryLock(15000);
   try { return fn(); } finally { if (locked) lock.releaseLock(); }
 }

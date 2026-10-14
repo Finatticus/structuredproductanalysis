@@ -106,14 +106,67 @@ function initScreener() {
   scrSetValues({ noEtf: true });
 }
 
+function scrApplyTable(t) {
+  scr.table = t;
+  scr.rows = t.rows.map(r => Object.fromEntries(t.fields.map((k, i) => [k, r[i]])));
+  scrFillIndustries();
+  scr.presets = null; // 登入後才讀得到個人設定
+  scrRenderPresets();
+  $('#scrNote').innerHTML = t.days < 250
+    ? `歷史資料累積中（目前 ${t.days} 個交易日、法人 ${t.flowDays} 日）：需要較長歷史的條件（年線、52 週新高、一年漲跌幅等）暫時不完整。`
+    : '';
+  scrRun();
+}
+
+/* ---------- 篩選表：後端傳壓縮內容、瀏覽器解壓，並存一份在瀏覽器 ---------- */
+const SCR_CACHE_KEY = 'mw_scr';
+const scrCanUnzip = typeof DecompressionStream === 'function';
+
+async function scrUnzip(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const text = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  return JSON.parse(text);
+}
+
+function scrCached() {
+  try { return JSON.parse(localStorage.getItem(SCR_CACHE_KEY) || 'null'); } catch { return null; }
+}
+
+/** 取得篩選表：瀏覽器已有同一版本就不重傳 */
+async function scrFetchTable() {
+  if (!scrCanUnzip) return (await api('screener')).data;
+  const cached = scrCached();
+  const r = (await api('screener', { packed: true, have: cached && cached.computed })).data;
+  if (!r.ready) return r;
+  let t;
+  if (r.same && cached) t = await scrUnzip(cached.packed);
+  else {
+    t = await scrUnzip(r.packed);
+    try { localStorage.setItem(SCR_CACHE_KEY, JSON.stringify({ computed: r.computed, packed: r.packed })); } catch { /* 空間不足就不存 */ }
+  }
+  return Object.assign(t, { ready: true, filling: r.filling });
+}
+
 async function loadScreener(force) {
   if (!state.token) return;
   if (!force && scr.table && Date.now() - scr.loadedAt < 10 * 60000) return;
   const st = $('#scrStatus');
   st.className = 'status';
   st.innerHTML = '<span class="dot"></span>載入全市場資料中…';
+  // 重新整理網頁後：先用瀏覽器裡的上次資料顯示，再向後端確認是否有新版
+  if (!scr.table && scrCanUnzip) {
+    const cached = scrCached();
+    if (cached) {
+      try {
+        scrApplyTable(Object.assign(await scrUnzip(cached.packed), { ready: true }));
+        st.innerHTML = '<span class="dot"></span>先顯示上次資料，背景確認是否有更新…';
+      } catch { /* 快取壞掉就忽略 */ }
+    }
+  }
   try {
-    const t = (await api('screener')).data;
+    const t = await scrFetchTable();
     scr.loadedAt = Date.now();
     if (!t.ready) {
       scr.table = null;
@@ -124,18 +177,10 @@ async function loadScreener(force) {
       st.innerHTML = '<span class="dot"></span>' + (t.setup ? '資料建置中' : '尚未啟用');
       return;
     }
-    scr.table = t;
-    scr.rows = t.rows.map(r => Object.fromEntries(t.fields.map((k, i) => [k, r[i]])));
-    scrFillIndustries();
-    scr.presets = null; // 登入後才讀得到個人設定
-    scrRenderPresets();
+    if (!scr.table || scr.table.computed !== t.computed) scrApplyTable(t);
     st.className = 'status live';
     st.innerHTML = `<span class="dot"></span>資料日 ${esc(t.date)}・${t.rows.length} 檔・歷史 ${t.days} 個交易日` +
       (t.filling ? '（補齊中）' : '');
-    $('#scrNote').innerHTML = t.days < 250
-      ? `歷史資料累積中（目前 ${t.days} 個交易日、法人 ${t.flowDays} 日）：需要較長歷史的條件（年線、52 週新高、一年漲跌幅等）暫時不完整。`
-      : '';
-    scrRun();
   } catch (err) {
     st.className = 'status err';
     st.innerHTML = '<span class="dot"></span>' + esc(err.message);

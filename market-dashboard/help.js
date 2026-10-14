@@ -107,8 +107,8 @@ const HELP_GUIDE = `
 <h2>網站說明</h2>
 <nav class="help-toc">
   <a href="#g-overview">1. 功能總覽</a><a href="#g-account">2. 帳號與資料儲存</a><a href="#g-common">3. 畫面共通操作</a>
-  <a href="#g-market">4. 市場監控</a><a href="#g-macro">5. 總經與板塊分析</a><a href="#g-research">6. 個股研究</a>
-  <a href="#g-pf">6-1. 投資組合</a><a href="#g-screener">7. 選股篩選器</a><a href="#g-etf">7-1. ETF 專區</a><a href="#g-bt">7-2. 回測與策略</a><a href="#g-sources">8. 資料來源與更新時間</a><a href="#g-deploy">9. 部署與更新</a>
+  <a href="#g-market">4. 市場監控</a><a href="#g-macro">5. 總經與板塊分析</a><a href="#g-cal">5-1. 財金日曆</a><a href="#g-research">6. 個股研究</a>
+  <a href="#g-pf">6-1. 投資組合</a><a href="#g-screener">7. 選股篩選器</a><a href="#g-etf">7-1. ETF 專區</a><a href="#g-bt">7-2. 回測與策略</a><a href="#g-sources">8. 資料來源與更新時間</a><a href="#g-arch">8-1. 資料架構與加速設定</a><a href="#g-deploy">9. 部署與更新</a>
   <a href="#g-sheet">10. 試算表結構</a><a href="#g-faq">11. 常見問題與疑難排解</a><a href="#g-disclaimer">12. 免責聲明</a>
 </nav>
 
@@ -118,7 +118,8 @@ const HELP_GUIDE = `
   <tbody>
     <tr><td class="nm">市場監控</td><td>自選標的即時報價（匯率、台股、國外、指數、虛擬貨幣），當日走勢小圖、歷史走勢圖與技術分析</td><td>只在停留於此頁、且瀏覽器分頁在前景時更新（每 5–60 秒，預設 30 秒）；各區塊可單獨停止；虛擬貨幣逐筆推播</td></tr>
     <tr><td class="nm">投資組合</td><td>輸入交易紀錄，追蹤即時損益、資產配置與再平衡、已實現損益、股利現金流（自動計算）、匯率影響、績效與風險（時間加權報酬、XIRR、回撤、β、相關係數）</td><td>停留在此頁時每 60 秒更新報價；歷史價格與配息快取 30 分鐘</td></tr>
-    <tr><td class="nm">總經與板塊分析</td><td>新聞、跨資產、板塊輪動、經濟／財報日曆、美債、FOMC、台股籌碼、資金流向、景氣與央行、美國經濟數據</td><td>第一次開啟時自動更新，之後按「↻ 重新整理」；超過 1 小時會提醒</td></tr>
+    <tr><td class="nm">總經與板塊分析</td><td>新聞、跨資產、板塊輪動、美債、FOMC、台股籌碼、資金流向、景氣與央行、美國經濟數據</td><td>第一次開啟時自動更新，之後按「↻ 重新整理」；超過 1 小時會提醒。上次資料存在瀏覽器，重新整理網頁後先顯示再背景更新</td></tr>
+    <tr><td class="nm">財金日曆</td><td>經濟日曆（上週實際值／本週／下週）、自選財報日曆、美股重要財報、台股除權息預告（標示自選與持股）、市場重要日期（休市、結算、MSCI、央行會議、申報期限）</td><td>同上（超過 6 小時提醒）</td></tr>
     <tr><td class="nm">個股研究</td><td>輸入代號，查看單一股票的完整檔案與各面向多空判斷</td><td>每次查詢時即時抓取</td></tr>
     <tr><td class="nm">選股篩選器</td><td>以 60 多項條件篩選上市＋上櫃股票，存常用條件、一鍵加入自選</td><td>後端每天 21:40 自動更新</td></tr>
     <tr><td class="nm">ETF 專區</td><td>台股 ETF 總覽（折溢價、規模、申贖資金流）、高股息比較、美股 ETF 資金流、個別 ETF（成分股、產業、持股變化、配息）、持股重疊比較</td><td>打開分頁時抓，之後按「↻ 更新」</td></tr>
@@ -218,22 +219,21 @@ const HELP_GUIDE = `
 </table></div>
 
 <h3 id="g-macro">5. 總經與板塊分析</h3>
-<p>登入後<b>第一次</b>開啟此頁會自動抓資料，之後切回來不會重抓，需要最新資料時按「↻ 重新整理」；資料超過 1 小時，標題旁會出現「⚠ 資料已是 N 分鐘前」提醒。各字卡獨立載入，某個來源失敗只影響該字卡（可按「重試」）。</p>
+<p>登入後<b>第一次</b>開啟此頁會自動抓資料，之後切回來不會重抓，需要最新資料時按「↻ 重新整理」；資料超過 1 小時，標題旁會出現「⚠ 資料已是 N 分鐘前」提醒。各字卡獨立載入，某個來源失敗只影響該字卡，並會自動重試（5→10→20→30→60 秒，之後每 5 分鐘）直到成功。
+  成功的資料存在瀏覽器，重新整理網頁後會先顯示「上次資料」再在背景更新。經濟日曆與財報日曆已移到「財金日曆」頁。</p>
 <div class="tbl-wrap"><table class="mtbl help-tbl">
   <thead><tr><th>字卡</th><th>內容與解讀</th><th>來源</th><th>暫存</th></tr></thead>
   <tbody>
     <tr><td class="nm">跨資產與市場情緒</td><td>全球股市、匯率、美債殖利率（以 bp 表示）、商品、加密、VIX 的 1D／1W／1M／YTD 與 3 個月走勢。<br>情緒指標：VIX（&lt;15 低波動、15–20 正常、20–30 偏高、&gt;30 恐慌）；VIX 期限結構 VIX÷VIX3M（&gt;1 逆價差＝短期避險升溫）；10 年期殖利率；美元指數；加密恐懼貪婪指數</td><td>Yahoo、alternative.me</td><td>2 分鐘</td></tr>
     <tr><td class="nm">即時重大新聞</td><td>頭條、台股、國際股、總經、CNBC（英文）五個分頁，點標題開原文</td><td>鉅亨網、CNBC</td><td>3 分鐘</td></tr>
     <tr><td class="nm">板塊輪動熱力圖</td><td>美股 11 大產業 ETF＋6 個主題 ETF；台股 28 個類股指數。可切換 1D～YTD、方塊圖或輪動矩陣（點欄位排序）。上方列出最強／最弱板塊，以及「動能轉強／轉弱」（近 1 月排名較近 3 月上升或下降 3 名以上）</td><td>Yahoo；證交所（1D 盤中即時，其餘以歷史收盤比較）</td><td>2 分鐘</td></tr>
-    <tr><td class="nm">經濟日曆</td><td>本週＋下週高影響事件（美、歐、日、中、英、台），台北時間、預期值、前值；已公布者變灰、今天標色</td><td>本週 Forex Factory；下週 FRED 公布日程＋FOMC＋台灣央行</td><td>1 小時</td></tr>
-    <tr><td class="nm">財報日曆</td><td>自選清單中台股與國外股票的下次財報或法說日期，本週者標示「本週財報」；台股查無日期時顯示法定公告期限（年報 3/31、Q1 5/15、Q2 8/14、Q3 11/14）</td><td>Yahoo Finance</td><td>6 小時</td></tr>
-    <tr><td class="nm">美債殖利率曲線與利差</td><td>1M～30Y 曲線（最新／1 週／1 月／1 年前比較，可勾選）；10Y−2Y、10Y−3M、30Y−5Y 利差與 3 年走勢。&lt;0 倒掛、0–50bp 平坦、&gt;50bp 正斜率；10Y−3M 倒掛常被視為衰退前兆</td><td>FRED（美國財政部資料，約落後 1 個交易日）</td><td>30 分鐘</td></tr>
+    <tr><td class="nm">美債殖利率曲線與利差</td><td>1M～30Y 曲線（最新／1 週／1 月／1 年前比較，可勾選）；10Y−2Y、10Y−3M、30Y−5Y 利差與 3 年走勢。&lt;0 倒掛、0–50bp 平坦、&gt;50bp 正斜率；10Y−3M 倒掛常被視為衰退前兆</td><td>美國財政部每日殖利率（約落後 1 個交易日；失敗時改用 FRED）</td><td>30 分鐘</td></tr>
     <tr><td class="nm">FOMC 利率預測</td><td>目前目標區間、有效聯邦基金利率、未來三次會議與倒數天數（SEP＝公布經濟預測與點陣圖）、下次會議升息／維持／降息機率、各次會議隱含利率與最可能區間</td><td>聯準會、紐約聯準銀行、CBOT 30 天期聯邦基金期貨（CME FedWatch 算法）</td><td>10 分鐘</td></tr>
     <tr><td class="nm">台股信用交易（上市／上櫃）</td><td>融資餘額（億）、融資／融券張數、券資比與日、20 日變化；融資餘額 vs 加權／櫃買指數走勢圖；近 14 個交易日明細。融資快速增加常代表散戶追價；指數下跌時融資大減可能是斷頭賣壓</td><td>上市：FinMind（失敗改用證交所）；上櫃：櫃買中心</td><td>30 分鐘</td></tr>
     <tr><td class="nm">三大法人買賣超（上市／上櫃）</td><td>當日外資、投信、自營商；本週、上週、近 5／20 日累計；近兩週每日明細（依週分組、至少 10 個交易日）</td><td>同上</td><td>30 分鐘</td></tr>
     <tr><td class="nm">資金流向排行</td><td>個股外資、投信買超／賣超前 10 名（依張數或金額、可排除 ETF），土洋同買／同賣，★ 標示自選股。金額以最近收盤價估算</td><td>證交所 T86／櫃買中心</td><td>30 分鐘</td></tr>
     <tr><td class="nm">台灣景氣與央行</td><td>國發會景氣對策信號（燈號、分數、領先與同時指標、近 24 個月燈號；藍 9–16 低迷、黃藍 17–22、綠 23–31 穩定、黃紅 32–37、紅 38–45 熱絡）；央行重貼現率、擔保放款與短期融通利率、歷次調整；下次理監事會（依慣例推估）</td><td>國發會（政府資料開放平臺）、中央銀行</td><td>6 小時</td></tr>
-    <tr><td class="nm">美國經濟數據</td><td>CPI、核心 CPI、核心 PCE 年增率、失業率、非農新增、實質 GDP、初領失業金、密大消費者信心，含前值、變化與近 13 期走勢；點名稱開 FRED 完整歷史</td><td>FRED</td><td>6 小時</td></tr>
+    <tr><td class="nm">美國經濟數據</td><td>CPI、核心 CPI、核心 PCE 年增率、失業率、非農新增、實質 GDP、初領失業金、密大消費者信心，含前值、變化與近 13 期走勢；點名稱開 FRED 完整歷史</td><td>FRED（設定 FRED_KEY 時走官方 API，較穩定）</td><td>6 小時</td></tr>
   </tbody>
 </table></div>
 <p>每張字卡右上的 <b>↻</b> 可只更新該字卡（30 秒內重複按會沿用快取）。FOMC 字卡下方可展開「機率怎麼算出來的？」查看模型方法。</p>
@@ -245,7 +245,23 @@ const HELP_GUIDE = `
   <li>證交所信用交易與法人資料於交易日晚間公布，盤中看到的是前一交易日。</li>
   <li>上櫃（及上市備援）資料沒有歷史區間 API，後端逐日抓取並永久保存；第一次約 17–25 個交易日，之後每次開啟再補，補齊前字卡下方會顯示「歷史資料逐步補齊中」。</li>
   <li>台灣央行理監事會日期依慣例（每季末月第三個週四）推估，請以央行公告為準。</li>
-  <li>下週經濟日曆只有美國數據日程與央行會議，預期值通常要到該週才會出現。</li>
+</ul>
+
+<h3 id="g-cal">5-1. 財金日曆</h3>
+<p>載入方式與總經頁相同（第一次開啟自動抓、自動重試、瀏覽器快取、可編輯版面）。</p>
+<div class="tbl-wrap"><table class="mtbl help-tbl">
+  <thead><tr><th>字卡</th><th>內容</th><th>來源</th><th>暫存</th></tr></thead>
+  <tbody>
+    <tr><td class="nm">經濟日曆</td><td>上週／本週／下週（可切換或全部顯示、可篩國家）的重要事件：時間（台北）、實際值、預期、前值。實際值高於預期標 ▲、低於預期標 ▼（不代表利多或利空）</td><td>本週 Forex Factory 高影響事件；實際值、上週與下週為 Nasdaq 各國重點數據；FOMC、台灣央行</td><td>30 分鐘（過去日期 6 小時）</td></tr>
+    <tr><td class="nm">財報日曆（自選清單）</td><td>自選清單中台股與國外股票的下次財報或法說日期；台股查無日期時顯示法定公告期限（年報 3/31、Q1 5/15、Q2 8/14、Q3 11/14）</td><td>Yahoo Finance</td><td>6 小時</td></tr>
+    <tr><td class="nm">美股重要財報</td><td>本週／下週市值 100 億美元以上公司的財報：盤前／盤後、EPS 預估、已公布者的實際 EPS 與驚喜幅度、去年同期；★ 標示自選與持股</td><td>Nasdaq</td><td>1 小時</td></tr>
+    <tr><td class="nm">台股除權息預告</td><td>上市＋上櫃近期除權息：現金股利、配股；標示自選（★）與投資組合持股，並估算持股可領現金股利</td><td>證交所、櫃買中心</td><td>1 小時</td></tr>
+    <tr><td class="nm">市場重要日期</td><td>未來 120 天：台股／美股休市、台指期與美股選擇權結算（四巫日）、MSCI 季度調整、FOMC 與台灣央行會議、月營收與財報申報期限</td><td>證交所休市表；其餘依規則推算</td><td>6 小時</td></tr>
+  </tbody>
+</table></div>
+<ul>
+  <li>上週的事件：若系統上週有記錄 Forex Factory 清單就沿用（中文名稱一致），否則改用 Nasdaq 的各國重點數據。</li>
+  <li>美股休市、結算日、MSCI 生效日依規則推算，遇臨時休市可能異動；台灣央行理監事會依慣例推估。</li>
 </ul>
 
 <h3 id="g-research">6. 個股研究</h3>
@@ -362,37 +378,84 @@ const HELP_GUIDE = `
     <tr><td class="nm">FinMind</td><td>台股個股估值歷史、財報、月營收、法人、融資、外資持股、股利；全市場信用交易與法人</td><td>交易日晚間</td></tr>
     <tr><td class="nm">Yahoo Finance</td><td>匯率、國外股票、指數、期貨、歷史走勢、板塊 ETF、財報日期、美股基本面與分析師</td><td>依市場即時或延遲 10–20 分鐘</td></tr>
     <tr><td class="nm">Binance</td><td>虛擬貨幣即時價格與 K 線</td><td>即時</td></tr>
-    <tr><td class="nm">FRED（聖路易聯準銀行）</td><td>美債殖利率、美國經濟數據、數據公布日程</td><td>依官方公布（殖利率約落後 1 個交易日）</td></tr>
+    <tr><td class="nm">美國財政部</td><td>美債殖利率曲線（每日固定期限殖利率）</td><td>依官方公布（約落後 1 個交易日）</td></tr>
+    <tr><td class="nm">FRED（聖路易聯準銀行）</td><td>美國經濟數據、數據公布日程（備援）</td><td>依官方公布（殖利率約落後 1 個交易日）</td></tr>
     <tr><td class="nm">聯準會／紐約聯準銀行</td><td>FOMC 會議日期、有效聯邦基金利率與目標區間</td><td>每日</td></tr>
     <tr><td class="nm">國發會／中央銀行</td><td>景氣對策信號、政策利率</td><td>景氣燈號每月約 27 日</td></tr>
     <tr><td class="nm">鉅亨網、CNBC、Forex Factory、alternative.me</td><td>新聞、經濟日曆、加密恐懼貪婪指數</td><td>即時／每日</td></tr>
   </tbody>
 </table></div>
 
+<h3 id="g-arch">8-1. 資料架構與加速設定（資料中繼站、瀏覽器資料引擎）</h3>
+<p><b>為什麼會慢、會抓不到</b>：網站原本所有資料都由 Google Apps Script 代抓，有三個先天限制——
+① Google 主機的 IP 很多人共用，Yahoo、證交所常常限流或封鎖；② 一般帳號每天只有 20,000 次對外請求，用完後經後端的資料全部失敗（約 24 小時恢復）；
+③ 每次請求都要等 Apps Script 啟動 1–3 秒。另外證交所即時報價本身時快時慢（實測同一網址一次 8 秒、下一次 0.07 秒），FRED 網站對程式請求常常沒回應。</p>
+<p><b>解法</b>：設定免費的<b>資料中繼站</b>（Cloudflare Workers），讓瀏覽器直接抓資料，不經 Google。</p>
+<div class="tbl-wrap"><table class="mtbl help-tbl">
+  <thead><tr><th>頁面／功能</th><th>有中繼站時</th><th>效果（實測）</th></tr></thead>
+  <tbody>
+    <tr><td class="nm">市場監控：報價、當日走勢、K 線</td><td>瀏覽器直接經中繼站抓</td><td>6 檔報價 0.5 秒、K 線 0.25 秒；證交所慢時台股 8 秒內改用 Yahoo，先回來的先顯示</td></tr>
+    <tr><td class="nm">投資組合：報價、歷史價格／配息／分割</td><td>瀏覽器直接經中繼站抓（同時 6 檔）</td><td>4 檔歷史資料 2 秒；解析結果與後端完全一致</td></tr>
+    <tr><td class="nm">總經：跨資產、新聞、類股熱力圖、美債曲線、美國經濟數據、FOMC、資金流向</td><td>瀏覽器資料引擎計算</td><td>各 0.4–3 秒（以前常常抓很久或只有框架）</td></tr>
+    <tr><td class="nm">財金日曆：全部字卡</td><td>瀏覽器資料引擎計算</td><td>多數 1 秒內；經濟日曆約 8 秒、美股財報約 5 秒（逐日查詢，之後有快取）</td></tr>
+    <tr><td class="nm">總經的信用交易、法人、台灣景氣；ETF、個股研究、選股、回測</td><td>Google 後端，對外請求經中繼站轉送</td><td>不會再被 Google 主機被擋影響；ETF 快照改一天寫一次、歷史從快取讀</td></tr>
+  </tbody>
+</table></div>
+<h4>資料中繼站（Cloudflare Workers）</h4>
+<ul>
+  <li>免費方案每天 100,000 次請求，有邊緣快取（多人同時看同一檔只向來源抓一次）；只轉送白名單網站，且要帶正確密碼（KEY），不會被別人當公開代理。</li>
+  <li>中繼站故障時自動退回原本的方式，不會比沒設定更差。</li>
+</ul>
+<h4>瀏覽器資料引擎</h4>
+<ul>
+  <li>在瀏覽器背景執行緒（不會讓畫面卡住）直接執行<b>同一份</b>後端程式（Code.gs、Macro.gs、Calendar.gs），對外請求經中繼站。計算邏輯只有一份，結果與後端一致；失敗時自動改走後端（後端還有 6 小時備援資料）。</li>
+  <li>使用條件：已設定中繼站，且網頁以 http/https 開啟（例如 GitHub Pages）。<b>直接雙擊 index.html（file://）時無法使用</b>，這些字卡會自動改走後端。</li>
+  <li>需要和網頁一起上傳：<code>engine.js</code>、<code>engine-worker.js</code>、<code>Code.gs</code>、<code>Macro.gs</code>、<code>Calendar.gs</code>。上傳前先把 FinMind token 移到指令碼屬性（見下方步驟 3）。</li>
+</ul>
+<h4>設定步驟（照順序做一次）</h4>
+<ol>
+  <li><b>建立中繼站</b>：dash.cloudflare.com 註冊 →「Workers &amp; Pages → Create → Create Worker」→ 名稱 <code>mw-proxy</code>（Cloudflare Access 保持關閉）→ Deploy →「Edit code」全選刪除、貼上 <code>worker.js</code> → Deploy →「Settings → Variables and Secrets → Add」：Key 填 <code>KEY</code>、Value 自訂密碼、<b>Secret 打勾</b> →「Add variable and deploy」。
+    <br>測試：開 <code>https://mw-proxy.你的帳號.workers.dev/?key=你的KEY&amp;url=https%3A%2F%2Fquery1.finance.yahoo.com%2Fv8%2Ffinance%2Fchart%2F2330.TW%3Frange%3D1d</code>，看到 <code>{"chart":{"result":</code> 就成功。
+    <br>已設定過的話：把最新版 <code>worker.js</code> 重新貼上並 Deploy（KEY 不用重設）。</li>
+  <li><b>更新 Apps Script</b>：<code>Code.gs</code>、<code>Macro.gs</code>、<code>Calendar.gs</code>、<code>Etf.gs</code>、<code>Screener.gs</code>、<code>Research.gs</code>、<code>Portfolio.gs</code> 換成最新版 →「部署 → 管理部署作業 → 鉛筆 → 版本：新版本 → 部署」。</li>
+  <li><b>指令碼屬性</b>（Apps Script 齒輪「專案設定」最下方）：
+    <code>PROXY_URL</code> = 中繼站網址（結尾不加 /）、<code>PROXY_KEY</code> = KEY 密碼、
+    <code>FRED_KEY</code> = FRED 免費 API 金鑰（建議，fredaccount.stlouisfed.org 註冊後「API Keys」申請）、
+    <code>FINMIND_TOKEN</code> = FinMind token（建議）。設好 FINMIND_TOKEN 後把 Macro.gs 裡的 <code>FINMIND_TOKEN</code> 常數清空再部署，避免 token 隨網頁外流。
+    其他已存在的屬性是程式自己用的，不要刪改。</li>
+  <li><b>上傳網頁檔案</b>：全部前端檔案加上 <code>engine.js</code>、<code>engine-worker.js</code>、<code>Code.gs</code>、<code>Macro.gs</code>、<code>Calendar.gs</code>（見「9.1 檔案」）。</li>
+  <li><b>Apps Script 執行一次</b> <code>screenerRecheckHolidays</code>（清除舊版因證交所連線失敗誤標的非交易日）。</li>
+  <li><b>確認</b>：網頁登出再登入 →「⚙ 設定 → 連線診斷」應顯示「資料中繼站：已啟用」「瀏覽器資料引擎：已啟用」；「本頁最近的請求」會出現「直連 …」與「瀏覽器 …」紀錄；按「實測各資料來源」應都是「正常」。</li>
+</ol>
+
 <h3 id="g-deploy">9. 部署與更新</h3>
 <h4>9.1 檔案</h4>
 <div class="tbl-wrap"><table class="mtbl help-tbl">
   <thead><tr><th>放到 Apps Script（後端）</th><th>放到網頁資料夾（前端）</th></tr></thead>
   <tbody><tr>
-    <td><code>Code.gs</code>（帳號、報價、走勢）<br><code>Macro.gs</code>（總經與板塊分析）<br><code>Research.gs</code>（個股研究）<br><code>Screener.gs</code>（選股篩選器）<br><code>Etf.gs</code>（ETF 專區、回測價格）</td>
-    <td><code>index.html</code>、<code>style.css</code>、<code>app.js</code>、<code>macro.js</code>、<code>research.js</code>、<code>screener.js</code>、<code>etf.js</code>、<code>backtest.js</code>、<code>help.js</code>、<code>settings.js</code></td>
+    <td><code>Code.gs</code>（帳號、報價、走勢）<br><code>Macro.gs</code>（總經與板塊分析）<br><code>Research.gs</code>（個股研究）<br><code>Screener.gs</code>（選股篩選器）<br><code>Etf.gs</code>（ETF 專區、回測價格）<br><code>Portfolio.gs</code>（投資組合）<br><code>Calendar.gs</code>（財金日曆）<br>（強烈建議）<code>worker.js</code> 貼到 Cloudflare Workers：資料中繼站（見 8-1）</td>
+    <td><code>index.html</code>、<code>style.css</code>、<code>app.js</code>、<code>engine.js</code>、<code>engine-worker.js</code>、<code>panels.js</code>、<code>macro.js</code>、<code>research.js</code>、<code>cal.js</code>、<code>screener.js</code>、<code>etf.js</code>、<code>portfolio.js</code>、<code>backtest.js</code>、<code>help.js</code>、<code>settings.js</code>
+      <br>＋ <code>Code.gs</code>、<code>Macro.gs</code>、<code>Calendar.gs</code>（瀏覽器資料引擎會載入這三個檔；上傳前先把 FinMind token 移到指令碼屬性）</td>
   </tr></tbody>
 </table></div>
 <h4>9.2 第一次部署</h4>
 <ol>
   <li>新建 Google 試算表 → 選單「擴充功能 → Apps Script」。</li>
-  <li><code>Code.gs</code> 貼上覆蓋預設程式碼；其他 .gs 用左側「檔案 ＋ → 指令碼」新增（<b>不要選 HTML</b>），檔名輸入 Macro、Research、Screener 即可。</li>
+  <li><code>Code.gs</code> 貼上覆蓋預設程式碼；其他 .gs 用左側「檔案 ＋ → 指令碼」新增（<b>不要選 HTML</b>），檔名輸入 Macro、Research、Screener、Etf、Portfolio、Calendar 即可。</li>
   <li>上方函式選單選 <code>testQuotes</code> → 執行並允許授權，執行紀錄出現報價代表正常。</li>
   <li>「部署 → 新增部署作業」→ 類型「網頁應用程式」，執行身分「<b>我</b>」，存取權「<b>所有人</b>」（不是「任何擁有 Google 帳戶的使用者」）。</li>
   <li>複製網址（以 <code>/exec</code> 結尾）貼到 <code>app.js</code> 的 <code>API_URL</code> 或登入頁的「後端網址設定」。</li>
   <li>選股器：執行一次 <code>setupScreener</code>。</li>
-  <li>（建議）到 finmindtrade.com 免費註冊，把 token 貼到 <code>Macro.gs</code> 的 <code>FINMIND_TOKEN</code>。</li>
+  <li>（建議）到 finmindtrade.com 免費註冊，把 token 填到指令碼屬性 <code>FINMIND_TOKEN</code>（不要寫在 Macro.gs 裡）。</li>
+  <li>（強烈建議）設定資料中繼站與瀏覽器資料引擎，見「8-1」。</li>
 </ol>
 <h4>9.3 之後更新程式</h4>
 <ul>
   <li>改了任何 .gs：要到「部署 → 管理部署作業 → 編輯（鉛筆）→ 版本：<b>新版本</b> → 部署」才會生效，網址不變。</li>
   <li>只改前端檔案：替換檔案後重新整理網頁即可。</li>
-  <li>網頁可直接雙擊 <code>index.html</code> 使用，或放到 GitHub Pages／Netlify 等靜態空間。<b>公開網頁時只上傳前端檔案，不要上傳 .gs</b>（裡面有 FinMind token）。</li>
+  <li>網頁可直接雙擊 <code>index.html</code> 使用，但建議放到 GitHub Pages／Netlify 等靜態空間（http/https 開啟才能使用瀏覽器資料引擎）。</li>
+  <li>公開網頁時：除了前端檔案，只需要上傳 <code>Code.gs</code>、<code>Macro.gs</code>、<code>Calendar.gs</code>（引擎用），其他 .gs 不用；上傳前確認 FinMind token、中繼站 KEY 等都放在指令碼屬性、沒有寫在檔案裡。</li>
+  <li>更新 .gs 後：Apps Script 要部署新版本；網頁上的 .gs 也要換成新版（瀏覽器引擎會自動抓新版，必要時 Ctrl+F5）。</li>
 </ul>
 
 <h3 id="g-sheet">10. 試算表結構</h3>
@@ -418,6 +481,12 @@ const HELP_GUIDE = `
     <tr><td class="nm">報價顯示「更新失敗（保留最後報價）」</td><td>可能是當日額度用完、資料來源暫時無回應或被限流；稍候會自動恢復。查看「今日 API 呼叫」是否已滿</td></tr>
     <tr><td class="nm">新增標的顯示「查無報價」</td><td>代碼格式不符，請參考輸入欄旁的「?」；國外股票需加市場碼（例：<code>7011 JP</code>）</td></tr>
     <tr><td class="nm">某些標的價格不動</td><td>該市場休市或該標的無成交；日股、期貨可能有延遲</td></tr>
+    <tr><td class="nm">「連線診斷」顯示 Google 額度已用完</td><td>經後端的資料約 24 小時內恢復。有中繼站時，市場監控、投資組合、總經大部分字卡與財金日曆都不經 Google，不受影響</td></tr>
+    <tr><td class="nm">「瀏覽器資料引擎：未啟用（file://）」</td><td>網頁是直接開檔案，改放 GitHub Pages 等網站即可；不改也能用，只是總經、日曆改走後端</td></tr>
+    <tr><td class="nm">「瀏覽器資料引擎：無法啟動」</td><td><code>engine-worker.js</code>、<code>Code.gs</code>、<code>Macro.gs</code>、<code>Calendar.gs</code> 沒有和網頁一起上傳</td></tr>
+    <tr><td class="nm">美國經濟數據常常載入失敗</td><td>FRED 網站對程式請求不穩定，設定指令碼屬性 <code>FRED_KEY</code>（免費）改走官方 API</td></tr>
+    <tr><td class="nm">報價抓很久、字卡只有框架沒有資料</td><td>多半是 Google 主機被 Yahoo／證交所限流，或 Google 每日 20,000 次外部請求額度用完。根本解法是設定<b>資料中繼站</b>（Cloudflare Workers 免費方案，約 5 分鐘，步驟見 README「十五、資料中繼站」）：報價、走勢改由瀏覽器直接抓、不經 Google，後端其他資料也經中繼站轉送。設定後「設定 → 連線診斷」會顯示「已啟用」</td></tr>
+    <tr><td class="nm">報價或字卡更新很慢</td><td>到「⚙ 設定 → 連線診斷」按「實測各資料來源」，看是哪個來源慢或連不上。連不上的來源會自動暫停 3 分鐘並改用備援（台股報價改用 Yahoo），不會讓整個網站卡住；若選股篩選器正在補資料，也會在這裡提示</td></tr>
     <tr><td class="nm">總經頁某張字卡載入失敗</td><td>該資料來源暫時無回應，會自動重試（5→10→20→30→60 秒，之後每 5 分鐘）直到成功，期間先顯示上次成功的資料；也可按「立即重試」。只在停留此頁時重試，不會在背景耗額度</td></tr>
     <tr><td class="nm">信用交易／法人下方寫「改用備援」</td><td>FinMind 暫時無法使用（常見原因：未設 token 或達每小時上限），已自動改用證交所資料</td></tr>
     <tr><td class="nm">上櫃資料只有十幾天</td><td>歷史逐日補齊中，多開幾次總經頁就會補滿</td></tr>

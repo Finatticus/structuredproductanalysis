@@ -60,6 +60,7 @@
       <button class="nav-btn active" data-section="market">市場監控</button>
       <button class="nav-btn" data-section="portfolio">投資組合</button>
       <button class="nav-btn" data-section="macro">總經與板塊分析</button>
+      <button class="nav-btn" data-section="cal">財金日曆</button>
       <button class="nav-btn" data-section="research">個股研究</button>
       <button class="nav-btn" data-section="screener">選股篩選器</button>
       <button class="nav-btn" data-section="etf">ETF 專區</button>
@@ -154,6 +155,28 @@
         只在開啟此頁或按「重新整理」時抓取，不會在背景持續更新。僅供參考，不構成投資建議。
       </p>
     </div>
+    <!-- 財金日曆 -->
+    <div class="section hidden" id="section-cal">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <h1>財金日曆</h1>
+          <span class="status" id="calStatus"><span class="dot"></span>第一次開啟時自動更新</span>
+          <span class="stale-tag hidden" id="calStale"></span>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-ghost btn-sm hidden" id="calReset" title="還原預設的字卡順序、寬度與顯示">還原預設</button>
+          <button class="btn btn-ghost btn-sm" id="calEdit" title="拖曳調整字卡順序、設定寬度或隱藏">✎ 編輯版面</button>
+          <button class="btn btn-ghost btn-sm" id="calRefresh" title="重新抓取所有區塊（30 秒內重複按會沿用快取）">↻ 重新整理</button>
+        </div>
+      </div>
+      <div class="edit-hint hidden" id="calEditHint">編輯版面：按住字卡標題列拖曳調整順序；右側可設定寬度或取消「顯示」隱藏字卡（隱藏的字卡不會抓資料）。完成後按「✓ 完成」，版面會存到你的帳號。</div>
+      <div class="macro-grid" id="calGrid"></div>
+      <p class="macro-note">
+        資料來源：Forex Factory、Nasdaq、Yahoo Finance、FRED、聯準會、臺灣證券交易所、櫃買中心。
+        第一次開啟此頁時抓取，之後按「重新整理」；上次的資料存在瀏覽器，重新整理網頁後會先顯示再在背景更新。僅供參考，不構成投資建議。
+      </p>
+    </div>
+
     <!-- 個股研究 -->
     <div class="section hidden" id="section-research">
       <div class="toolbar">
@@ -287,6 +310,11 @@
             <button class="btn btn-ghost" id="logoutBtn">登出</button>
           </div>
         </section>
+        <section class="panel set-diag">
+          <div class="panel-head"><h2 class="panel-title">連線診斷</h2>
+            <div class="panel-tools"><button class="btn btn-ghost btn-sm" id="diagStats">↻ 重新整理統計</button><button class="btn btn-primary btn-sm" id="diagProbe">實測各資料來源</button></div></div>
+          <div class="panel-body" id="diagBody"><div class="panel-msg">開啟設定頁時讀取統計</div></div>
+        </section>
         <section class="panel hidden" id="setAdmin">
           <div class="panel-head"><h2 class="panel-title">帳號審核（管理員）</h2><span id="setPendingCount" class="muted"></span>
             <div class="panel-tools"><button class="btn btn-ghost btn-sm" id="setReload">↻ 重新整理</button></div></div>
@@ -365,8 +393,11 @@
 <script src="https://unpkg.com/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script src="app.js"></script>
+<script src="engine.js"></script>
+<script src="panels.js"></script>
 <script src="macro.js"></script>
 <script src="research.js"></script>
+<script src="cal.js"></script>
 <script src="screener.js"></script>
 <script src="etf.js"></script>
 <script src="portfolio.js"></script>

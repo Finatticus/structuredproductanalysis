@@ -31,15 +31,20 @@ function screenerBackfill() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(1000)) return;
   try {
-    const done = scrFill_(Date.now());
-    screenerCompute_();
-    if (done) {
-      ScriptApp.getProjectTriggers().forEach(function (t) {
-        if (t.getHandlerFunction() === 'screenerBackfill') ScriptApp.deleteTrigger(t);
-      });
-    }
+    scrBackfillRun_();
   } finally {
     lock.releaseLock();
+    flushUsage_();
+  }
+}
+
+function scrBackfillRun_() {
+  const done = scrFill_(Date.now());
+  screenerCompute_();
+  if (done) {
+    ScriptApp.getProjectTriggers().forEach(function (t) {
+      if (t.getHandlerFunction() === 'screenerBackfill') ScriptApp.deleteTrigger(t);
+    });
   }
 }
 
@@ -55,6 +60,7 @@ function screenerDaily() {
   // 順便記錄 ETF 受益權單位數快照（ETF 專區的 5／20 日資金流用），沒開網頁也會每天累積
   try { etf_('tw', null, true); } catch (e) { /* Etf.gs 未安裝或資料暫時無法取得 */ }
   try { etf_('us', null, true); } catch (e) { /* ignore */ }
+  flushUsage_();
 }
 
 /* ======================== 儲存 ======================== */
@@ -103,16 +109,23 @@ function scrNum_(s) {
   return isFinite(v) ? v : null;
 }
 
+/**
+ * 證交所 JSON。連線失敗、被限流（非 200）、或回傳的不是 JSON（例如封鎖頁面）時回傳 { _fail: true }，
+ * 呼叫端不可把它當成「非交易日」或「當天沒資料」。只有成功時才間隔 TWSE_PAUSE，避免觸發頻率限制。
+ */
 function scrTwse_(url) {
   const res = fetch_(url, { muteHttpExceptions: true, headers: { 'User-Agent': UA } });
+  const text = okText_(res);
+  if (!text) return { _fail: true };
   Utilities.sleep(TWSE_PAUSE);
-  return JSON.parse(okText_(res) || '{}');
+  try { return JSON.parse(text); } catch (e) { markHostDown_('www.twse.com.tw', '回傳的不是資料（可能被限流）'); return { _fail: true }; }
 }
 
 /** 價量：{ code: [收, 高, 低, 量(張)] }，names：{ code: 名稱 }；非交易日回傳 null */
 function scrFetchP_(ds) {
   const out = {}, names = {};
   const j = scrTwse_('https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=' + ds.replace(/-/g, '') + '&type=ALLBUT0999&response=json');
+  if (j._fail) return { fail: true }; // 連線失敗：不是非交易日
   const t = (j.tables || []).filter(function (x) { return x.fields && x.fields[0] === '證券代號'; })[0];
   if (!t || !t.data || !t.data.length) return null;
   t.data.forEach(function (r) {
@@ -140,6 +153,7 @@ function scrFetchP_(ds) {
 function scrFetchI_(ds) {
   const out = {};
   const j = scrTwse_('https://www.twse.com.tw/rwd/zh/fund/T86?date=' + ds.replace(/-/g, '') + '&selectType=ALLBUT0999&response=json');
+  if (j._fail) return null; // 上市失敗就整天下次再抓，不存只有上櫃的不完整資料
   (j.stat === 'OK' && j.data || []).forEach(function (r) {
     const c = String(r[0]).trim();
     if (SCR_CODE.test(c)) out[c] = [Math.round(((scrNum_(r[4]) || 0) + (scrNum_(r[7]) || 0)) / 1000), Math.round((scrNum_(r[10]) || 0) / 1000)];
@@ -159,6 +173,7 @@ function scrFetchI_(ds) {
 function scrFetchM_(ds) {
   const out = {};
   const j = scrTwse_('https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=' + ds.replace(/-/g, '') + '&selectType=ALL&response=json');
+  if (j._fail) return null;
   const t = (j.tables || []).filter(function (x) { return x.fields && x.fields[0] === '代號'; })[0];
   ((t && t.data) || []).forEach(function (r) {
     const c = String(r[0]).trim();
@@ -195,6 +210,7 @@ function scrFill_(t0) {
 
     if (!idx[ds + '|P']) {
       const p = scrFetchP_(ds);
+      if (p && p.fail) return false; // 證交所連不上：這輪到此為止，下次排程再補（不要誤標成非交易日）
       if (!p) {
         if (ds < recent) scrPut_(sh, idx, ds, 'X', '');
         continue;
@@ -216,6 +232,24 @@ function scrFill_(t0) {
     }
   }
   return true;
+}
+
+/**
+ * 在 Apps Script 編輯器執行：清除近 400 天中標記為「非交易日」的平日，下次排程會重新確認。
+ * 舊版在證交所連線失敗時會把交易日誤標為非交易日，造成篩選資料缺漏；真正的休市日會被重新標記回來。
+ */
+function screenerRecheckHolidays() {
+  const sh = scrSheet_(SCR_DAILY);
+  const idx = scrIndex_(sh);
+  const from = Utilities.formatDate(new Date(Date.now() - 400 * 86400000), 'Asia/Taipei', 'yyyy-MM-dd');
+  const rows = Object.keys(idx).filter(function (k) {
+    const p = k.split('|');
+    if (p[1] !== 'X' || p[0] < from) return false;
+    const dow = new Date(p[0] + 'T00:00:00Z').getUTCDay();
+    return dow !== 0 && dow !== 6;
+  }).map(function (k) { return idx[k]; }).sort(function (a, b) { return b - a; });
+  rows.forEach(function (r) { sh.deleteRow(r); });
+  Logger.log('已清除 ' + rows.length + ' 個平日的「非交易日」標記，下次排程（或執行 screenerBackfill）會重新確認。');
 }
 
 /* ======================== 計算指標 ======================== */
@@ -393,20 +427,46 @@ function screenerCompute_() {
   const parts = [];
   for (let i = 0; i < packed.length; i += 45000) parts.push([packed.slice(i, i + 45000)]);
   osh.getRange(1, 1, parts.length, 1).setValues(parts);
-  CacheService.getScriptCache().remove('scr_meta');
+  CacheService.getScriptCache().removeAll(['scr_meta', 'scr_packed', 'scr_info', 'scr_filling']);
 }
 
 /* ======================== 網頁讀取 ======================== */
-function screenerTable_() {
-  const sh = ss_().getSheetByName(SCR_OUT);
-  const n = sh ? sh.getLastRow() : 0;
-  if (!n) {
-    const hasTrigger = ScriptApp.getProjectTriggers().some(function (t) { return /^screener/.test(t.getHandlerFunction()); });
-    return { ready: false, setup: hasTrigger };
+/**
+ * 篩選表（全市場，每天更新一次，所有使用者共用）
+ *  - 壓縮後的內容快取 6 小時，不必每次讀工作頁
+ *  - req.packed：直接回傳 gzip＋base64，由瀏覽器解壓（傳輸量小很多，也省掉後端解壓與 JSON 轉換）
+ *  - req.have：瀏覽器已有的版本（computed）；相同就只回 same，不重傳
+ */
+function screenerTable_(req) {
+  req = req || {};
+  const cache = CacheService.getScriptCache();
+  let packed = cacheGetBig_('scr_packed');
+  if (!packed) {
+    const sh = ss_().getSheetByName(SCR_OUT);
+    const n = sh ? sh.getLastRow() : 0;
+    if (!n) {
+      const hasTrigger = ScriptApp.getProjectTriggers().some(function (t) { return /^screener/.test(t.getHandlerFunction()); });
+      return { ready: false, setup: hasTrigger };
+    }
+    packed = sh.getRange(1, 1, n, 1).getValues().map(function (r) { return r[0]; }).join('');
+    cachePutBig_('scr_packed', packed, 21600);
   }
-  const packed = sh.getRange(1, 1, n, 1).getValues().map(function (r) { return r[0]; }).join('');
-  const t = scrUnpack_(packed);
-  t.ready = true;
-  t.filling = t.days < SCR_PRICE_DAYS && ScriptApp.getProjectTriggers().some(function (x) { return x.getHandlerFunction() === 'screenerBackfill'; });
-  return t;
+  let info = null;
+  try { info = JSON.parse(cache.get('scr_info') || 'null'); } catch (e) { info = null; }
+  let table = null;
+  if (!info) {
+    table = scrUnpack_(packed);
+    info = { computed: table.computed, days: table.days };
+    cache.put('scr_info', JSON.stringify(info), 21600);
+  }
+  let filling = cache.get('scr_filling');
+  if (filling == null) {
+    filling = info.days < SCR_PRICE_DAYS && ScriptApp.getProjectTriggers().some(function (x) { return x.getHandlerFunction() === 'screenerBackfill'; }) ? '1' : '';
+    cache.put('scr_filling', filling, 600);
+  }
+  const head = { ready: true, computed: info.computed, filling: !!filling };
+  if (req.have && Number(req.have) === info.computed) return Object.assign(head, { same: true });
+  if (req.packed) return Object.assign(head, { packed: packed });
+  table = table || scrUnpack_(packed);
+  return Object.assign(table, head);
 }

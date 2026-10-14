@@ -1,14 +1,12 @@
 /* =========================================================
  * 總經與板塊分析 — 前端
- * 只在點開此頁（或按重新整理）時向後端要資料；各區塊獨立載入、獨立顯示錯誤
- * 依賴 app.js 的 $, $$, api, esc, store, state, toast
+ * 字卡的載入、重試、瀏覽器快取、版面編輯由 panels.js 的 PanelPage 處理；這裡只定義字卡與畫法
+ * 依賴 app.js 的 $, $$, api, esc, store, state, toast；panels.js（PanelPage, newChart）
  * ========================================================= */
 const MACRO_PARTS = [
   { key: 'cross', title: '跨資產與市場情緒', span: 7 },
   { key: 'news', title: '即時重大新聞', span: 5 },
   { key: 'sectors', title: '板塊輪動熱力圖', span: 12 },
-  { key: 'calendar', title: '經濟日曆', span: 7 },
-  { key: 'earnings', title: '財報日曆（自選清單）', span: 5 },
   { key: 'curve', title: '美債殖利率曲線與利差', span: 7 },
   { key: 'fomc', title: 'FOMC 利率預測', span: 5 },
   { key: 'margin', title: '台股信用交易', span: 6 },
@@ -17,27 +15,10 @@ const MACRO_PARTS = [
   { key: 'twmacro', title: '台灣景氣與央行', span: 5 },
   { key: 'econ', title: '美國經濟數據', span: 7 },
 ];
-const SPAN_OPTS = [[4, '1/3 寬'], [5, '5/12 寬'], [6, '1/2 寬'], [7, '7/12 寬'], [8, '2/3 寬'], [12, '全寬']];
 const PERIODS = [['d1', '1D', 3], ['w1', '1W', 6], ['m1', '1M', 10], ['m3', '3M', 18], ['ytd', 'YTD', 30]];
 const CURVE_COLORS = ['#1f4e8c', '#5aa0e6', '#e67e22', '#a3abb8'];
-const MACRO_STALE_MS = 3600000; // 資料超過 1 小時提醒更新（不自動重抓，省額度）
 
-const macro = {
-  loadedAt: 0,
-  data: {},
-  charts: {},
-  editing: false,
-  sortable: null,
-  layout: null,
-  ui: Object.assign(
-    { news: 'headline', mkt: 'us', period: 'd1', view: 'tiles', curves: [true, true, true, true], marginMkt: 'tse', instMkt: 'tse',
-      flowMkt: 'tse', flowBy: 'shares', flowEtf: '0' },
-    (() => { try { return JSON.parse(store.get('mw_macro') || '{}'); } catch { return {}; } })(),
-  ),
-};
-function saveMacroUi() { store.set('mw_macro', JSON.stringify(macro.ui)); }
-
-/** 面板 → 後端區塊名稱（信用交易、法人依上市／上櫃選擇） */
+/** 面板 → 後端區塊名稱（信用交易、法人、資金流向依上市／上櫃選擇） */
 function apiPart(key) {
   if (key === 'margin' && macro.ui.marginMkt === 'otc') return 'margin_otc';
   if (key === 'inst' && macro.ui.instMkt === 'otc') return 'inst_otc';
@@ -45,354 +26,39 @@ function apiPart(key) {
   return key;
 }
 
-/** 上市／上櫃切換：已載入過就直接顯示，否則向後端要 */
+// 可在瀏覽器引擎計算的區塊（只需公開市場資料、不需長期儲存）；信用交易、法人（逐日累積歷史）與台灣景氣（需解壓 ZIP）留在後端
+const MACRO_DIRECT = ['cross', 'news', 'sectors', 'curve', 'econ', 'fomc', 'flow', 'flow_otc'];
+
+const macro = new PanelPage({
+  id: 'macro', action: 'macro', parts: MACRO_PARTS, layoutKey: 'macroLayout', cachePrefix: 'mw_mc_',
+  apiPart, variants: k => (['margin', 'inst', 'flow'].includes(k) ? [k, k + '_otc'] : [k]),
+  direct: (part, force) => (engineOn() && MACRO_DIRECT.includes(part) ? engineCall('macro_', [part, force, state.account], part) : null),
+  renderers: {
+    cross: (...a) => renderCross(...a), news: (...a) => renderNews(...a), sectors: (...a) => renderSectors(...a),
+    curve: (...a) => renderCurve(...a), fomc: (...a) => renderFomc(...a), margin: (...a) => renderMargin(...a),
+    inst: (...a) => renderInst(...a), econ: (...a) => renderEcon(...a), flow: (...a) => renderFlow(...a),
+    twmacro: (...a) => renderTwMacro(...a),
+  },
+});
+macro.ui = Object.assign(
+  { news: 'headline', mkt: 'us', period: 'd1', view: 'tiles', curves: [true, true, true, true], marginMkt: 'tse', instMkt: 'tse',
+    flowMkt: 'tse', flowBy: 'shares', flowEtf: '0' },
+  (() => { try { return JSON.parse(store.get('mw_macro') || '{}'); } catch { return {}; } })(),
+);
+function saveMacroUi() { store.set('mw_macro', JSON.stringify(macro.ui)); }
+function renderPart(key) { macro.renderPart(key); }
+function loadPart(key, force) { return macro.loadPart(key, force); }
+
+/** 上市／上櫃切換：已載入過就直接顯示，否則（或只是瀏覽器快取）向後端要 */
 function marketSeg(tools, key, uiKey) {
   seg(tools, [['tse', '上市'], ['otc', '上櫃']], macro.ui[uiKey], v => {
     macro.ui[uiKey] = v;
     saveMacroUi();
-    const d = macro.data[apiPart(key)];
-    if (d) renderPart(key);
-    if (!d || d.cached) loadPart(key, false); // 瀏覽器快取的舊資料也要更新
+    macro.refreshIfNeeded(key);
   });
 }
 
-/* ---------- 初始化 ---------- */
-function initMacro() {
-  const grid = $('#macroGrid');
-  grid.innerHTML = MACRO_PARTS.map(p => `
-    <section class="panel" data-part="${p.key}" style="--span:${p.span}">
-      <div class="panel-head">
-        <h2 class="panel-title">${p.title}</h2>
-        <div class="panel-tools"></div>
-        <span class="panel-time"></span>
-        <button class="icon-btn panel-refresh" data-refresh title="只更新這張字卡">↻</button>
-        <div class="panel-edit">
-          <select data-w title="字卡寬度">${SPAN_OPTS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
-          <label class="chk"><input type="checkbox" data-show checked> 顯示</label>
-        </div>
-      </div>
-      <div class="panel-body"><div class="panel-msg">尚未載入</div></div>
-    </section>`).join('');
-  $('.nav-btn[data-section="macro"]').addEventListener('click', () => loadMacro(false));
-  $('#macroRefresh').addEventListener('click', () => loadMacro(true));
-  // 各字卡獨立更新（後端 30 秒內重複按會沿用快取）
-  grid.addEventListener('click', e => {
-    const b = e.target.closest('[data-refresh]');
-    if (!b) return;
-    const key = b.closest('.panel').dataset.part;
-    b.disabled = true;
-    loadPart(key, true).finally(() => { b.disabled = false; });
-  });
-  setInterval(macroStaleCheck, 60000);
-  setInterval(macroTick, 1000);
-  document.addEventListener('visibilitychange', macroResumeRetries);
-  $$('.nav-btn').forEach(b => b.addEventListener('click', () => setTimeout(macroResumeRetries, 0)));
-  $('#colorSel').addEventListener('change', () => MACRO_PARTS.forEach(p => renderPart(p.key)));
-
-  $('#macroEdit').addEventListener('click', () => setMacroEditing(!macro.editing));
-  $('#macroReset').addEventListener('click', () => {
-    if (!confirm('確定要還原預設的字卡順序與寬度？')) return;
-    macro.layout = { order: [], w: {}, hide: [] };
-    applyMacroLayout();
-    saveMacroLayout();
-  });
-  grid.addEventListener('change', e => {
-    const panel = e.target.closest('.panel');
-    if (!panel) return;
-    const key = panel.dataset.part, L = macroLayout();
-    if (e.target.matches('[data-w]')) L.w[key] = +e.target.value;
-    if (e.target.matches('[data-show]')) {
-      L.hide = L.hide.filter(k => k !== key);
-      if (!e.target.checked) L.hide.push(key);
-    }
-    applyMacroLayout();
-    saveMacroLayout();
-  });
-  if (window.Sortable) {
-    macro.sortable = Sortable.create(grid, {
-      draggable: '.panel', handle: '.panel-head', filter: 'select, input, label', preventOnFilter: false,
-      animation: 180, ghostClass: 'sortable-ghost', disabled: true,
-      onEnd: e => {
-        if (e.oldIndex === e.newIndex) return;
-        macroLayout().order = $$('#macroGrid .panel').map(x => x.dataset.part);
-        saveMacroLayout();
-      },
-    });
-  }
-}
-
-/** 資料超過 1 小時：顯示提醒（只看時間，不會自動更新） */
-function macroStaleCheck() {
-  const el = $('#macroStale');
-  const old = macro.loadedAt && Date.now() - macro.loadedAt > MACRO_STALE_MS;
-  el.classList.toggle('hidden', !old);
-  if (old) {
-    const mins = Math.floor((Date.now() - macro.loadedAt) / 60000);
-    el.textContent = `⚠ 資料已是 ${mins >= 120 ? Math.floor(mins / 60) + ' 小時' : mins + ' 分鐘'}前，記得按「↻ 重新整理」`;
-  }
-}
-
-/* ---------- 字卡版面（順序／寬度／顯示）：存在試算表的個人設定 macroLayout ---------- */
-function macroLayout() {
-  if (!macro.layout) {
-    let L = {};
-    try { L = JSON.parse((state.settings && state.settings.macroLayout) || '{}'); } catch { L = {}; }
-    macro.layout = { order: L.order || [], w: L.w || {}, hide: L.hide || [] };
-  }
-  return macro.layout;
-}
-
-function applyMacroLayout() {
-  const L = macroLayout(), grid = $('#macroGrid');
-  const def = MACRO_PARTS.map(p => p.key);
-  // 已存順序優先；新加入的字卡依預設位置插入
-  const order = L.order.filter(k => def.includes(k));
-  def.forEach((k, i) => { if (!order.includes(k)) order.splice(Math.min(i, order.length), 0, k); });
-  order.forEach(k => grid.appendChild($(`.panel[data-part="${k}"]`, grid)));
-  MACRO_PARTS.forEach(p => {
-    const panel = $(`.panel[data-part="${p.key}"]`, grid);
-    const span = L.w[p.key] || p.span;
-    panel.style.setProperty('--span', span);
-    $('[data-w]', panel).value = String(span);
-    const hidden = L.hide.includes(p.key);
-    panel.classList.toggle('is-hidden', hidden);
-    $('[data-show]', panel).checked = !hidden;
-  });
-}
-
-async function saveMacroLayout() {
-  const value = JSON.stringify(macroLayout());
-  state.settings = Object.assign(state.settings || {}, { macroLayout: value });
-  try { await api('saveSetting', { key: 'macroLayout', value }); }
-  catch (err) { toast('版面儲存失敗：' + err.message); }
-}
-
-function setMacroEditing(on) {
-  macro.editing = on;
-  $('#macroGrid').classList.toggle('editing', on);
-  $('#macroEditHint').classList.toggle('hidden', !on);
-  $('#macroReset').classList.toggle('hidden', !on);
-  const b = $('#macroEdit');
-  b.classList.toggle('on', on);
-  b.textContent = on ? '✓ 完成' : '✎ 編輯版面';
-  if (macro.sortable) macro.sortable.option('disabled', !on);
-  if (!on) {
-    // 結束編輯：重新顯示的字卡若還沒資料就載入；圖表依新寬度重畫
-    MACRO_PARTS.forEach(p => {
-      if (macroLayout().hide.includes(p.key)) return;
-      const d = macro.data[apiPart(p.key)];
-      if (d) renderPart(p.key);
-      if (!d || d.cached) loadPart(p.key, false);
-    });
-  }
-}
-
-/* ---------- 載入與自動重試 ----------
- * 同時最多 MACRO_CONCURRENCY 個請求（12 張字卡同時打後端，GAS 同時執行數與證交所限流都容易出錯）；
- * 失敗或拿到後端的備援舊資料時，自動排程重試（5→10→20→30→60 秒，10 次後每 5 分鐘），直到成功。
- * 只在停留在此頁、且分頁在前景時重試，切走就暫停、回來立即補做。 */
-const MACRO_CONCURRENCY = 4;
-const MACRO_RETRY_S = [5, 10, 20, 30, 60];
-macro.inflight = new Set();  // 正在請求的字卡
-macro.retry = new Map();     // 字卡 → { n: 已失敗次數, at: 下次重試時間, timer, msg }
-macro.queue = [];
-macro.running = 0;
-
-function macroActive() {
-  return !document.hidden && !$('#section-macro').classList.contains('hidden');
-}
-
-/** 只有第一次進入此頁自動抓；之後由使用者按「↻ 重新整理」 */
-async function loadMacro(force) {
-  if (!state.token) return;
-  if (!force && macro.loadedAt) { macroStaleCheck(); macroResumeRetries(); return; }
-  const first = !macro.loadedAt;
-  macro.loadedAt = Date.now();
-  macroStaleCheck();
-  applyMacroLayout();
-  macro.retry.forEach(r => clearTimeout(r.timer));
-  macro.retry.clear();
-  const visible = MACRO_PARTS.filter(p => !macroLayout().hide.includes(p.key)); // 隱藏的字卡不抓，省額度
-  // 重新整理網頁後第一次進入：先顯示瀏覽器裡存的上次資料，再在背景更新
-  if (first) macro.fromCache = macroCacheRestore(visible);
-  macroUpdateStatus();
-  await Promise.all(visible.map(p => loadPart(p.key, force)));
-  macro.fromCache = 0;
-  macroUpdateStatus();
-}
-
-/* ---------- 瀏覽器快取（localStorage，每個帳號、每個區塊各存一份） ---------- */
-const MACRO_CACHE_MAX_AGE = 3 * 86400000; // 超過 3 天的快取不顯示
-function macroCacheKey(part) { return `mw_mc_${state.account || ''}_${part}`; }
-
-function macroCacheSave(part, data) {
-  if (!data || data.stale) return;
-  try { localStorage.setItem(macroCacheKey(part), JSON.stringify(data)); }
-  catch {
-    // 空間不足：清掉其他帳號的總經快取後再試一次
-    try {
-      Object.keys(localStorage).filter(k => k.startsWith('mw_mc_') && !k.startsWith(`mw_mc_${state.account || ''}_`)).forEach(k => localStorage.removeItem(k));
-      localStorage.setItem(macroCacheKey(part), JSON.stringify(data));
-    } catch { /* 放棄，不影響使用 */ }
-  }
-}
-
-function macroCacheRestore(visible) {
-  let n = 0;
-  visible.forEach(p => {
-    [p.key, p.key + '_otc'].forEach(part => {
-      if (macro.data[part]) return;
-      let d = null;
-      try { d = JSON.parse(store.get(macroCacheKey(part)) || 'null'); } catch { d = null; }
-      if (!d || !d.updated || Date.now() - d.updated > MACRO_CACHE_MAX_AGE) return;
-      d.cached = true;
-      macro.data[part] = d;
-      if (part === apiPart(p.key)) { renderPart(p.key); n++; }
-    });
-  });
-  return n;
-}
-
-/** 排隊執行：同時最多 MACRO_CONCURRENCY 個 */
-function macroSlot(fn) {
-  return new Promise((resolve, reject) => {
-    macro.queue.push(() => fn().then(resolve, reject));
-    macroPump();
-  });
-}
-function macroPump() {
-  while (macro.running < MACRO_CONCURRENCY && macro.queue.length) {
-    const job = macro.queue.shift();
-    macro.running++;
-    job().finally(() => { macro.running--; macroPump(); });
-  }
-}
-
-async function loadPart(key, force) {
-  if (macro.inflight.has(key)) return true;
-  const panel = $(`.panel[data-part="${key}"]`);
-  const part = apiPart(key);
-  const old = macro.retry.get(key);
-  if (old) clearTimeout(old.timer);
-  macro.inflight.add(key);
-  panel.classList.add('loading');
-  if (!macro.data[part]) $('.panel-body', panel).innerHTML = `<div class="panel-msg">${old ? `重新載入中…（第 ${old.n + 1} 次）` : '載入中…'}</div>`;
-  macroUpdateStatus();
-  try {
-    const r = await macroSlot(() => api('macro', { part, force: !!force }));
-    if (r.data.stale) {
-      // 後端來源失敗，回傳的是之前成功的資料：先顯示，背景繼續重試
-      if (!macro.data[part] || (macro.data[part].updated || 0) <= r.data.updated) macro.data[part] = r.data;
-      macroScheduleRetry(key, '資料來源暫時無法取得，先顯示之前的資料（' + r.data.stale + '）');
-      renderPart(key);
-      return false;
-    }
-    macro.data[part] = r.data;
-    macro.retry.delete(key);
-    renderPart(key);
-    macroCacheSave(part, r.data);
-    return true;
-  } catch (err) {
-    if (!state.token) return false; // 已登出（登入逾時）就不再重試
-    macroScheduleRetry(key, err.message);
-    if (macro.data[part]) renderPart(key); // 保留上次成功的內容
-    else $('.panel-body', panel).innerHTML =
-      `<div class="panel-msg err">載入失敗：${esc(err.message)}<br><span data-countdown></span><br><button class="btn btn-ghost btn-sm" data-retry>立即重試</button></div>`;
-    macroTick();
-    const b = $('[data-retry]', panel);
-    if (b) b.addEventListener('click', () => loadPart(key, false));
-    return false;
-  } finally {
-    macro.inflight.delete(key);
-    panel.classList.remove('loading');
-    macroUpdateStatus();
-  }
-}
-
-function macroScheduleRetry(key, msg) {
-  const prev = macro.retry.get(key);
-  const n = (prev ? prev.n : 0) + 1;
-  const sec = n > 10 ? 300 : MACRO_RETRY_S[Math.min(n, MACRO_RETRY_S.length) - 1];
-  const r = { n, msg, at: Date.now() + sec * 1000, timer: null };
-  r.timer = setTimeout(() => macroRetryNow(key), sec * 1000);
-  macro.retry.set(key, r);
-}
-
-function macroRetryNow(key) {
-  const r = macro.retry.get(key);
-  if (!r) return;
-  if (macroLayout().hide.includes(key)) { macro.retry.delete(key); macroUpdateStatus(); return; }
-  if (!macroActive()) { r.waiting = true; macroTick(); return; } // 回到此頁時再做
-  loadPart(key, false); // 非強制：後端若已有新快取就直接用，不多耗額度
-}
-
-/** 切回此頁或分頁回到前景：已到期（或等待中）的重試立即執行 */
-function macroResumeRetries() {
-  if (!macroActive()) return;
-  macro.retry.forEach((r, key) => { if (r.waiting || r.at <= Date.now()) { r.waiting = false; macroRetryNow(key); } });
-}
-
-/** 每秒更新倒數文字 */
-function macroTick() {
-  macro.retry.forEach((r, key) => {
-    const panel = $(`.panel[data-part="${key}"]`);
-    if (!panel || macro.inflight.has(key)) return;
-    const s = Math.max(0, Math.ceil((r.at - Date.now()) / 1000));
-    const txt = r.waiting ? '更新失敗，回到此頁時重試' : `更新失敗，${s} 秒後重試（第 ${r.n} 次）`;
-    $$('[data-countdown]', panel).forEach(el => { el.textContent = txt; });
-  });
-}
-
-function macroUpdateStatus() {
-  const st = $('#macroStatus');
-  if (!st || !macro.loadedAt) return;
-  const total = MACRO_PARTS.filter(p => !macroLayout().hide.includes(p.key)).length;
-  const fail = [...macro.retry.keys()].filter(k => !macroLayout().hide.includes(k)).length;
-  const busy = macro.inflight.size;
-  const time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
-  if (fail) {
-    st.className = 'status err';
-    st.innerHTML = `<span class="dot"></span>${fail} 個區塊載入失敗 · 自動重試中${busy ? `（${busy} 個請求進行中）` : ''}`;
-  } else if (busy) {
-    st.className = 'status';
-    st.innerHTML = `<span class="dot"></span>${macro.fromCache ? '先顯示上次資料，背景更新中' : '更新中'}…（${total - busy}/${total}）`;
-  } else {
-    st.className = 'status live';
-    st.innerHTML = '<span class="dot"></span>已更新 · ' + time;
-  }
-}
-
-function renderPart(key) {
-  const d = macro.data[apiPart(key)];
-  const panel = $(`.panel[data-part="${key}"]`);
-  if (!d || !panel) return;
-  (macro.charts[key] || []).forEach(c => c.remove());
-  macro.charts[key] = [];
-  const pt = $('.panel-time', panel);
-  const ut = d.updated ? new Date(d.updated) : null;
-  const old = ut && Date.now() - d.updated > 12 * 3600000;
-  pt.textContent = ut ? (d.cached ? '上次資料 ' : d.stale ? '資料 ' : '更新 ') +
-    (old ? `${ut.getMonth() + 1}/${ut.getDate()} ` : '') + ut.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '';
-  pt.classList.remove('warn');
-  pt.title = '';
-  delete pt.dataset.countdown;
-  if (macro.retry.has(key)) {
-    // 失敗但有舊資料：時間後面接倒數
-    pt.classList.add('warn');
-    pt.title = macro.retry.get(key).msg || '';
-    pt.innerHTML = `${esc(pt.textContent)} · <span data-countdown></span>`;
-  }
-  const tools = $('.panel-tools', panel), body = $('.panel-body', panel);
-  tools.innerHTML = '';
-  try {
-    ({ cross: renderCross, news: renderNews, sectors: renderSectors, curve: renderCurve,
-      fomc: renderFomc, margin: renderMargin, inst: renderInst, econ: renderEcon, flow: renderFlow,
-      earnings: renderEarnings, calendar: renderCalendar, twmacro: renderTwMacro })[key](d, body, tools, key);
-  } catch (err) {
-    console.error(err);
-    body.innerHTML = `<div class="panel-msg err">顯示失敗：${esc(err.message)}</div>`;
-  }
-}
+function initMacro() { macro.init(); }
 
 /* ---------- 共用小工具 ---------- */
 const isNum = v => v != null && isFinite(v);
@@ -443,20 +109,6 @@ function mdTxt(s) { // 'YYYY-MM-DD' → 'MM/DD'
   return s && s.length >= 10 ? s.slice(5, 7) + '/' + s.slice(8, 10) : s || '';
 }
 
-function newChart(key, el, opts = {}) {
-  const LWC = window.LightweightCharts;
-  const chart = LWC.createChart(el, Object.assign({
-    autoSize: true,
-    layout: { background: { type: 'solid', color: '#ffffff' }, textColor: '#5b6778', fontSize: 11, fontFamily: 'Inter, "Noto Sans TC", sans-serif' },
-    grid: { vertLines: { color: '#f2f4f7' }, horzLines: { color: '#f2f4f7' } },
-    rightPriceScale: { borderColor: '#e3e8ef' },
-    timeScale: { borderColor: '#e3e8ef' },
-    localization: { locale: 'zh-TW', dateFormat: 'yyyy-MM-dd' },
-    handleScale: { mouseWheel: false }, // 避免捲動頁面時誤觸縮放
-  }, opts));
-  macro.charts[key].push(chart);
-  return chart;
-}
 
 function cssVar(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
 
@@ -551,6 +203,10 @@ function renderSectors(d, body, tools, key) {
     body.innerHTML = `<div class="panel-msg err">台股類股資料暫時無法取得${d.twErr ? '：' + esc(d.twErr) : ''}</div>`;
     return;
   }
+  if (isUS && d.usErr) {
+    body.innerHTML = `<div class="panel-msg err">${esc(d.usErr)}（台股類股正常，可切換到「台股」）</div>`;
+    return;
+  }
   const [pk, plabel, scale] = PERIODS.find(p => p[0] === ui.period);
   const sorted = list.filter(x => isNum(x[pk])).sort((a, b) => b[pk] - a[pk]);
 
@@ -630,7 +286,7 @@ function renderCurve(d, body, tools, key) {
         ${spreadRow('30Y − 5Y', S.s305, '長端斜率，反映期限溢酬與長期通膨預期')}
       </tbody></table></div>
     <div class="mini-chart" id="spreadChart"></div>
-    <div class="foot-note">資料：FRED／美國財政部固定期限殖利率（日資料，約落後 1 個交易日）。即時 10 年期殖利率見「跨資產」。</div>`;
+    <div class="foot-note">資料：${esc(d.src || '美國財政部')}每日固定期限殖利率（日資料，約落後 1 個交易日）。即時 10 年期殖利率見「跨資產」。</div>`;
 
   const chart = newChart(key, $('#spreadChart', body), { rightPriceScale: { borderColor: '#e3e8ef', scaleMargins: { top: 0.1, bottom: 0.1 } } });
   const LWC = window.LightweightCharts;
@@ -876,7 +532,7 @@ function renderEcon(d, body) {
     <div class="tbl-wrap"><table class="mtbl econ">
       <thead><tr><th>指標</th><th class="num">最新</th><th class="num">前值</th><th class="num">變化</th><th>資料期間</th><th>近 13 期走勢</th></tr></thead>
       <tbody>${rows}</tbody></table></div>
-    <div class="foot-note">資料：FRED。數據依官方公布時程更新（CPI／就業約每月上旬、GDP 每季、初領失業金每週四），點指標名稱可看完整歷史。</div>`;
+    <div class="foot-note">資料：FRED${d.api ? '（官方 API）' : '（網站下載；建議設定 FRED_KEY 改走官方 API，較穩定）'}。數據依官方公布時程更新（CPI／就業約每月上旬、GDP 每季、初領失業金每週四），點指標名稱可看完整歷史。</div>`;
 }
 
 /* =========================================================
@@ -943,84 +599,6 @@ function tpDate(ts, withTime) {
   const t = new Date(ts + 8 * 3600000);
   const s = `${t.getUTCMonth() + 1}/${t.getUTCDate()}（${WD_ZH[t.getUTCDay()]}）`;
   return withTime ? s + ' ' + String(t.getUTCHours()).padStart(2, '0') + ':' + String(t.getUTCMinutes()).padStart(2, '0') : s;
-}
-
-/** 台股法定財報公告期限（一般公司）：年報 3/31、Q1 5/15、Q2 8/14、Q3 11/14 */
-function twDeadline() {
-  const tp = new Date(Date.now() + 8 * 3600000), y = tp.getUTCFullYear();
-  const md = `${String(tp.getUTCMonth() + 1).padStart(2, '0')}-${String(tp.getUTCDate()).padStart(2, '0')}`;
-  const list = [['03-31', '年報'], ['05-15', 'Q1'], ['08-14', 'Q2'], ['11-14', 'Q3']];
-  const hit = list.find(([d]) => d >= md) || list[0];
-  return `${hit[1]} 財報 ${+hit[0].slice(0, 2)}/${+hit[0].slice(3)} 前`;
-}
-
-function renderEarnings(d, body) {
-  const [w0, w1, w2] = weekBounds();
-  const now = Date.now();
-  const rows = (d.rows || []).slice().sort((a, b) => {
-    const fa = a.start && a.start > now - 86400000 ? a.start : Infinity;
-    const fb = b.start && b.start > now - 86400000 ? b.start : Infinity;
-    return fa - fb;
-  });
-  if (!rows.length) {
-    body.innerHTML = '<div class="panel-msg">自選清單中沒有台股或國外股票</div>';
-    return;
-  }
-  const thisWeek = rows.filter(r => r.start && r.start >= w0 && r.start < w1);
-  body.innerHTML = `
-    ${thisWeek.length ? `<div class="earn-alert">📢 本週財報：${thisWeek.map(r => `<b>${esc(r.name)}</b> ${tpDate(r.start)}`).join('、')}</div>` : ''}
-    <div class="tbl-wrap"><table class="mtbl">
-      <thead><tr><th>標的</th><th>下次財報／法說</th><th>狀態</th></tr></thead>
-      <tbody>${rows.map(r => {
-        const upcoming = r.start && r.start > now - 86400000;
-        let tag, when;
-        if (!upcoming) {
-          when = r.start ? `<span class="muted">上次 ${tpDate(r.start)}，下次未公布</span>` : '<span class="muted">尚無日期</span>';
-          tag = r.cat === 'tw' ? `<span class="tag">${twDeadline()}</span>` : '';
-        } else {
-          const days = Math.ceil((r.start - now) / 86400000);
-          when = tpDate(r.start) + (r.end && r.end - r.start > 86400000 ? ` ～ ${tpDate(r.end)}` : '') + (r.est ? ' <span class="muted">預估</span>' : '');
-          tag = r.start < w1 ? '<span class="tag bad">本週財報</span>'
-            : r.start < w2 ? '<span class="tag warn">下週</span>'
-              : `<span class="tag">${days} 天後</span>`;
-        }
-        return `<tr><td class="nm">${esc(r.name)} <span class="muted">${esc(r.symbol)}</span></td><td>${when}</td><td>${tag}</td></tr>`;
-      }).join('')}</tbody></table></div>
-    <div class="foot-note">日期來源 Yahoo Finance（台北時間）。台股多為法說會或董事會日期；查無日期的台股顯示法定公告期限（一般公司：年報 3/31、Q1 5/15、Q2 8/14、Q3 11/14）。</div>`;
-}
-
-/* =========================================================
- * 經濟日曆
- * ========================================================= */
-const CC_ZH = { USD: '美國', EUR: '歐元區', JPY: '日本', CNY: '中國', GBP: '英國', TWD: '台灣' };
-
-function renderCalendar(d, body) {
-  const now = Date.now();
-  const todayKey = tpDate(now);
-  const group = (from, to) => {
-    const list = d.events.filter(e => e.ts >= from && e.ts < to);
-    if (!list.length) return '<tr><td colspan="5" class="muted">本期間沒有重要事件</td></tr>';
-    let lastDay = '';
-    return list.map(e => {
-      const day = tpDate(e.ts);
-      const head = day !== lastDay ? `<tr class="cal-day ${day === todayKey ? 'today' : ''}"><th colspan="5">${day}${day === todayKey ? '　今天' : ''}</th></tr>` : '';
-      lastDay = day;
-      return head + `<tr class="${e.ts < now ? 'past' : ''}">
-        <td class="num">${tpDate(e.ts, true).split(' ')[1]}</td>
-        <td>${CC_ZH[e.cc] || e.cc}</td>
-        <td class="nm">${esc(e.t)}</td>
-        <td class="num">${esc(e.fc || '—')}</td>
-        <td class="num">${esc(e.prev || '—')}</td></tr>`;
-    }).join('');
-  };
-  const head = '<thead><tr><th class="num">時間</th><th>國家</th><th>事件</th><th class="num">預期</th><th class="num">前值</th></tr></thead>';
-  body.innerHTML = `
-    <div class="sub-h">本週</div>
-    <div class="tbl-wrap"><table class="mtbl cal">${head}<tbody>${group(d.weekStart, d.nextStart)}</tbody></table></div>
-    <div class="sub-h">下週</div>
-    <div class="tbl-wrap"><table class="mtbl cal">${head}<tbody>${group(d.nextStart, d.end)}</tbody></table></div>
-    <div class="foot-note">時間為台北時間，只列高影響事件（美、歐、日、中、英、台）。本週來源 Forex Factory（含市場預期）；
-      下週為 FRED 公布的美國數據日程與央行會議，預期值通常要到該週才會出現，前值取自 FRED 最新數據。台灣央行理監事會日期依慣例推估。灰色為已公布。</div>`;
 }
 
 /* =========================================================

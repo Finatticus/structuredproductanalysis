@@ -8,6 +8,7 @@
  *  - 每次讀取時把「受益權單位數／淨值」與「前十大持股」快照存在隱藏工作頁 _etf，用來計算 5／20 日資金流與持股變化
  */
 const ETF_SHEET = '_etf';
+const ETF_HOLD_SHEET = '_etfh'; // 完整持股快照（較大）另外存，避免每次讀 _etf 都要讀進全部持股
 const ETF_TTL = { tw: 120, high: 21600, us: 600 };
 
 /** 高股息 ETF 比較清單（不存在的代號會自動略過） */
@@ -43,11 +44,12 @@ function etf_(part, code, force) {
 }
 
 /* ======================== 快照儲存 ======================== */
-function etfSheet_() {
+function etfSheet_(name) {
   const ss = ss_();
-  let sh = ss.getSheetByName(ETF_SHEET);
+  name = name || ETF_SHEET;
+  let sh = ss.getSheetByName(name);
   if (!sh) {
-    sh = ss.insertSheet(ETF_SHEET);
+    sh = ss.insertSheet(name);
     sh.getRange('A:A').setNumberFormat('@');
     sh.hideSheet();
   }
@@ -59,7 +61,22 @@ function etfStoreAll_() {
   const n = sh.getLastRow();
   const out = {};
   if (n) sh.getRange(1, 1, n, 2).getValues().forEach(function (r, i) { out[r[0]] = { row: i + 1, v: r[1] }; });
-  return { sh: sh, map: out };
+  return { sh: sh, map: out, reload: function () { return etfStoreAll_().map; } };
+}
+
+/** 單一 ETF 的持股快照：只讀 A 欄（鍵），再逐列讀這檔 ETF 的內容（最多 12 列） */
+function etfHoldStore_(code) {
+  const sh = etfSheet_(ETF_HOLD_SHEET);
+  const n = sh.getLastRow();
+  const out = {};
+  const prefix = 'P|' + code + '|';
+  if (n) {
+    sh.getRange(1, 1, n, 1).getValues().forEach(function (r, i) {
+      if (String(r[0]).indexOf(prefix) === 0) out[r[0]] = { row: i + 1, v: null };
+    });
+    Object.keys(out).forEach(function (k) { out[k].v = sh.getRange(out[k].row, 2).getValue(); });
+  }
+  return { sh: sh, map: out, reload: function () { return etfHoldStore_(code).map; } };
 }
 
 function etfPut_(store, key, value) {
@@ -69,6 +86,59 @@ function etfPut_(store, key, value) {
     store.sh.appendRow([key, s]);
     store.map[key] = { row: store.sh.getLastRow(), v: s };
   }
+}
+
+/** 只讀 A 欄（鍵）的 store：內容等到用到才逐格讀取（避免整張讀出大量快照） */
+function etfKeyStore_() {
+  const sh = etfSheet_();
+  const n = sh.getLastRow();
+  const map = {};
+  if (n) sh.getRange(1, 1, n, 1).getValues().forEach(function (r, i) { map[r[0]] = { row: i + 1, v: undefined }; });
+  return { sh: sh, map: map, reload: function () { return etfKeyStore_().map; } };
+}
+
+function etfGet_(store, key) {
+  const e = store.map[key];
+  if (!e) return null;
+  if (e.v === undefined) e.v = store.sh.getRange(e.row, 2).getValue();
+  return e.v;
+}
+
+/**
+ * 單位數快照歷史（kind = U 台股、S 美股），快取 1 小時；只有寫入新快照時才讀工作頁。
+ * todaySnap：本次抓到的最新單位數，若今天的快照還沒寫入（或快取中的是舊值）就以它取代今天這筆，流向計算仍是最新的。
+ */
+function etfHist_(kind, ds, todaySnap) {
+  const ck = 'etf_hist_' + kind;
+  const written = CacheService.getScriptCache().get('etf_w_' + kind + '_' + ds);
+  let hist = null;
+  if (todaySnap && !written) {
+    // 今天還沒寫（或已超過 2 小時）：寫入快照、修剪，順便更新快取
+    const lock = writeLock_();
+    const locked = lock.tryLock(10000);
+    try {
+      const store = etfStoreAll_();
+      etfPut_(store, kind + '|' + ds, todaySnap);
+      etfPrune_(store, kind);
+      hist = etfSnapshots_(store, kind);
+    } finally {
+      if (locked) lock.releaseLock();
+    }
+    CacheService.getScriptCache().put('etf_w_' + kind + '_' + ds, '1', 7200);
+    cachePutBig_(ck, JSON.stringify(hist), 3600);
+    return hist;
+  }
+  const hit = cacheGetBig_(ck);
+  if (hit) hist = JSON.parse(hit);
+  else {
+    hist = etfSnapshots_(etfStoreAll_(), kind);
+    cachePutBig_(ck, JSON.stringify(hist), 3600);
+  }
+  if (todaySnap) {
+    if (hist.length && hist[hist.length - 1].d === ds) hist[hist.length - 1] = { d: ds, v: todaySnap };
+    else hist.push({ d: ds, v: todaySnap });
+  }
+  return hist;
 }
 
 /** 依日期排序的快照：kind = U（台股單位數）、S（美股單位數） */
@@ -83,7 +153,7 @@ function etfPrune_(store, kind, keep) {
   const extra = keys.slice(0, Math.max(0, keys.length - (keep || 70))).map(function (k) { return store.map[k].row; }).sort(function (a, b) { return b - a; });
   if (!extra.length) return;
   extra.forEach(function (r) { store.sh.deleteRow(r); });
-  store.map = etfStoreAll_().map; // 刪列後列號會位移，重新讀取
+  store.map = store.reload(); // 刪列後列號會位移，重新讀取
 }
 
 /* ======================== 台股 ETF 總覽 ======================== */
@@ -170,15 +240,13 @@ function etfTw_() {
   const rows = etfMisAll_();
   const date = rows.reduce(function (m, r) { return r.date > m ? r.date : m; }, '');
   const ds = date.slice(0, 4) + '-' + date.slice(4, 6) + '-' + date.slice(6, 8);
-  // 單位數快照：同一天覆寫（盤中與收盤後的單位數相同，存最新即可）
-  const store = etfStoreAll_();
+  // 單位數快照：一天一筆（2 小時內不重複寫），歷史從快取讀（以前每次開啟都整張讀寫工作頁）
+  let snap = null;
   if (!ETF_MIS_STALE_) { // 備援資料不寫快照
-    const snap = {};
+    snap = {};
     rows.forEach(function (r) { if (r.units != null) snap[r.code] = [r.units, r.nav || r.prevNav]; });
-    etfPut_(store, 'U|' + ds, snap);
-    etfPrune_(store, 'U');
   }
-  const hist = etfSnapshots_(store, 'U');
+  const hist = etfHist_('U', ds, snap);
   const back = function (k) { return hist.length > k ? hist[hist.length - 1 - k].v : null; };
   const h5 = back(5), h20 = back(20);
   const flow = function (r, h) {
@@ -284,10 +352,10 @@ function etfHoldSnap_(store, code, isTw) {
   const k = 'P|' + code + '|' + full.date;
   if (!store.map[k]) {
     // 只在寫入工作頁時上鎖（抓網頁時不鎖，fetch_ 的計數也會用到同一把鎖）
-    const lock = LockService.getScriptLock();
+    const lock = writeLock_();
     const locked = lock.tryLock(10000);
     try {
-      store.map = etfStoreAll_().map; // 其他執行可能剛寫入，重新讀取列號
+      store.map = store.reload(); // 其他執行可能剛寫入，重新讀取列號
       if (!store.map[k]) {
         try { etfPut_(store, k, full.rows); } catch (e) { /* 單格超過 5 萬字（極大型 ETF）就不存 */ }
         etfPrune_(store, 'P|' + code, ETF_HOLD_KEEP);
@@ -367,10 +435,29 @@ function etfHoldDaily() {
   props.setProperty('etfTrack', JSON.stringify(t));
   const list = ETF_TRACK_DEFAULT.concat(Object.keys(t).sort(function (a, b) { return t[b] - t[a]; }))
     .filter(function (c, i, a) { return a.indexOf(c) === i; }).slice(0, ETF_TRACK_MAX);
-  const store = etfStoreAll_();
+  etfMigrateHold_();
   list.forEach(function (c) {
-    try { etfHoldSnap_(store, c, /^\d{4,6}[A-Z]?$/.test(c)); } catch (e) { /* 單檔失敗略過 */ }
+    try { etfHoldSnap_(etfHoldStore_(c), c, /^\d{4,6}[A-Z]?$/.test(c)); } catch (e) { /* 單檔失敗略過 */ }
   });
+  flushUsage_();
+}
+
+/** 舊版把持股快照存在 _etf：搬到 _etfh（只做一次） */
+function etfMigrateHold_() {
+  const store = etfStoreAll_();
+  const keys = Object.keys(store.map).filter(function (k) { return k.indexOf('P|') === 0; });
+  if (!keys.length) return;
+  const lock = writeLock_();
+  const locked = lock.tryLock(10000);
+  try {
+    const dst = etfSheet_(ETF_HOLD_SHEET);
+    const rows = keys.map(function (k) { return [k, store.map[k].v]; });
+    dst.getRange(dst.getLastRow() + 1, 1, rows.length, 2).setValues(rows);
+    keys.map(function (k) { return store.map[k].row; }).sort(function (a, b) { return b - a; })
+      .forEach(function (r) { store.sh.deleteRow(r); });
+  } finally {
+    if (locked) lock.releaseLock();
+  }
 }
 
 /** 在編輯器執行一次：建立每日持股快照排程（台北 09 點與 21 點各一次，資料日相同不會重複存） */
@@ -416,12 +503,17 @@ function etfDetail_(code) {
     .filter(function (x) { return x[1] > 0; }).sort(function (a, b) { return b[1] - a[1]; });
 
   // 完整持股與股數（MoneyDJ）＋ 1／5 個交易日前的增減
-  const store = etfStoreAll_();
+  let store = etfKeyStore_(); // 只讀鍵，需要的格子再讀
+  if (Object.keys(store.map).some(function (k) { return k.indexOf('P|') === 0; })) {
+    etfMigrateHold_(); // 舊版存在 _etf 的持股快照搬到 _etfh
+    store = etfKeyStore_();
+  }
   let hold = null;
   try {
-    const full = etfHoldSnap_(store, code, isTw);
+    const hstore = etfHoldStore_(code);
+    const full = etfHoldSnap_(hstore, code, isTw);
     if (full) {
-      const dif = etfHoldDiff_(store, code, full, isTw ? ch.t : null);
+      const dif = etfHoldDiff_(hstore, code, full, isTw ? ch.t : null);
       hold = { date: full.date, rows: full.rows, snaps: dif.snaps, cmp: dif.cmp, monthly: !isTw };
     }
   } catch (e) {
@@ -432,7 +524,8 @@ function etfDetail_(code) {
   // 持股變化：和上次記錄的前十大比較
   const hk = 'H|' + code;
   const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
-  let hs = store.map[hk] ? JSON.parse(store.map[hk].v) : {};
+  let hs = {};
+  try { hs = JSON.parse(etfGet_(store, hk) || '{}'); } catch (e) { hs = {}; }
   const sig = JSON.stringify(holdings.map(function (h) { return [h[0], Math.round((h[2] || 0) * 10000)]; }));
   if (holdings.length && (!hs.cur || hs.cur.sig !== sig)) {
     hs = { prev: hs.cur && hs.cur.d !== today ? hs.cur : hs.prev, cur: { d: today, sig: sig, h: holdings.map(function (h) { return [h[0], h[1], h[2]]; }) } };
@@ -442,7 +535,7 @@ function etfDetail_(code) {
   // 規模與單位數歷史（台股）
   let unitsHist = [];
   if (isTw) {
-    unitsHist = etfSnapshots_(store, 'U').map(function (s) {
+    unitsHist = etfHist_('U', '', null).map(function (s) {
       const v = s.v[code];
       return v ? [s.d, v[0], v[1]] : null;
     }).filter(function (x) { return x; });
@@ -527,13 +620,11 @@ function etfUs_() {
   try { JSON.parse(okText_(qres)).quoteResponse.result.forEach(function (x) { q[x.symbol] = x; }); } catch (e) { /* ignore */ }
   const perf = sparkPerf_(syms); // Macro.gs：1D／1W／1M／3M／YTD
 
-  // 流通單位數快照 → 估算資金流（單位數變化 × 淨值）
-  const store = etfStoreAll_();
+  // 流通單位數快照 → 估算資金流（單位數變化 × 淨值）；一天一筆，歷史從快取讀
   const ds = Utilities.formatDate(new Date(), 'America/New_York', 'yyyy-MM-dd');
   const snap = {};
   syms.forEach(function (s) { const x = q[s]; if (x && x.sharesOutstanding) snap[s] = [x.sharesOutstanding, x.navPrice || x.regularMarketPrice]; });
-  if (Object.keys(snap).length) { etfPut_(store, 'S|' + ds, snap); etfPrune_(store, 'S'); }
-  const hist = etfSnapshots_(store, 'S');
+  const hist = etfHist_('S', ds, Object.keys(snap).length ? snap : null);
   const flowK = function (s, k) {
     if (hist.length <= k || !snap[s]) return null;
     const old = hist[hist.length - 1 - k].v[s];

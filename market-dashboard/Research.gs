@@ -23,7 +23,7 @@ function research_(raw, force) {
 
 function fmId_(dataset, id, start) {
   return get_('https://api.finmindtrade.com/api/v4/data?dataset=' + dataset + (id ? '&data_id=' + encodeURIComponent(id) : '') +
-    (start ? '&start_date=' + start : '') + (FINMIND_TOKEN ? '&token=' + encodeURIComponent(FINMIND_TOKEN) : ''));
+    (start ? '&start_date=' + start : '') + (finmindToken_() ? '&token=' + encodeURIComponent(finmindToken_()) : ''));
 }
 
 function fmRows_(res) {

@@ -3,7 +3,7 @@
  * 部署 GAS 後，把「網頁應用程式網址」貼到下方 API_URL
  * （或在登入頁「後端網址設定」輸入，會存在瀏覽器）
  * ========================================================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzzWu-C0OP7vpV7DCLCQ-1rlzhMd6TkyQIgQx_aKuO3-vZG7HTvmPcw5mXbD_JlC2F-/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzKwkmYPvRzdnKGt8PDhHXqlsdvIlQ1H7NUHVD-fzwjA3xTo6RjW7U-Tu_SUH0z3Vr0/exec';
 
 /* ---------- 類別設定（含輸入規則說明） ---------- */
 const CATS = [
@@ -78,21 +78,44 @@ const store = {
  * ========================================================= */
 function apiUrl() { return store.get('mw_api') || API_URL; }
 
+const API_TIMEOUT_MS = 90000; // GAS 單次最長可跑 6 分鐘；超過 90 秒視為卡住，讓呼叫端重試或顯示錯誤
+// 例行輪詢應該幾秒內完成，等太久不如放棄這輪、下一輪再抓
+const API_TIMEOUTS = { quotes: 30000, intraday: 30000, diag: 180000 };
+// 最近 80 次請求的耗時（「設定 → 連線診斷」顯示）：總耗時、後端耗時、各外部來源
+const apiLog = [];
+
+function logApi(entry) {
+  apiLog.push(entry);
+  if (apiLog.length > 80) apiLog.shift();
+}
+
 async function api(action, data = {}) {
   const url = apiUrl();
   if (!url) throw new Error('尚未設定後端網址（登入頁下方「後端網址設定」）');
   // 不帶自訂 header → text/plain 簡單請求，避免 CORS 預檢
   let res, j;
+  const ctl = new AbortController();
+  const limit = API_TIMEOUTS[action] || API_TIMEOUT_MS;
+  const timer = setTimeout(() => ctl.abort(), limit);
+  const t0 = Date.now();
+  const label = action + (data.part ? ':' + data.part : data.op ? ':' + data.op : '');
   try {
     res = await fetch(url, {
       method: 'POST',
       body: JSON.stringify({ action, token: state.token, ...data }),
+      signal: ctl.signal,
     });
     j = await res.json();
   } catch (err) {
+    logApi({ at: t0, action: label, total: Date.now() - t0, server: null, hosts: {}, ok: false, err: err.name === 'AbortError' ? '逾時' : '連線失敗' });
+    if (err.name === 'AbortError') throw Object.assign(new Error(`後端回應逾時（超過 ${limit / 1000} 秒）`), { retry: true });
     // 網路中斷，或 GAS 部署存取權不是「所有人」（請求被導向 Google 登入頁）
     throw Object.assign(new Error('無法連線後端（請確認網路，或 GAS 部署存取權為「所有人」）'), { retry: true });
+  } finally {
+    clearTimeout(timer);
   }
+  logApi({ at: t0, action: label, total: Date.now() - t0, server: j.ms ?? null, hosts: j.hosts || {}, ok: !!j.ok, err: j.ok ? '' : String(j.error || '').slice(0, 60) });
+  if (j.quota) quotaWarn();
   if (j.usage) updateUsage(j.usage);
   if (!j.ok) {
     if (j.code === 'AUTH') { logout(true); }
@@ -104,6 +127,190 @@ async function api(action, data = {}) {
 /** 去掉錯誤訊息中冗長的網址（例如 GAS 的「無法開啟網址：https://…」） */
 function cleanMsg(m) {
   return String(m).replace(/無法開啟網址[:：]?\s*\S*/g, '資料來源連線失敗').replace(/\s*https?:\/\/\S+/g, '').trim();
+}
+
+/**
+ * 背景載入（總經、財金日曆的字卡、走勢小圖、投資組合歷史資料）排隊送出，全站同時最多 BG_LIMIT 個，
+ * 避免一次把 GAS 塞滿（同時執行數過多時每個請求都會變慢、甚至失敗）。
+ * 使用者直接操作的請求（新增、儲存、查詢、報價）走 api()，不排隊，所以不會被背景載入卡住。
+ */
+const BG_LIMIT = 4;
+const bgQueue = { jobs: [], running: 0 };
+function apiBg(action, data) {
+  return new Promise((resolve, reject) => {
+    bgQueue.jobs.push(() => api(action, data).then(resolve, reject));
+    bgPump();
+  });
+}
+function bgPump() {
+  while (bgQueue.running < BG_LIMIT && bgQueue.jobs.length) {
+    const job = bgQueue.jobs.shift();
+    bgQueue.running++;
+    job().finally(() => { bgQueue.running--; bgPump(); });
+  }
+}
+
+/** Google 每日對外請求額度用完：提示一次（每 10 分鐘最多一次） */
+let quotaWarnAt = 0;
+function quotaWarn() {
+  if (Date.now() - quotaWarnAt < 600000) return;
+  quotaWarnAt = Date.now();
+  toast('Google Apps Script 今天的外部請求額度已用完（一般帳號每天 20,000 次），經後端的資料會暫時抓不到，約 24 小時內自動恢復。' +
+    (state.proxy ? '' : '設定資料中繼站後，報價與走勢改由瀏覽器抓，不再受這個額度限制（見說明頁）。'));
+}
+
+/* =========================================================
+ * 資料中繼站（Cloudflare Worker，見 worker.js）：瀏覽器直接抓報價與走勢
+ * 不經 Google Apps Script → 沒有 GAS 的啟動時間、不吃 Google 每日額度、不會因 Google 主機被擋而失敗。
+ * 證交所與 Yahoo 分開請求、各自逾時，一邊慢不會拖住另一邊；失敗時退回原本的後端路徑。
+ * ========================================================= */
+const DIRECT_TIMEOUT_MS = 10000;
+const direct = { misBadUntil: 0 }; // 證交所即時報價最近失敗：3 分鐘內台股直接改用 Yahoo
+
+function proxyOn() { return !!(state.proxy && state.proxy.url); }
+
+async function pget(u, timeout = DIRECT_TIMEOUT_MS) {
+  const ctl = new AbortController();
+  const tm = setTimeout(() => ctl.abort(), timeout);
+  const t0 = Date.now();
+  const host = new URL(u).hostname;
+  try {
+    const r = await fetch(`${state.proxy.url}/?key=${encodeURIComponent(state.proxy.key || '')}&url=${encodeURIComponent(u)}`, { signal: ctl.signal });
+    const pm = +r.headers.get('X-Proxy-Ms') || null;
+    logApi({ at: t0, action: '直連 ' + host, total: Date.now() - t0, server: pm, hosts: { [host]: [1, pm || 0, r.ok ? 0 : 1] }, ok: r.ok, err: r.ok ? '' : 'HTTP ' + r.status });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.text();
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      logApi({ at: t0, action: '直連 ' + host, total: Date.now() - t0, server: null, hosts: { [host]: [1, Date.now() - t0, 1] }, ok: false, err: '逾時' });
+      throw new Error(host + ' 逾時');
+    }
+    throw err;
+  } finally {
+    clearTimeout(tm);
+  }
+}
+
+function dNum(v) { const n = parseFloat(v); return isFinite(n) && n !== 0 ? n : null; }
+function dQuote(price, prev, name, time) {
+  if (price == null) return { price: null };
+  const chg = prev ? price - prev : null;
+  return { price, prev: prev ?? null, chg, pct: prev ? (chg / prev) * 100 : null, name, time };
+}
+function dParseMis(text) {
+  const out = {};
+  (JSON.parse(text).msgArray || []).forEach(x => {
+    if (!x.c || !x.ex || !x.ch) return;
+    const prev = dNum(x.y), bid = dNum(String(x.b || '').split('_')[0]), ask = dNum(String(x.a || '').split('_')[0]);
+    let price = dNum(x.z);
+    if (price == null) price = dNum(x.pz);
+    if (price == null && bid != null && ask != null) price = (bid + ask) / 2;
+    if (price == null) price = bid ?? ask ?? prev;
+    out['mis:' + x.ex + '_' + x.ch] = dQuote(price, prev, x.n || x.c, Number(x.tlong) || Date.now());
+  });
+  return out;
+}
+function dYahooMeta(m) {
+  if (!m || m.regularMarketPrice == null) return null;
+  return dQuote(m.regularMarketPrice, m.previousClose ?? m.chartPreviousClose, m.shortName || m.longName || m.symbol, (m.regularMarketTime || 0) * 1000);
+}
+/** mis:tse_2330.tw → 2330.TW、mis:otc_xxxx.tw → xxxx.TWO */
+function misToYahoo(src) {
+  const m = src.match(/^mis:(tse|otc)_(.+)\.tw$/);
+  return m ? m[2].toUpperCase() + (m[1] === 'tse' ? '.TW' : '.TWO') : null;
+}
+function srcToYahoo(src) { return src.startsWith('yahoo:') ? src.slice(6) : misToYahoo(src); }
+const chunkArr = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
+
+/** Yahoo spark：{ Yahoo 代號: 報價 } */
+async function dSpark(syms) {
+  const out = {};
+  await Promise.allSettled(chunkArr(syms, 20).map(async c => {
+    const j = JSON.parse(await pget('https://query1.finance.yahoo.com/v7/finance/spark?range=1d&interval=1d&symbols=' + c.map(encodeURIComponent).join(',')));
+    ((j.spark && j.spark.result) || []).forEach(r => { const q = dYahooMeta(r.response && r.response[0] && r.response[0].meta); if (q) out[r.symbol] = q; });
+  }));
+  // spark 缺漏：逐檔用 v8 chart 補
+  const miss = syms.filter(s => !out[s]).slice(0, 25);
+  await Promise.allSettled(miss.map(async s => {
+    const j = JSON.parse(await pget('https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(s) + '?range=1d&interval=1d'));
+    const q = dYahooMeta(j.chart.result[0].meta);
+    if (q) out[s] = q;
+  }));
+  return out;
+}
+
+/** 經中繼站抓報價：回傳 { quotes, failed }；onPartial(部分報價) 讓先回來的一邊先顯示 */
+async function fetchQuotesDirect(sources, onPartial) {
+  const mis = sources.filter(s => s.startsWith('mis:')), yh = sources.filter(s => s.startsWith('yahoo:')).map(s => s.slice(6));
+  const quotes = {};
+  const useMis = mis.length && Date.now() > direct.misBadUntil;
+  const [misRes] = await Promise.allSettled([
+    useMis ? Promise.all(chunkArr(mis, 40).map(c => pget('https://mis.twse.com.tw/stock/api/getStockInfo.jsp?json=1&delay=0&_=' + Date.now() + '&ex_ch=' + encodeURIComponent(c.map(s => s.slice(4)).join('|')), 8000)
+      .then(dParseMis).then(o => { if (onPartial) onPartial(o); return o; })))
+      : Promise.resolve([]),
+    dSpark(yh).then(q => {
+      const o = {};
+      Object.entries(q).forEach(([s, v]) => { quotes['yahoo:' + s] = v; o['yahoo:' + s] = v; });
+      if (onPartial) onPartial(o);
+    }),
+  ]);
+  if (misRes.status === 'fulfilled') misRes.value.forEach(o => Object.assign(quotes, o));
+  // 證交所失敗或缺漏的台股：改用 Yahoo（標記 alt）
+  const misMiss = mis.filter(s => !quotes[s]);
+  if (useMis && misMiss.length === mis.length) direct.misBadUntil = Date.now() + 180000;
+  if (misMiss.length) {
+    const map = {};
+    misMiss.forEach(s => { const y = misToYahoo(s); if (y) map[y] = s; });
+    const q = await dSpark(Object.keys(map));
+    Object.entries(q).forEach(([y, v]) => { v.alt = 'Yahoo'; quotes[map[y]] = v; });
+  }
+  return { quotes, failed: sources.filter(s => !quotes[s] || quotes[s].price == null) };
+}
+
+/** 報價：有中繼站就由瀏覽器直接抓；沒有或全部失敗才走後端 */
+async function fetchQuotes(sources, onPartial) {
+  if (!sources.length) return { quotes: {}, failed: [] };
+  if (proxyOn()) {
+    try {
+      const r = await fetchQuotesDirect(sources, onPartial);
+      if (Object.keys(r.quotes).length) return r;
+    } catch { /* 改走後端 */ }
+  }
+  const r = await api('quotes', { sources });
+  return { quotes: r.quotes || {}, failed: r.failed || [] };
+}
+
+/** 當日 5 分線（走勢小圖）：{ 資料來源: { c, prev } } */
+async function fetchIntradayDirect(sources) {
+  const map = {};
+  sources.forEach(s => { const y = srcToYahoo(s); if (y) map[y] = s; });
+  const out = {};
+  await Promise.allSettled(chunkArr(Object.keys(map), 20).map(async c => {
+    const j = JSON.parse(await pget('https://query1.finance.yahoo.com/v7/finance/spark?range=1d&interval=5m&symbols=' + c.map(encodeURIComponent).join(',')));
+    ((j.spark && j.spark.result) || []).forEach(x => {
+      const src = map[x.symbol], resp = x.response && x.response[0];
+      if (!src || !resp) return;
+      const closes = (((resp.indicators || {}).quote || [])[0] || {}).close || [];
+      out[src] = { c: closes.filter(v => v != null), prev: resp.meta.chartPreviousClose ?? resp.meta.previousClose };
+    });
+  }));
+  return out;
+}
+
+/** 歷史 K 線：{ t, o, h, l, c, v } */
+const HIST_RANGE = { '1d': '5y', '1wk': '10y', '1mo': 'max' };
+async function fetchHistoryDirect(source, interval) {
+  const y = srcToYahoo(source);
+  if (!y) throw new Error('此來源不支援歷史資料');
+  const j = JSON.parse(await pget('https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(y) + '?range=' + HIST_RANGE[interval] + '&interval=' + interval + '&includePrePost=false', 20000));
+  const r = j.chart.result[0], q = r.indicators.quote[0], off = r.meta.gmtoffset || 0;
+  const rows = {};
+  (r.timestamp || []).forEach((ts, i) => {
+    if (q.close[i] == null || q.open[i] == null) return;
+    rows[new Date((ts + off) * 1000).toISOString().slice(0, 10)] = [q.open[i], q.high[i], q.low[i], q.close[i], q.volume[i] || 0];
+  });
+  const days = Object.keys(rows).sort();
+  return { t: days, o: days.map(d => rows[d][0]), h: days.map(d => rows[d][1]), l: days.map(d => rows[d][2]), c: days.map(d => rows[d][3]), v: days.map(d => rows[d][4]) };
 }
 
 /** 遇到暫時性錯誤自動重試（最多 3 次，間隔 2、4、6 秒） */
@@ -215,6 +422,8 @@ async function showApp() {
   try {
     const r = await api('watchlist');
     state.items = r.items;
+    state.proxy = r.proxy || null; // 資料中繼站（有設定時報價、走勢由瀏覽器直接抓）
+    state.fredKey = r.fredKey || '';
     state.settings = r.settings || {};
     state.admin = !!r.admin;
     state.paused = new Set(String(state.settings.pausedCats || '').split(',').filter(Boolean));
@@ -527,13 +736,15 @@ async function pollQuotes() {
   polling = true;
   const now = () => new Date().toLocaleTimeString('zh-TW', { hour12: false });
   try {
-    const r = await api('quotes', { sources });
+    const r = await fetchQuotes(sources, part => Object.entries(part).forEach(([src, q]) => setQuote(src, q)));
     Object.entries(r.quotes).forEach(([src, q]) => setQuote(src, q));
     state.lastUpdate = new Date();
     // 個別失敗只列名稱，下一輪自動再試，不額外重試
     const failed = (r.failed || []).map(src => (state.items.find(i => i.source === src) || {}).name || src);
     const tail = failed.length ? ` · 失敗：${failed.slice(0, 3).join('、')}${failed.length > 3 ? ` 等 ${failed.length} 檔` : ''}` : '';
-    setStatus('即時更新中 · ' + now() + tail, failed.length ? 'warn' : 'live');
+    const alt = Object.values(r.quotes).some(q => q && q.alt);
+    const altTxt = alt ? ' · 證交所連線異常，台股暫用 Yahoo 報價' : '';
+    setStatus('即時更新中 · ' + now() + tail + altTxt, failed.length || alt ? 'warn' : 'live');
   } catch (err) {
     setStatus('更新失敗 · ' + now() + '（下一輪自動更新）', 'err');
   } finally {
@@ -676,8 +887,11 @@ async function loadIntraday(items = state.items) {
   const gas = [...new Set(items.map(i => i.source).filter(s => /^(yahoo|mis):/.test(s)))];
   const tasks = [];
   if (gas.length) {
-    tasks.push(api('intraday', { sources: gas }).then(r => {
-      Object.entries(r.data || {}).forEach(([src, d]) => { state.intraday[src] = d; drawSpark(src); });
+    const load = proxyOn()
+      ? fetchIntradayDirect(gas).then(d => (Object.keys(d).length ? d : apiBg('intraday', { sources: gas }).then(r => r.data || {})))
+      : apiBg('intraday', { sources: gas }).then(r => r.data || {});
+    tasks.push(load.then(data => {
+      Object.entries(data).forEach(([src, d]) => { state.intraday[src] = d; drawSpark(src); });
     }));
   }
   // 虛擬貨幣 24 小時不間斷，取近 24 小時 15 分 K
@@ -882,7 +1096,9 @@ async function loadHistory() {
       const k = await fetchBinanceKlines(it.source, iv, n);
       d = k.map(x => ({ time: new Date(x.t).toISOString().slice(0, 10), open: x.o, high: x.h, low: x.l, close: x.c, volume: x.v }));
     } else {
-      const r = (await api('history', { source: it.source, interval: chartState.interval })).data;
+      let r = null;
+      if (proxyOn()) { try { r = await fetchHistoryDirect(it.source, chartState.interval); } catch { r = null; } }
+      if (!r) r = (await api('history', { source: it.source, interval: chartState.interval })).data;
       d = r.t.map((t, i) => {
         const o = r.o[i], c = r.c[i];
         return { time: t, open: o, close: c, high: r.h[i] ?? Math.max(o, c), low: r.l[i] ?? Math.min(o, c), volume: r.v[i] || 0 };

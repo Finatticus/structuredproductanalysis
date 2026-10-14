@@ -15,6 +15,12 @@
 const SPREADSHEET_ID = '';            // 若腳本是從試算表「擴充功能 → Apps Script」建立，留空即可
 const ACCOUNT_SHEET = 'Account';
 const ADMIN_ACCOUNT = 'michael';   // 管理員帳號：不需審核，可在「設定」審核其他人
+// 資料中繼站（Cloudflare Worker，見 worker.js 與 README「十五」）。填了之後：
+//  - 瀏覽器直接經中繼站抓報價、走勢（不經 Google、不吃 Google 每日額度）
+//  - 後端對 Yahoo、證交所等網站的請求也經中繼站轉送（不會因 Google 主機被擋而失敗）
+// 也可以改在「專案設定 → 指令碼屬性」新增 PROXY_URL、PROXY_KEY（優先使用）
+const PROXY_URL = '';  // 例如 https://mw-proxy.你的帳號.workers.dev
+const PROXY_KEY = '';  // 與 Worker 的 KEY 相同
 // Account 工作頁 D 欄（審核狀態）：空白＝待審核、通過、拒絕、停用；只有「通過」與管理員可以登入
 const ST_APPROVED = '通過', ST_REJECTED = '拒絕', ST_DISABLED = '停用';
 const STATUS_CACHE_SEC = 300;     // 審核狀態快取，停用後最慢 5 分鐘生效
@@ -89,6 +95,7 @@ function doGet() {
 }
 
 function doPost(e) {
+  const t0 = Date.now();
   let res;
   try {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
@@ -96,6 +103,17 @@ function doPost(e) {
   } catch (err) {
     res = { ok: false, error: String((err && err.message) || err), code: (err && err.code) || '' };
   }
+  // 回報本次後端耗時與各來源耗時（前端「連線診斷」用來判斷是後端排隊、還是外部來源慢）
+  const hosts = {};
+  HOST_LOG_.forEach(function (x) {
+    const h = hosts[x[0]] = hosts[x[0]] || [0, 0, 0];
+    h[0]++; h[1] = Math.max(h[1], x[1]);
+    if (x[2] === 'err' || x[2] === 'skip' || x[2] >= 500 || x[2] === 429) h[2]++;
+  });
+  flushUsage_();
+  res.ms = Date.now() - t0;
+  res.hosts = hosts;
+  if (QUOTA_HIT_) res.quota = true;
   return json_(res);
 }
 
@@ -117,7 +135,9 @@ function route_(req) {
       return { ok: true };
     case 'watchlist': {
       const acc = auth_(req.token);
-      return { ok: true, account: acc, admin: isAdmin_(acc), items: getWatchlist_(acc), settings: getSettings_(acc) };
+      const px = proxyCfg_();
+      return { ok: true, account: acc, admin: isAdmin_(acc), items: getWatchlist_(acc), settings: getSettings_(acc),
+        proxy: px.url ? { url: px.url, key: px.key } : null, fredKey: px.url ? fredKey_() : '' }; // 瀏覽器引擎抓 FRED 用
     }
     case 'reorder': {
       const acc = auth_(req.token);
@@ -144,6 +164,14 @@ function route_(req) {
       auth_(req.token);
       return { ok: true, data: research_(req.symbol, !!req.force), usage: getUsage_() }; // 定義於 Research.gs
     }
+    case 'diag': {
+      auth_(req.token);
+      return { ok: true, data: diag_(!!req.probe) };
+    }
+    case 'cal': {
+      const acc = auth_(req.token);
+      return { ok: true, data: cal_(String(req.part || ''), !!req.force, acc), usage: getUsage_() }; // 定義於 Calendar.gs
+    }
     case 'portfolio': {
       const acc = auth_(req.token);
       return { ok: true, data: portfolio_(acc, req), usage: getUsage_() }; // 定義於 Portfolio.gs
@@ -158,7 +186,7 @@ function route_(req) {
     }
     case 'screener': {
       auth_(req.token);
-      return { ok: true, data: screenerTable_() }; // 定義於 Screener.gs
+      return { ok: true, data: screenerTable_(req) }; // 定義於 Screener.gs
     }
     case 'history': {
       auth_(req.token);
@@ -194,7 +222,7 @@ function register_(account, password) {
   if (account.toLowerCase() === ACCOUNT_SHEET.toLowerCase()) throw new Error('此帳號名稱不可使用');
   if (password.length < 6) throw new Error('密碼至少 6 個字元');
 
-  const lock = LockService.getScriptLock();
+  const lock = writeLock_();
   lock.waitLock(15000);
   try {
     const ss = ss_();
@@ -275,7 +303,7 @@ function listUsers_() {
 
 /** decision：approve 通過、reject 拒絕、disable 停用、delete 刪除（只限未通過的帳號） */
 function reviewUser_(account, decision) {
-  const lock = LockService.getScriptLock();
+  const lock = writeLock_();
   lock.waitLock(15000);
   try {
     const sh = accountSheet_();
@@ -398,8 +426,8 @@ function addSymbol_(account, category, symbol, name, sourceHint) {
   });
   if (dup) throw new Error(r.symbol + ' 已在清單中');
 
-  let quote = null;
-  if (/^(yahoo|mis):/.test(r.source)) {
+  let quote = r.quote || null; // 台股解析代號時已抓過報價，不再重抓
+  if (!quote && /^(yahoo|mis):/.test(r.source)) {
     quote = getQuotes_([r.source])[r.source];
     if ((!quote || quote.price == null) && FETCH_FAILS_) throw retryErr_('資料來源暫時連線失敗');
     if (!quote || quote.price == null) throw new Error('查無報價：' + r.symbol + '，請確認代碼格式');
@@ -421,7 +449,7 @@ function removeSymbol_(account, category, symbol) {
 
 /** keys：依新順序排列的 "類別|代碼" 陣列；未列到的列保留在最後 */
 function reorderWatchlist_(account, keys) {
-  const lock = LockService.getScriptLock();
+  const lock = writeLock_();
   lock.waitLock(10000);
   try {
     const sh = userSheet_(account);
@@ -487,14 +515,14 @@ function resolveSymbol_(category, raw, hint) {
     const f0 = FETCH_FAILS_;
     const mis = fetchQuotesRaw_(['mis:tse_' + lc + '.tw', 'mis:otc_' + lc + '.tw']);
     for (const k in mis) {
-      if (mis[k] && mis[k].price != null) return { symbol: code, source: k, name: mis[k].name };
+      if (mis[k] && mis[k].price != null) return { symbol: code, source: k, name: mis[k].name, quote: mis[k] };
     }
     // 證交所連不上時不要改用 Yahoo（會把上市櫃股票存成較慢的來源），請前端稍後重試
     if (FETCH_FAILS_ > f0) throw retryErr_('證交所暫時連線失敗');
     // 興櫃或 MIS 未涵蓋者 → Yahoo
     const y = fetchQuotesRaw_(['yahoo:' + code + '.TWO', 'yahoo:' + code + '.TW']);
     for (const k in y) {
-      if (y[k] && y[k].price != null) return { symbol: code, source: k, name: '' };
+      if (y[k] && y[k].price != null) return { symbol: code, source: k, name: '', quote: y[k] };
     }
     if (FETCH_FAILS_) throw retryErr_('證交所／Yahoo 暫時連線失敗');
     throw new Error('查無此台股代號：' + code);
@@ -552,13 +580,51 @@ function getQuotes_(sources) {
   return out;
 }
 
-/** 不經快取，直接向來源抓報價（一次 fetchAll 平行請求） */
+const MIS_HOST = 'mis.twse.com.tw';
+
+/** mis:tse_2330.tw → 2330.TW、mis:otc_xxxx.tw → xxxx.TWO（證交所暫停時改抓 Yahoo 用） */
+function misToYahoo_(m) {
+  const x = m.match(/^(tse|otc)_(.+)\.tw$/);
+  return x ? x[2].toUpperCase() + (x[1] === 'tse' ? '.TW' : '.TWO') : null;
+}
+
+/** 用 Yahoo spark 補抓台股報價（以 mis: 為 key 回傳，標記 alt） */
+function misViaYahoo_(misList) {
+  const map = {};
+  misList.forEach(function (m) { const y = misToYahoo_(m); if (y) map[y] = m; });
+  const syms = Object.keys(map);
+  const out = {};
+  if (!syms.length) return out;
+  fetchAll_(chunk_(syms, 20).map(function (c) {
+    return { url: 'https://query1.finance.yahoo.com/v7/finance/spark?range=1d&interval=1d&symbols=' + c.map(encodeURIComponent).join(','),
+      muteHttpExceptions: true, headers: { 'User-Agent': UA } };
+  })).forEach(function (r) {
+    if (r.getResponseCode() !== 200) return;
+    try {
+      const q = parseSpark_(r.getContentText());
+      Object.keys(q).forEach(function (k) {
+        const m = map[k.slice(6)];
+        if (m && q[k].price != null) { q[k].alt = 'Yahoo'; out['mis:' + m] = q[k]; }
+      });
+    } catch (e) { /* ignore */ }
+  });
+  return out;
+}
+
+/**
+ * 不經快取，直接向來源抓報價（一次 fetchAll 平行請求）。
+ * 證交所 MIS 暫停（斷路器）時台股改抓 Yahoo；MIS 這次失敗或回傳空資料的代號也用 Yahoo 補上。
+ * MIS 與 Yahoo 同一批送出，批次時間過長時視為 MIS 卡住（Yahoo spark 通常 1 秒內），暫停 MIS，下次直接走 Yahoo。
+ */
 function fetchQuotesRaw_(sources) {
-  const mis = [], yh = [];
+  let mis = [];
+  const yh = [];
   sources.forEach(function (s) {
     if (s.indexOf('mis:') === 0) mis.push(s.slice(4));
     else if (s.indexOf('yahoo:') === 0) yh.push(s.slice(6));
   });
+  let misAlt = [];
+  if (mis.length && isHostDown_(MIS_HOST)) { misAlt = mis; mis = []; }
 
   const reqs = [], parsers = [];
   chunk_(mis, 40).forEach(function (c) {
@@ -579,14 +645,23 @@ function fetchQuotesRaw_(sources) {
     });
     parsers.push(parseSpark_);
   });
-  if (!reqs.length) return {};
-
   const out = {};
-  const resps = fetchAll_(reqs);
-  resps.forEach(function (r, i) {
-    if (r.getResponseCode() !== 200) return;
-    try { Object.assign(out, parsers[i](r.getContentText())); } catch (e) { /* 單一來源失敗不影響其他 */ }
-  });
+  if (reqs.length) {
+    const t = Date.now();
+    const resps = fetchAll_(reqs);
+    const ms = Date.now() - t;
+    resps.forEach(function (r, i) {
+      if (r.getResponseCode() !== 200) return;
+      try { Object.assign(out, parsers[i](r.getContentText())); } catch (e) { /* 單一來源失敗不影響其他 */ }
+    });
+    if (mis.length) {
+      const got = mis.filter(function (m) { return out['mis:' + m]; }).length;
+      if (ms > 8000) markHostDown_(MIS_HOST, '即時報價回應過慢（' + Math.round(ms / 1000) + ' 秒）');
+      else if (!got && mis.length >= 1) markHostDown_(MIS_HOST, '即時報價沒有回傳資料');
+      misAlt = misAlt.concat(mis.filter(function (m) { return !out['mis:' + m]; }));
+    }
+  }
+  if (misAlt.length) Object.assign(out, misViaYahoo_(misAlt));
 
   // Yahoo spark 失敗時，對缺漏的代碼改用 v8 chart (query2) 逐檔補抓
   const missing = yh.filter(function (y) { return !out['yahoo:' + y]; });
@@ -778,24 +853,153 @@ function noteRes_(r) {
   return r;
 }
 
-function fetch_(url, opt) {
-  countFetch_(1);
-  try { return noteRes_(UrlFetchApp.fetch(url, opt)); } catch (e) { return failRes_(); }
+/* ======================== 資料中繼站與每日額度 ======================== */
+// 經中繼站轉送的網站（與 worker.js 的白名單一致）
+const PROXY_HOSTS = [
+  'query1.finance.yahoo.com', 'query2.finance.yahoo.com', 'fc.yahoo.com', 'finance.yahoo.com', 'login.yahoo.com',
+  'mis.twse.com.tw', 'www.twse.com.tw', 'openapi.twse.com.tw', 'www.tpex.org.tw',
+  'fred.stlouisfed.org', 'api.finmindtrade.com', 'api.nasdaq.com', 'api.cnyes.com', 'news.cnyes.com',
+  'www.moneydj.com', 'www.federalreserve.gov', 'www.cnbc.com', 'www.cbc.gov.tw', 'ws.ndc.gov.tw', 'data.gov.tw',
+  'nfs.faireconomy.media', 'markets.newyorkfed.org', 'api.alternative.me', 'home.treasury.gov', 'api.stlouisfed.org',
+];
+let PROXY_CFG_ = null;
+let QUOTA_HIT_ = false; // 本次執行碰到 Google 每日對外請求上限
+
+function proxyCfg_() {
+  if (!PROXY_CFG_) {
+    let url = PROXY_URL, key = PROXY_KEY;
+    try {
+      const p = PropertiesService.getScriptProperties();
+      url = p.getProperty('PROXY_URL') || url;
+      key = p.getProperty('PROXY_KEY') || key;
+    } catch (e) { /* ignore */ }
+    PROXY_CFG_ = { url: String(url || '').trim().replace(/\/+$/, ''), key: String(key || '').trim() };
+  }
+  return PROXY_CFG_;
 }
 
+/** 白名單內的網址改經中繼站 */
+function viaProxy_(url) {
+  const p = proxyCfg_();
+  if (!p.url || PROXY_HOSTS.indexOf(hostOf_(url)) < 0) return url;
+  return p.url + '/?key=' + encodeURIComponent(p.key) + '&url=' + encodeURIComponent(url);
+}
+
+/** Google 每日 UrlFetch 上限（一般帳號 20,000 次）用完時的錯誤 */
+function isQuotaError_(e) {
+  return /Service invoked too many times|too many times for one day|呼叫服務的次數過多|服務呼叫次數過多|Bandwidth quota exceeded|頻寬配額/i.test(String((e && e.message) || e));
+}
+
+function noteQuota_() {
+  QUOTA_HIT_ = true;
+  try { CacheService.getScriptCache().put('quota_out', String(Date.now()), 1800); } catch (e) { /* ignore */ }
+}
+
+/* ======================== 外部來源斷路器 ========================
+ * 某個來源（例如證交所擋 Google 主機）連不上或回應很慢時，UrlFetch 會等到逾時才放棄。
+ * 以前每個請求、每次重試都會再等一次，後端越積越多執行中的請求 → 全站變慢。
+ * 現在：連線失敗或單次超過 HOST_SLOW_MS 的來源標記為「暫停」HOST_DOWN_SEC 秒，期間直接回傳失敗（呼叫端改用備援或舊資料），
+ * 時間到再自動恢復嘗試。各來源的耗時記在快取，「設定 → 連線診斷」可以看到。 */
+const HOST_SLOW_MS = 12000;
+const HOST_DOWN_SEC = 180;
+let HOST_LOG_ = [];     // 本次執行：[來源, 毫秒, 狀態碼或 err／skip]
+let HOST_DOWN_ = null;  // 暫停中的來源（本次執行的快取）
+
+function hostOf_(url) {
+  const m = String(url || '').match(/^https?:\/\/([^\/?#:]+)/i);
+  return m ? m[1].toLowerCase() : '';
+}
+
+function hostsDown_() {
+  if (!HOST_DOWN_) {
+    try { HOST_DOWN_ = JSON.parse(CacheService.getScriptCache().get('hosts_down') || '{}'); } catch (e) { HOST_DOWN_ = {}; }
+  }
+  const now = Date.now();
+  Object.keys(HOST_DOWN_).forEach(function (h) { if (HOST_DOWN_[h].until < now) delete HOST_DOWN_[h]; });
+  return HOST_DOWN_;
+}
+
+function isHostDown_(host) { return !!hostsDown_()[host]; }
+
+function markHostDown_(host, why) {
+  if (!host) return;
+  const cache = CacheService.getScriptCache();
+  let cur = {};
+  try { cur = JSON.parse(cache.get('hosts_down') || '{}'); } catch (e) { cur = {}; }
+  cur[host] = { until: Date.now() + HOST_DOWN_SEC * 1000, why: String(why || '').slice(0, 100), at: Date.now() };
+  cache.put('hosts_down', JSON.stringify(cur), HOST_DOWN_SEC + 60);
+  HOST_DOWN_ = cur;
+}
+
+/** 參數錯誤（例如網址含不合法字元）或額度用完不是來源的問題，不暫停該來源 */
+function isArgError_(e) { return /Invalid argument|無效的引數|引數無效|Bad request/i.test(String((e && e.message) || e)) || isQuotaError_(e); }
+
+function fetch_(url, opt) {
+  const host = hostOf_(url);
+  if (isHostDown_(host)) { HOST_LOG_.push([host, 0, 'skip']); return failRes_(); }
+  countFetch_(1);
+  const t = Date.now();
+  const target = viaProxy_(url);
+  try {
+    let r;
+    try {
+      r = UrlFetchApp.fetch(target, opt);
+    } catch (e) {
+      if (target === url || isQuotaError_(e)) throw e;
+      r = UrlFetchApp.fetch(url, opt); // 中繼站連不上：改直接連線
+    }
+    r = noteRes_(r);
+    const ms = Date.now() - t;
+    HOST_LOG_.push([host, ms, r.getResponseCode()]);
+    if (ms > HOST_SLOW_MS) markHostDown_(host, '回應過慢（' + Math.round(ms / 1000) + ' 秒）');
+    return r;
+  } catch (e) {
+    HOST_LOG_.push([host, Date.now() - t, 'err']);
+    if (isQuotaError_(e)) noteQuota_();
+    else if (!isArgError_(e)) markHostDown_(host, String((e && e.message) || e).replace(/https?:\/\/\S+/g, '').trim());
+    return failRes_();
+  }
+}
+
+/**
+ * 平行請求。暫停中的來源直接回傳 599；整批失敗（某個網址連不上）時，從錯誤訊息找出該來源並暫停它，
+ * 其餘改用 fetch_ 逐一補抓（fetch_ 也有斷路器：同一個卡住的來源只會等一次，不會每個網址各等一次）。
+ */
 function fetchAll_(reqs) {
   if (!reqs.length) return [];
-  countFetch_(reqs.length); // fetchAll 內每個請求各算 1 次
+  const out = new Array(reqs.length);
+  const idx = [];
+  reqs.forEach(function (r, i) {
+    const host = hostOf_(r.url);
+    if (isHostDown_(host)) { out[i] = failRes_(); HOST_LOG_.push([host, 0, 'skip']); } else idx.push(i);
+  });
+  if (!idx.length) return out;
+  countFetch_(idx.length); // fetchAll 內每個請求各算 1 次
+  const t = Date.now();
   try {
-    return UrlFetchApp.fetchAll(reqs).map(noteRes_);
+    const res = UrlFetchApp.fetchAll(idx.map(function (i) { return Object.assign({}, reqs[i], { url: viaProxy_(reqs[i].url) }); }));
+    const ms = Date.now() - t; // 整批的時間（無法區分個別請求）
+    res.forEach(function (r, k) {
+      out[idx[k]] = noteRes_(r);
+      HOST_LOG_.push([hostOf_(reqs[idx[k]].url), ms, r.getResponseCode(), 'batch']);
+    });
+    return out;
   } catch (e) {
-    // 其中一個網址連不上會讓整批失敗 → 改成逐一請求，只有失敗的那個回傳 599
-    countFetch_(reqs.length);
-    return reqs.map(function (r) {
+    const msg = String((e && e.message) || e);
+    if (isQuotaError_(e)) { noteQuota_(); idx.forEach(function (i) { out[i] = failRes_(); }); return out; }
+    // 錯誤訊息裡的網址可能是中繼站網址：取出 url= 參數還原成原始網站
+    // 若是中繼站本身連不上，不暫停目標網站：下面逐一補抓時 fetch_ 會自動改直接連線
+    const badUrl = (msg.match(/https?:\/\/[^\s"'）)]+/) || [''])[0];
+    const px = proxyCfg_().url;
+    const bad = px && badUrl.indexOf(px) === 0 ? '' : hostOf_(badUrl);
+    if (bad && !isArgError_(e)) markHostDown_(bad, msg.replace(/https?:\/\/\S+/g, '').trim());
+    idx.forEach(function (i) {
+      const r = reqs[i];
       const o = Object.assign({}, r);
       delete o.url;
-      try { return noteRes_(UrlFetchApp.fetch(r.url, o)); } catch (e2) { return failRes_(); }
+      out[i] = fetch_(r.url, o);
     });
+    return out;
   }
 }
 
@@ -806,9 +1010,36 @@ function retryErr_(msg) {
   return e;
 }
 
+// 以前每次對外請求都要拿全域鎖、讀寫一次指令碼屬性；選股排程佔用鎖的 4–5 分鐘內，
+// 使用者的每個請求都會多等 3 秒。現在只在記憶體累計，每次執行結束（或累積 50 次）才寫入一次、不上鎖
+// （多個執行同時寫入時可能少算幾次，只影響畫面上的用量顯示）。
+let FETCH_PENDING_ = 0;
+
 function countFetch_(n) {
-  const lock = LockService.getScriptLock();
-  const locked = lock.tryLock(3000);
+  FETCH_PENDING_ += n;
+  if (FETCH_PENDING_ >= 50) flushUsage_();
+}
+
+/** 把本次執行的來源耗時併入近期紀錄（快取 1 小時，最多 400 筆），供連線診斷使用 */
+function flushHostLog_() {
+  if (!HOST_LOG_.length) return;
+  const log = HOST_LOG_;
+  HOST_LOG_ = [];
+  try {
+    const cache = CacheService.getScriptCache();
+    let cur = [];
+    try { cur = JSON.parse(cache.get('host_log') || '[]'); } catch (e) { cur = []; }
+    const now = Date.now();
+    cur = cur.concat(log.map(function (x) { return [now].concat(x); })).slice(-400);
+    cache.put('host_log', JSON.stringify(cur), 3600);
+  } catch (e) { /* 診斷紀錄非必要 */ }
+}
+
+function flushUsage_() {
+  flushHostLog_();
+  if (!FETCH_PENDING_) return;
+  const n = FETCH_PENDING_;
+  FETCH_PENDING_ = 0;
   try {
     const props = PropertiesService.getScriptProperties();
     const today = Utilities.formatDate(new Date(), USAGE_TZ, 'yyyy-MM-dd');
@@ -818,18 +1049,25 @@ function countFetch_(n) {
     u.n += n;
     props.setProperty('fetchUsage', JSON.stringify(u));
     usageNow_ = u;
-  } finally {
-    if (locked) lock.releaseLock();
-  }
+  } catch (e) { /* 計數失敗不影響主流程 */ }
 }
 
 function getUsage_() {
+  flushUsage_();
   let u = usageNow_;
   if (!u) {
     try { u = JSON.parse(PropertiesService.getScriptProperties().getProperty('fetchUsage') || '{}'); } catch (e) { u = {}; }
   }
   const today = Utilities.formatDate(new Date(), USAGE_TZ, 'yyyy-MM-dd');
   return { date: today, count: u.d === today ? u.n : 0, limit: URLFETCH_DAILY_LIMIT };
+}
+
+/**
+ * 寫入試算表用的鎖。選股排程長時間佔用 script lock，使用者操作改用試算表的 document lock，彼此不互相卡住；
+ * 若腳本不是從試算表建立（沒有 document lock）才退回 script lock。
+ */
+function writeLock_() {
+  return LockService.getDocumentLock() || LockService.getScriptLock();
 }
 
 /* ======================== 大型快取與備援 ======================== */
@@ -932,6 +1170,61 @@ function chunk_(arr, n) {
   const out = [];
   for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
   return out;
+}
+
+/* ======================== 連線診斷 ======================== */
+const DIAG_PROBES = [
+  ['證交所即時報價（MIS）', 'https://mis.twse.com.tw/stock/api/getStockInfo.jsp?json=1&delay=0&ex_ch=tse_2330.tw'],
+  ['證交所（法人、信用、類股）', 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?response=json&type=IND'],
+  ['櫃買中心', 'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes'],
+  ['Yahoo（報價、走勢）', 'https://query1.finance.yahoo.com/v8/finance/chart/2330.TW?range=1d&interval=1d'],
+  ['Yahoo（歷史、備援）', 'https://query2.finance.yahoo.com/v8/finance/chart/%5EGSPC?range=1d&interval=1d'],
+  ['FinMind', 'https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInfo&data_id=2330'],
+  ['美國財政部（殖利率）', 'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2026/all?type=daily_treasury_yield_curve&field_tdr_date_value=2026&page&_format=csv'],
+  ['FRED 網站（無金鑰時用）', 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10&cosd=2026-01-01'],
+  ['鉅亨網新聞', 'https://api.cnyes.com/media/api/v1/newslist/category/headline?limit=1'],
+  ['Nasdaq（日曆）', 'https://api.nasdaq.com/api/calendar/economicevents?date=2026-01-05'],
+];
+
+/**
+ * probe = true：逐一實測各來源（不經斷路器，每個最多一次），回傳耗時與狀態碼
+ * 一律回傳：暫停中的來源、近 1 小時各來源的請求次數／平均與最長耗時／失敗次數
+ */
+function diag_(probe) {
+  const out = { down: hostsDown_(), at: Date.now(), proxy: !!proxyCfg_().url };
+  try { const q = CacheService.getScriptCache().get('quota_out'); out.quotaOut = q ? +q : null; } catch (e) { out.quotaOut = null; }
+  try { out.triggers = ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); }); } catch (e) { out.triggers = null; }
+  let log = [];
+  try { log = JSON.parse(CacheService.getScriptCache().get('host_log') || '[]'); } catch (e) { log = []; }
+  const stat = {};
+  log.forEach(function (x) {
+    const s = stat[x[1]] = stat[x[1]] || { n: 0, sum: 0, max: 0, fail: 0, skip: 0, batch: 0, last: 0 };
+    s.n++; s.last = Math.max(s.last, x[0]);
+    if (x[3] === 'skip') { s.skip++; return; }
+    if (x[4] === 'batch') s.batch++;
+    s.sum += x[2]; s.max = Math.max(s.max, x[2]);
+    if (x[3] === 'err' || x[3] >= 500 || x[3] === 429) s.fail++;
+  });
+  out.stats = stat;
+  if (probe) {
+    out.probe = DIAG_PROBES.map(function (p) {
+      const t = Date.now();
+      let code = '', err = '', size = 0;
+      try {
+        const r = UrlFetchApp.fetch(viaProxy_(p[1]), { muteHttpExceptions: true, headers: { 'User-Agent': UA, Accept: 'application/json, text/plain, */*', Referer: 'https://mis.twse.com.tw/stock/index.jsp' } });
+        code = r.getResponseCode();
+        size = r.getContentText().length;
+      } catch (e) { if (isQuotaError_(e)) noteQuota_(); err = String((e && e.message) || e).replace(/https?:\/\/\S+/g, '').replace(/[：:]\s*$/, '').trim().slice(0, 100); }
+      countFetch_(1);
+      return { name: p[0], host: hostOf_(p[1]), ms: Date.now() - t, code: code, size: size, err: err };
+    });
+  }
+  return out;
+}
+
+/** 在編輯器執行：清除所有來源的暫停狀態（例如確認來源已恢復時） */
+function resetHosts() {
+  CacheService.getScriptCache().remove('hosts_down');
 }
 
 /** 在編輯器手動執行，可測試報價抓取並完成授權 */

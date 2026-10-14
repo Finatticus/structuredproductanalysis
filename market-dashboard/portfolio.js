@@ -150,7 +150,10 @@ async function pfRefreshAll(force) {
   const fresh = pf.mkt && Date.now() - (pf.mkt.updated || 0) < 30 * 60000 && pf.mkt.from <= need.from;
   try {
     if (force || missing || !fresh) {
-      const m = (await api('portfolio', { op: 'market', ...need })).data;
+      // 有資料中繼站：瀏覽器直接抓（不經 Google）；全部失敗才走後端
+      let m = null;
+      if (proxyOn()) { try { m = await pfMarketDirect(need); } catch { m = null; } }
+      if (!m || !Object.keys(m.series).length) m = (await apiBg('portfolio', { op: 'market', ...need })).data;
       pf.mkt = m;
       try { localStorage.setItem(pfMktKey(), JSON.stringify(m)); } catch { /* 空間不足就不存 */ }
     }
@@ -164,6 +167,62 @@ async function pfRefreshAll(force) {
   }
 }
 
+/* ---------- 歷史價格／配息／分割：經中繼站直接抓（格式與後端 Portfolio.gs 的 pfMarket_ 相同） ---------- */
+function pfRound(v) {
+  if (v == null) return null;
+  const a = Math.abs(v), p = a >= 1000 ? 100 : a >= 1 ? 10000 : 1000000;
+  return Math.round(v * p) / p;
+}
+
+function pfRangeOf(from) {
+  const days = (Date.now() - Date.parse(from || '2000-01-01')) / 86400000;
+  return days <= 330 ? '2y' : days <= 1400 ? '5y' : days <= 3300 ? '10y' : 'max';
+}
+
+/** Yahoo 日線 → { t, c, divs, splits, ccy, itype, name, price }；保留 from 之後，至少近 400 天（相關係數、β 用） */
+function pfParseChart(text, from) {
+  const r = JSON.parse(text).chart.result[0];
+  const q = r.indicators.quote[0], off = r.meta.gmtoffset || 0;
+  const day = ts => new Date((ts + off) * 1000).toISOString().slice(0, 10);
+  const minKeep = day(Date.now() / 1000 - 400 * 86400);
+  const keep = from < minKeep ? from : minKeep;
+  const t = [], c = [], seen = {};
+  (r.timestamp || []).forEach((ts, i) => {
+    if (q.close[i] == null) return;
+    const d = day(ts);
+    if (d < keep) return;
+    if (seen[d] != null) { c[seen[d]] = pfRound(q.close[i]); return; }
+    seen[d] = t.length;
+    t.push(d); c.push(pfRound(q.close[i]));
+  });
+  const ev = r.events || {};
+  const divs = Object.values(ev.dividends || {}).map(x => [day(x.date), pfRound(x.amount)]).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  const splits = Object.values(ev.splits || {}).map(x => [day(x.date), x.numerator / x.denominator])
+    .filter(x => isFinite(x[1]) && x[1] > 0 && x[1] !== 1).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  return { t, c, divs, splits, ccy: r.meta.currency || null, itype: r.meta.instrumentType || '', name: r.meta.shortName || r.meta.longName || '', price: r.meta.regularMarketPrice || null };
+}
+
+async function pfMarketDirect(need) {
+  const range = pfRangeOf(need.from);
+  const syms = [...new Set(need.syms.concat(need.ccys.map(pfFxSym), need.bench))].filter(s => /^[\^A-Z0-9.\-=]{1,20}$/i.test(s));
+  const out = { series: {}, stale: [], from: need.from, updated: Date.now(), direct: true };
+  const prev = (pf.mkt && pf.mkt.series) || {};
+  const queue = syms.slice();
+  const one = async () => {
+    while (queue.length) {
+      const s = queue.shift();
+      try {
+        out.series[s] = pfParseChart(await pget('https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(s) + '?range=' + range + '&interval=1d&events=div,split', 20000), need.from);
+      } catch {
+        if (prev[s]) out.series[s] = prev[s]; // 沿用上次的資料
+        out.stale.push(s);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(6, syms.length) }, one)); // 同時最多 6 檔
+  return out;
+}
+
 async function pfRefreshQuotes(silent) {
   const c = pf.calc;
   const src = new Set();
@@ -172,7 +231,7 @@ async function pfRefreshQuotes(silent) {
   if (!c) pf.txns.forEach(t => { if (/^(yahoo|mis):/.test(t.source)) src.add(t.source); });
   if (src.size) {
     try {
-      const r = await api('quotes', { sources: [...src] });
+      const r = await fetchQuotes([...src]);
       Object.entries(r.quotes || {}).forEach(([k, q]) => { if (q && q.price != null) pf.quotes[k] = q; });
       pf.quoteAt = Date.now();
       if (!silent) pfStatus('報價已更新 · ' + new Date().toLocaleTimeString('zh-TW', { hour12: false }), 'live');
