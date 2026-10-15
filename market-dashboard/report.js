@@ -338,12 +338,18 @@ const CAL_REPORT = {
   },
   earnings(d) {
     const now = Date.now();
-    const rows = (d.rows || []).slice().sort((a, b) => ((a.start > now - 86400000 ? a.start : Infinity) - (b.start > now - 86400000 ? b.start : Infinity))).map(r => {
-      const up = r.start && r.start > now - 86400000;
-      return `<tr><td>${esc(r.name)} <span class="muted">${esc(r.symbol)}</span></td><td>${up ? tpDate(r.start) + (r.est ? '（預估）' : '') : r.start ? `上次 ${tpDate(r.start)}，下次未公布` : '尚無日期'}</td>
-        <td>${up ? `${Math.ceil((r.start - now) / 86400000)} 天後` : r.cat === 'tw' ? twDeadline() : ''}</td></tr>`;
-    });
-    return { src: 'Yahoo Finance（美股備援 Nasdaq）', html: (d.note ? `<p class="note">${esc(d.note)}</p>` : '') + (rows.length ? rTbl(['標的', '下次財報／法說', '狀態'], rows) : '<p class="muted">自選清單中沒有台股或國外股票</p>') };
+    const all = d.rows || [];
+    // 只列出已有下次財報／法說日期的標的
+    const up = all.filter(r => r.start && r.start > now - 86400000).sort((a, b) => a.start - b.start);
+    const rows = up.map(r => `<tr><td>${esc(r.name)} <span class="muted">${esc(r.symbol)}</span></td><td>${tpDate(r.start)}${r.end && r.end - r.start > 86400000 ? ' ～ ' + tpDate(r.end) : ''}${r.est ? '（預估）' : ''}</td>
+      <td>${Math.ceil((r.start - now) / 86400000)} 天後</td></tr>`);
+    const noDate = all.length - up.length;
+    return {
+      src: 'Yahoo Finance（美股備援 Nasdaq）',
+      html: (d.note ? `<p class="note">${esc(d.note)}</p>` : '') +
+        (rows.length ? rTbl(['標的', '下次財報／法說', '倒數'], rows) : `<p class="muted">${all.length ? '自選清單中的股票目前都還沒有公布下次財報／法說日期' : '自選清單中沒有台股或國外股票'}</p>`) +
+        (noDate ? `<p class="note">另有 ${noDate} 檔自選股尚未公布下次日期，未列出。</p>` : ''),
+    };
   },
   usearn(d) {
     const mine = calMyGlobal();

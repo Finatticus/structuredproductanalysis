@@ -94,13 +94,19 @@ function twDeadline() {
 function renderEarnings(d, body) {
   const [w0, w1, w2] = weekBounds();
   const now = Date.now();
-  const rows = (d.rows || []).slice().sort((a, b) => {
-    const fa = a.start && a.start > now - 86400000 ? a.start : Infinity;
-    const fb = b.start && b.start > now - 86400000 ? b.start : Infinity;
-    return fa - fb;
-  });
-  if (!rows.length) {
+  // 只列出已有下次財報／法說日期的標的（尚無日期或下次未公布的不列）
+  const all = d.rows || [];
+  const rows = all.filter(r => r.start && r.start > now - 86400000).sort((a, b) => a.start - b.start);
+  const noDate = all.length - rows.length;
+  const foot = `${d.note ? `<div class="foot-note warn">${esc(d.note)}</div>` : ''}
+    <div class="foot-note">日期來源 Yahoo Finance（台北時間；美股 Yahoo 沒有日期時改用 Nasdaq，只有日期、不含時間）。台股多為法說會或董事會日期。
+      ${noDate ? `另有 ${noDate} 檔自選股尚未公布下次日期，未列出；台股法定公告期限：${twDeadline()}（年報 3/31、Q1 5/15、Q2 8/14、Q3 11/14）。` : ''}</div>`;
+  if (!all.length) {
     body.innerHTML = '<div class="panel-msg">自選清單中沒有台股或國外股票</div>';
+    return;
+  }
+  if (!rows.length) {
+    body.innerHTML = '<div class="panel-msg">自選清單中的股票目前都還沒有公布下次財報／法說日期</div>' + foot;
     return;
   }
   const thisWeek = rows.filter(r => r.start && r.start >= w0 && r.start < w1);
@@ -109,22 +115,13 @@ function renderEarnings(d, body) {
     <div class="tbl-wrap"><table class="mtbl">
       <thead><tr><th>標的</th><th>下次財報／法說</th><th>狀態</th></tr></thead>
       <tbody>${rows.map(r => {
-        const upcoming = r.start && r.start > now - 86400000;
-        let tag, when;
-        if (!upcoming) {
-          when = r.start ? `<span class="muted">上次 ${tpDate(r.start)}，下次未公布</span>` : '<span class="muted">尚無日期</span>';
-          tag = r.cat === 'tw' ? `<span class="tag">${twDeadline()}</span>` : '';
-        } else {
-          const days = Math.ceil((r.start - now) / 86400000);
-          when = tpDate(r.start) + (r.end && r.end - r.start > 86400000 ? ` ～ ${tpDate(r.end)}` : '') + (r.est ? ' <span class="muted">預估</span>' : '');
-          tag = r.start < w1 ? '<span class="tag bad">本週財報</span>'
-            : r.start < w2 ? '<span class="tag warn">下週</span>'
-              : `<span class="tag">${days} 天後</span>`;
-        }
+        const days = Math.ceil((r.start - now) / 86400000);
+        const when = tpDate(r.start) + (r.end && r.end - r.start > 86400000 ? ` ～ ${tpDate(r.end)}` : '') + (r.est ? ' <span class="muted">預估</span>' : '');
+        const tag = r.start < w1 ? '<span class="tag bad">本週財報</span>'
+          : r.start < w2 ? '<span class="tag warn">下週</span>'
+            : `<span class="tag">${days} 天後</span>`;
         return `<tr><td class="nm"><a href="#" data-rs="${esc(r.symbol)}">${esc(r.name)}</a> <span class="muted">${esc(r.symbol)}</span></td><td>${when}</td><td>${tag}</td></tr>`;
-      }).join('')}</tbody></table></div>
-    ${d.note ? `<div class="foot-note warn">${esc(d.note)}</div>` : ''}
-    <div class="foot-note">日期來源 Yahoo Finance（台北時間；美股 Yahoo 沒有日期時改用 Nasdaq，只有日期、不含時間）。台股多為法說會或董事會日期；查無日期的台股顯示法定公告期限（一般公司：年報 3/31、Q1 5/15、Q2 8/14、Q3 11/14）。</div>`;
+      }).join('')}</tbody></table></div>${foot}`;
   calBindResearch(body);
 }
 
