@@ -815,3 +815,41 @@ svg.optdist rect.op.hot { fill: #d9730d; }
 svg.optdist line.spot { stroke: #c62828; stroke-dasharray: 4 3; }
 .cotbar { position: relative; height: 8px; min-width: 80px; border-radius: 4px; background: linear-gradient(90deg, #d5ecdf, #eef1f5 40%, #eef1f5 60%, #f6d5d5); }
 .cotbar i { position: absolute; top: -3px; width: 4px; height: 14px; margin-left: -2px; border-radius: 2px; background: var(--primary); }
+
+/* ---------- 個股研究：分組、導覽、延伸資料 ---------- */
+.rsx { display: contents; }
+.rs-group { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin: 14px 0 -4px; scroll-margin-top: 118px; }
+.rs-group h3 { margin: 0; font-size: 15px; font-weight: 700; color: var(--primary); white-space: nowrap; }
+.rs-group::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.rs-nav { grid-column: 1 / -1; position: sticky; top: 58px; z-index: 6; display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px;
+  background: rgba(255,255,255,.94); backdrop-filter: blur(6px); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.rs-nav button { border: 1px solid transparent; background: var(--surface-2); color: var(--text-2); border-radius: 16px; padding: 5px 12px; font-size: 12.5px; cursor: pointer; }
+.rs-nav button:hover { border-color: var(--primary); color: var(--primary); }
+.rs-nav .rs-pdf { margin-left: auto; background: var(--primary); color: #fff; }
+.rsx-wait .panel-msg { color: var(--text-3); }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid #c9d6ea; border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.mtbl.sm td, .mtbl.sm th { padding-top: 4px; padding-bottom: 4px; font-size: 12.5px; }
+.fair-bar { position: relative; height: 12px; margin: 16px 4px 6px; border-radius: 6px; overflow: visible; }
+.fair-bar .z { position: absolute; top: 0; bottom: 0; }
+.fair-bar .z1 { background: #cfe9da; border-radius: 6px 0 0 6px; } .fair-bar .z2 { background: #e7f2ea; } .fair-bar .z3 { background: #fbefd9; } .fair-bar .z4 { background: #f6d5d5; border-radius: 0 6px 6px 0; }
+.fair-bar .now { position: absolute; top: -5px; width: 4px; height: 22px; background: var(--text); border-radius: 2px; transform: translateX(-50%); }
+.fair-lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-2); margin-bottom: 8px; }
+.vp-wrap { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
+.vp { display: flex; flex-direction: column; gap: 2px; }
+.vp-row { display: grid; grid-template-columns: 52px 1fr; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.vp-p { text-align: right; }
+.vp-bar { height: 8px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.vp-bar i { display: block; height: 100%; background: #b9c7dc; border-radius: 3px; }
+.vp-row.above .vp-bar i { background: color-mix(in srgb, var(--up) 45%, #fff); }
+.vp-row.below .vp-bar i { background: color-mix(in srgb, var(--down) 45%, #fff); }
+.vp-row.cur { color: var(--text); font-weight: 700; } .vp-row.cur .vp-bar i { background: var(--primary); }
+.vp-side .sub-h { margin: 8px 0 4px; } .vp-side .sub-h:first-child { margin-top: 0; }
+.lv { font-size: 12.5px; padding: 2px 0; font-variant-numeric: tabular-nums; }
+.fscore { list-style: none; padding: 0; margin: 6px 0; columns: 2; column-gap: 16px; font-size: 12.5px; }
+.fscore li { break-inside: avoid; padding: 3px 0; display: flex; gap: 6px; }
+.fscore li span { width: 16px; text-align: center; font-weight: 700; }
+.fscore li.ok span { color: #137a48; } .fscore li.no span { color: #c62828; } .fscore li.na { color: var(--text-3); }
+@media (max-width: 760px) { .vp-wrap { grid-template-columns: 1fr; } .fscore { columns: 1; } .rs-nav { top: 104px; } }
+/* 全寬字卡裡的長條圖：限制高度（等比例縮放、置中），不會被放大成整個螢幕高 */
+.rs-grid .bars-wrap svg.bars { max-height: 230px; width: 100%; }

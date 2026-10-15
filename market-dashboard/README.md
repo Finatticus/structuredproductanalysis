@@ -6,13 +6,13 @@
 | `Code.gs` | Google Apps Script 後端（帳號、報價、走勢） |
 | `Macro.gs` | Google Apps Script 後端（總經與板塊分析） |
 | `macro.js` | 前端：總經與板塊分析頁 |
-| `Research.gs` / `research.js` | 個股研究（後端／前端） |
+| `Research.gs` / `research.js` / `research2.js` | 個股研究（後端／前端；`research2.js` 為延伸資料、風險與報酬等統計） |
 | `Screener.gs` / `screener.js` | 選股篩選器（後端／前端） |
 | `Etf.gs` / `etf.js` / `backtest.js` | ETF 專區、回測與策略（回測價格由 Etf.gs 提供） |
 | `Portfolio.gs` / `portfolio.js` | 投資組合部位追蹤（後端／前端） |
 | `Calendar.gs` / `cal.js` | 財金日曆（後端／前端） |
 | `Futures.gs` / `futures.js` | 期貨專區（後端／前端；瀏覽器資料引擎也會載入 `Futures.gs`） |
-| `report.js` | 總經與財金日曆的 PDF 報告 |
+| `report.js` | 總經、財金日曆、個股研究的 PDF 報告 |
 | `worker.js` | 資料中繼站（貼到 Cloudflare Workers，強烈建議設定，見「十五」） |
 | `engine.js` / `engine-worker.js` | 瀏覽器資料引擎：在瀏覽器背景執行同一份後端程式（見「十六」） |
 | `panels.js` | 字卡頁面共用引擎（總經、財金日曆：分批載入、自動重試、瀏覽器快取、版面編輯） |
@@ -153,6 +153,29 @@ GAS 免費帳號 UrlFetch（向外部網站抓資料）每日上限 **20,000 次
   3. Yahoo 完整資料（quoteSummary，**需要 cookie＋crumb 認證**，Google／Cloudflare 主機常被拒絕）：抓得到時優先使用，另含員工數、內部人持股、近期評等異動。
   舊版只用第 3 層，認證失敗時市值、本益比、成長與獲利、籌碼、公司簡介都會空白。Beta 抓不到時以近一年日報酬對 S&P 500 自行計算；放空比例改用 Nasdaq 時以「占總股數」顯示。
 - 其他市場（日、港、韓等）：沒有 Nasdaq 資料，簡介、分析師、籌碼只在 Yahoo 認證成功時顯示；財報與估值仍有。
+
+
+### 8.1 延伸資料（2026-10 新增）
+
+主要資料顯示後，前端在背景以 `researchx` action 分組平行載入延伸資料（`Research.gs` 的 `researchX_`），每組獨立快取、失敗只影響該組並可重試。畫面依分組排列（價格與技術、基本面、財務體質、預估與分析師、籌碼、股利、新聞與事件、同業比較、公司簡介），上方有固定的分組導覽列。
+
+| 分組 | 台股 | 美股 | 來源 | 快取 |
+|---|---|---|---|---|
+| 財務體質 `fin` | 資產負債、現金流（累計換算單季）、ROE／ROA、杜邦分析、存貨與應收天數、F-Score、Z-Score | 同左（Yahoo 季／年報）＋ SEC 近 12 年年度財報、股東回饋（買回、股利、股數變化） | FinMind；Yahoo、SEC XBRL（`data.sec.gov`，代號以 EDGAR 公司搜尋 `efts.sec.gov` 對照） | 6 小時 |
+| 預估 `est` | — | 分析師季度／年度 EPS 共識與調整、財報驚喜與財報前後股價反應 | Nasdaq | 6 小時 |
+| 籌碼 `chips`／`own` | 集保股權分散（近 12 週，集保網站查詢頁接力查詢）、借券賣出餘額、融券、當沖比、哪些 ETF 持有（ETF 專區 `_etfh` 快照反查，索引快取 6 小時） | 內部人交易、機構持股與前十大、最近月選擇權 Put/Call 比、最大未平倉、最大痛點 | FinMind、集保結算所；Nasdaq | 1～2 小時 |
+| 新聞與事件 `events` | 鉅亨網新聞、注意／處置股票、除權息結果（填息天數由前端以股價計算） | Yahoo 新聞、SEC 申報（10-K／10-Q／8-K 等與 8-K 項目說明） | 鉅亨網、證交所、櫃買中心、FinMind；Yahoo、SEC | 30 分鐘 |
+| 同業 `peers` | 同產業市值前 8 大（全市場快照：上市櫃本益比、殖利率、月營收、股數、收盤，6 小時共用） | Yahoo 相關個股（不一定同產業）的估值、成長、利潤率、漲跌 | 證交所、櫃買中心開放資料；Yahoo | 6 小時 |
+
+另外由現有價格資料在前端計算（不另抓資料）：風險指標（最大回撤與收復、Beta、夏普、索提諾、單日最大漲跌）、長期報酬（1 個月～10 年，含息）、季節性（10 年月線，排除未結束的當月）、支撐與壓力（近一年成交量分布）、合理價區間（本益比百分位 × EPS，差距過大時提示參考性低）、月營收亮點。主要資料另加近 10 年月線（`mo`）。
+
+**個股 PDF 報告**：頁首「📄 產出 PDF 報告」，延伸資料未載完會先確認；版型同總經報告。
+
+**不提供**：券商分點進出（驗證碼／付費）、董監持股與質押、公開資訊觀測站重大訊息（防爬）、美股隱含波動率（無免費來源）；SEC EPS 未依分割調整故不列。
+
+**額度**：第一次查一檔台股約 45 次外部請求（主要 14＋延伸約 33，其中全市場快照 8 次 6 小時內共用）、美股約 37 次；之後同一檔在快取時間內幾乎不耗額度。集保網站與 SEC 由 Google 直接連（不經中繼站）。
+
+**網頁快取**：`index.html` 引用的程式與樣式帶版本號（`?v=20261016`），更新網頁檔案時要一起上傳新的 `index.html`，瀏覽器才會載入新版。
 
 ## 九、選股篩選器（需先啟用一次）
 
@@ -351,7 +374,7 @@ GAS 免費帳號 UrlFetch（向外部網站抓資料）每日上限 **20,000 次
 4. **FRED API 金鑰**（建議）：到 https://fredaccount.stlouisfed.org 註冊 → 「API Keys」→「Request API Key」→ 複製 32 碼金鑰填到 `FRED_KEY`。
    FRED 網站對程式請求常常很慢或沒回應（實測多次逾時），官方 API 則穩定；沒填時美國經濟數據退回網站下載。美債殖利率曲線已改用**美國財政部**官方資料，不需金鑰。
 5. **網頁檔案**（上傳到 GitHub Pages 等，或放在同一資料夾）：
-   `index.html`、`style.css`、`app.js`、`engine.js`、`engine-worker.js`、`panels.js`、`macro.js`、`cal.js`、`futures.js`、`report.js`、`research.js`、`screener.js`、`etf.js`、`portfolio.js`、`backtest.js`、`help.js`、`settings.js`，以及 `Code.gs`、`Macro.gs`、`Calendar.gs`、`Futures.gs`（瀏覽器引擎用）。
+   `index.html`、`style.css`、`app.js`、`engine.js`、`engine-worker.js`、`panels.js`、`macro.js`、`cal.js`、`futures.js`、`report.js`、`research.js`、`research2.js`、`screener.js`、`etf.js`、`portfolio.js`、`backtest.js`、`help.js`、`settings.js`，以及 `Code.gs`、`Macro.gs`、`Calendar.gs`、`Futures.gs`（瀏覽器引擎用）。
 6. **在 Apps Script 執行一次**：`screenerRecheckHolidays`（清除舊版誤標的非交易日）。
 7. **排程**（Apps Script 左側鬧鐘「觸發條件」）：`screenerDaily`、`etfHoldDaily` 保留；`screenerBackfill` 是選股器補歷史資料用，補完會自動刪除。若 Google 額度吃緊可先刪除它，之後再執行一次 `setupScreener` 重建。
 8. **確認**：網頁登出再登入 →「設定 → 連線診斷」：

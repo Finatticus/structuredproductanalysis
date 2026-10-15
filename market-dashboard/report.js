@@ -1,5 +1,5 @@
 /* =========================================================
- * PDF 報告（總經與板塊分析、財金日曆）
+ * PDF 報告（總經與板塊分析、財金日曆、個股研究）
  *  - 按「📄 產出 PDF 報告」：檢查各字卡是否都已成功更新，有未成功的先列出並確認是否繼續
  *  - 依目前資料重新排版成 A4 直式報告（封面、重點摘要、目錄、編號章節、表格與向量圖表、頁首頁碼），
  *    在新分頁開啟並叫出列印視窗，「目的地」選「另存為 PDF」即可存檔
@@ -545,7 +545,8 @@ ol.toc { margin: 0; padding-left: 22px; columns: 2; column-gap: 28px; } ol.toc l
 .sec { margin: 0 0 20px; }
 .sec h2 { font-size: 13pt; color: var(--navy); margin: 0 0 2px; padding: 10px 0 5px; border-bottom: 1.5px solid var(--navy); break-after: avoid; display: flex; align-items: baseline; gap: 10px; }
 .sec h2 .no { font: 700 11pt "Inter", sans-serif; color: #fff; background: var(--navy); border-radius: 3px; padding: 1px 7px; }
-.src { font-size: 8pt; color: var(--muted); margin: 4px 0 10px; }
+.src { font-size: 8pt; color: var(--muted); margin: 4px 0 10px; break-after: avoid; }
+.sec > .kpis:first-of-type, .sec > p:first-of-type { break-before: avoid; }
 h4 { font-size: 10pt; margin: 12px 0 6px; color: var(--ink); break-after: avoid; }
 p { margin: 6px 0 8px; }
 .note { font-size: 8.5pt; color: #8a6400; background: #fff8e1; border-left: 3px solid #e0a100; padding: 4px 8px; }
@@ -566,7 +567,7 @@ table.rt td.sp { width: 80px; } table.rt td.heat { font-weight: 600; }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(32mm, 1fr)); border: 1px solid var(--rule); border-radius: 4px; margin: 6px 0 10px; break-inside: avoid; }
 .kpi { padding: 7px 10px; border-right: 1px solid var(--rule); } .kpi:last-child { border-right: 0; }
 .kl { font-size: 8pt; color: var(--muted); } .kv { font: 700 12.5pt "Inter", "Noto Sans TC", sans-serif; margin: 1px 0; } .ks { font-size: 8pt; color: var(--muted); }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; } .two > div { min-width: 0; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; break-inside: avoid; } .two > div { min-width: 0; }
 .keep { break-inside: avoid; }
 svg.rchart { width: 100%; height: auto; margin: 4px 0 8px; break-inside: avoid; display: block; }
 svg .gl { stroke: #e6eaf0; stroke-width: 1; } svg .zl { stroke: #c62828; stroke-dasharray: 3 3; }
@@ -579,6 +580,233 @@ ol.news { margin: 0 0 6px; padding-left: 18px; } ol.news li { margin: 3px 0; bre
 .lights span { color: #fff; font: 700 8.5pt "Inter", sans-serif; text-align: center; padding: 4px 0 2px; border-radius: 3px; }
 .lights i { display: block; font: 400 6.5pt "Inter", sans-serif; opacity: .9; font-style: normal; }
 `;
+
+/* =========================================================
+ * 個股研究 PDF 報告
+ * ========================================================= */
+const RSX_LABEL = { fin: '財務體質', est: '分析師預估與財報驚喜', chips: '股權分散、借券與當沖', own: '內部人、機構與選擇權', events: '新聞與事件', peers: '同業比較' };
+
+function reportShell(title, docTitle, cover, secs) {
+  const css = getComputedStyle(document.body);
+  const up = css.getPropertyValue('--up').trim() || '#d63a3a', down = css.getPropertyValue('--down').trim() || '#13894f';
+  return `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>${docTitle}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>${REPORT_CSS.replace('__UP__', up).replace('__DOWN__', down).replace('__TITLE__', title)}</style></head><body>
+<div class="bar noprint"><b>${esc(title)}</b><span>列印視窗的「目的地」選「另存為 PDF」即可存檔；建議紙張 A4、勾選「背景圖形」。</span><button onclick="window.print()">列印／另存 PDF</button><button onclick="window.close()">關閉</button></div>
+${cover}
+${secs.map((s, i) => `<section class="sec"><h2><span class="no">${i + 1}</span>${esc(s.title)}</h2>
+  ${s.src ? `<div class="src">來源：${esc(s.src)}</div>` : ''}${s.html}</section>`).join('')}
+</body></html>`;
+}
+
+function buildResearchReport() {
+  const d = research.data, C = research.calc, X = research.x || {}, E = research.xerr || {};
+  if (!d || !C) { toast('請先查詢一檔股票'); return; }
+  const isTW = d.mkt === 'TW', cur = d.currency || '';
+  const parts = isTW ? RSX_PARTS.TW : RSX_PARTS.US;
+  const issues = parts.filter(p => !X[p]).map(p => `・${RSX_LABEL[p]}：${E[p] ? '無法取得（' + E[p].slice(0, 40) + '）' : '仍在背景載入中'}，報告中會略過`);
+  if (issues.length && !confirm(`以下延伸資料尚未載入完成：\n\n${issues.join('\n')}\n\n仍要產出報告嗎？（按「取消」可等載入完成後再產出）`)) return;
+
+  const secs = [];
+  const add = (title, html, src) => { if (html) secs.push({ title, html, src }); };
+  const last = C.last, P = d.price, n = P.c.length;
+
+  // 1. 價格與技術
+  {
+    const s = Math.max(0, n - 250), T = C.tech;
+    const chart = rChart({ labels: P.t.slice(s), h: 200, series: [
+      { name: '收盤價', color: '#1f4e8c', vals: P.c.slice(s), width: 1.8, fmt: v => numTxt(v, v >= 100 ? 0 : 2) },
+      { name: 'MA60', color: '#e67e22', vals: C.ma[60].slice(s), width: 1.2 }, { name: 'MA240', color: '#7f8c8d', vals: C.ma[240].slice(s), width: 1.2, dash: true }] });
+    const tech = rTbl(['指標', '#數值', '解讀'], [
+      `<tr><td>RSI(14)</td>${rNum(T.rsi, 1)}<td>${T.rsi >= 70 ? '超買區' : T.rsi <= 30 ? '超賣區' : T.rsi >= 50 ? '強勢區' : '弱勢區'}</td></tr>`,
+      `<tr><td>KD(9,3,3)</td><td class="num">K ${numTxt(T.k, 1)} / D ${numTxt(T.d, 1)}</td><td>${T.k > T.d ? 'K 在 D 之上' : 'K 在 D 之下'}</td></tr>`,
+      `<tr><td>MACD(12,26,9)</td><td class="num">DIF ${numTxt(T.dif, 2)} / ${numTxt(T.dea, 2)}</td><td class="${rc(T.osc)}">柱 ${signTxt(T.osc, 2)}</td></tr>`,
+      `<tr><td>乖離率</td><td class="num">20 日 ${signTxt(T.bias20, 1, '%')}／60 日 ${signTxt(T.bias60, 1, '%')}</td><td></td></tr>`,
+      ...[20, 60, 240].map(k => { const m = C.ma[k][n - 1]; return `<tr><td>MA${k}</td>${rNum(m)}<td class="${rc(last - m)}">${isNum(m) ? (last >= m ? '股價在上' : '股價在下') : '—'}</td></tr>`; })], 'sm');
+    const R = C.risk || rsxRiskCalc(), RT = C.rets || rsxReturnsCalc();
+    const risk = rTbl(['風險指標', '#數值'], [
+      `<tr><td>最大回撤（近 ${R.years} 年）</td>${rSign(R.mdd, 1, '%')}</tr>`, `<tr><td>近 1 年最大回撤</td>${rSign(R.mdd1, 1, '%')}</tr>`,
+      `<tr><td>年化波動度</td>${rNum(R.vol, 1, '%')}</tr>`, `<tr><td>Beta</td>${rNum(R.beta, 2)}</tr>`, `<tr><td>夏普值／索提諾值</td><td class="num">${numTxt(R.sharpe, 2)}／${numTxt(R.sortino, 2)}</td></tr>`,
+      `<tr><td>單日最大漲／跌</td><td class="num"><span class="up">${signTxt(R.best, 1, '%')}</span>／<span class="down">${signTxt(R.worst, 1, '%')}</span></td></tr>`], 'sm');
+    const rets = rTbl(['期間', '#股價', '#含息', '#年化'], RT.map(r => `<tr><td>${r.label}</td>${rSign(r.p, 1, '%')}${'t' in r ? rSign(r.t, 1, '%') : '<td class="num">—</td>'}${rSign(r.ann, 1, '%')}</tr>`), 'sm');
+    const S = C.season || rsxSeasonCalc();
+    const season = S ? `<h4>季節性（近 ${Math.round(d.mo.t.length / 12)} 年各月份）</h4>` + rTbl(['月份', ...S.map(x => '#' + x.m + '月')], [
+      `<tr><td>平均報酬</td>${S.map(x => rSign(x.avg, 1, '%')).join('')}</tr>`, `<tr><td>上漲機率</td>${S.map(x => rNum(x.win, 0, '%')).join('')}</tr>`], 'sm') : '';
+    const LV = C.levels || rsxLevelsCalc();
+    const lv = `<p>成交密集壓力區：${LV.res.map(x => `${numTxt(x.lo, 1)}–${numTxt(x.hi, 1)}`).join('、') || '無'}；支撐區：${LV.sup.map(x => `${numTxt(x.lo, 1)}–${numTxt(x.hi, 1)}`).join('、') || '無'}；52 週區間 ${numTxt(LV.r250.lo)}–${numTxt(LV.r250.hi)}。</p>`;
+    add('價格與技術', chart + `<div class="two"><div><h4>技術指標</h4>${tech}</div><div><h4>風險指標</h4>${risk}</div></div><div class="two"><div><h4>長期報酬</h4>${rets}</div><div><h4>支撐與壓力</h4>${lv}</div></div>` + season, 'Yahoo Finance 日線與月線');
+  }
+  // 2. 估值與合理價
+  {
+    const VA = C.val, F = rsxFairCalc();
+    const k = rKpis([['本益比', isNum(VA.cur) && VA.cur > 0 ? numTxt(VA.cur, 1) : '—', VA.pr != null ? '歷史百分位 ' + numTxt(VA.pr, 0) : ''], ['歷史中位數', numTxt(VA.q[2], 1), `25–75%：${numTxt(VA.q[1], 1)}–${numTxt(VA.q[3], 1)}`],
+      ['股價淨值比', numTxt(VA.curPb, 2), ''], ['殖利率', isNum(VA.yld) ? numTxt(VA.yld, 2) + '%' : '—', ''], ['估值判斷', C.verdict.valuation ? esc(C.verdict.valuation.label) : '—', '']]);
+    const fair = F.ok ? rTbl(['合理價依據', '#EPS', '#便宜（P25）', '#合理（中位）', '#昂貴（P75）'], [
+      `<tr><td>近四季 EPS</td>${rNum(F.ttm, 2)}${rNum(F.cheap)}<td class="num b">${numTxt(F.fair)}</td>${rNum(F.rich)}</tr>`,
+      F.fwd ? `<tr><td>預估 EPS（${esc(F.fwd.p)}）</td>${rNum(F.fwd.eps, 2)}${rNum(F.fwd.cheap)}<td class="num b">${numTxt(F.fwd.fair)}</td>${rNum(F.fwd.rich)}</tr>` : '']) +
+      `<p>現價 ${numTxt(last)}，距合理價 ${signTxt((F.fair / last - 1) * 100, 1, '%')}。</p>` +
+      (F.warn ? `<p class="note">歷史本益比區間很寬（${numTxt(F.p25, 1)}–${numTxt(F.p75, 1)} 倍）或與現價差距很大：過去的獲利基期變化大（高成長或景氣循環），用歷史本益比推算的合理價參考性低。</p>` : '')
+      : '<p class="muted">本益比資料不足或近四季虧損，無法估算合理價。</p>';
+    add('估值與合理價', k + fair, isTW ? '證交所／FinMind 本益比歷史' : 'Yahoo Finance（歷史本益比以股價 ÷ 近四季 EPS 重建）');
+  }
+  // 3. 成長與獲利
+  if (C.fin && C.fin.length) {
+    const F = C.fin.slice(-12);
+    const rows = C.fin.slice(-8).reverse().map(x => { const j = C.fin.indexOf(x), ly = C.fin[j - 4]; const g = ly && ly.rev ? (x.rev / ly.rev - 1) * 100 : null;
+      return `<tr><td>${qLabel(x.p)}</td><td class="num">${fmtBig(x.rev, cur)}</td>${rSign(g, 1, '%')}${rNum(x.gm, 1, '%')}${rNum(x.om, 1, '%')}${rNum(x.nm, 1, '%')}<td class="num b">${numTxt(x.eps, 2)}</td></tr>`; });
+    const chart = rChart({ labels: F.map(x => x.p), h: 170, series: [{ name: '毛利率', color: '#1f4e8c', vals: F.map(x => x.gm), fmt: v => v.toFixed(0) + '%' }, { name: '營益率', color: '#e67e22', vals: F.map(x => x.om) }, { name: '淨利率', color: '#16a085', vals: F.map(x => x.nm) }] });
+    const v = [C.verdict.growth, C.verdict.profit].filter(Boolean).map(x => `${esc(x.label)}：${x.reasons.slice(0, 2).map(esc).join('；')}`).join('<br>');
+    let html = `<p>${v}</p>` + chart + rTbl(['季度', '#營收', '#年增', '#毛利率', '#營益率', '#淨利率', '#EPS'], rows, 'sm');
+    if (isTW && C.mrev.list.length) {
+      const L = C.mrev.list.slice(-12).reverse(), hl = rsxRevHighlights();
+      html += `<h4>月營收</h4>${hl.length ? `<p>${hl.join('；')}</p>` : ''}` + rTbl(['月份', '#營收', '#年增', '#月增'], L.map(x => `<tr><td>${x.ym.replace('-', '/')}</td><td class="num">${fmtBig(x.rev, 'TWD')}</td>${rSign(x.yoy, 1, '%')}${rSign(x.mom, 1, '%')}</tr>`), 'sm');
+    }
+    add('成長與獲利', html, isTW ? 'FinMind（公開資訊觀測站財報、月營收）' : 'Yahoo Finance');
+  }
+  // 4. 財務體質
+  if (X.fin) {
+    const q = (X.fin.q || []).filter(r => r.p), fcur = X.fin.cur || cur;
+    const now = q.length >= 4 ? rsxFinRatios(q, q.length - 1) : X.fin.a && X.fin.a.length ? rsxAnnRatios(X.fin.a, X.fin.a.length - 1) : null;
+    if (now) {
+      let prev = null;
+      if (isTW && q.length >= 8) prev = rsxFinRatios(q, q.length - 5);
+      else if (!isTW && X.fin.a && X.fin.a.length >= 2) prev = rsxAnnRatios(X.fin.a, X.fin.a.length - 2);
+      const curY = !isTW && X.fin.a && X.fin.a.length >= 2 ? rsxAnnRatios(X.fin.a, X.fin.a.length - 1) : now;
+      const F = rsxFScore(curY, prev);
+      const mcap = isTW ? (d.shares ? d.shares * last : null) : d.stats && d.stats.mcap;
+      const Z = /金融|銀行|保險|證券/.test(d.industry || '') ? null : rsxZScore(now, mcap);
+      let html = rKpis([['負債比', numTxt(now.debtR, 1) + '%'], ['流動比／速動比', `${numTxt(now.curR, 2)}／${numTxt(now.quick, 2)}`], ['ROE（近四季）', numTxt(now.roe, 1) + '%', 'ROA ' + numTxt(now.roa, 1) + '%'],
+        ['自由現金流（近四季）', fmtBig(now.t.fcf, fcur), '', rc(now.t.fcf)], ['F-Score', F ? `${F.score}／${F.of}` : '—'], ['Z-Score', Z ? numTxt(Z.z, 2) : '—', Z ? Z.zone[0] : '']]);
+      if (F) html += `<div class="two"><div><h4>Piotroski F-Score</h4>${rTbl(['項目', '結果'], F.items.map(([t, ok]) => `<tr><td>${t}</td><td class="${ok ? 'up' : ok === false ? 'down' : ''}">${ok === null ? '—' : ok ? '✓ 符合' : '✗ 不符合'}</td></tr>`), 'sm')}</div>`;
+      const pts = [];
+      if (isTW) for (let i = q.length - 1; i >= 3 && pts.length < 5; i -= 4) pts.push(rsxFinRatios(q, i));
+      else (X.fin.a || []).forEach((r, k) => { if (k >= 1 || (X.fin.a || []).length === 1) pts.unshift(rsxAnnRatios(X.fin.a, k)); });
+      html += `<div><h4>杜邦分析</h4>${rTbl(['期間', '#ROE', '#淨利率', '#資產週轉', '#權益乘數'], pts.slice(0, 5).map(r => `<tr><td>${isTW ? qLabel(r.p) : r.p.slice(0, 4)}</td>${rNum(r.roe, 1, '%')}${rNum(r.nm, 1, '%')}${rNum(r.turn, 2)}${rNum(r.lev, 2)}</tr>`), 'sm')}</div>${F ? '</div>' : ''}`;
+      html += `<h4>近 8 季現金流與資產負債</h4>` + rTbl(['季度', '#營收', '#淨利', '#營業現金流', '#資本支出', '#自由現金流', '#負債比', '#流動比'],
+        q.slice(-8).reverse().map(r => `<tr><td>${qLabel(r.p)}</td><td class="num">${fmtBig(r.rev, fcur)}</td><td class="num">${fmtBig(r.ni, fcur)}</td><td class="num">${fmtBig(r.ocf, fcur)}</td><td class="num">${fmtBig(r.capex, fcur)}</td><td class="num ${rc(r.fcf)}">${fmtBig(r.fcf, fcur)}</td>${rNum(rxPct(r.tl, r.ta), 1, '%')}${rNum(r.ca && r.cl ? r.ca / r.cl : null, 2)}</tr>`), 'sm');
+      const S = X.fin.sec;
+      if (S && S.rows && S.rows.length) {
+        html += `<h4>長期財報（SEC，近 ${S.rows.length} 年，${esc(S.cur)}）</h4>` + rChart({ labels: S.rows.map(r => String(r.y)), h: 160, series: [{ name: '營收', color: '#1f4e8c', vals: S.rows.map(r => rxDiv(r.rev, S.cur)), width: 2, fmt: v => numTxt(v, 0) }, { name: '淨利', color: '#16a085', vals: S.rows.map(r => rxDiv(r.ni, S.cur)) }] }) +
+          rTbl(['年度', '#營收', '#毛利率', '#營益率', '#淨利', '#淨利率', '#營業現金流', '#ROE'], S.rows.slice().reverse().map(r => `<tr><td>${r.y}</td><td class="num">${fmtBig(r.rev, S.cur)}</td>${rNum(rxPct(r.gp, r.rev), 1, '%')}${rNum(rxPct(r.op, r.rev), 1, '%')}<td class="num">${fmtBig(r.ni, S.cur)}</td>${rNum(rxPct(r.ni, r.rev), 1, '%')}<td class="num">${fmtBig(r.ocf, S.cur)}</td>${rNum(rxPct(r.ni, r.eq), 1, '%')}</tr>`), 'sm');
+      }
+      add('財務體質', html, X.fin.src + (X.fin.sec ? '、SEC' : ''));
+    }
+  }
+  // 5. 預估與分析師
+  {
+    let html = '';
+    const A = d.analyst;
+    if (A && (A.mean || A.trend)) {
+      html += rKpis([['平均目標價', numTxt(A.mean), A.mean ? '距現價 ' + signTxt((A.mean / last - 1) * 100, 1, '%') : ''], ['目標價區間', `${numTxt(A.low)}–${numTxt(A.high)}`], ['分析師人數', A.n || '—'],
+        ['評等分布', A.trend ? `買進 ${(A.trend.sb || 0) + (A.trend.b || 0)}・持有 ${A.trend.h || 0}・賣出 ${(A.trend.s || 0) + (A.trend.ss || 0)}` : '—']]);
+    }
+    if (X.est) {
+      const fr = r => `<tr><td>${esc(r.p)}</td><td class="num b">${numTxt(r.avg, 2)}</td><td class="num">${numTxt(r.lo, 2)}–${numTxt(r.hi, 2)}</td>${rNum(r.n, 0)}<td class="num">${r.up ? '▲' + r.up : ''} ${r.dn ? '▼' + r.dn : ''}</td></tr>`;
+      const idx = ds => P.t.findIndex(t => t >= ds);
+      html += `<div class="two"><div><h4>EPS 預估</h4>${rTbl(['期間', '#平均', '#區間', '#家數', '#4 週調整'], (X.est.qf || []).concat(X.est.yf || []).map(fr), 'sm')}</div>
+        <div><h4>財報驚喜與股價反應</h4>${rTbl(['季度', '#實際', '#預估', '#驚喜', '#反應'], (X.est.surprise || []).map(r => { const k = r.d ? idx(r.d) : -1; const rx = k > 0 && k + 1 < n ? (P.c[k + 1] / P.c[k - 1] - 1) * 100 : null;
+          return `<tr><td>${esc(r.p)}</td>${rNum(r.eps, 2)}${rNum(r.est, 2)}${rSign(r.sp, 1, '%')}${rSign(rx, 1, '%')}</tr>`; }), 'sm')}</div></div>`;
+    }
+    add('預估與分析師', html, (A ? (A.src === 'Nasdaq' ? 'Nasdaq' : 'Yahoo Finance') : '') + (X.est ? '、Nasdaq（Zacks 共識）' : ''));
+  }
+  // 6. 籌碼
+  {
+    let html = '';
+    const CH = C.chips || {};
+    if (isTW) {
+      html += rKpis([['外資 20 日', signTxt(CH.f20, 0) + ' 張', '5 日 ' + signTxt(CH.f5, 0), rc(CH.f20)], ['投信 20 日', signTxt(CH.it20, 0) + ' 張', '5 日 ' + signTxt(CH.it5, 0), rc(CH.it20)],
+        ['外資持股', numTxt((d.foreign || []).slice(-1)[0] && d.foreign.slice(-1)[0].r, 2) + '%', '20 日 ' + signTxt(CH.fr, 2)], ['融資 20 日', signTxt(CH.mg20, 1, '%'), '']]);
+      const Xc = X.chips;
+      if (Xc) {
+        const W = Xc.tdcc || [];
+        if (W.length) {
+          const pct = (w, lv) => w.lv.filter(x => lv.includes(x[0])).reduce((s, x) => s + x[3], 0), ppl = w => w.lv.reduce((s, x) => s + x[1], 0);
+          html += `<h4>集保股權分散（近 ${W.length} 週）</h4>` + rTbl(['週', '#千張大戶', '#400 張以上', '#10 張以下', '#股東人數'], W.slice().reverse().slice(0, 8).map(w =>
+            `<tr><td>${mdTxt(w.d)}</td>${rNum(pct(w, [15]), 2, '%')}${rNum(pct(w, [12, 13, 14, 15]), 2, '%')}${rNum(pct(w, [1, 2, 3]), 2, '%')}${rNum(ppl(w), 0)}</tr>`), 'sm');
+        }
+        const S = Xc.sbl || [], vb = new Map(P.t.map((t, i) => [t, (P.v[i] || 0) / 1000])), db = new Map((Xc.dt || []).map(x => [x.d, x.v]));
+        if (S.length) html += `<h4>借券與當沖（近 10 日）</h4>` + rTbl(['日期', '#借券賣出', '#借券餘額', '#融券餘額', '#當沖比'], S.slice(-10).reverse().map(x =>
+          `<tr><td>${mdTxt(x.d)}</td>${rNum(x.ss, 0)}${rNum(x.sb, 0)}${rNum(x.mb, 0)}${rNum(db.has(x.d) && vb.get(x.d) ? (db.get(x.d) / vb.get(x.d)) * 100 : null, 1, '%')}</tr>`), 'sm');
+        if (Xc.etfs && Xc.etfs.length) html += `<h4>持有的 ETF（追蹤中）</h4>` + rTbl(['ETF', '#權重', '#張數', '資料日'], Xc.etfs.map(x => `<tr><td>${esc(x.etf)} ${esc(x.name)}</td>${rNum(x.w, 2, '%')}${rNum(x.sh / 1000, 0)}<td>${mdTxt(x.d)}</td></tr>`), 'sm');
+      }
+    } else {
+      html += rKpis([['機構持股', isNum(CH.inst) ? numTxt(CH.inst * 100, 1) + '%' : '—'], ['內部人持股', isNum(CH.insider) ? numTxt(CH.insider * 100, 2) + '%' : '—'],
+        ['放空比例', isNum(CH.shortPct) ? numTxt(CH.shortPct * 100, 2) + '%' : '—', '較上期 ' + signTxt(CH.shortChg, 1, '%')], ['回補天數', numTxt(CH.shortRatio, 1)]]);
+      const O = X.own;
+      if (O) {
+        html += `<h4>內部人交易（近期）</h4>${rTbl(['日期', '內部人', '職務', '類型', '#股數', '#價格'], (O.insiders || []).slice(0, 10).map(x => `<tr><td>${esc(x.d)}</td><td>${esc(x.who)}</td><td>${esc(x.rel || '')}</td><td>${esc(INSIDER_ZH[x.type] || x.type)}</td>${rNum(x.sh, 0)}${rNum(x.px || null, 2)}</tr>`), 'sm')}
+          <h4>前十大機構</h4>${rTbl(['機構', '#持股(M)', '#變動', '申報日'], (O.holders || []).map(x => `<tr><td>${esc(x.who)}</td>${rNum(x.sh / 1e6, 1)}${rSign(x.chgPct, 2, '%')}<td>${esc(x.d)}</td></tr>`), 'sm')}`;
+        if (O.opt) {
+          const o = O.opt;
+          html += `<h4>選擇權（${o.exp} 到期）</h4>` + rKpis([['Put/Call（未平倉）', numTxt(o.callOI ? o.putOI / o.callOI : null, 2)], ['最大買權未平倉', numTxt(o.maxCall.k, 2)], ['最大賣權未平倉', numTxt(o.maxPut.k, 2)], ['最大痛點', numTxt(o.pain, 2), isNum(o.px) ? '距現價 ' + signTxt((o.pain / o.px - 1) * 100, 1, '%') : '']]);
+        }
+      }
+    }
+    add('籌碼', html, isTW ? 'FinMind（法人、融資、借券、當沖）、集保結算所' : 'Yahoo／Nasdaq（SEC Form 4、13F）');
+  }
+  // 7. 股利
+  {
+    let html = '';
+    const D = d.div || [];
+    if (D.length) html += rTbl(isTW ? ['期別', '#現金股利', '#股票股利', '除息日'] : ['除息日', '#每股現金股利'], D.slice(0, 10).map(x => (isTW
+      ? `<tr><td>${esc(x.y)}</td>${rNum(x.cash, 2)}${rNum(x.stock, 2)}<td>${esc(x.ex || '—')}</td></tr>` : `<tr><td>${new Date(x.t + 8 * 3600000).toISOString().slice(0, 10)}</td>${rNum(x.cash, 4)}</tr>`)), 'sm');
+    if (isTW && X.events && (X.events.divs || []).length) {
+      const rows = X.events.divs.filter(x => x.d >= P.t[0]).slice().reverse().map(x => {
+        const k = P.t.findIndex(t => t >= x.d);
+        let days = null;
+        if (k >= 0) for (let i = k; i < n; i++) if (P.h[i] >= x.before) { days = i - k + 1; break; }
+        return `<tr><td>${esc(x.d)}</td>${rNum(x.amt, 2)}${rNum(x.before)}${rNum(x.ref)}<td class="num">${days != null ? days + ' 天' : '未填息'}</td></tr>`;
+      });
+      html += `<h4>填息紀錄</h4>` + rTbl(['除權息日', '#配發', '#除息前收盤', '#參考價', '#填息'], rows, 'sm');
+    }
+    add('股利', html, isTW ? 'FinMind' : 'Yahoo Finance');
+  }
+  // 8. 新聞與事件
+  if (X.events) {
+    let html = (X.events.notes || []).map(x => `<p class="note">${esc(x.kind)}：${esc(x.text)}</p>`).join('');
+    html += `<ol class="news">${(X.events.news || []).slice(0, 12).map(x => `<li><a href="${esc(x.u)}">${esc(x.t)}</a><span class="muted">　${esc(x.s)}・${rTime(x.ts)}</span></li>`).join('')}</ol>`;
+    if (!isTW && (X.events.filings || []).length) html += `<h4>SEC 申報文件</h4>` + rTbl(['日期', '文件', '內容'], X.events.filings.slice(0, 10).map(f => `<tr><td>${esc(f.d)}</td><td><a href="${esc(f.u)}">${esc(f.form)}</a> ${esc(f.zh)}</td><td>${esc(f.items || '')}</td></tr>`), 'sm');
+    add('新聞與事件', html, isTW ? '鉅亨網、證交所、櫃買中心' : 'Yahoo Finance、SEC EDGAR');
+  }
+  // 9. 同業比較
+  if (X.peers && (X.peers.rows || []).length) {
+    const R = X.peers.rows;
+    const html = isTW
+      ? `<p>${esc(X.peers.ind)}（共 ${X.peers.total} 家），本股市值排名第 ${X.peers.rank}。</p>` + rTbl(['公司', '#市值(億)', '#本益比', '#淨值比', '#殖利率', '#月營收年增', '#今年'], R.map(r =>
+        `<tr class="${r.me ? 'sum' : ''}"><td>${r.me ? '★ ' : ''}${esc(r.n)} ${esc(r.c)}</td>${rNum(r.cap, 0)}${rNum(r.pe, 1)}${rNum(r.pb, 2)}${rNum(r.y, 2, '%')}${rSign(r.ry, 1, '%')}${rSign(r.ytd, 1, '%')}</tr>`), 'sm')
+      : rTbl(['公司', '#市值', '#本益比', '#預估本益比', '#營收年增', '#毛利率', '#淨利率', '#今年'], R.map(r =>
+        `<tr class="${r.me ? 'sum' : ''}"><td>${r.me ? '★ ' : ''}${esc(r.s)} <span class="muted">${esc(String(r.n).slice(0, 22))}</span></td><td class="num">${fmtBig(r.cap, 'USD')}</td>${rNum(r.pe, 1)}${rNum(r.fpe, 1)}${rSign(r.ry, 1, '%')}${rNum(r.gm, 1, '%')}${rNum(r.nm, 1, '%')}${rSign(r.ytd, 1, '%')}</tr>`), 'sm');
+    add('同業比較', html, isTW ? '證交所、櫃買中心開放資料' : 'Yahoo Finance 相關個股（不一定同產業）');
+  }
+  // 10. 公司簡介
+  {
+    const pf = d.profile || {};
+    const html = rKpis([['產業', esc(d.industry || pf.industry || '—'), esc(pf.sector || '')], ['員工數', pf.employees ? numTxt(pf.employees, 0) : '—'], ['國家', esc(pf.country || (isTW ? 'Taiwan' : '—'))]]) +
+      (pf.summary ? `<p>${esc(pf.summary)}</p>` : '');
+    add('公司簡介', html, pf.summary ? (pf.src === 'Nasdaq' ? 'Nasdaq' : 'Yahoo Finance') : '');
+  }
+
+  // 封面：股價、主要指標、各面向判斷
+  const now = Date.now();
+  const verdicts = RS_BLOCKS.map(([k, label]) => [label, C.verdict[k]]).filter(x => x[1]);
+  const mcap = isTW ? (d.shares ? d.shares * last : null) : d.stats && d.stats.mcap;
+  const cover = `<section class="cover">
+  <div class="band"><div class="brand">MARKET WATCH｜個股研究報告</div><h1>${esc(d.name)} <span style="font-size:15pt;opacity:.85">${esc(d.code)}</span></h1>
+    <div class="date">${rDateLong(now)}　${esc(d.industry || '')}${d.board ? '・' + esc(d.board) : ''}</div></div>
+  ${rKpis([['股價', numTxt(last), `<span class="${rc(C.chg)}">${pctTxt(C.chg)}</span>　${esc(P.t[n - 1])}`], ['市值', fmtBig(mcap, cur)], ['本益比', isNum(C.val.cur) && C.val.cur > 0 ? numTxt(C.val.cur, 1) : '—'],
+    ['股價淨值比', numTxt(C.val.curPb, 2)], ['殖利率', isNum(C.val.yld) ? numTxt(C.val.yld, 2) + '%' : '—', `52 週 ${numTxt(C.lo52)}–${numTxt(C.hi52)}`]])}
+  <h2 class="ch">各面向判斷</h2>
+  ${rTbl(['面向', '判斷', '主要依據'], verdicts.map(([l, v]) => `<tr><td>${l}</td><td class="b ${v.tone === 'bull' ? 'up' : v.tone === 'bear' ? 'down' : ''}">${esc(v.label)}</td><td>${v.reasons.slice(0, 2).map(esc).join('；')}</td></tr>`))}
+  ${issues.length ? `<p class="note">產出時有 ${issues.length} 組延伸資料尚未載入，相關章節已略過。</p>` : ''}
+  <h2 class="ch">目錄</h2>
+  <ol class="toc">${secs.map(s => `<li><span>${esc(s.title)}</span></li>`).join('')}</ol>
+  <p class="disc">產出時間 ${rTime(now)}（台北）。各面向依固定統計規則判斷，彼此獨立、不加總成買賣建議；資料來自公開來源，可能有延遲或錯誤，僅供研究參考，不構成任何投資建議。</p>
+</section>`;
+  const stamp = new Date(now + 8 * 3600000).toISOString().slice(0, 10).replace(/-/g, '');
+  openReport(reportShell(`${d.name} ${d.code} 個股研究報告`, `MarketWatch_個股研究_${d.code}_${stamp}`, cover, secs));
+}
 
 /* ---------- 工具列按鈕 ---------- */
 ['macro', 'cal'].forEach(id => {

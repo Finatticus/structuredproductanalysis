@@ -45,7 +45,7 @@ const HELP_QUOTA = `
     <tr><td class="nm">點開歷史走勢圖</td><td>每次 1–2 次</td><td>同一檔 10 分鐘內重開不另計</td></tr>
     <tr><td class="nm">新增標的</td><td>每次 1–2 次</td><td>驗證代碼是否存在</td></tr>
     <tr><td class="nm">總經與板塊分析</td><td>每次重新整理約 35–45 次<br><span class="muted">有中繼站：約 5–10 次（只剩信用交易、法人、台灣景氣）</span></td><td>只在第一次開啟時自動抓，之後按「↻ 重新整理」才抓；各字卡另有暫存；隱藏的字卡不抓</td></tr>
-    <tr><td class="nm">個股研究</td><td>每查一檔約 10–16 次</td><td>台股約 14 次、美股約 12 次（Yahoo＋Nasdaq）；同一檔 10 分鐘內重查用快取</td></tr>
+    <tr><td class="nm">個股研究</td><td>每查一檔約 40–50 次（第一次）</td><td>主要資料台股約 14 次、美股約 12 次；延伸資料（財務體質、籌碼、新聞、同業等）台股約 33 次、美股約 25 次。延伸資料各有 30 分鐘～6 小時快取，同業比較用的全市場資料 6 小時內共用，再查其他股票時會少很多</td></tr>
     <tr><td class="nm">投資組合</td><td>開啟時 1 次讀取＋持股、匯率、基準各 1 次歷史資料（快取 30 分鐘）；報價每 60 秒 1 次<br><span class="muted">有中繼站：只剩讀寫交易紀錄</span></td><td>只在停留此頁時更新報價</td></tr>
     <tr><td class="nm">ETF 專區</td><td>總覽 1 次、美股約 5 次、個別 ETF 約 4–6 次、高股息比較約 25 次</td><td>只在打開分頁或按更新時抓；高股息比較暫存 6 小時</td></tr>
     <tr><td class="nm">期貨專區</td><td>沒有中繼站時每次重新整理約 25 次<br><span class="muted">有中繼站：0（全部由瀏覽器抓）</span></td><td>即時行情只在交易時段、停留此頁時自動更新（台灣 30 秒、美國 60 秒）</td></tr>
@@ -282,8 +282,10 @@ const HELP_GUIDE = `
 <h3 id="g-research">6. 個股研究</h3>
 <ul>
   <li><b>輸入</b>：台股代號（<code>2330</code>、<code>6488</code>）、美股代號（<code>NVDA</code>、<code>TSM</code>），或其他市場（<code>7011 JP</code>、<code>0700 HK</code>）。下方有「最近查詢」與「自選」快捷鈕；也可從選股篩選器點代號進入。</li>
-  <li><b>頁首</b>：股價、市值、本益比、淨值比、殖利率、下次財報、52 週位置、一鍵加入自選。</li>
-  <li><b>各面向判斷總覽</b>：九個面向的結論，點擊跳到對應字卡；各面向彼此獨立，<b>不加總成買賣建議</b>。</li>
+  <li><b>頁首</b>：股價、市值、本益比、淨值比、殖利率、下次財報、52 週位置、一鍵加入自選、<b>📄 產出 PDF 報告</b>。</li>
+  <li><b>各面向判斷總覽</b>：十個面向的結論（財務體質在延伸資料載入後出現），點擊跳到對應字卡；各面向彼此獨立，<b>不加總成買賣建議</b>。</li>
+  <li><b>分組導覽列</b>：價格與技術、基本面、財務體質、預估與分析師、籌碼、股利、新聞與事件、同業比較、公司簡介；捲動時固定在上方，點一下跳到該組。</li>
+  <li><b>載入方式</b>：先顯示主要資料（約 3–10 秒），財務體質、籌碼、新聞、同業等<b>延伸資料在背景分組平行載入</b>，各字卡先顯示「背景載入中」，到了就自動填入；某一組失敗只影響該組，可按「重試」。</li>
 </ul>
 <div class="tbl-wrap"><table class="mtbl help-tbl">
   <thead><tr><th>面向</th><th>判斷規則</th></tr></thead>
@@ -298,12 +300,31 @@ const HELP_GUIDE = `
     <tr><td class="nm">相對強弱</td><td>近 3 個月與 6 個月相對大盤（加權指數／S&P 500／日經等）的超額報酬：都 &gt;3% 強於大盤、都 &lt;−3% 弱於大盤</td></tr>
     <tr><td class="nm">分析師</td><td>平均目標價較現價高 ≥15% 且平均評等 ≤2.2 為樂觀；目標價低於現價或評等 ≥3 為保守；不足 3 位標示「樣本少」</td></tr>
     <tr><td class="nm">波動度</td><td>20 日歷史波動度在近一年的百分位：≥80 偏高、≤20 偏低（只代表風險大小，不代表多空）</td></tr>
+    <tr><td class="nm">財務體質</td><td>Piotroski F-Score（9 項：獲利、現金流、ROA 變化、獲利品質、槓桿、流動性、股權稀釋、毛利率、資產週轉）≥7 穩健、≤3 偏弱；另列 Altman Z-Score（&gt;2.99 安全、&lt;1.81 有財務壓力，不適用金融業）</td></tr>
   </tbody>
 </table></div>
-<p>字卡內容：價格走勢（K 線、MA20／60／120／240、成交量，3 月～全部）、技術分析（指標表＋RSI／MACD 圖）、歷史波動度（HV20／HV60）、估值（本益比歷史與 10／25／50／75／90 百分位帶）、成長與獲利（單季 EPS 長條、三種利潤率走勢、近 8 季表）、月營收（台股，13 個月＋年增率）、籌碼、相對強弱（含強弱線）、分析師（目標價區間、評等分布、近期評等異動）、股利紀錄、公司簡介（英文）。</p>
+<h4>各分組的字卡</h4>
+<div class="tbl-wrap"><table class="mtbl help-tbl">
+  <thead><tr><th>分組</th><th>字卡與內容</th><th>來源</th></tr></thead>
+  <tbody>
+    <tr><td class="nm">價格與技術</td><td>價格走勢；技術分析；歷史波動度；<b>風險指標</b>（最大回撤與收復天數、近 1 年回撤、年化波動、Beta、夏普值、索提諾值、單日最大漲跌）；<b>長期報酬</b>（1 個月～10 年，股價與含息、年化）；相對強弱；<b>季節性</b>（近 10 年各月份平均報酬與上漲機率，本月與下月標示）；<b>支撐與壓力</b>（近一年成交量分布、上下方成交密集區、20／60 日與 52 週高低點）</td><td>Yahoo 日線與 10 年月線（含還原權息）</td></tr>
+    <tr><td class="nm">基本面</td><td>估值；<b>合理價區間</b>（本益比歷史 25／50／75 百分位 × 近四季 EPS，美股另用預估 EPS；高成長或景氣循環股會提示參考性低）；成長與獲利；月營收（台股，加上<b>營收亮點</b>：創新高、歷年同月新高、連續年增月數、今年累計年增）</td><td>同上、FinMind</td></tr>
+    <tr><td class="nm">財務體質</td><td><b>資產負債與現金流</b>（負債比、流動比、速動比、現金、自由現金流、現金流／淨利、ROE、近 8 季表與自由現金流長條圖）；<b>杜邦分析與經營效率</b>（ROE 拆成淨利率 × 資產週轉 × 權益乘數、存貨與應收帳款天數）；<b>財務健康評分</b>（F-Score 逐項、Z-Score）；美股另有<b>長期財報</b>（SEC 近 12 年營收、利潤率、現金流、ROE、年複合成長）與<b>股東回饋與股本</b>（買回、股利、股東回饋率、流通股數變化）</td><td>台股 FinMind（現金流量表已由累計換算成單季）；美股 Yahoo、美國證管會 SEC</td></tr>
+    <tr><td class="nm">預估與分析師</td><td>分析師觀點；美股另有<b>分析師 EPS 預估</b>（季度與年度共識、區間、家數、近 4 週上修／下修、預估本益比、下年度成長）與<b>財報驚喜與股價反應</b>（近 4 季實際對預估、財報前後兩日股價反應、平均震幅）</td><td>Yahoo、Nasdaq（Zacks 共識）</td></tr>
+    <tr><td class="nm">籌碼</td><td>台股：法人與融資；<b>集保股權分散</b>（千張大戶、400 張以上、10 張以下散戶比例與股東人數，近 12 週走勢與各級距變化）；<b>借券賣出與當沖</b>（借券賣出餘額與 20 日變化、融券餘額、當沖比例與 20 日平均）；<b>哪些 ETF 持有</b>（ETF 專區追蹤中的 ETF：權重、張數、較前次增減）。<br>美股：機構與放空；<b>內部人交易</b>（近 3／12 個月買賣筆數、近期明細）；<b>機構持股</b>（比例、加碼／減碼／新建倉／出清家數、前十大機構與變動）；<b>選擇權</b>（最近月到期的 Put/Call 比、最大未平倉履約價、最大痛點、各履約價未平倉分布）</td><td>FinMind、集保結算所、ETF 專區快照；Nasdaq（SEC Form 4、13F、選擇權）</td></tr>
+    <tr><td class="nm">股利</td><td>股利紀錄；台股另有<b>填息紀錄</b>（每次除權息的填息天數、未填息的回補進度、平均填息天數）</td><td>FinMind 除權息結果表</td></tr>
+    <tr><td class="nm">新聞與事件</td><td>個股新聞（台股另標示<b>注意股票／處置股票</b>）；美股另有 <b>SEC 申報文件</b>（10-K、10-Q、8-K 重大事件與項目說明，點開原文）</td><td>台股：鉅亨網、證交所、櫃買中心；美股：Yahoo、SEC EDGAR</td></tr>
+    <tr><td class="nm">同業比較</td><td>台股：同產業市值前 8 大的市值、股價、本益比、淨值比、殖利率、月營收年增、累計年增、1 月／3 月／今年漲跌與同業中位數，並寫出本股相對位置；美股：Yahoo「相關個股」（投資人常一起關注，不一定同產業）的市值、本益比、預估本益比、股價營收比、淨值比、營收年增、三種利潤率、漲跌。點名稱可開啟該股研究</td><td>證交所、櫃買中心開放資料；Yahoo</td></tr>
+  </tbody>
+</table></div>
+<h4>個股 PDF 報告</h4>
+<p>頁首或導覽列右側按「📄 產出 PDF 報告」：延伸資料還沒載完時會先列出並詢問是否繼續。報告依目前資料排版成 A4：封面（股價、主要指標、各面向判斷、目錄），以及價格與技術、估值與合理價、成長與獲利、財務體質、預估與分析師、籌碼、股利、新聞與事件、同業比較、公司簡介等章節；存檔方式同總經報告（「目的地」選「另存為 PDF」）。</p>
+<p>字卡內容（原有）：價格走勢（K 線、MA20／60／120／240、成交量，3 月～全部）、技術分析（指標表＋RSI／MACD 圖）、歷史波動度（HV20／HV60）、估值（本益比歷史與 10／25／50／75／90 百分位帶）、成長與獲利（單季 EPS 長條、三種利潤率走勢、近 8 季表）、月營收（台股，13 個月＋年增率）、籌碼、相對強弱（含強弱線）、分析師（目標價區間、評等分布、近期評等異動）、股利紀錄、公司簡介（英文）。</p>
 <p class="muted">資料：台股 FinMind（需 token）＋證交所＋Yahoo。美股：Yahoo 財報與估值時間序列（單季／年度財報、市值、本益比、預估本益比、淨值比）＋ Nasdaq（公司簡介、產業、殖利率、機構持股、放空、分析師目標價、下次財報）＋ Yahoo 完整資料（需要認證，抓得到時優先使用，另含員工數、內部人持股、近期評等異動）。
   其他市場（日、港、韓等）沒有 Nasdaq 資料，簡介、分析師、籌碼只在 Yahoo 認證成功時顯示。Beta 抓不到時以近一年日報酬對大盤自行計算。
-  美股的歷史本益比以「股價 ÷ 近四季 EPS」重建（Yahoo 免認證資料約有近 5 季與 4 個年度）；興櫃股票沒有本益比資料，估值顯示「資料不足」。</p>
+  美股的歷史本益比以「股價 ÷ 近四季 EPS」重建（Yahoo 免認證資料約有近 5 季與 4 個年度）；興櫃股票沒有本益比資料，估值顯示「資料不足」。
+  SEC 長期財報依 SEC 的曆年對齊（會計年度不在 12 月結束的公司會有數月落差），EPS 因原始申報值未依股票分割調整而不列；外國公司（例如 TSM）以 IFRS 申報、幣別依原始申報。
+  集保股權分散每週更新、保存一年；集保網站從 Google 主機連不上時該字卡會顯示原因。<b>不提供</b>：券商分點進出（需要驗證碼或付費資料）、董監持股與質押、公開資訊觀測站重大訊息（有防爬機制）、美股隱含波動率（沒有免費來源）。</p>
 
 <h3 id="g-pf">6-1. 投資組合</h3>
 <div class="tbl-wrap"><table class="mtbl help-tbl">
@@ -490,7 +511,7 @@ const HELP_GUIDE = `
   <thead><tr><th>放到 Apps Script（後端）</th><th>放到網頁資料夾（前端）</th></tr></thead>
   <tbody><tr>
     <td><code>Code.gs</code>（帳號、報價、走勢）<br><code>Macro.gs</code>（總經與板塊分析）<br><code>Research.gs</code>（個股研究）<br><code>Screener.gs</code>（選股篩選器）<br><code>Etf.gs</code>（ETF 專區、回測價格）<br><code>Portfolio.gs</code>（投資組合）<br><code>Calendar.gs</code>（財金日曆）<br><code>Futures.gs</code>（期貨專區）<br>（強烈建議）<code>worker.js</code> 貼到 Cloudflare Workers：資料中繼站（見 8-1）</td>
-    <td><code>index.html</code>、<code>style.css</code>、<code>app.js</code>、<code>engine.js</code>、<code>engine-worker.js</code>、<code>panels.js</code>、<code>macro.js</code>、<code>research.js</code>、<code>cal.js</code>、<code>screener.js</code>、<code>etf.js</code>、<code>futures.js</code>、<code>report.js</code>、<code>portfolio.js</code>、<code>backtest.js</code>、<code>help.js</code>、<code>settings.js</code>
+    <td><code>index.html</code>、<code>style.css</code>、<code>app.js</code>、<code>engine.js</code>、<code>engine-worker.js</code>、<code>panels.js</code>、<code>macro.js</code>、<code>research.js</code>、<code>research2.js</code>、<code>cal.js</code>、<code>screener.js</code>、<code>etf.js</code>、<code>futures.js</code>、<code>report.js</code>、<code>portfolio.js</code>、<code>backtest.js</code>、<code>help.js</code>、<code>settings.js</code>
       <br>＋ <code>Code.gs</code>、<code>Macro.gs</code>、<code>Calendar.gs</code>、<code>Futures.gs</code>（瀏覽器資料引擎會載入這四個檔；FinMind token 只放在指令碼屬性）</td>
   </tr></tbody>
 </table></div>
@@ -542,6 +563,8 @@ const HELP_GUIDE = `
     <tr><td class="nm">「瀏覽器資料引擎：未啟用（file://）」</td><td>網頁是直接開檔案，改放 GitHub Pages 等網站即可；不改也能用，只是總經、日曆改走後端</td></tr>
     <tr><td class="nm">「瀏覽器資料引擎：無法啟動」</td><td><code>engine-worker.js</code>、<code>Code.gs</code>、<code>Macro.gs</code>、<code>Calendar.gs</code>、<code>Futures.gs</code> 沒有和網頁一起上傳</td></tr>
     <tr><td class="nm">期貨專區的台灣字卡很慢或失敗</td><td>多半是 <code>worker.js</code> 還是舊版（沒有期交所白名單與 POST 轉送），會改走後端而變慢；把最新版 <code>worker.js</code> 重新貼上並 Deploy。後端也要新增 <code>Futures</code> 指令碼檔並部署新版本</td></tr>
+    <tr><td class="nm">個股研究的延伸字卡一直「背景載入中」或顯示無法取得</td><td>延伸資料走 Google 後端：確認 <code>Research.gs</code>、<code>Code.gs</code> 已更新並部署新版本；集保、SEC 等來源暫時連不上時只影響該字卡，可按「重試」</td></tr>
+    <tr><td class="nm">更新網頁檔案後畫面還是舊的</td><td><code>index.html</code> 引用的程式都帶版本號（例如 <code>app.js?v=20261016</code>），換新版時要一起上傳新的 <code>index.html</code>；仍是舊版時按 Ctrl+F5</td></tr>
     <tr><td class="nm">按「產出 PDF 報告」沒有反應或只跳出列印視窗</td><td>瀏覽器擋住了新分頁：在網址列右側允許此網站的彈出視窗。列印視窗的「目的地」要選「另存為 PDF」；底色沒印出來時勾選「背景圖形」</td></tr>
     <tr><td class="nm">美國經濟數據常常載入失敗</td><td>多半是沒有設定 <code>FRED_KEY</code>：FRED 網站對程式請求常常沒回應。到 fredaccount.stlouisfed.org 免費註冊 →「API Keys」申請 32 字元金鑰 → 加到指令碼屬性 <code>FRED_KEY</code> → 網頁重新整理。字卡會直接寫出失敗原因（未設定金鑰、金鑰無效、限流、逾時）；「連線診斷」可看金鑰是否已設定，按「實測」可確認金鑰能不能用。抓不到時沿用每個指標上次成功的數值</td></tr>
     <tr><td class="nm">美股個股研究的市值、本益比、籌碼、簡介是空的</td><td>舊版完全依賴 Yahoo 的認證資料，Google／Cloudflare 主機常被 Yahoo 拒絕。新版改用 Yahoo 免認證的財報與估值資料，以及 Nasdaq 的簡介、分析師、放空資料；請確認 <code>Research.gs</code>、<code>Calendar.gs</code> 已更新並部署新版本。日股、港股等非美國股票沒有 Nasdaq 資料，簡介與籌碼仍可能空白</td></tr>

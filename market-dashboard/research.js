@@ -326,8 +326,26 @@ function rsCompute(d) {
  * ========================================================= */
 const RS_BLOCKS = [
   ['trend', '趨勢'], ['momentum', '動能'], ['valuation', '估值'], ['growth', '成長'], ['profit', '獲利能力'],
-  ['chips', '籌碼'], ['rs', '相對強弱'], ['analyst', '分析師'], ['vol', '波動度'],
+  ['chips', '籌碼'], ['rs', '相對強弱'], ['analyst', '分析師'], ['vol', '波動度'], ['health', '財務體質'],
 ];
+const RS_ANCHOR = { momentum: 'tech', growth: 'fin', profit: 'fin', health: 'xbal' };
+
+/** 各面向判斷總覽（財務體質在延伸資料載入後補上，見 research2.js rsUpdateOverview） */
+function rsOverviewHtml() {
+  const C = research.calc;
+  const verdicts = RS_BLOCKS.map(([k, label]) => [k, label, C.verdict[k]]).filter(x => x[2]);
+  const cnt = t => verdicts.filter(x => x[2].tone === t).length;
+  return `<section class="panel" style="--span:12">
+      <div class="panel-head"><h2 class="panel-title">各面向判斷總覽</h2>
+        <span class="muted">多方 ${cnt('bull')}・空方 ${cnt('bear')}・中性／留意 ${cnt('neutral') + cnt('warn')}</span></div>
+      <div class="panel-body">
+        <div class="vgrid">${verdicts.map(([k, label, v]) => `
+          <a class="vcard ${v.tone}" href="#rs-${RS_ANCHOR[k] || k}">
+            <div class="vcard-l">${label}</div><div class="vcard-v">${esc(v.label)}</div></a>`).join('')}</div>
+        <div class="foot-note">各面向依固定統計規則判斷（依據寫在每張字卡下方），彼此獨立、不加總成買賣建議；僅供研究參考，不構成投資建議。</div>
+      </div>
+    </section>`;
+}
 
 function vChip(v) {
   if (!v) return '';
@@ -362,8 +380,7 @@ function renderResearch() {
   const pos = C.hi52 > C.lo52 ? ((C.last - C.lo52) / (C.hi52 - C.lo52)) * 100 : 50;
   const cat = isTW ? 'tw' : 'global';
   const inList = inWatchlist(cat, d.code);
-  const verdicts = RS_BLOCKS.map(([k, label]) => [k, label, C.verdict[k]]).filter(x => x[2]);
-  const cnt = t => verdicts.filter(x => x[2].tone === t).length;
+  const P = {}; // 各字卡，最後依分組排列
 
   let html = `
     <section class="panel rs-head" style="--span:12">
@@ -375,6 +392,7 @@ function renderResearch() {
         </div>
         <div class="rs-actions">
           <button class="btn btn-ghost btn-sm" id="rsAdd" ${inList ? 'disabled' : ''}>${inList ? '✓ 已在自選' : '＋ 加入自選'}</button>
+          <button class="btn btn-primary btn-sm" id="rsPdf" title="把這檔股票的完整資料整理成 A4 報告，可另存為 PDF">📄 產出 PDF 報告</button>
         </div>
       </div>
       <div class="kpis rs-kpis">
@@ -392,25 +410,16 @@ function renderResearch() {
       </div>
     </section>
 
-    <section class="panel" style="--span:12">
-      <div class="panel-head"><h2 class="panel-title">各面向判斷總覽</h2>
-        <span class="muted">多方 ${cnt('bull')}・空方 ${cnt('bear')}・中性／留意 ${cnt('neutral') + cnt('warn')}</span></div>
-      <div class="panel-body">
-        <div class="vgrid">${verdicts.map(([k, label, v]) => `
-          <a class="vcard ${v.tone}" href="#rs-${k === 'momentum' ? 'tech' : k === 'growth' || k === 'profit' ? 'fin' : k}">
-            <div class="vcard-l">${label}</div><div class="vcard-v">${esc(v.label)}</div></a>`).join('')}</div>
-        <div class="foot-note">各面向依固定統計規則判斷（依據寫在每張字卡下方），彼此獨立、不加總成買賣建議；僅供研究參考，不構成投資建議。</div>
-      </div>
-    </section>`;
+    <div id="rsOverview" class="rsx">${rsOverviewHtml()}</div>`;
 
   // 走勢圖
-  html += rsPanel('trend', '價格走勢與成交量', 12, 'trend', `
+  P.trend = rsPanel('trend', '價格走勢與成交量', 12, 'trend', `
     <div class="chart-legend"><span style="--c:#e67e22">MA20</span><span style="--c:#2c6bc4">MA60</span><span style="--c:#8e44ad">MA120</span><span style="--c:#7f8c8d">MA240</span></div>
     <div class="mini-chart rs-main" id="rsMain"></div>`);
 
   // 技術指標
   const T = C.tech;
-  html += rsPanel('tech', '技術分析', 6, 'momentum', `
+  P.tech = rsPanel('tech', '技術分析', 6, 'momentum', `
     <div class="tbl-wrap"><table class="mtbl">
       <tr><td class="nm">RSI(14)</td><td class="num strong">${numTxt(T.rsi, 1)}</td><td class="muted">${T.rsi >= 70 ? '超買區' : T.rsi <= 30 ? '超賣區' : T.rsi >= 50 ? '強勢區' : '弱勢區'}</td></tr>
       <tr><td class="nm">KD(9,3,3)</td><td class="num strong">K ${numTxt(T.k, 1)} / D ${numTxt(T.d, 1)}</td><td class="muted">${T.k > T.d ? 'K 在 D 之上' : 'K 在 D 之下'}</td></tr>
@@ -422,7 +431,7 @@ function renderResearch() {
 
   // 波動度
   const H = C.hv;
-  html += rsPanel('vol', '歷史波動度', 6, 'vol', `
+  P.vol = rsPanel('vol', '歷史波動度', 6, 'vol', `
     <div class="kpis">
       <div class="kpi"><div class="kpi-l">20 日年化</div><div class="kpi-v">${numTxt(H.cur, 1)}%</div></div>
       <div class="kpi"><div class="kpi-l">60 日年化</div><div class="kpi-v">${numTxt(H.cur60, 1)}%</div></div>
@@ -434,7 +443,7 @@ function renderResearch() {
 
   // 估值
   const VA = C.val;
-  html += rsPanel('valuation', '估值', 6, 'valuation', VA.peV.length ? `
+  P.valuation = rsPanel('valuation', '估值', 6, 'valuation', VA.peV.length ? `
     <div class="kpis">
       <div class="kpi"><div class="kpi-l">本益比</div><div class="kpi-v">${isNum(VA.cur) && VA.cur > 0 ? numTxt(VA.cur, 1) : '—'}</div><div class="kpi-s">百分位 ${numTxt(VA.pr, 0)}</div></div>
       <div class="kpi"><div class="kpi-l">歷史中位數</div><div class="kpi-v">${numTxt(VA.q[2], 1)}</div><div class="kpi-s">25–75%：${numTxt(VA.q[1], 1)}–${numTxt(VA.q[3], 1)}</div></div>
@@ -446,7 +455,7 @@ function renderResearch() {
 
   // 成長與獲利
   const fin = C.fin.slice(-12);
-  html += rsPanel('fin', '成長與獲利（單季）', 6, 'growth', fin.length ? `
+  P.fin = rsPanel('fin', '成長與獲利（單季）', isTW ? 6 : 12, 'growth', fin.length ? `
     <div class="vchip-row">${vChip(C.verdict.profit)} <span class="muted">獲利能力</span></div>
     <div class="bars-wrap">${barsSvg(fin.map(x => x.eps), fin.map(x => qLabel(x.p)), 'EPS')}</div>
     <div class="chart-legend"><span style="--c:#1f4e8c">毛利率</span><span style="--c:#e67e22">營業利益率</span><span style="--c:#16a085">淨利率</span></div>
@@ -464,7 +473,7 @@ function renderResearch() {
   // 月營收（台股）
   if (isTW && C.mrev.list.length) {
     const L = C.mrev.list.slice(-13);
-    html += rsPanel('rev', '月營收', 6, null, `
+    P.rev = rsPanel('rev', '月營收', 6, null, `
       <div class="kpis">
         <div class="kpi"><div class="kpi-l">${L[L.length - 1].ym.replace('-', '/')} 營收</div><div class="kpi-v">${fmtBig(L[L.length - 1].rev, 'TWD')}</div></div>
         <div class="kpi"><div class="kpi-l">年增率</div><div class="kpi-v ${dirCls(L[L.length - 1].yoy)}">${signTxt(L[L.length - 1].yoy, 1, '%')}</div></div>
@@ -472,12 +481,13 @@ function renderResearch() {
         <div class="kpi"><div class="kpi-l">近 3 月平均年增</div><div class="kpi-v ${dirCls(C.mrev.m3)}">${signTxt(C.mrev.m3, 1, '%')}</div></div>
       </div>
       <div class="bars-wrap">${barsSvg(L.map(x => x.rev / 1e8), L.map(x => x.ym.slice(2).replace('-', '/')), '營收（億）', L.map(x => x.yoy))}</div>
+      ${(() => { const hl = rsxRevHighlights(); return hl.length ? `<div class="sec-sum">${hl.map(x => `<span>${x}</span>`).join('')}</div>` : ''; })()}
       <div class="foot-note">長條為月營收（億元），折線為年增率（%）。月營收約每月 10 日前公布，是台股最即時的基本面指標。</div>`);
   }
 
   // 籌碼
   const CH = C.chips || {};
-  html += rsPanel('chips', '籌碼', 6, 'chips', isTW ? `
+  P.chips = rsPanel('chips', '籌碼', isTW ? 6 : 12, 'chips', isTW ? `
     <div class="kpis">
       <div class="kpi"><div class="kpi-l">外資 5／20 日</div><div class="kpi-v ${dirCls(CH.f20)}">${signTxt(CH.f20, 0)}<small> 張</small></div><div class="kpi-s ${dirCls(CH.f5)}">5 日 ${signTxt(CH.f5, 0)}</div></div>
       <div class="kpi"><div class="kpi-l">投信 5／20 日</div><div class="kpi-v ${dirCls(CH.it20)}">${signTxt(CH.it20, 0)}<small> 張</small></div><div class="kpi-s ${dirCls(CH.it5)}">5 日 ${signTxt(CH.it5, 0)}</div></div>
@@ -500,7 +510,7 @@ function renderResearch() {
 
   // 相對強弱
   if (C.rs) {
-    html += rsPanel('rs', `相對強弱（vs ${C.rs.sym === '^TWII' ? '加權指數' : C.rs.sym === '^GSPC' ? 'S&P 500' : C.rs.sym}）`, 6, 'rs', `
+    P.rs = rsPanel('rs', `相對強弱（vs ${C.rs.sym === '^TWII' ? '加權指數' : C.rs.sym === '^GSPC' ? 'S&P 500' : C.rs.sym}）`, 6, 'rs', `
       <div class="tbl-wrap"><table class="mtbl">
         <thead><tr><th>期間</th><th class="num">個股</th><th class="num">大盤</th><th class="num">超額報酬</th></tr></thead>
         <tbody>${C.rs.per.map(p => `<tr><td class="nm">${p.label}</td><td class="num ${dirCls(p.sr)}">${pctTxt(p.sr)}</td><td class="num ${dirCls(p.br)}">${pctTxt(p.br)}</td><td class="num strong ${dirCls(p.ex)}">${signTxt(p.ex, 1, '%')}</td></tr>`).join('')}</tbody>
@@ -514,7 +524,7 @@ function renderResearch() {
   if (A) {
     const tr = A.trend, tot = tr ? tr.sb + tr.b + tr.h + tr.s + tr.ss : 0;
     const lo = Math.min(A.low || C.last, C.last), hi = Math.max(A.high || C.last, C.last), pos = v => ((v - lo) / (hi - lo || 1)) * 100;
-    html += rsPanel('analyst', '分析師觀點', 6, 'analyst', `
+    P.analyst = rsPanel('analyst', '分析師觀點', 6, 'analyst', `
       ${A.mean ? `<div class="tgt">
         <div class="tgt-bar"><i class="tgt-range" style="left:${pos(A.low || lo)}%;right:${100 - pos(A.high || hi)}%"></i>
           <i class="tgt-mean" style="left:${pos(A.mean)}%" title="平均目標價"></i><i class="tgt-now" style="left:${pos(C.last)}%" title="現價"></i></div>
@@ -530,17 +540,17 @@ function renderResearch() {
   // 股利
   const D = d.div || [];
   if (D.length) {
-    html += rsPanel('div', '股利紀錄', 6, null, `
+    P.div = rsPanel('div', '股利紀錄', isTW ? 6 : 12, null, `
       <div class="tbl-wrap"><table class="mtbl">
         <thead><tr>${isTW ? '<th>期別</th><th class="num">現金股利</th><th class="num">股票股利</th><th>除息日</th>' : '<th>除息日</th><th class="num">每股現金股利</th>'}</tr></thead>
         <tbody>${D.slice(0, 10).map(x => isTW
           ? `<tr><td class="nm">${esc(x.y)}</td><td class="num">${numTxt(x.cash, 2)}</td><td class="num">${numTxt(x.stock, 2)}</td><td>${esc(x.ex || '—')}</td></tr>`
-          : `<tr><td class="nm">${tpDate(x.t)}</td><td class="num">${numTxt(x.cash, 4)}</td></tr>`).join('')}</tbody></table></div>`);
+          : `<tr><td class="nm">${new Date(x.t + 8 * 3600000).toISOString().slice(0, 10)}</td><td class="num">${numTxt(x.cash, 4)}</td></tr>`).join('')}</tbody></table></div>`);
   }
 
   // 公司簡介
   const pf = d.profile || {};
-  html += rsPanel('profile', '公司簡介', 12, null, `
+  P.profile = rsPanel('profile', '公司簡介', 12, null, `
     <div class="kpis">
       <div class="kpi"><div class="kpi-l">產業</div><div class="kpi-v sm">${esc(d.industry || pf.industry || '—')}</div><div class="kpi-s">${esc(pf.sector || '')}</div></div>
       <div class="kpi"><div class="kpi-l">員工數</div><div class="kpi-v sm">${pf.employees ? numTxt(pf.employees, 0) : '—'}</div></div>
@@ -549,7 +559,22 @@ function renderResearch() {
     </div>
     ${pf.summary ? `<p class="rs-summary">${esc(pf.summary)}</p><div class="foot-note">簡介來源 ${pf.src === 'Nasdaq' ? 'Nasdaq' : 'Yahoo Finance'}（英文）。</div>` : ''}`);
 
+  // 依分組排列：價格與技術 → 基本面 → 財務體質 → 預估 → 籌碼 → 股利 → 新聞 → 同業 → 簡介
+  const groups = [
+    ['price', (() => { const B = rsxBasePanels(); return P.trend + P.tech + P.vol + B.risk + B.returns + (P.rs || '') + (B.season || '') + B.levels; })()],
+    ['fund', P.valuation + rsxFairPanel() + P.fin + (P.rev || '')],
+    ['health', rsxBox('fin')],
+    ['est', (P.analyst || '') + (isTW ? '' : rsxBox('est'))],
+    ['chips', P.chips + rsxBox(isTW ? 'chips' : 'own')],
+    ['div', (P.div || '') + (isTW ? rsxBox('divfill') : '')],
+    ['news', rsxBox('events')],
+    ['peers', rsxBox('peers')],
+    ['profile', P.profile],
+  ].filter(g => g[1]);
+  html += rsNav(groups.map(g => g[0])) + groups.map(([k, h]) => rsGroup(k, RS_GROUPS.find(x => x[0] === k)[1]) + h).join('');
   $('#rsBody').innerHTML = `<div class="macro-grid rs-grid">${html}</div>`;
+  rsBindNav();
+  ['#rsPdf', '#rsPdf2'].forEach(id => { const b = $(id); if (b) b.addEventListener('click', () => { try { buildResearchReport(); } catch (err) { console.error(err); toast('報告產出失敗：' + err.message); } }); });
   const addBtn = $('#rsAdd');
   if (addBtn) addBtn.addEventListener('click', async () => {
     addBtn.disabled = true;
@@ -557,6 +582,7 @@ function renderResearch() {
     catch (err) { addBtn.disabled = false; toast('加入失敗：' + err.message); }
   });
   rsCharts();
+  rsLoadExtras(); // 延伸資料在背景分組載入（research2.js）
 }
 
 function qLabel(p) {
@@ -565,7 +591,7 @@ function qLabel(p) {
 }
 
 /** 簡單長條圖（可加一條折線，例如年增率） */
-function barsSvg(vals, labels, title, line) {
+function barsSvg(vals, labels, title, line, lineLabel = '年增率') {
   const W = 560, H = 170, L = 8, R = 8, T = 18, B = 22;
   const v = vals.map(x => (isNum(x) ? x : 0));
   const max = Math.max(0, ...v), min = Math.min(0, ...v);
@@ -576,7 +602,7 @@ function barsSvg(vals, labels, title, line) {
   let g = `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="#d6dbe3"/>`;
   v.forEach((x, i) => {
     const x0 = L + i * bw + bw * 0.18, h = Math.abs(y(x) - y(0));
-    const col = line ? '#9db4d3' : x >= 0 ? '#1f4e8c' : down;
+    const col = x >= 0 ? (line ? '#9db4d3' : '#1f4e8c') : line ? '#e8a0a0' : down;
     g += `<rect x="${x0.toFixed(1)}" y="${Math.min(y(x), y(0)).toFixed(1)}" width="${(bw * 0.64).toFixed(1)}" height="${Math.max(h, 0.5).toFixed(1)}" rx="2" fill="${col}"><title>${labels[i]}：${numTxt(vals[i], 2)}</title></rect>`;
     if (!line) g += `<text x="${(x0 + bw * 0.32).toFixed(1)}" y="${(x >= 0 ? y(x) - 4 : y(x) + 11).toFixed(1)}" class="bv" text-anchor="middle">${numTxt(vals[i], Math.abs(vals[i]) >= 100 ? 0 : 2)}</text>`;
     g += `<text x="${(x0 + bw * 0.32).toFixed(1)}" y="${H - 6}" class="ax" text-anchor="middle">${labels[i]}</text>`;
@@ -588,10 +614,10 @@ function barsSvg(vals, labels, title, line) {
       const ly = x => T + 4 + (H - T - B - 8) * (1 - (x - lmin) / ls);
       const pts = line.map((x, i) => (isNum(x) ? `${(L + i * bw + bw / 2).toFixed(1)},${ly(x).toFixed(1)}` : null)).filter(Boolean).join(' ');
       g += `<polyline points="${pts}" fill="none" stroke="#e67e22" stroke-width="2"/>`;
-      line.forEach((x, i) => { if (isNum(x)) g += `<circle cx="${(L + i * bw + bw / 2).toFixed(1)}" cy="${ly(x).toFixed(1)}" r="2.5" fill="#e67e22"><title>${labels[i]} 年增 ${numTxt(x, 1)}%</title></circle>`; });
+      line.forEach((x, i) => { if (isNum(x)) g += `<circle cx="${(L + i * bw + bw / 2).toFixed(1)}" cy="${ly(x).toFixed(1)}" r="2.5" fill="#e67e22"><title>${labels[i]} ${esc(lineLabel)} ${numTxt(x, 1)}</title></circle>`; });
     }
   }
-  return `<div class="bars-title">${esc(title)}${line ? '<span class="muted">　折線：年增率</span>' : ''}</div><svg viewBox="0 0 ${W} ${H}" class="curve bars">${g}</svg>`;
+  return `<div class="bars-title">${esc(title)}${line ? `<span class="muted">　折線：${esc(lineLabel)}</span>` : ''}</div><svg viewBox="0 0 ${W} ${H}" class="curve bars">${g}</svg>`;
 }
 
 function rsChart(el, opts) {

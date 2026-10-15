@@ -164,6 +164,10 @@ function route_(req) {
       auth_(req.token);
       return { ok: true, data: research_(req.symbol, !!req.force), usage: getUsage_() }; // 定義於 Research.gs
     }
+    case 'researchx': {
+      auth_(req.token);
+      return { ok: true, data: researchX_(req.symbol, String(req.part || ''), !!req.force), usage: getUsage_() }; // 定義於 Research.gs
+    }
     case 'relay': {
       auth_(req.token);
       return { ok: true, data: relay_(String(req.url || '')) };
