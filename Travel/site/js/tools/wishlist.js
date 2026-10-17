@@ -136,7 +136,7 @@
     const t = x.tripId ? S.get(x.tripId) : null;
     const day = t && x.dayId ? t.days.findIndex(d => d.id === x.dayId) : -1;
     const link = x.url || x.mapUrl;
-    return `<div class="wl-item${x.done ? ' done' : ''}" data-id="${x.id}">
+    return `<div class="wl-item${x.done ? ' done' : ''}" data-id="${x.id}" id="wl-${x.id}">
       <button class="pk-cb" data-act="done" title="標記去過／完成" aria-label="完成"></button>
       <div class="wl-main">
         <div class="wl-top"><span class="wl-type">${TYPES[x.type] || '其他'}</span>${'★'.repeat(x.stars || 0) ? `<span class="wl-stars">${'★'.repeat(x.stars)}</span>` : ''}

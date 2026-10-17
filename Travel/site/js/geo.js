@@ -162,5 +162,5 @@
   }
 
   window.TA = window.TA || {};
-  TA.geo = { stats, tripKm, dist, HOME, placePoints, cityLL, search, resolve, reverse, backfill };
+  TA.geo = { stats, tripKm, roundKm, dist, HOME, placePoints, cityLL, search, resolve, reverse, backfill };
 })();

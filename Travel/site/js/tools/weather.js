@@ -30,12 +30,29 @@
 
   // ---------- 資料 ----------
   const cacheGet = (k, ttl) => { try { const c = JSON.parse(localStorage.getItem(k) || 'null'); if (c && Date.now() - c.at < ttl) return c.d; } catch { } return null; };
-  const cacheSet = (k, d) => { try { localStorage.setItem(k, JSON.stringify({ at: Date.now(), d })); } catch { } };
+  /** 天氣快取只留最近用過的 12 個城市，避免佔滿瀏覽器空間（旅程資料也存在同一個空間） */
+  function prune(prefix, keep) {
+    try {
+      // 已離線下載的旅程，它的城市天氣不清
+      const keepLL = new Set();
+      try { Object.keys(TA.offline?.records() || {}).forEach(id => { const t = S.get(id); if (t) TA.geo.placePoints(t.countries, t.cities, t).forEach(p => keepLL.add(p.ll.join())); }); } catch { }
+      const ks = Object.keys(localStorage).filter(x => x.startsWith(prefix) && !keepLL.has((x.slice(prefix.length).match(/^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?/) || [''])[0]));
+      if (ks.length <= keep) return;
+      const at = k => { try { return JSON.parse(localStorage.getItem(k)).at || 0; } catch { return 0; } };
+      ks.map(k => [k, at(k)]).sort((a, b) => b[1] - a[1]).slice(keep).forEach(([k]) => localStorage.removeItem(k));
+    } catch { }
+  }
+  const cacheSet = (k, d) => {
+    const v = JSON.stringify({ at: Date.now(), d });
+    try { localStorage.setItem(k, v); }
+    catch { prune('ta.wx.h.', 4); prune('ta.wx.f.', 6); try { localStorage.setItem(k, v); } catch { } }
+    prune('ta.wx.h.', 12); prune('ta.wx.f.', 30);
+  };
 
   // 連不上網路時，改用上次存的資料（不管多舊），並記下資料時間
-  const stale = prefix => {
+  const stale = (prefix, exact) => {
     try {
-      const k = Object.keys(localStorage).filter(x => x.startsWith(prefix)).sort().pop();
+      const k = exact ? prefix : Object.keys(localStorage).filter(x => x.startsWith(prefix)).sort().pop();
       const c = k && JSON.parse(localStorage.getItem(k));
       if (c) { const d = c.d; if (d && typeof d === 'object') d._savedAt = c.at; return d; }
     } catch { }
@@ -50,8 +67,10 @@
       daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum' });
     try {
       const d = await (await fetch('https://api.open-meteo.com/v1/forecast?' + q)).json();
+      // 額度用完或參數錯誤時會回 { error, reason }，不要存起來
+      if (!d?.daily?.time || !d.current) throw new Error(d?.reason || '天氣資料格式不正確');
       cacheSet(k, d); return d;
-    } catch (e) { const s = stale(k); if (s) return s; throw e; }
+    } catch (e) { const s = stale(k, true); if (s) return s; throw e; }
   }
   async function history(ll) {
     const end = U.addDays(U.todayStr(), -6);
@@ -62,6 +81,7 @@
     let j;
     try { j = await (await fetch('https://archive-api.open-meteo.com/v1/archive?' + q)).json(); }
     catch (e) { const s = stale(`ta.wx.h.${ll.join()}.`); if (s) return s; throw e; }
+    if (!j?.daily?.time) { const s = stale(`ta.wx.h.${ll.join()}.`); if (s) return s; throw new Error(j?.reason || '歷史天氣資料格式不正確'); }
     const d = j.daily.time.map((t, i) => [t, j.daily.temperature_2m_max[i], j.daily.temperature_2m_min[i], j.daily.precipitation_sum[i]]);
     try { Object.keys(localStorage).filter(x => x.startsWith(`ta.wx.h.${ll.join()}.`) && x !== k).forEach(x => localStorage.removeItem(x)); } catch { }
     cacheSet(k, d); return d;

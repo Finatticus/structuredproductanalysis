@@ -56,7 +56,13 @@
 
   // ---------- 設定 ----------
   TA.views.settings = function (el, { tab } = {}) {
-    const tabs = `<nav class="tabs set-tabs"><a href="#/settings" class="${tab ? '' : 'on'}">設定</a><a href="#/settings/help" class="${tab === 'help' ? 'on' : ''}">網站說明</a></nav>`;
+    const tabs = `<nav class="tabs set-tabs"><a href="#/settings" class="${tab ? '' : 'on'}">設定</a>${S.isGuest() ? '' : `<a href="#/settings/health" class="${tab === 'health' ? 'on' : ''}">資料健檢</a>`}<a href="#/settings/help" class="${tab === 'help' ? 'on' : ''}">網站說明</a></nav>`;
+    if (tab === 'health' && !S.isGuest()) {
+      el.innerHTML = `<div class="narrow"><header class="page-head"><div class="eyebrow">Settings</div><h1 class="display">資料健檢</h1>
+        <p class="lede">找出需要整理的地方，點「前往修改」直接跳到編輯頁的那個位置。</p></header>${tabs}<div class="hc"></div></div>`;
+      TA.health.render(U.$('.hc', el));
+      return;
+    }
     if (tab === 'help') {
       el.innerHTML = `<div class="narrow"><header class="page-head"><div class="eyebrow">Settings</div><h1 class="display">網站說明</h1>
         <p class="lede">每個區塊怎麼用、資料怎麼存、數字怎麼算。</p></header>${tabs}${TA.views.helpHtml()}</div>`;
@@ -68,6 +74,14 @@
     el.innerHTML = `<div class="narrow">
       <header class="page-head"><div class="eyebrow">Settings</div><h1 class="display">設定</h1></header>
       ${tabs}
+
+      <section class="panel" id="theme-panel">
+        <h3>網頁配色</h3>
+        <p class="hint">只會改變這台裝置的顯示，每個人可以選自己喜歡的配色。</p>
+        <div class="theme-grid">${UI.theme.list.map(t => `<button type="button" class="theme-opt${UI.theme.get() === t.id ? ' on' : ''}" data-theme-id="${t.id}"
+          style="--sw-paper:${t.paper};--sw-surface:${t.surface};--sw-line:${t.line};--sw-primary:${t.primary};--sw-accent:${t.accent}"><span class="theme-sw"></span>${t.name}</button>`).join('')}</div>
+        <label class="mini-check"><input type="checkbox" id="theme-auto" ${UI.theme.autoDark() ? 'checked' : ''} ${UI.theme.get() === 'dark' ? 'disabled' : ''}>手機或電腦切到深色模式時，自動改用深色</label>
+      </section>
 
       <section class="panel admin-only">
         <h3>雲端資料</h3>
@@ -138,6 +152,14 @@
       </section>
     </div>`;
 
+    // ---- 網頁配色 ----
+    el.addEventListener('click', e => {
+      const b = e.target.closest('[data-theme-id]'); if (!b) return;
+      UI.theme.set(b.dataset.themeId);
+      U.$$('.theme-opt', el).forEach(x => x.classList.toggle('on', x === b));
+      const cb = U.$('#theme-auto', el); if (cb) cb.disabled = b.dataset.themeId === 'dark';
+    });
+    U.$('#theme-auto', el)?.addEventListener('change', e => UI.theme.set(UI.theme.get(), e.target.checked));
     el.addEventListener('click', async e => {
       const a = e.target.closest('[data-act]');
       if (!a) return;

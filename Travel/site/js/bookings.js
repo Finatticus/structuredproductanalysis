@@ -96,7 +96,7 @@
         if (b.url) links.push(`<a href="${E(b.url)}" target="_blank" rel="noopener">訂單／官網</a>`);
         if (b.type === 'hotel' && b.phone) links.push(`<a href="tel:${E(b.phone.replace(/[^\d+]/g, ''))}">撥打飯店</a>`);
         const extra = [b.seat && `座位 ${b.seat}`, b.bag, b.people && `${b.people} 人`, b.paid, b.price].filter(Boolean).join('　');
-        return `<article class="bk-item">
+        return `<article class="bk-item" id="bk-${E(b.id)}">
           <div class="bk-when">${ico(b.type, 18)}<span>${E(TYPES[b.type]?.label || '')}</span></div>
           <div class="bk-main">
             <b class="bk-title">${E(titleOf(b))}</b>

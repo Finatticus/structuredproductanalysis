@@ -16,11 +16,13 @@
     up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
     bed: '<path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.5"/>',
     link: '<path d="M10 14a4 4 0 0 0 5.6 0l3-3a4 4 0 0 0-5.6-5.6l-1 1M14 10a4 4 0 0 0-5.6 0l-3 3a4 4 0 0 0 5.6 5.6l1-1"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
     download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
     lock: '<rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
     // 工具箱
     packing: '<rect x="5" y="7" width="14" height="13" rx="2"/><path d="M9 7V4h6v3M5 12h14"/>',
     split: '<circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 20c0-3 2.5-5 5-5s5 2 5 5M13 15.5c1-.3 2-.5 3-.5 2.5 0 5 2 5 5"/>',
+    expense: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 15h2"/>',
     budget: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 15h2"/>',
     converter: '<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
     checklist: '<path d="M4 6l2 2 3-3M4 13l2 2 3-3M12 7h8M12 14h8M4 20h16"/>',
@@ -51,6 +53,37 @@
     num: n => Number(n).toLocaleString('en-US'),
     name: () => (window.TA_CONFIG && TA_CONFIG.siteName) || '旅行誌',
   };
+  // ---- 網頁配色（每台裝置各自記住，管理者與訪客都能選） ----
+  const THEMES = [
+    { id: 'paper', name: '米棕', paper: '#f4f1ea', surface: '#fbfaf6', line: '#e1dbcf', primary: '#23403a', accent: '#9a6332' },
+    { id: 'white', name: '純白', paper: '#f7f7f5', surface: '#ffffff', line: '#e6e6e3', primary: '#2e3236', accent: '#8a7a62' },
+    { id: 'mist', name: '淺灰', paper: '#eff0f0', surface: '#f8f8f8', line: '#dfe1e2', primary: '#3e4649', accent: '#7a8a90' },
+    { id: 'sky', name: '淺藍', paper: '#eef3f7', surface: '#f8fbfd', line: '#d9e3eb', primary: '#34536e', accent: '#6b8fae' },
+    { id: 'sage', name: '淺綠', paper: '#f0f3ee', surface: '#f9fbf7', line: '#dde4da', primary: '#3d5a46', accent: '#8a9a6a' },
+    { id: 'blush', name: '淺粉', paper: '#f8f1f0', surface: '#fdf9f8', line: '#ecdfdd', primary: '#6e4c54', accent: '#b0808a' },
+    { id: 'lavender', name: '淺紫', paper: '#f3f2f7', surface: '#fbfafd', line: '#e3e1ec', primary: '#4b4a6b', accent: '#8c82ad' },
+    { id: 'dark', name: '深色', paper: '#15181a', surface: '#1b1f21', line: '#2c3134', primary: '#c9b48f', accent: '#d39a62' },
+  ];
+  const ls = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { } return null; };
+  const theme = {
+    list: THEMES,
+    get: () => THEMES.find(t => t.id === ls('ta.theme')) ? ls('ta.theme') : 'paper',
+    autoDark: () => ls('ta.theme.auto') !== '0',
+    apply() {
+      const id = theme.get(), auto = theme.autoDark() && id !== 'dark', root = document.documentElement;
+      root.dataset.theme = id;
+      root.classList.toggle('auto-dark', auto);
+      const t = THEMES.find(x => x.id === id), dark = THEMES.find(x => x.id === 'dark');
+      document.querySelectorAll('meta[name="theme-color"]').forEach(m => {
+        const isDarkMeta = /dark/.test(m.media);
+        m.content = isDarkMeta && auto ? dark.paper : t.paper;
+      });
+    },
+    set(id, autoDark) { ls('ta.theme', id); if (autoDark !== undefined) ls('ta.theme.auto', autoDark ? '1' : '0'); theme.apply(); },
+  };
+  UI.theme = theme;
+  theme.apply();
+
   window.TA = window.TA || {};
   TA.ui = UI;
 })();

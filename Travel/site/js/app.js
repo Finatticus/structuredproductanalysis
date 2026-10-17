@@ -19,6 +19,7 @@
     [/^\/world$/, () => ['world', {}]],
     [/^\/settings$/, () => ['settings', {}]],
     [/^\/settings\/help$/, () => ['settings', { tab: 'help' }]],
+    [/^\/settings\/health$/, () => ['settings', { tab: 'health' }]],
   ];
   const NAV = { home: '/', trip: '/', editor: '/', tools: '/tools', tool: '/tools', world: '/world', settings: '/settings' };
 
@@ -54,6 +55,17 @@
     U.$$('.nav a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + NAV[name]));
     U.$$('.tabbar a').forEach(a => a.classList.toggle('on', a.dataset.nav === NAV[name]));
     document.body.dataset.view = name;
+    // 從搜尋跳過來：捲到指定位置並標示
+    const jump = sessionStorage.getItem('ta.jump');
+    if (jump) {
+      sessionStorage.removeItem('ta.jump');
+      setTimeout(() => {
+        const node = document.getElementById(jump);
+        if (!node) return;
+        node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        node.classList.add('flash'); setTimeout(() => node.classList.remove('flash'), 2600);
+      }, 350);
+    }
     const t = name === 'trip' || name === 'editor' ? S.get(params.id) : null;
     document.title = t ? `${t.title}｜${TA.ui.name()}` : TA.ui.name();
   }
@@ -114,7 +126,8 @@
     try {
       const r = await S.sync();
       const n = await S.migrate();
-      if ((r && (r.pulled || r.pushed)) || n) { if (!current?.canLeave) render(); paintTicker(); }
+      // 雲端真的有新資料才重畫，避免打字到一半（例如記帳）畫面被刷新
+      if (r?.changed || n) { if (!current?.canLeave) render(); paintTicker(); }
       if (n) U.toast(`已將 ${n} 段旅程更新為新版格式`);
       TA.geo.backfill(() => { if (!current?.canLeave) render(); });
     } catch (e) { if (navigator.onLine) U.toast('雲端同步失敗：' + e.message, 'err'); else paintOnline(); }
@@ -125,8 +138,9 @@
       started = true;
       S.on(paintSync);
       S.on(U.debounce(paintTicker, 500));
+      U.$('#searchBtn').addEventListener('click', () => TA.search.open());
       U.$('#syncBtn').addEventListener('click', async () => {
-        try { const r = await S.sync(); await S.migrate(); U.toast(`同步完成（下載 ${r.pulled}、上傳 ${r.pushed}）`); render(); paintTicker(); }
+        try { const r = await S.sync(); await S.migrate(); U.toast(`同步完成（下載 ${r.pulled}、上傳 ${r.pushed}）`); if (!current?.canLeave) render(); paintTicker(); }
         catch (e) { U.toast('同步失敗：' + e.message, 'err'); }
       });
       setInterval(TA.ticker.tick, 20000);

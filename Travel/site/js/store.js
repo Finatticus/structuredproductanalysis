@@ -9,7 +9,13 @@
   const listeners = new Set();
 
   const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
-  const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { TA.u.toast('瀏覽器儲存空間不足：' + e.message, 'err'); } };
+  const save = (k, v) => {
+    const json = JSON.stringify(v);
+    try { localStorage.setItem(k, json); return; } catch { }
+    // 空間不足：先清掉可以重抓的天氣快取再試一次
+    try { Object.keys(localStorage).filter(x => /^ta\.(wx|clim)\./.test(x)).forEach(x => localStorage.removeItem(x)); localStorage.setItem(k, json); }
+    catch (e) { TA.u.toast('瀏覽器儲存空間不足：' + e.message, 'err'); }
+  };
 
   let trips = load(KEY, []);
   let settings = Object.assign({ gasUrl: '', gasToken: '', baseCurrency: 'TWD', homeTz: 'Asia/Taipei', lastSync: '' }, load(SETTINGS_KEY, {}));
@@ -59,10 +65,14 @@
       if (Store.denied()) return;
       const t = trips.find(x => x.id === id);
       if (!t) return;
-      const tomb = { id, deleted: true, updatedAt: new Date().toISOString() };
-      trips[trips.indexOf(t)] = tomb;
+      const now = new Date().toISOString();
+      const tombs = [{ id, deleted: true, updatedAt: now }];
+      trips[trips.indexOf(t)] = tombs[0];
+      // 這趟的記帳一起刪掉
+      const ex = trips.findIndex(x => x.id === '__exp_' + id && !x.deleted);
+      if (ex >= 0) { trips[ex] = { id: '__exp_' + id, deleted: true, updatedAt: now }; tombs.push(trips[ex]); }
       persist();
-      Store.push([tomb]);
+      Store.push(tombs);
     },
     newTrip(partial = {}) {
       const now = new Date().toISOString();
@@ -137,6 +147,9 @@
       const list = Array.isArray(data) ? data : data.trips;
       if (!Array.isArray(list)) throw new Error('格式不正確');
       let n = 0;
+      // 還原的資料視為最新版本，避免下次同步被雲端或其他裝置較新的舊資料蓋回去
+      const now = new Date().toISOString();
+      list.forEach(t => { if (t && t.id) t.updatedAt = now; });
       for (const t of list) { if (!t.id) continue; const i = trips.findIndex(x => x.id === t.id); if (i >= 0) trips[i] = t; else trips.push(t); n++; }
       persist(); Store.push(list);
       return n;
@@ -191,16 +204,23 @@
       }
     },
     /** 雙向合併：以 updatedAt 較新者為準 */
+    /** 同步；已經有一次在跑（例如存檔後的自動同步）就等它跑完，再補跑一次確保最新 */
     async sync() {
-      if (!Store.hasRemote() || Store.syncing) return;
+      if (!Store.hasRemote()) return { pulled: 0, pushed: 0, changed: 0 };
+      if (Store._syncP) { await Store._syncP.catch(() => { }); return Store.sync(); }
+      Store._syncP = Store._sync();
+      try { return await Store._syncP; } finally { Store._syncP = null; }
+    },
+    async _sync() {
       Store.syncing = true; listeners.forEach(fn => fn());
       try {
         const { trips: remote } = await Store.call('list');
         const map = new Map(trips.map(t => [t.id, t]));
         const toPush = [];
+        let changed = 0;
         for (const r of remote) {
           const l = map.get(r.id);
-          if (!l || (r.updatedAt || '') > (l.updatedAt || '')) map.set(r.id, r);
+          if (!l || (r.updatedAt || '') > (l.updatedAt || '')) { map.set(r.id, r); changed++; }
           else if ((l.updatedAt || '') > (r.updatedAt || '')) toPush.push(l);
         }
         const remoteIds = new Set(remote.map(r => r.id));
@@ -209,7 +229,7 @@
         save(KEY, trips);
         if (toPush.length && !Store.isGuest()) await Store.call('save', { trips: toPush });
         Store.setSettings({ lastSync: new Date().toISOString() });
-        return { pulled: remote.length, pushed: toPush.length };
+        return { pulled: remote.length, pushed: toPush.length, changed };
       } finally {
         Store.syncing = false; listeners.forEach(fn => fn());
       }

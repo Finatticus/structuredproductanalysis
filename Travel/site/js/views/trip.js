@@ -17,7 +17,7 @@
 
   // 沒有連結的站點，用名稱＋國家在 Google 地圖搜尋
   // 超過 40 個字元、中間沒有空白的一串（通常是殘留的網址）顯示成「…」
-  const tidy = s => String(s || '').replace(/\S{41,}/g, m => (m.match(/^[^,%/+]{1,20}/) || [''])[0] + '…');
+  const tidy = s => String(s || '').replace(/[!-~]{41,}/g, m => (m.match(/^[^,%/+]{1,20}/) || [''])[0] + '…');
   const mapQ = (name, t) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([name, (t.countries || [])[0]].filter(Boolean).join(' '));
 
   function dayHtml(d, i, t) {
@@ -83,8 +83,9 @@
         </dl>
         <div class="head-actions">
           <a class="btn primary" href="#/trip/${t.id}/edit">${UI.icon('edit', 16)}編輯</a>
-          <a class="btn" href="#/tool/packing/${t.id}">${UI.icon('packing', 16)}行李與出發須知${t.packing ? `　${t.packing.items.filter(x => x.done).length}/${t.packing.items.length}` : ''}</a>
+          <a class="btn" href="#/tool/packing/${t.id}">${UI.icon('packing', 16)}行李與出發須知</a>
           <a class="btn" href="#/tool/wishlist/${t.id}">${UI.icon('wishlist', 16)}願望清單${TA.wishlist?.countFor(t.id) ? `　${TA.wishlist.countFor(t.id)}` : ''}</a>
+          <a class="btn" href="#/tool/expense/${t.id}">${UI.icon('expense', 16)}記帳分帳</a>
           <a class="btn ghost" href="#/tool/weather/${t.id}">${UI.icon('weather', 16)}天氣</a>
           <a class="btn ghost" href="#/tool/emergency/${t.id}">${UI.icon('emergency', 16)}緊急資訊</a>
           <button class="btn ghost" data-act="print">${UI.icon('print', 16)}列印</button>

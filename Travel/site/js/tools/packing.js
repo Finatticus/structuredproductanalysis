@@ -69,6 +69,7 @@
       try {
         const r = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${p.ll[0]}&longitude=${p.ll[1]}&start_date=${s}&end_date=${e}&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
         const j = await r.json();
+        if (!j?.daily?.temperature_2m_max?.some(v => v != null)) return null;
         const c = { name: p.name, max: Math.round(avg(j.daily.temperature_2m_max)), min: Math.round(avg(j.daily.temperature_2m_min)) };
         try { localStorage.setItem(key, JSON.stringify(c)); } catch { }
         return c;

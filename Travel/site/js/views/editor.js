@@ -42,6 +42,9 @@
     if (!isNew && !orig) { el.innerHTML = `<div class="empty-box">找不到這段旅程<br><a class="btn" href="#/">回主頁</a></div>`; return; }
     let t = isNew ? S.newTrip() : U.clone(orig);
     let dirty = false;
+    // 開始編輯時的版本：儲存前比對，避免蓋掉這段期間在別處（另一台裝置、同步）做的修改
+    const strip = x => x ? JSON.stringify({ ...x, packing: 0, geo: 0, updatedAt: 0 }) : '';
+    let base = strip(orig);
     const open = new Set(t.days.length <= 2 ? t.days.map(d => d.id) : []);
     t.bookings = t.bookings || [];
     const bkOpen = new Set();
@@ -456,8 +459,15 @@
       }
     });
 
-    function save() {
+    async function save() {
       if (el.querySelector('img.uploading')) return U.toast('圖片還在上傳中，請稍候', 'err');
+      const cur = isNew ? null : S.get(t.id);
+      if (cur && strip(cur) !== base) {
+        const ok = await U.confirm('這段旅程在你編輯期間，已經在其他地方（例如另一台裝置）被修改過。現在儲存會用你這份覆蓋那些修改，確定要儲存嗎？', { ok: '用我這份覆蓋', danger: true });
+        if (!ok) return;
+      }
+      // 行李清單、城市座標是在別的頁面更新的，用最新的那份
+      if (cur) { t.packing = cur.packing; t.geo = Object.assign({}, cur.geo, t.geo); if (!t.packing) delete t.packing; }
       if (!t.title.trim()) t.title = t.cities.join('・') || t.countries.join('・') || '未命名旅程';
       // 整理：清掉空白的站點、淨化圖文內容
       t.days.forEach(d => {
@@ -476,6 +486,7 @@
       if (!t.endDate && t.days.length) t.endDate = t.days[t.days.length - 1].date || t.startDate;
       t.v = 2;
       S.upsert(t);
+      base = strip(t);
       dirty = false;
       localStorage.removeItem(draftKey);
       U.toast('已儲存');
@@ -488,6 +499,34 @@
     window.addEventListener('beforeunload', onUnload);
 
     paint(false);
+
+    // 從資料健檢或搜尋跳過來：打開對應的天／訂位，捲到那裡並標示出來
+    (function applyFocus() {
+      let f = null;
+      try { f = JSON.parse(sessionStorage.getItem('ta.focus') || 'null'); } catch { }
+      if (!f || f.id !== t.id) return;
+      sessionStorage.removeItem('ta.focus');
+      if (['day', 'stop', 'block'].includes(f.kind) && t.days[f.i]) open.add(t.days[f.i].id);
+      if (f.kind === 'booking' && t.bookings[f.i]) bkOpen.add(t.bookings[f.i].id);
+      paint(false);
+      const sel = {
+        day: f.field && f.field !== 'notes' ? `[data-bind="days.${f.i}.${f.field}"]` : f.field === 'notes' ? `.rte[data-path="days.${f.i}.notes"]` : `#ed-day-${f.i}`,
+        stop: `.stop-name[data-i="${f.i}"][data-k="${f.k}"]`,
+        block: `.ed-blocks[data-i="${f.i}"] .ed-block[data-j="${f.j}"]`,
+        booking: `.bk-ed[data-i="${f.i}"]`,
+        city: `.chip-x[data-city="${CSS.escape(f.name || '')}"]`,
+        intro: '#ed-intro', section: `.ed-sec[data-k="${f.k}"]`,
+      }[f.kind];
+      setTimeout(() => {
+        const node = sel && U.$(sel, el);
+        if (!node) return;
+        node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const box = node.closest('.stop-ed, .ed-block, .bk-ed, .ed-sec, .rte, .fld, .chip-x') || node;
+        box.classList.add('flash');
+        setTimeout(() => box.classList.remove('flash'), 2600);
+        if (node.matches('input')) node.focus({ preventScroll: true });
+      }, 120);
+    })();
 
     return {
       cleanup() { document.removeEventListener('keydown', onKey); window.removeEventListener('beforeunload', onUnload); sortables.forEach(s => s.destroy()); uninstall(); },

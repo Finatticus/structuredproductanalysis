@@ -44,6 +44,7 @@
   function render(el, { onCountry } = {}) {
     if (!window.d3 || !window.topojson || !window.TA_WORLD) { el.hidden = true; return; }
     const { visited, planned, cities, home } = collect();
+    const zhOf = id => TA.countries.list.find(c => c.num === id)?.zh;
     const land = topojson.feature(TA_WORLD, TA_WORLD.objects.countries).features.filter(f => f.id !== '010'); // 去掉南極
     // 法國的海外領地（南美的法屬圭亞那）不算在「去過」裡
     const fr = land.find(f => f.id === '250');
@@ -59,7 +60,7 @@
       <path class="m-grat" d="${path(grat)}"/>
       <g class="m-land">${land.map(f => {
         const v = visited.get(f.id), p = planned.has(f.id), h = home && home.id === f.id;
-        return `<path d="${path(f)}" class="${h ? 'h' : v ? 'v' : p ? 'p' : ''}" data-id="${f.id}" data-name="${TA.u.esc(h ? home.name : v ? v.name : f.properties.name)}"${v ? ` data-n="${v.n}"` : ''}/>`;
+        return `<path d="${path(f)}" class="${h ? 'h' : v ? 'v' : p ? 'p' : ''}" data-id="${f.id}" data-name="${TA.u.esc(h ? home.name : v ? v.name : zhOf(f.id) || f.properties.name)}"${v ? ` data-n="${v.n}"` : ''}/>`;
       }).join('')}</g>
       <g class="m-cities">${cities.sort((a, b) => a.done - b.done).map(c => {
         const [x, y] = proj([c.ll[1], c.ll[0]]);
@@ -76,21 +77,32 @@
     </div>`;
 
     const tip = el.querySelector('.map-tip');
-    el.addEventListener('mousemove', e => {
-      const t = e.target;
-      let txt = '';
-      if (t.dataset.city) txt = `${t.dataset.city}${+t.dataset.n ? `・${t.dataset.n} 次` : '・即將前往'}`;
-      else if (t.classList.contains('h')) txt = `${t.dataset.name}・居住地`;
-      else if (t.classList.contains('v')) txt = `${t.dataset.name}・${t.dataset.n} 次`;
-      else if (t.classList.contains('p')) txt = `${TA.countries.list.find(c => c.num === t.dataset.id)?.zh || t.dataset.name}・即將前往`;
+    let hideT = 0;
+    const tipText = t => {
+      if (t.dataset.city) return `${t.dataset.city}${+t.dataset.n ? `・${t.dataset.n} 次` : '・即將前往'}`;
+      if (!t.dataset.name) return '';
+      if (t.classList.contains('h')) return `${t.dataset.name}・居住地`;
+      if (t.classList.contains('v')) return `${t.dataset.name}・${t.dataset.n} 次`;
+      if (t.classList.contains('p')) return `${t.dataset.name}・即將前往`;
+      return t.dataset.name;
+    };
+    const showTip = (e, autoHide) => {
+      const txt = tipText(e.target);
+      clearTimeout(hideT);
       if (!txt) { tip.hidden = true; return; }
       const r = el.getBoundingClientRect();
       tip.hidden = false; tip.textContent = txt;
       tip.style.left = (e.clientX - r.left) + 'px'; tip.style.top = (e.clientY - r.top) + 'px';
-    });
+      if (autoHide) hideT = setTimeout(() => (tip.hidden = true), 2500);
+    };
+    el.addEventListener('mousemove', e => { if (!touched) showTip(e); });
     el.addEventListener('mouseleave', () => (tip.hidden = true));
+    // 手機：點一下顯示國名（幾秒後自動消失）
+    let touched = false;
+    el.addEventListener('touchstart', () => (touched = true), { passive: true });
     el.addEventListener('click', e => {
       const t = e.target;
+      if (touched) showTip(e, true);
       const name = t.dataset.city || (t.classList.contains('v') ? t.dataset.name : '');
       if (name && onCountry) onCountry(name);
     });
