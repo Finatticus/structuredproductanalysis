@@ -100,6 +100,19 @@
         </form>
       </section>
 
+      <section class="panel" id="off-panel">
+        <h3>離線資料</h3>
+        <p class="hint">存到這台裝置的旅程，沒有網路也能打開。在旅程頁按「離線下載」新增。</p>
+        ${(() => {
+          const rec = TA.offline.records();
+          const ids = Object.keys(rec).filter(id => S.get(id));
+          return ids.length ? `<div class="off-rows">${ids.map(id => `<div class="off-row"><span><b>${E(S.get(id).title)}</b><small>${new Date(rec[id].at).toLocaleString('zh-TW')}・${rec[id].files} 張圖片${rec[id].bytes ? '・約 ' + TA.offline.fmtBytes(rec[id].bytes) : ''}</small></span>
+            <button class="btn sm ghost" data-act="off-update" data-id="${id}">更新</button><button class="btn sm ghost" data-act="off-rm" data-id="${id}">移除</button></div>`).join('')}</div>`
+            : '<p class="muted">目前沒有存到這台裝置的旅程。</p>';
+        })()}
+        <p class="hint off-usage"></p>
+      </section>
+
       <section class="panel">
         <h3>地區</h3>
         <div class="row2">
@@ -161,6 +174,8 @@
         TA.ticker.loadRates(true).then(() => TA.app.paintTicker());
         U.toast('已儲存');
       }
+      if (act === 'off-update') { TA.offline.dialog(S.get(a.dataset.id), () => TA.app.rerender()); return; }
+      if (act === 'off-rm') { await TA.offline.remove(a.dataset.id); U.toast('已移除離線資料'); TA.app.rerender(); return; }
       if (act === 'export') U.download(`旅行誌備份-${U.todayStr()}.json`, S.exportJSON());
       if (act === 'logout' && await U.confirm('確定要登出這台裝置？', { ok: '登出', danger: true })) { S.logout(); location.hash = '#/'; location.reload(); }
     });
@@ -203,6 +218,11 @@
       }
     });
 
+    // 手機上已用的儲存空間
+    navigator.storage?.estimate?.().then(s => {
+      const box = U.$('.off-usage', el);
+      if (box && s?.usage) box.textContent = `這個網站目前在這台裝置使用約 ${TA.offline.fmtBytes(s.usage)}${s.quota ? `（可用上限約 ${TA.offline.fmtBytes(s.quota)}）` : ''}。`;
+    }).catch(() => { });
     U.$('#importFile', el).addEventListener('change', async e => {
       const f = e.target.files[0]; if (!f) return;
       try { const n = S.importJSON(await f.text()); await S.migrate(); U.toast(`已匯入 ${n} 段旅程`); }

@@ -89,7 +89,7 @@
       const re = /<img[^>]+src="(https?:\/\/[^"]+)"/g;
       const own = u => /googleusercontent\.com|drive\.google\.com/.test(u);
       for (const t of Store.all()) {
-        const html = [t.intro, ...(t.days || []).flatMap(d => [d.notes, ...(d.blocks || []).map(b => b.body)]), ...(t.sections || []).map(s => s.body)].join('');
+        const html = [t.intro, ...(t.days || []).flatMap(d => [d.notes, ...(d.blocks || []).map(b => b.body)]), ...(t.sections || []).map(s => s.body), ...(t.bookings || []).map(b => b.note || '')].join('');
         for (const m of html.matchAll(re)) if (!own(m[1])) set.add(m[1].replace(/&amp;/g, '&'));
         if (t.cover && /^https?:/.test(t.cover) && !/googleusercontent\.com/.test(t.cover)) set.add(t.cover);
       }
@@ -184,7 +184,11 @@
     async push(list) {
       if (!Store.hasRemote() || Store.isGuest()) return;
       try { await Store.call('save', { trips: list }); }
-      catch (e) { console.warn(e); TA.u.toast('雲端儲存失敗，已存在本機：' + e.message, 'err'); }
+      catch (e) {
+        console.warn(e);
+        if (!navigator.onLine) TA.u.toast('目前離線，已先存在這台裝置，恢復連線後會自動上傳');
+        else TA.u.toast('雲端儲存失敗，已存在本機：' + e.message, 'err');
+      }
     },
     /** 雙向合併：以 updatedAt 較新者為準 */
     async sync() {

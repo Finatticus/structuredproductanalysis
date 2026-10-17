@@ -43,6 +43,8 @@
     let t = isNew ? S.newTrip() : U.clone(orig);
     let dirty = false;
     const open = new Set(t.days.length <= 2 ? t.days.map(d => d.id) : []);
+    t.bookings = t.bookings || [];
+    const bkOpen = new Set();
     const draftKey = 'ta.draft.' + (params.id || 'new');
 
     try {
@@ -148,6 +150,7 @@
       <div class="ed-layout">
         <aside class="ed-nav">
           <a href="#" data-jump="ed-basic">基本資訊</a>
+          <a href="#" data-jump="ed-bookings">訂位與交通 <small>${(t.bookings || []).length || ''}</small></a>
           <a href="#" data-jump="ed-intro">行前備註</a>
           <a href="#" data-jump="ed-days">每日行程</a>
           ${t.days.map((d, i) => `<a href="#" class="sub" data-jump="ed-day-${i}">${String(i + 1).padStart(2, '0')}　${d.date ? UI.dot(d.date, false) : ''}</a>`).join('')}
@@ -181,6 +184,12 @@
               </div>
               <div class="add-row">${FACT_PRESETS.map(p => `<button type="button" class="btn sm ghost" data-act="fact-add" data-label="${p}">${p}</button>`).join('')}<button type="button" class="btn sm ghost" data-act="fact-add" data-label="">自訂</button></div>
             </div>
+          </section>
+
+          <section class="panel" id="ed-bookings">
+            <h3>訂位與交通</h3>
+            <p class="hint">機票、住宿、交通、租車、門票。填了日期會自動出現在那一天的行程；填了免費取消期限，期限前會在首頁提醒。</p>
+            ${TA.bookings.editorHtml(t, bkOpen)}
           </section>
 
           <section class="panel" id="ed-intro">
@@ -274,6 +283,8 @@
       if (bb) { setPath(bb, e.target.checked); touch(); return; }
       const b = e.target.dataset?.bind;
       if (!b) return;
+      if (e.target.dataset.upper) { e.target.value = e.target.value.toUpperCase().replace(/\s+/g, ''); setPath(b, e.target.value); }
+      if (/^bookings\.\d+\.code$/.test(b)) { e.target.value = e.target.value.trim().toUpperCase(); setPath(b, e.target.value); }
       if (/^days\.\d+\.date$/.test(b) || b === 'startDate' || b === 'endDate') {
         if (b === 'startDate' && (!t.endDate || t.endDate < t.startDate)) t.endDate = t.startDate;
         paint();
@@ -422,6 +433,26 @@
         }
         case 'fact-add': t.facts = t.facts || []; t.facts.push({ label: a.dataset.label, value: '' }); touch(); paint(); return;
         case 'fact-del': t.facts.splice(k, 1); touch(); paint(); return;
+        // ---- 訂位 ----
+        case 'bk-add': {
+          const b = { id: U.uid('k'), type: a.dataset.type };
+          if (b.type === 'hotel') { b.checkin = t.startDate || ''; b.checkout = t.startDate ? U.addDays(t.startDate, 1) : ''; b.checkinTime = '15:00'; b.checkoutTime = '11:00'; }
+          if (b.type === 'train') b.kind = '火車';
+          t.bookings.push(b); bkOpen.add(b.id); touch(); paint();
+          setTimeout(() => U.$$('.bk-ed', el).pop()?.querySelector('input,select')?.focus(), 50);
+          return;
+        }
+        case 'bk-toggle': { const id = t.bookings[i].id; bkOpen.has(id) ? bkOpen.delete(id) : bkOpen.add(id); paint(); return; }
+        case 'bk-dup': { const c = U.clone(t.bookings[i]); c.id = U.uid('k'); c.code = ''; t.bookings.splice(i + 1, 0, c); bkOpen.add(c.id); touch(); paint(); return; }
+        case 'bk-del':
+          if (await U.confirm(`刪除「${TA.bookings.titleOf(t.bookings[i])}」？`, { ok: '刪除', danger: true })) { t.bookings.splice(i, 1); touch(); paint(); }
+          return;
+        case 'bk-from-days': {
+          const add = TA.bookings.hotelsFromDays(t);
+          if (!add.length) return U.toast('每日行程的住宿都已經有訂房了');
+          t.bookings.push(...add); touch(); paint(); U.toast(`新增了 ${add.length} 筆訂房，記得補上訂位代號與取消期限`);
+          return;
+        }
       }
     });
 
@@ -437,6 +468,9 @@
       t.intro = R.sanitize(t.intro);
       t.sections.forEach(s => (s.body = R.sanitize(s.body)));
       t.facts = (t.facts || []).filter(f => f.label.trim() || f.value.trim());
+      // 訂位：去掉完全空白的、依日期排序
+      (t.bookings || []).forEach(b => { if (b.note) b.note = R.isEmpty(TA.bookings.noteHtml(b.note)) ? '' : R.sanitize(TA.bookings.noteHtml(b.note)); });
+      t.bookings = TA.bookings.sorted((t.bookings || []).filter(b => Object.keys(b).some(k => !['id', 'type', 'kind', 'checkinTime', 'checkoutTime'].includes(k) && String(b[k] || '').trim())));
       t.days.sort((p, q) => (p.date || '9').localeCompare(q.date || '9'));
       if (!t.startDate && t.days[0]?.date) t.startDate = t.days[0].date;
       if (!t.endDate && t.days.length) t.endDate = t.days[t.days.length - 1].date || t.startDate;

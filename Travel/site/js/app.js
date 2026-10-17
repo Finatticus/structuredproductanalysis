@@ -97,14 +97,27 @@
     document.body.appendChild(box);
   });
 
+  // 離線時：顯示「離線」標籤，不跳同步錯誤；恢復連線自動同步
+  function paintOnline() {
+    const off = !navigator.onLine;
+    document.body.classList.toggle('offline', off);
+    let b = U.$('.net-badge');
+    if (off && !b) { b = document.createElement('span'); b.className = 'net-badge'; b.textContent = '離線'; b.title = '目前沒有網路，顯示上次同步的資料；修改會先存在這台裝置，恢復連線後自動上傳'; U.$('.top-actions').prepend(b); }
+    if (!off && b) b.remove();
+  }
+  window.addEventListener('offline', paintOnline);
+  window.addEventListener('online', () => { paintOnline(); if (S.isAuthed()) { syncAndMigrate(); TA.ticker.loadRates(true).then(paintTicker); } });
+
   async function syncAndMigrate() {
+    paintOnline();
+    if (!navigator.onLine) return;
     try {
       const r = await S.sync();
       const n = await S.migrate();
       if ((r && (r.pulled || r.pushed)) || n) { if (!current?.canLeave) render(); paintTicker(); }
       if (n) U.toast(`已將 ${n} 段旅程更新為新版格式`);
       TA.geo.backfill(() => { if (!current?.canLeave) render(); });
-    } catch (e) { U.toast('雲端同步失敗：' + e.message, 'err'); }
+    } catch (e) { if (navigator.onLine) U.toast('雲端同步失敗：' + e.message, 'err'); else paintOnline(); }
   }
 
   function start() {

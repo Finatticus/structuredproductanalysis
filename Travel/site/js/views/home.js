@@ -90,10 +90,19 @@
     return { html, cnt };
   }
 
+  /** 提醒：14 天內到期的免費取消、48 小時內起飛的航班 */
+  function remindersHtml() {
+    const list = TA.bookings.reminders(S.all().filter(t => S.statusOf(t) !== 'done'));
+    if (!list.length) return '';
+    return `<section class="reminders">${list.map(r => `<a class="rem ${r.level}" href="#/trip/${r.t.id}" data-tab-open="bk-${r.b.type}">
+      ${TA.bookings.ico(r.b.type, 16)}<b>${E(TA.bookings.titleOf(r.b))}</b><span>${E(r.text)}</span><em>${E(r.t.title)}</em></a>`).join('')}</section>`;
+  }
+
   function render(el) {
     el.innerHTML = `
       <section class="world-map" aria-label="足跡地圖"></section>
       ${heroHtml()}
+      ${remindersHtml()}
       ${statsHtml()}
       <section class="trips">
         <div class="sec-head">
@@ -123,6 +132,8 @@
     paint();
     U.$('.search', el).addEventListener('input', U.debounce(e => { query = e.target.value; paint(); }, 150));
     el.addEventListener('click', async e => {
+      const rem = e.target.closest('[data-tab-open]');
+      if (rem) sessionStorage.setItem('ta.tab.' + rem.getAttribute('href').split('/').pop(), rem.dataset.tabOpen);
       const f = e.target.closest('[data-f]');
       if (f) { filter = f.dataset.f; sessionStorage.setItem('ta.filter', filter); paint(); return; }
       const act = e.target.closest('[data-act]');

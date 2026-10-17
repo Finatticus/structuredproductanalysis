@@ -16,6 +16,8 @@
   const foldHtml = (title, body, path, open) => `<div class="fold${open ? ' open' : ''}"><div class="fold-title">${E(title)}</div><div class="fold-body">${rich(body, path)}</div></div>`;
 
   // 沒有連結的站點，用名稱＋國家在 Google 地圖搜尋
+  // 超過 40 個字元、中間沒有空白的一串（通常是殘留的網址）顯示成「…」
+  const tidy = s => String(s || '').replace(/\S{41,}/g, m => (m.match(/^[^,%/+]{1,20}/) || [''])[0] + '…');
   const mapQ = (name, t) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([name, (t.countries || [])[0]].filter(Boolean).join(' '));
 
   function dayHtml(d, i, t) {
@@ -30,7 +32,8 @@
       </div>
       <div class="day-main">
         ${d.title ? `<h3 class="day-title">${E(d.title)}</h3>` : ''}
-        ${stops.length ? `<ol class="stops">${stops.map(p => `<li><span class="t">${E(p.time || '')}</span><span class="n">${p.url ? `<a href="${E(p.url)}" target="_blank" rel="noopener">${E(p.name || p.url)}</a>` : E(p.name)}${p.name && !/google\.[^/]+\/maps|maps\.app\.goo\.gl/.test(p.url || '') ? `<a class="map-ic" href="${E(mapQ(p.name, t))}" target="_blank" rel="noopener" title="在 Google 地圖查看">${UI.icon('map', 13)}</a>` : ''}</span></li>`).join('')}</ol>` : ''}
+        ${TA.bookings.dayItems(t, d.date)}
+        ${stops.length ? `<ol class="stops">${stops.map(p => `<li><span class="t">${E(p.time || '')}</span><span class="n" title="${E(p.name)}">${p.url ? `<a href="${E(p.url)}" target="_blank" rel="noopener">${E(tidy(p.name || p.url))}</a>` : E(tidy(p.name))}${p.name && !/google\.[^/]+\/maps|maps\.app\.goo\.gl/.test(p.url || '') ? `<a class="map-ic" href="${E(mapQ(tidy(p.name), t))}" target="_blank" rel="noopener" title="在 Google 地圖查看">${UI.icon('map', 13)}</a>` : ''}</span></li>`).join('')}</ol>` : ''}
         ${rich(d.notes, `days.${i}.notes`)}
         ${d.hotel ? `<div class="stay-line"><span class="lbl">住宿</span>${d.hotelUrl ? `<a href="${E(d.hotelUrl)}" target="_blank" rel="noopener">${E(d.hotel)}</a>` : E(d.hotel)}${/google\.[^/]+\/maps|maps\.app\.goo\.gl/.test(d.hotelUrl || '') ? '' : `<a class="map-ic" href="${E(mapQ(d.hotel, t))}" target="_blank" rel="noopener" title="在 Google 地圖查看">${UI.icon('map', 13)}</a>`}</div>` : ''}
         ${(d.blocks || []).map((b, j) => foldHtml(b.title || '詳細內容', b.body, `days.${i}.blocks.${j}.body`, b.open)).join('')}
@@ -47,10 +50,21 @@
     const left = t.startDate ? U.diffDays(U.todayStr(), t.startDate) : null;
     const stays = stayList(t);
     const secs = (t.sections || []).filter(s => !R.isEmpty(s.body));
+    // 每一種訂位各自一個分頁；名稱相符的舊分頁（例如「機票」「飯店」）合併進去，放在訂位下面
+    const BK = TA.bookings;
+    const bkTypes = Object.keys(BK.TYPES).filter(ty => (t.bookings || []).some(b => b.type === ty));
+    const merged = new Map();
+    bkTypes.forEach(ty => { const s = secs.find(x => BK.SECTION_MATCH[ty].test(x.title) && ![...merged.values()].includes(x)); if (s) merged.set(ty, s); });
     const tabs = [{ key: 'plan', label: '每日行程' }];
-    if (stays.length) tabs.push({ key: 'stays', label: '住宿' });
-    secs.forEach(s => tabs.push({ key: s.id, label: s.title }));
+    bkTypes.forEach(ty => tabs.push({ key: 'bk-' + ty, label: BK.TYPES[ty].label }));
+    const showStays = stays.length && !bkTypes.includes('hotel');
+    if (showStays) tabs.push({ key: 'stays', label: '住宿' });
+    const offRec = TA.offline.records()[t.id];
+    const restSecs = secs.filter(s => ![...merged.values()].includes(s));
+    restSecs.forEach(s => tabs.push({ key: s.id, label: s.title }));
     let tab = sessionStorage.getItem('ta.tab.' + id) || 'plan';
+    // 舊分頁 id 被合併時，跳到對應的訂位分頁
+    for (const [ty, s] of merged) if (tab === s.id) tab = 'bk-' + ty;
     if (!tabs.some(x => x.key === tab)) tab = 'plan';
     const km = Math.round(TA.geo.tripKm(t));
 
@@ -71,7 +85,10 @@
           <a class="btn primary" href="#/trip/${t.id}/edit">${UI.icon('edit', 16)}編輯</a>
           <a class="btn" href="#/tool/packing/${t.id}">${UI.icon('packing', 16)}行李與出發須知${t.packing ? `　${t.packing.items.filter(x => x.done).length}/${t.packing.items.length}` : ''}</a>
           <a class="btn" href="#/tool/wishlist/${t.id}">${UI.icon('wishlist', 16)}願望清單${TA.wishlist?.countFor(t.id) ? `　${TA.wishlist.countFor(t.id)}` : ''}</a>
+          <a class="btn ghost" href="#/tool/weather/${t.id}">${UI.icon('weather', 16)}天氣</a>
+          <a class="btn ghost" href="#/tool/emergency/${t.id}">${UI.icon('emergency', 16)}緊急資訊</a>
           <button class="btn ghost" data-act="print">${UI.icon('print', 16)}列印</button>
+          <button class="btn ghost${offRec ? ' off-saved' : ''}" data-act="offline" title="${offRec ? `已離線下載（${new Date(offRec.at).toLocaleString('zh-TW')}），點一下更新或移除` : '存到這台裝置，沒有網路也能看'}">${UI.icon('download', 16)}離線下載${offRec ? '<i class="off-dot"></i>' : ''}</button>
         </div>
       </header>
 
@@ -92,13 +109,18 @@
         </div>
       </div>
 
-      ${stays.length ? `<div class="tab-pane" data-pane="stays" ${tab !== 'stays' ? 'hidden' : ''}>
+      ${bkTypes.map(ty => { const s = merged.get(ty); return `<div class="tab-pane" data-pane="bk-${ty}" ${tab !== 'bk-' + ty ? 'hidden' : ''}>
+        ${BK.viewHtml(t, ty)}
+        ${s ? `<article class="sheet bk-sheet"><h2 class="sheet-title">${E(s.title)}</h2>${rich(s.body, `sections.${t.sections.indexOf(s)}.body`)}</article>` : ''}
+      </div>`; }).join('')}
+
+      ${showStays ? `<div class="tab-pane" data-pane="stays" ${tab !== 'stays' ? 'hidden' : ''}>
         <table class="stays"><thead><tr><th>入住</th><th>退房</th><th>晚數</th><th>住宿</th></tr></thead><tbody>
         ${stays.map(s => `<tr><td>${UI.dot(s.from, false)}</td><td>${UI.dot(U.addDays(s.to, 1), false)}</td><td>${U.diffDays(s.from, s.to) + 1}</td><td>${s.url ? `<a href="${E(s.url)}" target="_blank" rel="noopener">${E(s.hotel)}</a>` : E(s.hotel)}</td></tr>`).join('')}
         </tbody></table>
       </div>` : ''}
 
-      ${secs.map(s => `<div class="tab-pane" data-pane="${s.id}" ${tab !== s.id ? 'hidden' : ''}>
+      ${restSecs.map(s => `<div class="tab-pane" data-pane="${s.id}" ${tab !== s.id ? 'hidden' : ''}>
         <article class="sheet"><h2 class="sheet-title">${E(s.title)}</h2>${rich(s.body, `sections.${t.sections.indexOf(s)}.body`)}</article>
       </div>`).join('')}
     `;
@@ -113,6 +135,13 @@
       }
       const ft = e.target.closest('.fold-title');
       if (ft) { ft.parentElement.classList.toggle('open'); return; }
+      const cp = e.target.closest('[data-copy]');
+      if (cp) {
+        const v = cp.dataset.copy;
+        (navigator.clipboard?.writeText(v) || Promise.reject()).then(() => U.toast(`已複製 ${v}`)).catch(() => U.toast(v));
+        return;
+      }
+      if (e.target.closest('[data-act="offline"]')) { TA.offline.dialog(t, () => TA.app.rerender()); return; }
       const li = e.target.closest('.rich li.task');
       if (li && e.offsetX < 26 && !S.isGuest()) {
         // 勾選待辦清單：直接存回

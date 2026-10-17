@@ -282,7 +282,7 @@
     });
     el.addEventListener('click', async e => {
       const ft = e.target.closest('.fold-title'); if (ft) { ft.parentElement.classList.toggle('open'); return; }
-      const md = e.target.closest('[data-mode]'); if (md) { t.packing.mode = md.dataset.mode; S.upsert(t); paint(); return; }
+      const md = e.target.closest('[data-mode]'); if (md) { t.packing.mode = md.dataset.mode; if (!S.isGuest()) S.upsert(t); paint(); return; }
       const a = e.target.closest('[data-act]'); if (!a) return;
       const key = t.packing?.mode === 'back' ? 'back' : 'done';
       const x = a.closest('.pk-item') ? find(a) : null;
