@@ -3,7 +3,7 @@
  * - 圖片、國旗、字型、外部程式庫：有存就直接用（離線下載的旅程圖片在這裡）
  * - 雲端資料、定位、天氣、匯率：一律直接連網，不經過這裡
  * 離線下載的檔案存在 'travel-journal-offline'，更新網站時不會被清掉 */
-const CACHE = 'travel-journal-v3';
+const CACHE = 'travel-journal-v4';
 const OFFLINE = 'travel-journal-offline';
 const SHELL = ['./', './index.html', './manifest.json', './icons/icon-192.png'];
 
@@ -18,7 +18,9 @@ self.addEventListener('activate', e => {
 const STATIC_HOSTS = /fonts\.googleapis\.com|fonts\.gstatic\.com|cdnjs\.cloudflare\.com|flagcdn\.com/;
 const IMAGE_HOSTS = /googleusercontent\.com|drive\.google\.com|flagcdn\.com/;
 
-const fromCache = req => caches.match(req).then(r => r || caches.match(req, { ignoreSearch: true }));
+// 不透明回應（跨網站、不允許讀取）不能拿來回答要求讀取內容的請求（mode: cors），否則會直接出錯
+const usable = (req, r) => r && !(r.type === 'opaque' && req.mode === 'cors') ? r : null;
+const fromCache = req => caches.match(req).then(r => usable(req, r) || caches.match(req, { ignoreSearch: true }).then(x => usable(req, x)));
 
 self.addEventListener('fetch', e => {
   const req = e.request;
@@ -52,8 +54,9 @@ self.addEventListener('fetch', e => {
   // 字型、外部程式庫：先用快取，背景更新
   if (STATIC_HOSTS.test(url.host)) {
     e.respondWith(caches.open(CACHE).then(async c => {
-      const hit = await c.match(req) || await caches.match(req);
-      const net = fetch(req).then(res => { if (res.ok || res.type === 'opaque') c.put(req, res.clone()); return res; }).catch(() => hit);
+      const hit = usable(req, await c.match(req)) || usable(req, await caches.match(req));
+      // 要求讀取內容的請求，不用不透明回應覆蓋已存的正常版本
+      const net = fetch(req).then(res => { if (res.ok || (res.type === 'opaque' && req.mode !== 'cors')) c.put(req, res.clone()); return res; }).catch(() => hit || Response.error());
       return hit || net;
     }));
   }

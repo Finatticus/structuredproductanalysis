@@ -1229,3 +1229,50 @@ a.sd-row:hover { background: color-mix(in srgb, var(--ink) 3%, transparent); }
   .sd-cn b { font-size: .84rem; }
   .sd-list { max-height: 360px; }
 }
+
+/* ============ 品牌：旅行誌 by Michael ============ */
+.brand { display: inline-flex; align-items: baseline; }
+.brand-by { font-family: 'Cormorant Garamond', 'Noto Serif Display', Georgia, serif; font-style: italic; font-weight: 500; font-size: 1.02rem; letter-spacing: .03em; color: var(--muted); margin-left: 7px; }
+@media (max-width: 720px) { .brand-by { font-size: .9rem; margin-left: 5px; } }
+
+/* ============ 願望清單：開放訪客新增 ============ */
+.wl-share { margin: 34px 0 10px; }
+.wl-share-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.wl-share-list .chip-tg small { margin-left: 6px; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
+.wl-share-list .chip-tg:disabled { opacity: .5; }
+.wl-by { color: var(--accent); }
+.gp-wish { display: block; font-size: .72rem; color: var(--accent); }
+
+/* 同步按鈕：還有修改沒上傳時，右上角一個小點 */
+#syncBtn { position: relative; }
+#syncBtn.has-pending::after { content: ''; position: absolute; top: 7px; right: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+/* ============ 設定：離線資料用量 ============ */
+.off-sum { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 6px 0 8px; }
+.off-sum b { font-family: var(--num); font-size: 1.6rem; font-weight: 500; font-variant-numeric: lining-nums; }
+.off-sum span { font-size: .8rem; color: var(--muted); }
+.off-bar { display: flex; height: 8px; border-radius: 2px; overflow: hidden; background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.off-bar i { display: block; height: 100%; min-width: 2px; }
+.off-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: .76rem; color: var(--ink-2); margin: 8px 0 4px; }
+.off-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.ob-a { background: var(--primary); }
+.ob-b { background: var(--accent); }
+.ob-c { background: color-mix(in srgb, var(--ink) 40%, var(--paper)); }
+.ob-d { background: color-mix(in srgb, var(--ink) 18%, var(--paper)); }
+.off-sh { font-size: .72rem; letter-spacing: .14em; color: var(--muted); margin: 20px 0 4px; }
+.off-size { font-style: normal; font-size: .84rem; font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; margin: 0 4px; }
+.off-row.sub b { font-weight: 400; color: var(--ink-2); }
+.off-row small { line-height: 1.5; }
+@media (max-width: 720px) {
+  .off-row { flex-wrap: wrap; }
+  .off-row span { flex: 1 1 100%; }
+  .off-row .off-size { margin-left: 0; margin-right: auto; }
+}
+
+/* 離線下載失敗清單 */
+.of-link { border: 0; background: none; font: inherit; font-size: inherit; color: var(--danger); padding: 0; margin-left: 6px; cursor: pointer; border-bottom: 1px solid currentColor; }
+.of-g { margin: 12px 0; }
+.of-g b { font-weight: 600; font-size: .9rem; }
+.of-g small { color: var(--muted); margin-left: 6px; }
+.of-g ul { margin: 4px 0 0; padding-left: 18px; font-size: .8rem; color: var(--ink-2); }
+.of-g li { overflow-wrap: anywhere; }

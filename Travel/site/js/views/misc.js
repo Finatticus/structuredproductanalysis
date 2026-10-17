@@ -117,14 +117,7 @@
       <section class="panel" id="off-panel">
         <h3>離線資料</h3>
         <p class="hint">存到這台裝置的旅程，沒有網路也能打開。在旅程頁按「離線下載」新增。</p>
-        ${(() => {
-          const rec = TA.offline.records();
-          const ids = Object.keys(rec).filter(id => S.get(id));
-          return ids.length ? `<div class="off-rows">${ids.map(id => `<div class="off-row"><span><b>${E(S.get(id).title)}</b><small>${new Date(rec[id].at).toLocaleString('zh-TW')}・${rec[id].files} 張圖片${rec[id].bytes ? '・約 ' + TA.offline.fmtBytes(rec[id].bytes) : ''}</small></span>
-            <button class="btn sm ghost" data-act="off-update" data-id="${id}">更新</button><button class="btn sm ghost" data-act="off-rm" data-id="${id}">移除</button></div>`).join('')}</div>`
-            : '<p class="muted">目前沒有存到這台裝置的旅程。</p>';
-        })()}
-        <p class="hint off-usage"></p>
+        <div class="off-box"><p class="muted">計算中…</p></div>
       </section>
 
       <section class="panel">
@@ -196,8 +189,18 @@
         TA.ticker.loadRates(true).then(() => TA.app.paintTicker());
         U.toast('已儲存');
       }
-      if (act === 'off-update') { TA.offline.dialog(S.get(a.dataset.id), () => TA.app.rerender()); return; }
-      if (act === 'off-rm') { await TA.offline.remove(a.dataset.id); U.toast('已移除離線資料'); TA.app.rerender(); return; }
+      if (act === 'off-update') { TA.offline.dialog(S.get(a.dataset.id), () => paintOffline()); return; }
+      if (act === 'off-rm') {
+        const t = S.get(a.dataset.id);
+        if (!(await U.confirm(`刪除${t ? `「${t.title}」` : '這趟'}的離線資料？旅程本身不會刪除，之後可以再下載。`, { ok: '刪除', danger: true }))) return;
+        await TA.offline.remove(a.dataset.id); U.toast('已刪除離線資料'); paintOffline(); return;
+      }
+      if (act === 'off-fails') { TA.offline.failsDialog(a.dataset.id, () => paintOffline()); return; }
+      if (act === 'off-wx') { TA.offline.clearWeather(); U.toast('已清除天氣暫存'); paintOffline(); return; }
+      if (act === 'off-all') {
+        if (!(await U.confirm('清除這台裝置上全部的離線下載（圖片、離線用的網站程式、天氣暫存）？旅程內容不受影響，需要時可以再下載。', { ok: '全部清除', danger: true }))) return;
+        await TA.offline.clearAll(); U.toast('已清除全部離線下載'); paintOffline(); return;
+      }
       if (act === 'export') U.download(`旅行誌備份-${U.todayStr()}.json`, S.exportJSON());
       if (act === 'logout' && await U.confirm('確定要登出這台裝置？', { ok: '登出', danger: true })) { S.logout(); location.hash = '#/'; location.reload(); }
     });
@@ -207,7 +210,7 @@
     const fmtT = s => s ? new Date(s).toLocaleString('zh-TW', { dateStyle: 'short', timeStyle: 'short' }) : '尚未使用';
     const paintGuests = () => {
       gpBox.innerHTML = guests.length ? `<div class="gp-head"><span>密碼</span><span>備註</span><span>最後使用</span><span></span></div>` + guests.map((g, i) => `<div class="gp-row">
-        <code>${E(g.token)}</code><span>${E(g.label || '—')}</span><span class="muted">${fmtT(g.lastUsed)}</span>
+        <code>${E(g.token)}</code><span>${E(g.label || '—')}${(g.wishTrips || []).length ? `<small class="gp-wish">可在 ${g.wishTrips.length} 趟旅程新增願望</small>` : ''}</span><span class="muted">${fmtT(g.lastUsed)}</span>
         <button class="icon-btn" data-act="gp-del" data-i="${i}" title="刪除這組密碼">${UI.icon('trash', 16)}</button></div>`).join('')
         : '<p class="muted">目前沒有訪客密碼，訪客無法登入。</p>';
     };
@@ -215,7 +218,9 @@
       try { guests = await S.setGuests(list); paintGuests(); U.toast('訪客密碼已更新'); }
       catch (err) { U.toast('更新失敗：' + err.message + (/未知動作/.test(err.message) ? '（請先更新 Apps Script）' : ''), 'err'); }
     };
+    if (!S.isGuest() && S.guestsCached()) { guests = S.guestsCached(); paintGuests(); }   // 先顯示上次的清單
     if (!S.isGuest()) S.guests().then(g => { guests = g; paintGuests(); }).catch(err => {
+      if (S.guestsCached()) return U.toast('訪客密碼清單更新失敗，顯示的是上次的資料：' + err.message, 'err');
       gpBox.innerHTML = `<p class="muted">${/未知動作/.test(err.message) ? '請先更新 Apps Script 程式並部署新版本，才能在這裡管理訪客密碼。' : '讀取失敗：' + E(err.message)}</p>`;
     });
     U.$('.gp-add', el).addEventListener('submit', e => {
@@ -240,11 +245,40 @@
       }
     });
 
-    // 手機上已用的儲存空間
-    navigator.storage?.estimate?.().then(s => {
-      const box = U.$('.off-usage', el);
-      if (box && s?.usage) box.textContent = `這個網站目前在這台裝置使用約 ${TA.offline.fmtBytes(s.usage)}${s.quota ? `（可用上限約 ${TA.offline.fmtBytes(s.quota)}）` : ''}。`;
-    }).catch(() => { });
+    // ---- 離線資料：下載了什麼、各佔多少空間 ----
+    const O = TA.offline, fb = O.fmtBytes;
+    async function paintOffline() {
+      const box = U.$('.off-box', el); if (!box) return;
+      const u = await O.usage();
+      if (!box.isConnected) return;
+      const tripsBytes = u.trips.reduce((s, x) => s + x.bytes, 0);
+      const parts = [['離線旅程', tripsBytes + (u.trips.length ? u.shell.bytes : 0), 'a'], ['天氣暫存', u.weather.bytes, 'b'], ['旅程資料', u.data.bytes, 'c'], ['網站程式', u.site.bytes, 'd']];
+      const sum = parts.reduce((s, p) => s + p[1], 0) || 1;
+      box.innerHTML = `
+        <div class="off-sum"><b>${fb(u.used ?? sum)}</b><span>${u.used != null ? '這個網站在這台裝置使用的空間' : '估計用量'}${u.quota ? `，可用上限約 ${fb(u.quota)}` : ''}</span></div>
+        <div class="off-bar">${parts.map(p => p[1] ? `<i class="ob-${p[2]}" style="width:${(p[1] / sum * 100).toFixed(1)}%" title="${p[0]} ${fb(p[1])}"></i>` : '').join('')}</div>
+        <div class="off-legend">${parts.map(p => `<span><i class="ob-${p[2]}"></i>${p[0]} ${fb(p[1])}</span>`).join('')}</div>
+        ${u.used != null && u.used > sum * 1.5 ? `<p class="hint">瀏覽器回報的用量比各項加總大，是因為部分跨網站圖片的實際大小量不到，瀏覽器會以較大的估計值計算。</p>` : ''}
+
+        <div class="off-sh">離線下載的旅程</div>
+        ${u.trips.length ? `<div class="off-rows">${u.trips.map(x => `<div class="off-row">
+          <span><b>${x.trip ? E(x.trip.title) : '已刪除的旅程'}</b>
+          <small>${new Date(x.at).toLocaleString('zh-TW', { dateStyle: 'medium', timeStyle: 'short' })} 下載・${x.files} 張圖片${(x.fails || []).length ? `<button class="of-link" data-act="off-fails" data-id="${x.id}">${(x.fails || []).length} 個檔案沒存到，查看</button>` : ''}${x.shared ? `・${x.shared} 張和其他旅程共用` : ''}${x.unknown ? `・${x.unknown} 張無法計算大小` : ''}</small></span>
+          <em class="off-size">${fb(x.bytes)}${x.unknown ? ' 以上' : ''}</em>
+          ${x.trip ? `<button class="btn sm ghost" data-act="off-update" data-id="${x.id}">更新</button>` : ''}<button class="btn sm ghost" data-act="off-rm" data-id="${x.id}">刪除</button></div>`).join('')}
+          <div class="off-row sub"><span><b>離線用的網站程式</b><small>${u.shell.files} 個檔案，所有離線旅程共用；刪掉全部離線旅程時會一起清除</small></span><em class="off-size">${fb(u.shell.bytes)}</em></div></div>`
+        : '<p class="muted">目前沒有存到這台裝置的旅程。在旅程頁按「離線下載」新增。</p>'}
+
+        <div class="off-sh">其他暫存</div>
+        <div class="off-rows">
+          <div class="off-row"><span><b>天氣暫存</b><small>${u.weather.cities} 個城市的預報與歷史氣溫，清除後打開天氣會重新下載${u.trips.length ? '；離線旅程的天氣也會一起清除' : ''}</small></span><em class="off-size">${fb(u.weather.bytes)}</em>
+            ${u.weather.bytes ? '<button class="btn sm ghost" data-act="off-wx">清除</button>' : ''}</div>
+          <div class="off-row"><span><b>旅程資料</b><small>全部旅程的文字內容，同步與離線都需要，不能清除（登出時會清除）</small></span><em class="off-size">${fb(u.data.bytes)}</em></div>
+          <div class="off-row"><span><b>網站程式與字型</b><small>${u.site.files} 個檔案，讓網站開得更快，瀏覽器會自動管理</small></span><em class="off-size">${fb(u.site.bytes)}</em></div>
+        </div>
+        ${u.trips.length || u.weather.bytes ? '<div class="add-row"><button class="btn danger" data-act="off-all">清除全部離線下載</button></div>' : ''}`;
+    }
+    paintOffline();
     U.$('#importFile', el).addEventListener('change', async e => {
       const f = e.target.files[0]; if (!f) return;
       try { const n = S.importJSON(await f.text()); await S.migrate(); U.toast(`已匯入 ${n} 段旅程`); }
@@ -273,7 +307,7 @@
       const btn = U.$('button', e.target), err = U.$('.login-err', el);
       btn.disabled = true; btn.textContent = '驗證中…'; err.hidden = true;
       try {
-        await S.login(needUrl ? U.$('#lg-url', el).value.trim() : S.gasUrl(), U.$('#lg-pw', el).value);
+        await S.login(needUrl ? U.$('#lg-url', el).value.trim() : S.gasUrl(), U.$('#lg-pw', el).value, txt => (btn.textContent = txt));
         onDone();
       } catch (ex) {
         err.hidden = false;

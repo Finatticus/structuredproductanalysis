@@ -2,14 +2,27 @@
  * #/tool/wishlist            全部願望（通用 bucket list ＋ 已連結旅程的）
  * #/tool/wishlist/<tripId>   這趟旅程的願望：可從同國家的願望加入、排進某一天的行程
  * 資料存在雲端紀錄 __wishlist：{ items: [...] }
- * 項目：{ id, title, type, url, mapUrl, ll, country, city, note, stars, tripId, dayId, done, createdAt } */
+ * 項目：{ id, title, type, url, mapUrl, ll, country, city, note, stars, tripId, dayId, done, addedBy, createdAt }
+ * 訪客新增的願望：管理者在「這趟的願望清單」開放某些訪客密碼後，那些訪客可以新增（只能新增）。
+ *   每筆存成獨立一列 __wishg_<id>（{ kind: 'wishg', item }），避免和管理者的清單互相覆蓋；
+ *   管理者之後任何修改願望清單時，會把這些併進 __wishlist 並移除獨立的那列。 */
 (function () {
   const U = TA.u, S = TA.store, E = TA.u.esc, UI = TA.ui;
   const REC_ID = '__wishlist';
   const TYPES = { sight: '景點', food: '美食', activity: '活動', shop: '購物', stay: '住宿', other: '其他' };
 
-  const items = () => U.clone(S.record(REC_ID)?.items || []);
-  const saveItems = list => S.saveRecord(REC_ID, 'wishlist', '願望清單（非旅程）', { items: list });
+  const guestRecs = () => S.records('wishg').filter(g => g.item?.id);
+  const items = () => {
+    const main = U.clone(S.record(REC_ID)?.items || []);
+    const ids = new Set(main.map(x => x.id));
+    guestRecs().forEach(g => { if (!ids.has(g.item.id)) main.unshift({ ...U.clone(g.item), _rec: g.id }); });
+    return main;
+  };
+  const saveItems = list => {
+    if (S.denied()) return;
+    S.saveRecord(REC_ID, 'wishlist', '願望清單（非旅程）', { items: list.map(({ _rec, ...x }) => x) });
+    guestRecs().forEach(g => S.remove(g.id));   // 已經併進主清單
+  };
   const update = fn => { const list = items(); fn(list); saveItems(list); return list; };
 
   /** 解析 Google 地圖網址：地點名稱與座標 */
@@ -34,7 +47,7 @@
   const mapLink = x => x.mapUrl || (x.ll ? mapsSearch(x.ll.join(',')) : mapsSearch([x.title, x.city, x.country].filter(Boolean).join(' ')));
 
   // ---------- 新增／編輯 ----------
-  function editDialog(item = {}, { tripId, onSaved } = {}) {
+  function editDialog(item = {}, { tripId, onSaved, guest = false } = {}) {
     const isNew = !item.id;
     const x = { type: 'sight', stars: 2, ...item };
     if (isNew && tripId) x.tripId = tripId;
@@ -54,21 +67,24 @@
         <label class="fld"><span>國家</span><input type="text" id="w-country" list="dl-w-countries" value="${E(x.country || '')}"></label>
         <label class="fld"><span>城市</span><input type="text" id="w-city" value="${E(x.city || '')}"></label>
       </div>
-      <div class="row2">
+      <div class="row2"${guest ? ' hidden' : ''}>
         <label class="fld"><span>連結到旅程</span><select id="w-trip"><option value="">不指定（通用願望清單）</option>
           ${trips.map(t => `<option value="${t.id}" ${x.tripId === t.id ? 'selected' : ''}>${E(t.title)}（${(t.startDate || '').slice(0, 7).replace('-', '/')}）</option>`).join('')}</select></label>
         <div class="fld"><span>想去程度</span><div class="stars" id="w-stars">${[1, 2, 3].map(n => `<button type="button" data-n="${n}" class="${n <= x.stars ? 'on' : ''}" aria-label="${n} 顆星">★</button>`).join('')}</div></div>
       </div>
       <label class="fld"><span>備註</span><textarea id="w-note" rows="4" placeholder="營業時間、要預約、推薦菜色、誰推薦的……">${E(x.note || '')}</textarea></label>
-      <label class="mini-check"><input type="checkbox" id="w-done" ${x.done ? 'checked' : ''}>已經去過／完成了</label>
+      ${guest ? `<div class="fld"><span>想去程度</span><div class="stars" id="w-stars-g">${[1, 2, 3].map(n => `<button type="button" data-n="${n}" class="${n <= x.stars ? 'on' : ''}" aria-label="${n} 顆星">★</button>`).join('')}</div></div>
+      <p class="hint">送出後會出現在這趟的願望清單，之後要修改或刪除請告訴旅程主人。</p>`
+      : `<label class="mini-check"><input type="checkbox" id="w-done" ${x.done ? 'checked' : ''}>已經去過／完成了</label>`}
       <div class="modal-actions">${isNew ? '' : '<button class="btn danger" id="w-del">刪除</button><span style="flex:1"></span>'}
-        <button class="btn ghost" data-close>取消</button><button class="btn primary" id="w-save">儲存</button></div>
+        <button class="btn ghost" data-close>取消</button><button class="btn primary" id="w-save">${guest ? '送出' : '儲存'}</button></div>
     `, { title: isNew ? '新增願望' : '編輯願望', wide: true });
     const $ = sel => U.$(sel, m.el);
     const status = $('.w-status');
     let ll = x.ll || null, url = x.url || '', mapUrl = x.mapUrl || '';
     let stars = x.stars;
-    $('#w-stars').onclick = e => { const b = e.target.closest('[data-n]'); if (!b) return; stars = +b.dataset.n; U.$$('#w-stars button', m.el).forEach(s => s.classList.toggle('on', +s.dataset.n <= stars)); };
+    const starBox = $(guest ? '#w-stars-g' : '#w-stars');
+    starBox.onclick = e => { const b = e.target.closest('[data-n]'); if (!b) return; stars = +b.dataset.n; U.$$('button', starBox).forEach(s => s.classList.toggle('on', +s.dataset.n <= stars)); };
 
     async function fillFrom(raw) {
       raw = raw.trim(); if (!raw) return;
@@ -116,8 +132,16 @@
       const data = {
         ...x, title, type: $('#w-type').value, url, mapUrl, ll,
         country: $('#w-country').value.trim(), city: $('#w-city').value.trim(), note: $('#w-note').value.trim(),
-        stars, tripId: tripSel || null, done: $('#w-done').checked, updatedAt: new Date().toISOString(),
+        stars, tripId: guest ? tripId : tripSel || null, done: guest ? false : $('#w-done').checked, updatedAt: new Date().toISOString(),
       };
+      if (guest) {
+        // 訪客：交給 Apps Script 檢查權限後存起來，再同步回來
+        const btn = $('#w-save'); btn.disabled = true; btn.textContent = '送出中…';
+        S.call('addWish', { tripId, item: data })
+          .then(() => S.sync()).then(() => { m.close(); U.toast('已加入這趟的願望清單'); onSaved && onSaved(); })
+          .catch(err => { btn.disabled = false; btn.textContent = '送出'; U.toast((navigator.onLine ? '新增失敗：' + err.message : '需要網路才能新增願望') + (/未知動作/.test(err.message) ? '（Apps Script 需要更新）' : ''), 'err'); });
+        return;
+      }
       if (data.tripId !== x.tripId) data.dayId = null;
       if (isNew) { data.id = U.uid('w'); data.createdAt = data.updatedAt; }
       update(list => { const i = list.findIndex(w => w.id === data.id); if (i >= 0) list[i] = data; else list.unshift(data); });
@@ -144,6 +168,7 @@
         ${x.note ? `<p class="wl-note">${E(x.note).replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">連結</a>')}</p>` : ''}
         <div class="wl-meta">
           ${x.city || x.country ? `<span>${E([x.city, x.country].filter(Boolean).join('，'))}</span>` : ''}
+          ${x.addedBy ? `<span class="wl-by">${E(x.addedBy)} 新增</span>` : ''}
           <a href="${E(mapLink(x))}" target="_blank" rel="noopener">${UI.icon('map', 14)}地圖</a>
           ${!trip && t ? `<a href="#/tool/wishlist/${t.id}" class="wl-trip">${E(t.title)}</a>` : ''}
           ${trip ? (day >= 0 ? `<span class="wl-day">已排入 Day ${day + 1}</span>` : `<select class="wl-sched" title="排進某一天的行程"><option value="">排入行程…</option>${trip.days.map((d, i) => `<option value="${d.id}">Day ${i + 1}　${UI.dot(d.date, false)}${d.title ? '　' + E(d.title) : ''}</option>`).join('')}</select>`) : ''}
@@ -216,7 +241,7 @@
 
   // ---------- 這趟旅程的願望 ----------
   function renderTrip(el, trip) {
-    function paint() {
+    let paint = function () {
       const all = items();
       const mine = all.filter(x => x.tripId === trip.id);
       const tripCountries = new Set((trip.countries || []).map(c => TA.countries.find(c)?.zh || c));
@@ -225,15 +250,39 @@
         <a class="back" href="#/trip/${trip.id}">${UI.icon('back', 16)}${E(trip.title)}</a>
         <header class="page-head slim"><div class="eyebrow">Wishlist</div><h1 class="display">這趟的願望清單</h1>
           <p class="lede">${E(trip.title)}　${UI.range(trip.startDate, trip.endDate)}</p>
-          <div class="add-row"><button class="btn primary" data-act="add">${UI.icon('plus', 16)}新增願望</button><a class="btn ghost" href="#/tool/wishlist">全部願望清單</a></div></header>
+          <div class="add-row">${S.canWish(trip.id) ? `<button class="btn primary" data-act="gadd">${UI.icon('plus', 16)}新增願望</button>` : ''}<button class="btn primary" data-act="add">${UI.icon('plus', 16)}新增願望</button><a class="btn ghost" href="#/tool/wishlist">全部願望清單</a></div>
+          ${S.canWish(trip.id) ? '<p class="hint">旅程主人開放你在這趟新增願望：想去的地方、想吃的店都可以加進來。</p>' : ''}</header>
         ${mine.length ? mine.map(x => itemHtml(x, { trip })).join('') : '<div class="empty-box">這趟還沒有願望。可以直接新增，或從下方同國家的願望加入。</div>'}
         ${suggest.length ? `<section class="wl-suggest"><div class="pk-gh"><span>同國家的其他願望</span><small>${suggest.length}</small></div>
           ${suggest.map(x => `<div class="wl-item sug" data-id="${x.id}"><div class="wl-main"><div class="wl-top"><span class="wl-type">${TYPES[x.type] || '其他'}</span><b class="wl-title">${E(x.title)}</b></div>
             <div class="wl-meta"><span>${E([x.city, x.country].filter(Boolean).join('，'))}</span></div></div>
             <div class="wl-act"><button class="btn sm" data-act="link">加入這趟</button></div></div>`).join('')}</section>` : ''}
+        ${S.isGuest() ? '' : `<section class="wl-share admin-only"><div class="pk-gh"><span>開放訪客新增</span><small class="wl-share-st">讀取中…</small></div><div class="wl-share-list"></div>
+          <p class="hint">勾選的訪客密碼登入後，可以在這趟的願望清單新增願望（不能修改、刪除，也不能編輯其他內容）。</p></section>`}
       </div>`;
     }
     paint();
+    // ---- 管理者：選擇哪些訪客密碼可以在這趟新增願望（存在 Apps Script 的訪客清單裡） ----
+    let guests = null;
+    const paintShare = () => {
+      const box = U.$('.wl-share-list', el), st = U.$('.wl-share-st', el);
+      if (!box || !guests) return;
+      st.textContent = `${guests.filter(g => (g.wishTrips || []).includes(trip.id)).length} / ${guests.length}`;
+      box.innerHTML = guests.length ? guests.map((g, i) => `<button type="button" class="chip-tg${(g.wishTrips || []).includes(trip.id) ? ' on' : ''}" data-gi="${i}">${E(g.label || g.token)}<small>${E(g.token)}</small></button>`).join('')
+        : '<p class="muted">還沒有訪客密碼，請先到「設定 → 訪客密碼」新增。</p>';
+    };
+    if (!S.isGuest() && S.guestsCached()) { guests = S.guestsCached(); paintShare(); }
+    if (!S.isGuest()) S.guests().then(g => { guests = g; paintShare(); }).catch(err => { const st = U.$('.wl-share-st', el); if (st) st.textContent = '無法讀取：' + err.message; });
+    const _paint = paint;
+    paint = () => { _paint(); paintShare(); };
+    el.addEventListener('click', async e => {
+      const gb = e.target.closest('[data-gi]'); if (!gb || !guests) return;
+      const g = guests[+gb.dataset.gi], on = !(g.wishTrips || []).includes(trip.id);
+      const list = guests.map(x => x === g ? { ...x, wishTrips: on ? [...(x.wishTrips || []), trip.id] : (x.wishTrips || []).filter(id => id !== trip.id) } : x);
+      gb.disabled = true;
+      try { guests = await S.setGuests(list); paintShare(); U.toast(on ? `已開放「${g.label || g.token}」新增願望` : `已取消「${g.label || g.token}」的權限`); }
+      catch (err) { gb.disabled = false; U.toast('更新失敗：' + err.message, 'err'); }
+    });
     el.addEventListener('change', e => {
       if (!e.target.classList.contains('wl-sched') || !e.target.value) return;
       const id = e.target.closest('.wl-item').dataset.id;
@@ -249,6 +298,7 @@
     el.addEventListener('click', e => {
       const a = e.target.closest('[data-act]'); if (!a) return;
       if (a.dataset.act === 'add') return editDialog({}, { tripId: trip.id, onSaved: paint });
+      if (a.dataset.act === 'gadd') return editDialog({}, { tripId: trip.id, onSaved: paint, guest: true });
       if (a.dataset.act === 'link') {
         const id = a.closest('.wl-item').dataset.id;
         update(list => { const w = list.find(i => i.id === id); w.tripId = trip.id; });

@@ -45,11 +45,15 @@
     },
     /** 其他設定型資料（例如行李模板），跟旅程一起存在雲端 */
     record(id) { return trips.find(t => t.id === id && !t.deleted) || null; },
+    /** 同一種類的所有紀錄（例如訪客新增的願望，每筆一列） */
+    records(kind) { return trips.filter(t => t.kind === kind && !t.deleted); },
     saveRecord(id, kind, title, data) { Store.upsert({ ...data, id, kind, v: 2, title }); },
     get(id) { return trips.find(t => t.id === id && !t.deleted) || null; },
 
     /** 訪客模式：只能看，任何寫入都擋下 */
     isGuest() { return settings.role === 'guest'; },
+    /** 這位訪客能不能在這趟旅程新增願望（管理者在「這趟的願望清單」開放） */
+    canWish(tripId) { return Store.isGuest() && !!settings.perms?.wishTrips?.includes(tripId); },
     denied(quiet) { if (!Store.isGuest()) return false; if (!quiet) TA.u.toast('訪客模式只能瀏覽，無法修改', 'err'); return true; },
 
     upsert(trip, { silent = false, quiet = false } = {}) {
@@ -135,9 +139,6 @@
     settings() { return settings; },
     setSettings(p) { settings = Object.assign(settings, p); save(SETTINGS_KEY, settings); listeners.forEach(fn => fn()); },
 
-    // ---- 訪客密碼（管理者專用） ----
-    async guests() { return (await Store.call('guests')).guests || []; },
-    async setGuests(list) { return (await Store.call('setGuests', { guests: list })).guests || []; },
 
     // ---- 備份 ----
     exportJSON() { return JSON.stringify({ app: 'travel-journal', version: 1, exportedAt: new Date().toISOString(), trips: trips.filter(t => !t.deleted) }, null, 1); },
@@ -159,51 +160,53 @@
     gasUrl() { return (window.TA_CONFIG && TA_CONFIG.gasUrl) || settings.gasUrl || ''; },
     isAuthed() { return !!(settings.gasToken && Store.gasUrl()); },
     loggingIn: false,
-    async login(url, token) {
+    async login(url, token, onStep) {
       const prev = { gasUrl: settings.gasUrl, gasToken: settings.gasToken };
       settings.gasUrl = url; settings.gasToken = token;
       let r;
       Store.loggingIn = true;
-      try { r = await Store.call('list'); }
+      // 先用 ping 確認密碼（很快、不下載資料），通過後再同步一次
+      try { r = await Store.call('ping'); }
       catch (e) { Object.assign(settings, prev); throw e; }
       finally { Store.loggingIn = false; }
-      Store.setSettings({ gasUrl: url === (window.TA_CONFIG && TA_CONFIG.gasUrl) ? '' : url, gasToken: token, role: r.role || 'admin' });
-      await Store.sync();
+      Store.setSettings({ gasUrl: url === (window.TA_CONFIG && TA_CONFIG.gasUrl) ? '' : url, gasToken: token, role: r.role || 'admin', perms: r.perms || null, dataVer: null });
+      onStep && onStep('載入資料中…');
+      // 密碼已確認；資料下載失敗也先進入網站，之後會自動重試
+      try { await Store.sync(); } catch (e) { console.warn(e); }
     },
     logout() {
       trips = []; save(KEY, trips);
-      Store.setSettings({ gasToken: '', lastSync: '', role: '' });
-      Object.keys(localStorage).filter(k => k.startsWith('ta.draft')).forEach(k => localStorage.removeItem(k));
+      pending.clear(); savePending();
+      Store.setSettings({ gasToken: '', lastSync: '', role: '', perms: null, dataVer: null });
+      Object.keys(localStorage).filter(k => k.startsWith('ta.draft') || k === GUESTS_KEY).forEach(k => localStorage.removeItem(k));
     },
 
-    // ---- Google Apps Script 同步 ----
+    // ---- Google Apps Script 連線 ----
     syncing: false,
     hasRemote() { return Store.isAuthed(); },
+    /** 呼叫 Apps Script。逾時、網路不穩、Google 暫時回傳錯誤頁時，會自動重試（新增類動作除外） */
     async call(action, payload = {}) {
-      const res = await fetch(Store.gasUrl(), {
-        method: 'POST',
-        // text/plain 避免 CORS 預檢（GAS 不支援 OPTIONS）
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action, token: settings.gasToken, ...payload }),
-      });
-      const j = await res.json();
-      if (!j.ok) {
-        // 密碼被改掉或訪客密碼被刪除：登出這台裝置
-        if (j.error === '密碼錯誤' && !Store.loggingIn && Store.isAuthed()) { Store.logout(); location.reload(); }
-        throw new Error(j.error || '連線失敗');
+      const SAFE = ['list', 'ping', 'guests', 'save', 'meta', 'checkLinks', 'setGuests'];
+      const tries = SAFE.includes(action) ? 3 : 1;
+      let last;
+      for (let i = 0; i < tries; i++) {
+        if (i) await new Promise(r => setTimeout(r, [0, 1500, 4000][i]));
+        try { return await callOnce(action, payload); }
+        catch (e) { last = e; if (e.fatal || !navigator.onLine) break; }
       }
-      return j;
+      throw last;
     },
-    async push(list) {
-      if (!Store.hasRemote() || Store.isGuest()) return;
-      try { await Store.call('save', { trips: list }); }
-      catch (e) {
-        console.warn(e);
-        if (!navigator.onLine) TA.u.toast('目前離線，已先存在這台裝置，恢復連線後會自動上傳');
-        else TA.u.toast('雲端儲存失敗，已存在本機：' + e.message, 'err');
-      }
+    /** 待上傳的筆數（存在本機、還沒送到雲端） */
+    pendingCount() { return pending.size; },
+    /** 修改先存本機，再排隊上傳（合併成一次送出，失敗會自動重試） */
+    push(list) {
+      if (!Store.hasRemote() || Store.isGuest()) return Promise.resolve(true);
+      list.forEach(t => t && t.id && pending.add(t.id));
+      savePending();
+      listeners.forEach(fn => fn());
+      return flush(600);
     },
-    /** 雙向合併：以 updatedAt 較新者為準 */
+    flush: () => flush(0),
     /** 同步；已經有一次在跑（例如存檔後的自動同步）就等它跑完，再補跑一次確保最新 */
     async sync() {
       if (!Store.hasRemote()) return { pulled: 0, pushed: 0, changed: 0 };
@@ -214,27 +217,136 @@
     async _sync() {
       Store.syncing = true; listeners.forEach(fn => fn());
       try {
-        const { trips: remote } = await Store.call('list');
-        const map = new Map(trips.map(t => [t.id, t]));
-        const toPush = [];
-        let changed = 0;
-        for (const r of remote) {
-          const l = map.get(r.id);
-          if (!l || (r.updatedAt || '') > (l.updatedAt || '')) { map.set(r.id, r); changed++; }
-          else if ((l.updatedAt || '') > (r.updatedAt || '')) toPush.push(l);
+        // 1. 先把本機還沒上傳的修改送出去
+        const pushedBefore = pending.size;
+        if (pending.size && !Store.isGuest()) await flush(0);
+        // 2. 帶上已知的版本號；雲端沒有變就不用整份下載
+        const r = await Store.call('list', { ver: settings.dataVer ?? null });
+        if (Store.isGuest()) Store.setSettings({ perms: r.perms || null });
+        if (r.unchanged) {
+          Store.setSettings({ lastSync: new Date().toISOString() });
+          return { pulled: 0, pushed: pushedBefore - pending.size, changed: 0 };
         }
-        const remoteIds = new Set(remote.map(r => r.id));
-        for (const l of trips) if (!remoteIds.has(l.id)) toPush.push(l);
+        // 3. 雙向合併：以 updatedAt 較新者為準
+        const remote = r.trips || [];
+        const map = new Map(trips.map(t => [t.id, t]));
+        let changed = 0;
+        for (const x of remote) {
+          const l = map.get(x.id);
+          if (!l || (x.updatedAt || '') > (l.updatedAt || '')) { map.set(x.id, x); changed++; pending.delete(x.id); }
+          else if ((l.updatedAt || '') > (x.updatedAt || '')) pending.add(l.id);
+        }
+        const remoteIds = new Set(remote.map(x => x.id));
+        for (const l of trips) if (!remoteIds.has(l.id)) pending.add(l.id);
         trips = [...map.values()];
         save(KEY, trips);
-        if (toPush.length && !Store.isGuest()) await Store.call('save', { trips: toPush });
-        Store.setSettings({ lastSync: new Date().toISOString() });
-        return { pulled: remote.length, pushed: toPush.length, changed };
+        Store.setSettings({ dataVer: r.ver ?? null, lastSync: new Date().toISOString() });
+        if (Store.isGuest()) pending.clear();
+        savePending();
+        const n = pending.size;
+        if (n) await flush(0);
+        return { pulled: remote.length, pushed: pushedBefore + n - pending.size, changed };
       } finally {
         Store.syncing = false; listeners.forEach(fn => fn());
       }
     },
   };
+
+  // ---------- 連線細節 ----------
+  async function callOnce(action, payload) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), ['save', 'importImages', 'checkLinks'].includes(action) ? 90000 : 30000);
+    let res, text;
+    try {
+      res = await fetch(Store.gasUrl(), {
+        method: 'POST',
+        // text/plain 避免 CORS 預檢（GAS 不支援 OPTIONS）
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action, token: settings.gasToken, ...payload }),
+        signal: ctrl.signal,
+      });
+      text = await res.text();
+    } catch (e) {
+      throw new Error(e.name === 'AbortError' ? '連線逾時，Apps Script 回應太慢' : navigator.onLine ? '無法連線到 Apps Script' : '目前沒有網路');
+    } finally { clearTimeout(timer); }
+    let j;
+    try { j = JSON.parse(text); }
+    catch {
+      // Google 回了網頁而不是資料：多半是暫時忙碌，或部署權限不是「所有人」
+      const err = new Error(/accounts\.google\.com|ServiceLogin/i.test(text)
+        ? 'Apps Script 要求登入 Google：請把部署的「存取權」設為「所有人」'
+        : `Apps Script 暫時沒有正常回應${res && !res.ok ? `（HTTP ${res.status}）` : ''}，請稍後再試`);
+      if (/accounts\.google\.com|ServiceLogin/i.test(text)) err.fatal = true;
+      throw err;
+    }
+    if (!j.ok) {
+      const err = new Error(j.error || '連線失敗');
+      // 密碼被改掉或訪客密碼被刪除：登出這台裝置
+      if (j.error === '密碼錯誤') { err.fatal = true; if (!Store.loggingIn && Store.isAuthed()) { Store.logout(); location.reload(); } }
+      if (/訪客模式|未知動作|沒有開放|請填寫/.test(j.error || '')) err.fatal = true;
+      throw err;
+    }
+    // 寫入後記下新的版本號（期間沒有別人寫入才算數，否則下次同步會整份重抓）
+    if (j.ver != null && j.prev != null && settings.dataVer === j.prev) Store.setSettings({ dataVer: j.ver });
+    return j;
+  }
+
+  // ---------- 上傳佇列 ----------
+  const PENDING_KEY = 'ta.pending.v1';
+  const GUESTS_KEY = 'ta.guests.cache';
+  const pending = new Set(load(PENDING_KEY, []));
+  function savePending() { try { localStorage.setItem(PENDING_KEY, JSON.stringify([...pending])); } catch { } }
+  let flushTimer = 0, waiters = [], running = null, retryN = 0, retryTimer = 0, warned = false;
+
+  function flush(delay) {
+    return new Promise(res => {
+      waiters.push(res);
+      clearTimeout(flushTimer);
+      flushTimer = setTimeout(async () => { const ws = waiters; waiters = []; const ok = await flushNow(); ws.forEach(f => f(ok)); }, delay);
+    });
+  }
+  async function flushNow() {
+    while (running) await running.catch(() => { });          // 一次只送一批
+    if (!pending.size || !Store.hasRemote() || Store.isGuest()) return true;
+    running = (async () => {
+      const ids = [...pending];
+      const recs = ids.map(id => trips.find(t => t.id === id)).filter(Boolean);
+      const stamp = new Map(recs.map(r => [r.id, r.updatedAt]));
+      for (let i = 0; i < recs.length; i += 20) await Store.call('save', { trips: recs.slice(i, i + 20) });
+      // 送出期間又被改過的，留著下一輪再送
+      ids.forEach(id => { const cur = trips.find(t => t.id === id); if (!cur || cur.updatedAt === stamp.get(id)) pending.delete(id); });
+      savePending();
+    })();
+    try {
+      await running;
+      retryN = 0; warned = false; clearTimeout(retryTimer);
+      return true;
+    } catch (e) {
+      console.warn('上傳失敗', e);
+      if (!warned) {
+        warned = true;
+        if (!navigator.onLine) TA.u.toast('目前離線，已先存在這台裝置，恢復連線後會自動上傳');
+        else TA.u.toast('雲端暫時存不進去，已存在這台裝置，稍後自動重試：' + e.message, 'err');
+      }
+      if (navigator.onLine && !e.fatal) { clearTimeout(retryTimer); retryTimer = setTimeout(() => flush(0), [5, 15, 60, 180][Math.min(retryN++, 3)] * 1000); }
+      return false;
+    } finally { running = null; listeners.forEach(fn => fn()); }
+  }
+  window.addEventListener('online', () => { if (pending.size) flush(500); });
+  // 關掉或切到背景前，盡量把還沒上傳的送出去
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && pending.size) flush(0); });
+
+  // ---- 訪客密碼（管理者專用）：先顯示上次的清單，背景再更新 ----
+  Store.guestsCached = () => load(GUESTS_KEY, null);
+  let guestsAt = 0, guestsP = null;
+  const keepGuests = g => { guestsAt = Date.now(); try { localStorage.setItem(GUESTS_KEY, JSON.stringify(g)); } catch { } return g; };
+  // 一分鐘內重複打開不用再問 Apps Script；同時多處要求只發一次
+  Store.guests = async () => {
+    if (Date.now() - guestsAt < 60000 && Store.guestsCached()) return Store.guestsCached();
+    guestsP = guestsP || Store.call('guests').then(r => keepGuests(r.guests || [])).finally(() => (guestsP = null));
+    return guestsP;
+  };
+  Store.setGuests = async list => keepGuests((await Store.call('setGuests', { guests: list })).guests || []);
 
   window.TA = window.TA || {};
   TA.store = Store;

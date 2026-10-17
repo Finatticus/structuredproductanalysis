@@ -95,7 +95,10 @@
   function paintSync() {
     const b = U.$('#syncBtn');
     b.classList.toggle('spin', S.syncing);
-    b.title = S.syncing ? '同步中…' : `同步（上次：${S.settings().lastSync ? new Date(S.settings().lastSync).toLocaleString('zh-TW') : '—'}）`;
+    const n = S.pendingCount();
+    b.classList.toggle('has-pending', n > 0);
+    b.title = S.syncing ? '同步中…' : `同步（上次：${S.settings().lastSync ? new Date(S.settings().lastSync).toLocaleString('zh-TW') : '—'}）${n ? `
+還有 ${n} 筆修改等待上傳` : ''}`;
   }
 
   // 圖片放大
