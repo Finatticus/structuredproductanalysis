@@ -77,15 +77,23 @@
   const noteHtml = v => !v ? '' : /<[a-z][\s\S]*>/i.test(v) ? v : `<p>${E(v).replace(/\n/g, '<br>')}</p>`;
 
   // ---------- 閱讀：某一種訂位（或全部）的分頁 ----------
+  /** 最左欄：這筆的日期（星期、第幾天），住宿與租車另外標結束日 */
+  function dateCol(t, b) {
+    const d0 = dPart(startOf(b));
+    if (!d0) return '<b class="bk-d none">日期未定</b>';
+    const end = { hotel: b.checkout, car: dPart(b.dropoff), flight: dPart(b.arr), train: dPart(b.arr) }[b.type] || '';
+    const day = (t.days || []).findIndex(d => d.date === d0);
+    const nights = b.type === 'hotel' && end ? TA.u.diffDays(d0, end) : 0;
+    return `<b class="bk-d">${UI.dot(d0, false)}</b><span class="bk-w">${UI.week(d0).replace('星期', '週')}${day >= 0 ? `・Day ${day + 1}` : ''}</span>
+      ${end && end !== d0 ? `<span class="bk-end">至 ${UI.dot(end, false)}${nights > 0 ? `・${nights} 晚` : ''}</span>` : ''}`;
+  }
+
   function viewHtml(t, type) {
     const list = sorted(t.bookings).filter(b => !type || b.type === type);
     if (!list.length) return '';
-    const codes = list.filter(b => b.code);
     const alerts = list.map(b => ({ b, c: cancelInfo(b) })).filter(x => x.c && (x.c.level === 'urgent' || x.c.level === 'soon'));
     return `
       ${alerts.length ? `<div class="bk-alerts">${alerts.map(x => `<div class="bk-alert ${x.c.level}">${ico(x.b.type)}<b>${E(titleOf(x.b))}</b><span>${x.c.text}（${x.c.when}）</span></div>`).join('')}</div>` : ''}
-      ${codes.length ? `<section class="bk-codes"><div class="wx-lbl">訂位代號<em>點一下就能複製</em></div>
-        <div class="bk-code-grid">${codes.map(b => `<button class="bk-code" data-copy="${E(b.code)}"><span>${ico(b.type, 14)}${E(titleOf(b))}</span><b>${E(b.code)}</b></button>`).join('')}</div></section>` : ''}
       <div class="bk-list">${list.map(b => {
         const c = cancelInfo(b);
         const links = [];
@@ -97,7 +105,7 @@
         if (b.type === 'hotel' && b.phone) links.push(`<a href="tel:${E(b.phone.replace(/[^\d+]/g, ''))}">撥打飯店</a>`);
         const extra = [b.seat && `座位 ${b.seat}`, b.bag, b.people && `${b.people} 人`, b.paid, b.price].filter(Boolean).join('　');
         return `<article class="bk-item" id="bk-${E(b.id)}">
-          <div class="bk-when">${ico(b.type, 18)}<span>${E(TYPES[b.type]?.label || '')}</span></div>
+          <div class="bk-when">${dateCol(t, b)}<span class="bk-type">${ico(b.type, 14)}${E(TYPES[b.type]?.label || '')}</span></div>
           <div class="bk-main">
             <b class="bk-title">${E(titleOf(b))}</b>
             ${routeOf(b) ? `<div class="bk-route">${E(routeOf(b))}</div>` : ''}

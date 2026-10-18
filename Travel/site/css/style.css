@@ -820,9 +820,13 @@ a.em-tel:hover { border-color: var(--ink); }
 .bk-code.sm b { font-size: .95rem; }
 .bk-code.xs { display: inline; padding: 0 6px; margin-left: 8px; font-family: ui-monospace, Consolas, monospace; font-size: .78rem; letter-spacing: .06em; }
 .bk-list { border-top: 1px solid var(--ink); }
-.bk-item { display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 18px; padding: 18px 0; border-bottom: 1px solid var(--line); align-items: start; }
-.bk-when { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: .74rem; letter-spacing: .1em; }
+.bk-item { display: grid; grid-template-columns: 104px minmax(0, 1fr) auto; gap: 18px; padding: 18px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.bk-when { display: flex; flex-direction: column; gap: 1px; color: var(--muted); font-size: .74rem; letter-spacing: .04em; }
 .bk-when .ico { color: var(--primary); }
+.bk-d { font-family: var(--num); font-size: 1.35rem; line-height: 1.1; font-weight: 500; color: var(--ink); letter-spacing: 0; font-variant-numeric: lining-nums; }
+.bk-d.none { font-family: inherit; font-size: .84rem; color: var(--muted); }
+.bk-end { color: var(--ink-2); }
+.bk-type { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; letter-spacing: .1em; }
 .bk-title { font-family: var(--serif); font-size: 1.1rem; }
 .bk-route { font-size: .95rem; margin-top: 2px; }
 .bk-time { font-variant-numeric: tabular-nums; color: var(--accent); font-size: .9rem; margin-top: 2px; }
@@ -874,7 +878,9 @@ a.em-tel:hover { border-color: var(--ink); }
 .net-badge { font-size: .7rem; letter-spacing: .12em; color: var(--paper); background: var(--ink-2); padding: 2px 8px; border-radius: 2px; align-self: center; margin-right: 6px; }
 @media (max-width: 720px) {
   .bk-item { grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  .bk-when { flex-direction: row; align-items: center; }
+  .bk-when { flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; }
+  .bk-d { font-size: 1.1rem; }
+  .bk-type { margin-top: 0; margin-left: auto; }
   .bk-side { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
   .bk-ed-body { grid-template-columns: 1fr 1fr; padding-left: 0; }
   .bk-ed-body .fld.wide { grid-column: 1 / -1; }

@@ -13,6 +13,26 @@
   const DROP = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'NOSCRIPT', 'TEMPLATE', 'SVG', 'MATH', 'FORM', 'INPUT', 'BUTTON', 'SELECT', 'TEXTAREA', 'META', 'LINK', 'TITLE', 'HEAD']);
   const CLASSES = new Set(['fold', 'fold-title', 'fold-body', 'callout', 'warn', 'note', 'checklist', 'task', 'done']);
   const STYLES = { SPAN: ['color', 'background-color', 'font-size', 'font-weight'], IMG: ['width'] };
+  // 瀏覽器在合併段落（例如按 Backspace）時，會把段落本身的底色、文字色、字級抄成行內樣式，造成「莫名的底色」。
+  // 只保留使用者真的設定的：螢光標記、調色盤顏色、舊資料的色碼與 em 字級、粗體。
+  const HILITE = ['rgb(251,231,161)', '#fbe7a1'];
+  const PALETTE = ['rgb(180,35,24)', 'rgb(196,87,13)', 'rgb(46,125,79)', 'rgb(31,95,168)', 'rgb(107,79,163)', 'rgb(122,122,122)'];
+  function okStyle(prop, val) {
+    const v = val.trim().toLowerCase().replace(/\s+/g, '');
+    if (prop === 'background-color') return HILITE.includes(v);
+    if (prop === 'color') return !/^rgba?\(/.test(v) || PALETTE.includes(v);
+    if (prop === 'font-size') return /^\d*\.?\d+em$/.test(v);   // 舊資料用 em；px、rem 是瀏覽器抄的
+    if (prop === 'font-weight') return /bold|^[6-9]00$/.test(v);
+    return true;
+  }
+  /** 編輯中：把瀏覽器自己加上的樣式拿掉（只改屬性，不搬動節點，游標不會跳） */
+  function tidySpans(body) {
+    body.querySelectorAll('span[style]').forEach(sp => {
+      const keep = sp.getAttribute('style').split(';').map(x => x.trim()).filter(x => { const i = x.indexOf(':'); return i > 0 && (STYLES.SPAN.includes(x.slice(0, i).trim().toLowerCase())) && okStyle(x.slice(0, i).trim().toLowerCase(), x.slice(i + 1)); });
+      const v = keep.join(';');
+      if (v !== sp.getAttribute('style')) v ? sp.setAttribute('style', v) : sp.removeAttribute('style');
+    });
+  }
   const okUrl = (u, img) => /^https?:\/\//i.test(u) || (!img && /^(mailto:|tel:)/i.test(u)) || (img && /^data:image\//i.test(u));
 
   function clean(src, doc, out) {
@@ -29,7 +49,7 @@
         if (v == null) continue;
         if (a === 'class') v = v.split(/\s+/).filter(c => CLASSES.has(c)).join(' ');
         if (a === 'style') {
-          v = v.split(';').map(x => x.trim()).filter(x => (STYLES[tag] || []).includes(x.split(':')[0].trim().toLowerCase()) && !/url\(|expression/i.test(x)).join(';');
+          v = v.split(';').map(x => x.trim()).filter(x => { const k = x.split(':')[0].trim().toLowerCase(); return (STYLES[tag] || []).includes(k) && !/url\(|expression/i.test(x) && (tag !== 'SPAN' || okStyle(k, x.slice(x.indexOf(':') + 1))); }).join(';');
         }
         if ((a === 'href' || a === 'src') && !okUrl(v.trim(), a === 'src')) continue;
         if (v) el.setAttribute(a, v);
@@ -134,7 +154,11 @@
     document.addEventListener('selectionchange', onSel);
 
     root.addEventListener('mousedown', e => { if (e.target.closest('.rte-bar button')) e.preventDefault(); });
-    root.addEventListener('input', e => { const b = e.target.closest?.('.rte-body'); if (b) fire(b); });
+    root.addEventListener('input', e => {
+      const b = e.target.closest?.('.rte-body'); if (!b) return;
+      if (/^(delete|insertParagraph|insertLineBreak|formatBlock)/.test(e.inputType || '')) tidySpans(b);
+      fire(b);
+    });
 
     async function addImages(body, files) {
       for (const f of [...files].filter(f => f.type.startsWith('image/'))) {
@@ -182,7 +206,10 @@
       switch (cmd) {
         case 'bold': case 'italic': case 'underline': exec(cmd); break;
         case 'color': btn.parentElement.classList.toggle('open'); return;
-        case 'fore': exec('foreColor', btn.dataset.v || getComputedStyle(body).color); btn.closest('.rte-pop').classList.remove('open'); break;
+        case 'fore':
+          // 「預設」= 拿掉顏色，而不是寫死目前的文字色（換深色配色時才不會看不到）
+          if (btn.dataset.v) exec('foreColor', btn.dataset.v); else { exec('foreColor', getComputedStyle(body).color); tidySpans(body); }
+          btn.closest('.rte-pop').classList.remove('open'); break;
         case 'mark': {
           const bg = closest(sel().anchorNode, 'span[style*="background"]', body);
           exec('hiliteColor', bg ? 'transparent' : '#fbe7a1'); break;
@@ -228,6 +255,7 @@
           break;
         }
       }
+      exec('styleWithCSS', false);   // 之後打字、合併段落不要再產生行內樣式
       fire(body);
     });
     const onDown = e => { if (!e.target.closest('.rte-pop')) root.querySelectorAll('.rte-pop.open').forEach(p => p.classList.remove('open')); };
