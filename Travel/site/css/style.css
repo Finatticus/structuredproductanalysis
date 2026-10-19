@@ -1282,3 +1282,70 @@ a.sd-row:hover { background: color-mix(in srgb, var(--ink) 3%, transparent); }
 .of-g small { color: var(--muted); margin-left: 6px; }
 .of-g ul { margin: 4px 0 0; padding-left: 18px; font-size: .8rem; color: var(--ink-2); }
 .of-g li { overflow-wrap: anywhere; }
+
+/* ============ 旅程頁：展開後的折疊內容有自己的底色（跟著網頁配色） ============ */
+.view-trip .fold.open > .fold-body {
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper));
+  border-left: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  padding: 14px 18px 16px; margin: 0 0 14px; border-radius: 0 3px 3px 0;
+}
+.view-trip .fold.open > .fold-title { color: var(--ink); }
+@media (max-width: 720px) { .view-trip .fold.open > .fold-body { padding: 12px 12px 14px; } }
+
+/* ============ 小鉛筆：只編輯這一塊 ============ */
+.ed-pen { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; color: var(--muted); opacity: .55; transition: .15s; vertical-align: middle; }
+.ed-pen:hover { opacity: 1; color: var(--primary); background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.day-side .ed-pen { margin: 6px 0 0 -4px; }
+.intro-lbl .ed-pen, .sheet-title .ed-pen { margin-left: 6px; width: 24px; height: 24px; }
+.pane-tools { display: flex; justify-content: flex-end; margin: -6px 0 4px; min-height: 0; }
+.pane-tools:empty { display: none; }
+.tab-lock { display: inline-flex; margin-left: 4px; color: var(--accent); vertical-align: 1px; }
+.sheet-title .tab-lock { margin-left: 8px; vertical-align: 3px; }
+body.guest .ed-pen { display: none !important; }
+@media (max-width: 720px) { .day-side .ed-pen { margin: 0 0 0 auto; opacity: .7; } .ed-pen { opacity: .7; } }
+@media print { .ed-pen, .pane-tools { display: none !important; } }
+
+/* 訪客看到的訂位代號（中間遮住，不能複製） */
+.bk-code.masked { cursor: default; }
+.bk-code.masked:hover { border-color: var(--line-2); }
+
+/* ============ 編輯：其他資訊分頁（可收合、觀看權限） ============ */
+.ed-sec { border: 1px solid var(--line); border-radius: 4px; margin-bottom: 8px; background: var(--surface); }
+.ed-sec-head { margin: 0; padding: 4px 6px 4px 4px; }
+.ed-sec-toggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; border: 0; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer; padding: 8px 4px; }
+.ed-sec-toggle .chev { color: var(--muted); display: inline-flex; }
+.ed-sec-toggle b { font-family: var(--serif); font-weight: 700; flex: none; }
+.ed-sec-toggle em { font-style: normal; color: var(--muted); font-size: .84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sec-lock { display: inline-flex; align-items: center; gap: 3px; flex: none; font-size: .72rem; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 10px; padding: 0 7px; }
+.ed-sec-body { padding: 4px 14px 14px; border-top: 1px solid var(--line); }
+.sec-vis .seg { margin: 2px 0 8px; }
+.sec-vis .seg button { height: 34px; }
+.sec-guests { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.sec-vis .hint { display: block; font-style: normal; }
+
+/* ============ 編輯：只編輯一部分 ============ */
+.ed-all { font-size: .84rem; color: var(--muted); border-bottom: 1px solid currentColor; }
+.ed-all:hover { color: var(--ink); }
+.ed-layout.ed-focus { grid-template-columns: minmax(0, 1fr); max-width: 860px; margin: 0 auto; }
+.ed-focus .ed-nav,
+.ed-focus .ed-main > section:not(.fx-on),
+.ed-focus .ed-day-wrap:not(.fx-on),
+.ed-focus .ed-sec:not(.fx-on),
+.ed-focus .bk-ed:not(.fx-on),
+.ed-focus #ed-bookings .add-row > :not(.fx-on),
+.ed-focus #ed-days > .btn.dashed,
+.ed-focus #ed-days .panel-head .head-actions,
+.ed-focus #ed-secs > .add-row,
+.ed-focus #ed-secs > .hint,
+.ed-focus .sh-day, .ed-focus .sh-sec,
+.ed-focus .ed-day-acts,
+.ed-focus .ed-sec-head .icon-btn { display: none !important; }
+.ed-focus .ed-main > section { margin-top: 0; }
+@media (max-width: 720px) { .ed-top .ed-all { order: 3; } }
+
+/* ============ 回收桶 ============ */
+.trash-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: .82rem; color: var(--muted); text-decoration: none; }
+.trash-link:hover { color: var(--ink); }
+.trash-box .off-row small em { font-style: normal; }
+.trash-box .tr-soon { color: var(--danger, #b42318); }
+.off-row b em.muted { font-style: normal; font-weight: 400; font-size: .8rem; margin-left: 4px; }

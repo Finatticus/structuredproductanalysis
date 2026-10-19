@@ -220,7 +220,7 @@
         if (sz == null) { if (sizes.has(u)) unknown++; } else bytes += sz;
       }
       out.unknown += unknown;
-      out.trips.push({ id, trip: TA.store.get(id), at: x.at, files: (x.imgs || []).length, failed: x.failed || 0, fails: x.fails || (x.failed ? Array.from({ length: x.failed }, () => ({ why: '舊版下載，原因未記錄' })) : []), bytes, unknown, shared });
+      out.trips.push({ id, trip: TA.store.get(id) || TA.store.trashed().find(t => t.id === id) || null, at: x.at, files: (x.imgs || []).length, failed: x.failed || 0, fails: x.fails || (x.failed ? Array.from({ length: x.failed }, () => ({ why: '舊版下載，原因未記錄' })) : []), bytes, unknown, shared });
     }
     out.trips.sort((a, b) => (b.at || '').localeCompare(a.at || ''));
     out.weather = lsSize(isWx);

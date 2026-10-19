@@ -77,6 +77,13 @@
   const noteHtml = v => !v ? '' : /<[a-z][\s\S]*>/i.test(v) ? v : `<p>${E(v).replace(/\n/g, '<br>')}</p>`;
 
   // ---------- 閱讀：某一種訂位（或全部）的分頁 ----------
+  /** 訂位代號按鈕：管理者點一下複製；訪客只看到遮住中間的代號，不能複製 */
+  function codeBtn(code, size, label = '') {
+    const m = E(TA.store.maskCode(code));
+    if (TA.store.isGuest()) return `<span class="bk-code ${size} masked" title="只有旅程主人看得到完整代號">${label}${size === 'xs' ? m : `<b>${m}</b>`}</span>`;
+    return `<button class="bk-code ${size}" data-copy="${E(code)}">${label}${size === 'xs' ? E(code) : `<b>${E(code)}</b>`}</button>`;
+  }
+
   /** 最左欄：這筆的日期（星期、第幾天），住宿與租車另外標結束日 */
   function dateCol(t, b) {
     const d0 = dPart(startOf(b));
@@ -116,7 +123,7 @@
             ${!TA.rich.isEmpty(noteHtml(b.note)) ? `<div class="fold bk-fold"><div class="fold-title">${/<img/i.test(b.note) ? '確認信與附件' : '備註'}</div><div class="fold-body"><div class="rich">${TA.rich.view(noteHtml(b.note))}</div></div></div>` : ''}
           </div>
           <div class="bk-side">
-            ${b.code ? `<button class="bk-code sm" data-copy="${E(b.code)}"><span>訂位代號</span><b>${E(b.code)}</b></button>` : ''}
+            ${b.code ? codeBtn(b.code, 'sm', '<span>訂位代號</span>') : ''}
             ${c ? `<span class="bk-cancel ${c.level}">${c.text}<small>${c.when}</small></span>` : ''}
           </div>
         </article>`;
@@ -139,7 +146,7 @@
     }
     out.sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
     if (!out.length) return '';
-    return `<ul class="bk-day">${out.map(x => `<li>${ico(x.b.type, 14)}<span class="t">${E(x.time)}</span><span>${E(x.text)}</span>${x.b.code ? `<button class="bk-code xs" data-copy="${E(x.b.code)}">${E(x.b.code)}</button>` : ''}</li>`).join('')}</ul>`;
+    return `<ul class="bk-day">${out.map(x => `<li>${ico(x.b.type, 14)}<span class="t">${E(x.time)}</span><span>${E(x.text)}</span>${x.b.code ? codeBtn(x.b.code, 'xs') : ''}</li>`).join('')}</ul>`;
   }
 
   /** 首頁提醒：所有未結束旅程中，14 天內到期的免費取消、48 小時內起飛的航班 */
@@ -163,7 +170,7 @@
       const ty = TYPES[b.type] || TYPES.ticket;
       const open = openIds.has(b.id);
       const c = cancelInfo(b);
-      return `<div class="bk-ed${open ? ' open' : ''}" data-i="${i}">
+      return `<div class="bk-ed${open ? ' open' : ''}" data-i="${i}" data-type="${b.type}">
         <div class="bk-ed-head">
           <button type="button" class="bk-ed-toggle" data-act="bk-toggle" data-i="${i}">${ico(b.type)}<b>${E(ty.label)}</b><span>${E(titleOf(b))}</span><em>${E(whenOf(b) || routeOf(b))}</em>${c ? `<small class="bk-cancel ${c.level}">${c.text}</small>` : ''}</button>
           <button type="button" class="icon-btn" data-act="bk-dup" data-i="${i}" title="複製一筆">${UI.icon('copy', 16)}</button>

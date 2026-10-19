@@ -36,6 +36,25 @@
     </div>`;
   }
 
+  /** 刪除旅程：問三次（確認 → 再確認 → 輸入「刪除」） */
+  async function confirmDeleteTrip(t) {
+    if (!(await U.confirm(`確定刪除「${t.title}」？`, { ok: '刪除', danger: true }))) return false;
+    const ex = TA.expense?.count(t.id) || 0;
+    if (!(await U.confirm(`再確認一次：這趟的每日行程、訂位、行李清單${ex ? `、${ex} 筆記帳` : ''}會一起移到回收桶，所有裝置都看不到。${S.TRASH_DAYS} 天內可以到「設定 → 回收桶」救回，之後會永久刪除。`, { ok: '我確定要刪除', danger: true }))) return false;
+    return new Promise(res => {
+      const m = U.modal(`<p>最後一步：請輸入「刪除」兩個字。</p>
+        <input type="text" id="del-word" autocomplete="off" placeholder="刪除">
+        <div class="modal-actions"><button class="btn ghost" data-close>取消</button><button class="btn danger" id="del-go" disabled>刪除「${E(t.title)}」</button></div>`, { title: '刪除旅程', small: true });
+      const inp = U.$('#del-word', m.el), go = U.$('#del-go', m.el);
+      inp.addEventListener('input', () => (go.disabled = inp.value.trim() !== '刪除'));
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !go.disabled) go.click(); });
+      go.onclick = () => { m.close(); res(true); };
+      m.onClose = () => res(false);
+      setTimeout(() => inp.focus(), 50);
+    });
+  }
+  TA.confirmDeleteTrip = confirmDeleteTrip;
+
   function render(el, params) {
     const isNew = !params.id;
     const orig = isNew ? null : S.get(params.id);
@@ -46,8 +65,22 @@
     const strip = x => x ? JSON.stringify({ ...x, packing: 0, geo: 0, updatedAt: 0 }) : '';
     let base = strip(orig);
     const open = new Set(t.days.length <= 2 ? t.days.map(d => d.id) : []);
+    const secOpen = new Set(t.sections.length <= 2 ? t.sections.map(x => x.id) : []);
+    const secMode = {};   // 分頁權限的介面狀態：'some' 時即使還沒勾訪客也顯示訪客清單
+    let guests = S.guestsCached() || [];
+    // 訪客清單讀到後，更新分頁權限的顯示（正在打字時不重畫，以免游標跑掉）
+    if (!S.isGuest()) S.guests().then(g => { guests = g; if (t.sections.some(x => Array.isArray(x.visibleTo)) && !el.contains(document.activeElement)) paint(); }).catch(() => { });
+    // 只編輯某一部分：#/trip/<id>/edit/<part>，part = intro、day-<id>、sec-<id>、bk-<類型>
+    const part = params.part || '';
+    const partDay = part.startsWith('day-') ? t.days.find(d => d.id === part.slice(4)) : null;
+    const partSec = part.startsWith('sec-') ? t.sections.find(x => x.id === part.slice(4)) : null;
+    const partBk = part.startsWith('bk-') ? part.slice(3) : '';
+    if (partDay) open.add(partDay.id);
+    if (partSec) secOpen.add(partSec.id);
+    const focusLabel = part === 'intro' ? '行前備註' : partDay ? `Day ${t.days.indexOf(partDay) + 1}　${partDay.date ? UI.dot(partDay.date, false) + '　' + UI.week(partDay.date) : ''}` : partSec ? partSec.title : partBk ? (TA.bookings.TYPES[partBk]?.label || '訂位') : '';
+    const focused = !!focusLabel;
     t.bookings = t.bookings || [];
-    const bkOpen = new Set();
+    const bkOpen = new Set(partBk ? (t.bookings || []).filter(b => b.type === partBk).map(b => b.id) : []);
     const draftKey = 'ta.draft.' + (params.id || 'new');
 
     try {
@@ -124,16 +157,32 @@
       </div>`;
     }
 
+    const visMode = s => !Array.isArray(s.visibleTo) ? 'all' : (s.visibleTo.length || secMode[s.id] === 'some') ? 'some' : 'me';
+    function visBadge(s) {
+      const m = visMode(s);
+      if (m === 'all') return '';
+      const n = s.visibleTo.filter(id => guests.some(g => g.id === id)).length;
+      return `<small class="sec-lock">${UI.icon('lock', 12)}${m === 'me' ? '只有我' : `我＋${n} 位訪客`}</small>`;
+    }
     function secHtml(s, k) {
-      return `<div class="ed-sec" data-k="${k}">
+      const isOpen = secOpen.has(s.id), m = visMode(s);
+      return `<div class="ed-sec${isOpen ? ' open' : ''}" data-k="${k}" data-id="${s.id}">
         <div class="ed-sec-head">
           <span class="handle sh-sec">${UI.icon('drag', 16)}</span>
-          <input type="text" class="st" data-bind="sections.${k}.title" value="${E(s.title)}" placeholder="分頁名稱">
+          <button type="button" class="ed-sec-toggle" data-act="sec-toggle" data-k="${k}"><span class="chev">${UI.icon(isOpen ? 'up' : 'down', 14)}</span><b>${E(s.title || '未命名分頁')}</b>${visBadge(s)}<em>${E(R.textOf(s.body).slice(0, 60))}</em></button>
           <button type="button" class="icon-btn" data-act="sec-up" data-k="${k}" title="上移">${UI.icon('up', 16)}</button>
           <button type="button" class="icon-btn" data-act="sec-down" data-k="${k}" title="下移">${UI.icon('down', 16)}</button>
           <button type="button" class="icon-btn" data-act="sec-del" data-k="${k}" title="刪除">${UI.icon('trash', 16)}</button>
         </div>
-        ${R.editor(`sections.${k}.body`, s.body)}
+        ${isOpen ? `<div class="ed-sec-body">
+          <label class="fld"><span>分頁名稱</span><input type="text" class="st" data-bind="sections.${k}.title" value="${E(s.title)}" placeholder="分頁名稱"></label>
+          <div class="fld sec-vis"><span>誰可以看</span>
+            <div class="seg">${[['all', '所有人'], ['me', '只有我'], ['some', '我和指定訪客']].map(([v, l]) => `<button type="button" data-act="sec-vis" data-v="${v}" data-k="${k}" class="${m === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+            ${m === 'some' ? `<div class="sec-guests">${guests.length ? guests.map(g => `<button type="button" class="chip-tg${s.visibleTo.includes(g.id) ? ' on' : ''}" data-act="sec-guest" data-k="${k}" data-gid="${E(g.id || '')}"${g.id ? '' : ' disabled title="請先更新 Apps Script"'}>${E(g.label || g.token)}</button>`).join('') : '<span class="muted">還沒有訪客密碼，請到「設定 → 訪客密碼」新增。</span>'}</div>` : ''}
+            <em class="hint">${m === 'all' ? '用訪客密碼登入的人都看得到這個分頁。' : m === 'me' ? '只有你看得到，訪客完全看不到這個分頁（雲端也不會傳給訪客）。' : '只有你和勾選的訪客看得到。'}</em>
+          </div>
+          ${R.editor(`sections.${k}.body`, s.body)}
+        </div>` : ''}
       </div>`;
     }
 
@@ -143,14 +192,15 @@
       return `
       <div class="ed-top">
         <a class="back" href="${isNew ? '#/' : '#/trip/' + t.id}">${UI.icon('back', 16)}${isNew ? '取消' : '返回旅程'}</a>
-        <h2>${isNew ? '新增旅程' : '編輯旅程'}</h2>
+        <h2>${isNew ? '新增旅程' : focused ? `編輯：${E(focusLabel)}` : '編輯旅程'}</h2>
+        ${focused ? `<a class="ed-all" href="#/trip/${t.id}/edit">編輯全部</a>` : ''}
         <span class="ed-state ${dirty ? 'dirty' : ''}"><i class="saved">已儲存</i><i class="unsaved">尚未儲存</i></span>
-        <button type="button" class="btn primary" data-act="save">儲存</button>
+        <button type="button" class="btn primary" data-act="save">${focused ? '儲存並返回' : '儲存'}</button>
       </div>
       <datalist id="dl-countries">${TA.countries.list.map(c => `<option value="${c.zh}">${c.en}</option>`).join('')}</datalist>
       <datalist id="dl-hotels">${hotels.map(h => `<option value="${E(h)}">`).join('')}</datalist>
 
-      <div class="ed-layout">
+      <div class="ed-layout${focused ? ' ed-focus' : ''}">
         <aside class="ed-nav">
           <a href="#" data-jump="ed-basic">基本資訊</a>
           <a href="#" data-jump="ed-bookings">訂位與交通 <small>${(t.bookings || []).length || ''}</small></a>
@@ -232,6 +282,13 @@
       const y = window.scrollY;
       sortables.forEach(s => s.destroy()); sortables = [];
       el.innerHTML = html();
+      if (focused) {
+        const mark = n => n && n.classList.add('fx-on');
+        if (part === 'intro') mark(U.$('#ed-intro', el));
+        if (partDay) { mark(U.$('#ed-days', el)); mark(U.$(`#ed-day-${t.days.indexOf(partDay)}`, el)); }
+        if (partSec) { mark(U.$('#ed-secs', el)); mark(U.$(`.ed-sec[data-id="${partSec.id}"]`, el)); }
+        if (partBk) { mark(U.$('#ed-bookings', el)); U.$$(`.bk-ed[data-type="${partBk}"], #ed-bookings .add-row [data-type="${partBk}"]`, el).forEach(mark); }
+      }
       if (keepScroll) window.scrollTo({ top: y, behavior: 'instant' });
       if (!window.Sortable) return;
       const mk = (node, handle, arrFn, after) => sortables.push(Sortable.create(node, {
@@ -371,7 +428,7 @@
       switch (act) {
         case 'save': return save();
         case 'delete':
-          if (await U.confirm(`確定刪除「${t.title}」？刪除後無法復原。`, { ok: '刪除', danger: true })) { dirty = false; localStorage.removeItem(draftKey); S.remove(t.id); location.hash = '#/'; }
+          if (await confirmDeleteTrip(t)) { dirty = false; localStorage.removeItem(draftKey); S.trash(t.id); U.toast(`已移到回收桶，${S.TRASH_DAYS} 天內可在設定救回`); location.hash = '#/'; }
           return;
         case 'toggle-day': { const id = t.days[i].id; open.has(id) ? open.delete(id) : open.add(id); paint(); return; }
         case 'expand-all': if (open.size) open.clear(); else t.days.forEach(d => open.add(d.id)); paint(); return;
@@ -423,9 +480,23 @@
         case 'stop-del': t.days[i].stops.splice(k, 1); touch(); paint(); return;
         case 'blk-add': t.days[i].blocks.push({ id: U.uid('b'), title: a.dataset.title, body: '', open: false }); touch(); paint(); return;
         case 'blk-del': if (await U.confirm('刪除這個區塊？', { ok: '刪除', danger: true })) { t.days[i].blocks.splice(+a.dataset.j, 1); touch(); paint(); } return;
+        case 'sec-toggle': { const id = t.sections[k].id; secOpen.has(id) ? secOpen.delete(id) : secOpen.add(id); paint(); return; }
+        case 'sec-vis': {
+          const sec = t.sections[k], v = a.dataset.v;
+          secMode[sec.id] = v;
+          if (v === 'all') delete sec.visibleTo; else if (v === 'me') sec.visibleTo = []; else sec.visibleTo = sec.visibleTo || [];
+          touch(); paint(); return;
+        }
+        case 'sec-guest': {
+          const sec = t.sections[k], gid = a.dataset.gid;
+          if (!gid) return;
+          sec.visibleTo = sec.visibleTo.includes(gid) ? sec.visibleTo.filter(x => x !== gid) : [...sec.visibleTo, gid];
+          touch(); paint(); return;
+        }
         case 'sec-add': {
           const tp = SECTION_TEMPLATES[k];
-          t.sections.push({ id: U.uid('s'), title: tp.title, body: tp.body }); touch(); paint();
+          const ns = { id: U.uid('s'), title: tp.title, body: tp.body };
+          t.sections.push(ns); secOpen.add(ns.id); touch(); paint();
           setTimeout(() => U.$$('.ed-sec', el).pop()?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50); return;
         }
         case 'sec-del': if (await U.confirm(`刪除「${t.sections[k].title}」分頁？`, { ok: '刪除', danger: true })) { t.sections.splice(k, 1); touch(); paint(); } return;
@@ -491,6 +562,7 @@
       localStorage.removeItem(draftKey);
       U.toast('已儲存');
       if (isNew) { location.hash = `#/trip/${t.id}/edit`; return; }
+      if (focused) { location.hash = `#/trip/${t.id}`; return; }
       el.querySelector('.ed-state')?.classList.remove('dirty');
     }
     const onKey = e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); } };
@@ -499,6 +571,7 @@
     window.addEventListener('beforeunload', onUnload);
 
     paint(false);
+    if (focused) window.scrollTo({ top: 0, behavior: 'instant' });
 
     // 從資料健檢或搜尋跳過來：打開對應的天／訂位，捲到那裡並標示出來
     (function applyFocus() {
@@ -508,6 +581,7 @@
       sessionStorage.removeItem('ta.focus');
       if (['day', 'stop', 'block'].includes(f.kind) && t.days[f.i]) open.add(t.days[f.i].id);
       if (f.kind === 'booking' && t.bookings[f.i]) bkOpen.add(t.bookings[f.i].id);
+      if (f.kind === 'section' && t.sections[f.k]) secOpen.add(t.sections[f.k].id);
       paint(false);
       const sel = {
         day: f.field && f.field !== 'notes' ? `[data-bind="days.${f.i}.${f.field}"]` : f.field === 'notes' ? `.rte[data-path="days.${f.i}.notes"]` : `#ed-day-${f.i}`,

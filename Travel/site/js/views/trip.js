@@ -20,6 +20,10 @@
   const tidy = s => String(s || '').replace(/[!-~]{41,}/g, m => (m.match(/^[^,%/+]{1,20}/) || [''])[0] + '…');
   const mapQ = (name, t) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([name, (t.countries || [])[0]].filter(Boolean).join(' '));
 
+  /** 小鉛筆：只編輯這一塊（訪客看不到） */
+  const pen = (t, part, label) => TA.store.isGuest() ? '' : `<a class="ed-pen" href="#/trip/${t.id}/edit/${part}" title="${label}" aria-label="${label}">${UI.icon('edit', 14)}</a>`;
+  const lockIco = s => Array.isArray(s.visibleTo) && !TA.store.isGuest() ? `<span class="tab-lock" title="${s.visibleTo.length ? '只有你和指定的訪客看得到' : '只有你看得到'}">${UI.icon('lock', 11)}</span>` : '';
+
   function dayHtml(d, i, t) {
     const today = U.todayStr() === d.date;
     const stops = (d.stops || []).filter(p => p.name || p.time);
@@ -29,6 +33,7 @@
         <span class="day-no">DAY ${String(i + 1).padStart(2, '0')}</span>
         <span class="day-date">${UI.dot(d.date, false)}</span>
         <span class="day-week">${UI.week(d.date)}${today ? '・今天' : ''}</span>
+        ${pen(t, 'day-' + d.id, `編輯 Day ${i + 1}`)}
       </div>
       <div class="day-main">
         ${d.title ? `<h3 class="day-title">${E(d.title)}</h3>` : ''}
@@ -49,7 +54,7 @@
     const n = UI.nDays(t);
     const left = t.startDate ? U.diffDays(U.todayStr(), t.startDate) : null;
     const stays = stayList(t);
-    const secs = (t.sections || []).filter(s => !R.isEmpty(s.body));
+    const secs = (t.sections || []).filter(s => !R.isEmpty(s.body) && S.canSee(s));
     // 每一種訂位各自一個分頁；名稱相符的舊分頁（例如「機票」「飯店」）合併進去，放在訂位下面
     const BK = TA.bookings;
     const bkTypes = Object.keys(BK.TYPES).filter(ty => (t.bookings || []).some(b => b.type === ty));
@@ -61,7 +66,7 @@
     if (showStays) tabs.push({ key: 'stays', label: '住宿' });
     const offRec = TA.offline.records()[t.id];
     const restSecs = secs.filter(s => ![...merged.values()].includes(s));
-    restSecs.forEach(s => tabs.push({ key: s.id, label: s.title }));
+    restSecs.forEach(s => tabs.push({ key: s.id, label: s.title, lock: lockIco(s) }));
     let tab = sessionStorage.getItem('ta.tab.' + id) || 'plan';
     // 舊分頁 id 被合併時，跳到對應的訂位分頁
     for (const [ty, s] of merged) if (tab === s.id) tab = 'bk-' + ty;
@@ -93,9 +98,9 @@
         </div>
       </header>
 
-      ${(t.facts || []).filter(f => f.label || f.value).length ? `<dl class="facts">${t.facts.filter(f => f.label || f.value).map(f => `<div><dt>${E(f.label)}</dt><dd>${E(f.value).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">連結</a>')}</dd></div>`).join('')}</dl>` : ''}
+      ${(t.facts || []).filter(f => f.label || f.value).length ? `<dl class="facts">${t.facts.filter(f => f.label || f.value).map(f => `<div><dt>${E(f.label)}</dt><dd>${E(S.isGuest() && /代號|訂位|confirmation|booking/i.test(f.label || '') ? S.maskCode(f.value) : f.value).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">連結</a>')}</dd></div>`).join('')}</dl>` : ''}
 
-      <nav class="tabs">${tabs.map(x => `<button data-tab="${x.key}" class="${x.key === tab ? 'on' : ''}">${E(x.label)}</button>`).join('')}</nav>
+      <nav class="tabs">${tabs.map(x => `<button data-tab="${x.key}" class="${x.key === tab ? 'on' : ''}">${E(x.label)}${x.lock || ''}</button>`).join('')}</nav>
 
       <div class="tab-pane" data-pane="plan" ${tab !== 'plan' ? 'hidden' : ''}>
         <div class="plan">
@@ -104,15 +109,16 @@
             ${t.days.map((d, i) => `<a href="#" data-jump="day-${d.id}" class="${U.todayStr() === d.date ? 'today' : ''}"><b>${String(i + 1).padStart(2, '0')}</b><span>${UI.dot(d.date, false)}</span><em>${E(d.title || (d.stops || [])[0]?.name || '')}</em></a>`).join('')}
           </aside>
           <div class="days">
-            ${R.isEmpty(t.intro) ? '' : `<section class="intro" id="intro"><div class="intro-lbl">行前備註</div>${rich(t.intro, 'intro')}</section>`}
+            ${R.isEmpty(t.intro) ? '' : `<section class="intro" id="intro"><div class="intro-lbl">行前備註${pen(t, 'intro', '編輯行前備註')}</div>${rich(t.intro, 'intro')}</section>`}
             ${t.days.length ? t.days.map((d, i) => dayHtml(d, i, t)).join('') : `<div class="empty-box">還沒有每日行程<br><a class="btn primary" href="#/trip/${t.id}/edit">開始安排</a></div>`}
           </div>
         </div>
       </div>
 
       ${bkTypes.map(ty => { const s = merged.get(ty); return `<div class="tab-pane" data-pane="bk-${ty}" ${tab !== 'bk-' + ty ? 'hidden' : ''}>
+        <div class="pane-tools">${pen(t, 'bk-' + ty, '編輯' + BK.TYPES[ty].label)}</div>
         ${BK.viewHtml(t, ty)}
-        ${s ? `<article class="sheet bk-sheet"><h2 class="sheet-title">${E(s.title)}</h2>${rich(s.body, `sections.${t.sections.indexOf(s)}.body`)}</article>` : ''}
+        ${s ? `<article class="sheet bk-sheet"><h2 class="sheet-title">${E(s.title)}${lockIco(s)}${pen(t, 'sec-' + s.id, '編輯「' + s.title + '」')}</h2>${rich(s.body, `sections.${t.sections.indexOf(s)}.body`)}</article>` : ''}
       </div>`; }).join('')}
 
       ${showStays ? `<div class="tab-pane" data-pane="stays" ${tab !== 'stays' ? 'hidden' : ''}>
@@ -122,7 +128,7 @@
       </div>` : ''}
 
       ${restSecs.map(s => `<div class="tab-pane" data-pane="${s.id}" ${tab !== s.id ? 'hidden' : ''}>
-        <article class="sheet"><h2 class="sheet-title">${E(s.title)}</h2>${rich(s.body, `sections.${t.sections.indexOf(s)}.body`)}</article>
+        <article class="sheet"><h2 class="sheet-title">${E(s.title)}${lockIco(s)}${pen(t, 'sec-' + s.id, '編輯「' + s.title + '」')}</h2>${rich(s.body, `sections.${t.sections.indexOf(s)}.body`)}</article>
       </div>`).join('')}
     `;
 

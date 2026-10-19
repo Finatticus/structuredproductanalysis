@@ -93,6 +93,12 @@
         <div class="add-row"><button class="btn" data-act="sync">${UI.icon('sync', 16)}立即同步</button></div>
       </section>
 
+      <section class="panel admin-only" id="trash-panel">
+        <h3>回收桶</h3>
+        <p class="hint">刪除的旅程會在這裡保留 ${S.TRASH_DAYS} 天，期間訪客也看不到；救回後一切照舊，包括記帳。超過 ${S.TRASH_DAYS} 天會自動永久刪除。</p>
+        <div class="trash-box"></div>
+      </section>
+
       <section class="panel admin-only" id="img-panel">
         <h3>圖片保存</h3>
         ${ext ? `<p>還有 <b>${ext}</b> 張圖片放在外部網站。搬到你自己的 Google Drive 後，就算原網站關閉，圖片也會一直保留。</p>
@@ -189,6 +195,20 @@
         TA.ticker.loadRates(true).then(() => TA.app.paintTicker());
         U.toast('已儲存');
       }
+      if (act === 'tr-restore') {
+        const t = S.trashed().find(x => x.id === a.dataset.id); if (!t) return;
+        S.restore(t.id); U.toast(`已救回「${t.title}」`); paintTrash(); return;
+      }
+      if (act === 'tr-purge') {
+        const t = S.trashed().find(x => x.id === a.dataset.id); if (!t) return;
+        if (!(await U.confirm(`永久刪除「${t.title}」？刪除後所有裝置都無法復原。`, { ok: '永久刪除', danger: true }))) return;
+        S.purge(t.id); U.toast('已永久刪除'); paintTrash(); paintOffline(); return;
+      }
+      if (act === 'tr-empty') {
+        const n = S.trashed().length;
+        if (!(await U.confirm(`永久刪除回收桶裡的 ${n} 趟旅程？刪除後所有裝置都無法復原。`, { ok: '全部永久刪除', danger: true }))) return;
+        S.trashed().forEach(t => S.purge(t.id)); U.toast('回收桶已清空'); paintTrash(); paintOffline(); return;
+      }
       if (act === 'off-update') { TA.offline.dialog(S.get(a.dataset.id), () => paintOffline()); return; }
       if (act === 'off-rm') {
         const t = S.get(a.dataset.id);
@@ -247,6 +267,25 @@
 
     // ---- 離線資料：下載了什麼、各佔多少空間 ----
     const O = TA.offline, fb = O.fmtBytes;
+    function paintTrash() {
+      const box = U.$('.trash-box', el); if (!box) return;
+      const list = S.trashed();
+      const day = iso => new Date(iso).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+      box.innerHTML = list.length ? `<div class="off-rows">${list.map(t => {
+        const left = S.trashLeft(t);
+        return `<div class="off-row">
+          <span><b>${E(t.title || '未命名旅程')}</b>
+          <small>${t.startDate ? UI.range(t.startDate, t.endDate) + '・' : ''}${day(t.trashedAt)} 刪除・<em class="${left <= 3 ? 'tr-soon' : ''}">${left ? `${left} 天後永久刪除` : '下次同步時永久刪除'}</em></small></span>
+          <button class="btn sm" data-act="tr-restore" data-id="${t.id}">救回</button><button class="btn sm ghost" data-act="tr-purge" data-id="${t.id}">永久刪除</button></div>`;
+      }).join('')}</div>
+        ${list.length > 1 ? '<div class="add-row"><button class="btn danger" data-act="tr-empty">清空回收桶</button></div>' : ''}`
+        : '<p class="muted">回收桶是空的。</p>';
+      const cnt = U.$('.kv dd', el); if (cnt) cnt.textContent = S.all().length;
+    }
+    if (!S.isGuest()) paintTrash();
+    // 從主頁「回收桶」連結過來：直接捲到回收桶
+    if (sessionStorage.getItem('ta.goto') === 'trash') { sessionStorage.removeItem('ta.goto'); setTimeout(() => U.$('#trash-panel', el)?.scrollIntoView({ block: 'start' }), 30); }
+
     async function paintOffline() {
       const box = U.$('.off-box', el); if (!box) return;
       const u = await O.usage();
@@ -262,10 +301,10 @@
 
         <div class="off-sh">離線下載的旅程</div>
         ${u.trips.length ? `<div class="off-rows">${u.trips.map(x => `<div class="off-row">
-          <span><b>${x.trip ? E(x.trip.title) : '已刪除的旅程'}</b>
+          <span><b>${x.trip ? E(x.trip.title) + (x.trip.trashedAt ? '<em class="muted">（在回收桶）</em>' : '') : '已刪除的旅程'}</b>
           <small>${new Date(x.at).toLocaleString('zh-TW', { dateStyle: 'medium', timeStyle: 'short' })} 下載・${x.files} 張圖片${(x.fails || []).length ? `<button class="of-link" data-act="off-fails" data-id="${x.id}">${(x.fails || []).length} 個檔案沒存到，查看</button>` : ''}${x.shared ? `・${x.shared} 張和其他旅程共用` : ''}${x.unknown ? `・${x.unknown} 張無法計算大小` : ''}</small></span>
           <em class="off-size">${fb(x.bytes)}${x.unknown ? ' 以上' : ''}</em>
-          ${x.trip ? `<button class="btn sm ghost" data-act="off-update" data-id="${x.id}">更新</button>` : ''}<button class="btn sm ghost" data-act="off-rm" data-id="${x.id}">刪除</button></div>`).join('')}
+          ${x.trip && !x.trip.trashedAt ? `<button class="btn sm ghost" data-act="off-update" data-id="${x.id}">更新</button>` : ''}<button class="btn sm ghost" data-act="off-rm" data-id="${x.id}">刪除</button></div>`).join('')}
           <div class="off-row sub"><span><b>離線用的網站程式</b><small>${u.shell.files} 個檔案，所有離線旅程共用；刪掉全部離線旅程時會一起清除</small></span><em class="off-size">${fb(u.shell.bytes)}</em></div></div>`
         : '<p class="muted">目前沒有存到這台裝置的旅程。在旅程頁按「離線下載」新增。</p>'}
 

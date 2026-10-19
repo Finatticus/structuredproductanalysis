@@ -24,7 +24,7 @@
         const code = norm(b.code), no = norm(b.no);
         const exact = (code && code === nq) || (no && no.replace(/\s/g, '') === nq.replace(/\s/g, ''));
         const fields = [b.code, b.no, b.name, b.airline, b.from, b.to, b.company, b.place, b.addr, TA.rich.textOf(b.note)].join(' ');
-        if (exact || hit(fields)) out.push({ ...base, kind: 'booking', b, title: TA.bookings.titleOf(b), sub: [b.code && `代號 ${b.code}`, TA.bookings.TYPES[b.type]?.label].filter(Boolean).join('　'), score: exact ? 100 : 40, tab: 'bk-' + b.type, jump: 'bk-' + b.id });
+        if (exact || hit(fields)) out.push({ ...base, kind: 'booking', b, title: TA.bookings.titleOf(b), sub: [b.code && `代號 ${S.codeOf(b.code)}`, TA.bookings.TYPES[b.type]?.label].filter(Boolean).join('　'), score: exact ? 100 : 40, tab: 'bk-' + b.type, jump: 'bk-' + b.id });
       });
       const hotels = new Set();
       (t.days || []).forEach((d, i) => {
@@ -36,7 +36,7 @@
         if (hit(txt)) out.push({ ...base, kind: 'text', title: snippet(txt), sub: dayLabel, score: 5, tab: 'plan', jump: 'day-' + d.id });
       });
       if (hit(TA.rich.textOf(t.intro))) out.push({ ...base, kind: 'text', title: snippet(TA.rich.textOf(t.intro)), sub: '行前備註', score: 5, tab: 'plan', jump: 'intro' });
-      (t.sections || []).forEach(s => { const txt = s.title + ' ' + TA.rich.textOf(s.body); if (hit(txt)) out.push({ ...base, kind: 'text', title: snippet(txt), sub: `分頁「${s.title}」`, score: 6, tab: s.id }); });
+      (t.sections || []).filter(s => S.canSee(s)).forEach(s => { const txt = s.title + ' ' + TA.rich.textOf(s.body); if (hit(txt)) out.push({ ...base, kind: 'text', title: snippet(txt), sub: `分頁「${s.title}」`, score: 6, tab: s.id }); });
     }
     for (const w of TA.wishlist?.items() || []) {
       if (hit([w.title, w.note, w.city, w.country].join(' '))) out.push({ kind: 'wish', w, title: w.title, sub: [w.city, w.country].filter(Boolean).join('，') + (w.done ? '　去過了' : ''), score: 15 });

@@ -161,6 +161,27 @@
     return { trips: done.length, countries: countries.size, cities: cities.size, days, months: days / 30.4, hotels: hotels.size, km: Math.round(km), laps: km / 40075 };
   }
 
+  /** 多國旅程裡，某個城市屬於哪一國：
+   * 1. 加城市時選的地點（標籤最後是國名，例如「清邁，泰國」）
+   * 2. 城市座標落在哪一國的國界內（世界地圖資料）
+   * 3. 都判斷不出來才用離哪一國首都最近 */
+  let feats = null;
+  function featureOf(num) {
+    if (!window.TA_WORLD || !window.topojson) return null;
+    feats = feats || new Map(topojson.feature(TA_WORLD, TA_WORLD.objects.countries).features.map(f => [f.id, f]));
+    return feats.get(num) || null;
+  }
+  function countryOf(city, holder, candidates) {
+    const list = (candidates || []).map(c => TA.countries.find(c)).filter(Boolean);
+    if (list.length <= 1) return list[0]?.zh || (candidates || [])[0] || '';
+    const g = holder?.geo?.[city];
+    if (g?.label) { const k = TA.countries.find(String(g.label).split(/[，,]/).pop().trim()); if (k && list.includes(k)) return k.zh; }
+    const ll = cityLL(city, holder);
+    if (!ll) return list[0].zh;
+    if (window.d3?.geoContains) for (const k of list) { const f = featureOf(k.num); if (f && d3.geoContains(f, [ll[1], ll[0]])) return k.zh; }
+    return list.slice().sort((a, b) => dist(ll, a.cap || [0, 180]) - dist(ll, b.cap || [0, 180]))[0].zh;
+  }
+
   window.TA = window.TA || {};
-  TA.geo = { stats, tripKm, roundKm, dist, HOME, placePoints, cityLL, search, resolve, reverse, backfill };
+  TA.geo = { countryOf, stats, tripKm, roundKm, dist, HOME, placePoints, cityLL, search, resolve, reverse, backfill };
 })();

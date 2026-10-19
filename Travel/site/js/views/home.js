@@ -99,13 +99,7 @@
       const m = new Map();
       const add = (country, city, n = 1) => { const c = country ? zh(country) : '其他'; if (!m.has(c)) m.set(c, new Map()); const cm = m.get(c); cm.set(city, (cm.get(city) || 0) + n); };
       trips.forEach(t => (t.cities || []).forEach(city => {
-        // 多國旅程：看城市離哪一國的首都最近，歸到那一國
-        let country = (t.countries || [])[0];
-        if ((t.countries || []).length > 1) {
-          const ll = TA.geo.cityLL(city, t);
-          if (ll) country = t.countries.slice().sort((a, b) => TA.geo.dist(ll, TA.countries.find(a)?.cap || [0, 180]) - TA.geo.dist(ll, TA.countries.find(b)?.cap || [0, 180]))[0];
-        }
-        add(country, city);
+        add(TA.geo.countryOf(city, t, t.countries), city);
       }));
       extras.forEach(x => (x.cities || []).forEach(c => add(x.country, c, Math.max(1, +x.times || 1))));
       const groups = [...m].sort((a, b) => b[1].size - a[1].size);
@@ -210,6 +204,7 @@
         </div>
         <div class="list-head"><span>出發</span><span>旅程</span><span>國家</span><span>天數</span><span>狀態</span><span></span></div>
         <div class="trip-list"></div>
+        ${!S.isGuest() && S.trashed().length ? `<a class="trash-link" href="#/settings">${UI.icon('trash', 14)}回收桶（${S.trashed().length}）</a>` : ''}
       </section>`;
 
     TA.worldMap.render(U.$('.world-map', el), {
@@ -235,6 +230,7 @@
       if (openStat) { panel.classList.remove('in'); void panel.offsetWidth; panel.classList.add('in'); }
     };
     el.addEventListener('click', async e => {
+      if (e.target.closest('.trash-link')) sessionStorage.setItem('ta.goto', 'trash');
       const sb = e.target.closest('[data-stat]'); if (sb) return showStat(sb.dataset.stat);
       if (e.target.closest('[data-stat-close]')) return showStat(openStat);
       const cty = e.target.closest('[data-country]');
@@ -250,7 +246,7 @@
       if (!t) return;
       e.preventDefault();
       if (act.dataset.act === 'del') {
-        if (await U.confirm(`確定刪除「${t.title}」？刪除後無法復原。`, { ok: '刪除', danger: true })) { S.remove(t.id); U.toast('已刪除'); TA.app.rerender(); }
+        if (await TA.confirmDeleteTrip(t)) { S.trash(t.id); U.toast(`已移到回收桶，${S.TRASH_DAYS} 天內可在設定救回`); TA.app.rerender(); }
       } else if (act.dataset.act === 'dup') {
         const c = U.clone(t);
         c.id = U.uid('t'); c.title += '（複本）'; c.status = 'auto'; c.createdAt = new Date().toISOString();

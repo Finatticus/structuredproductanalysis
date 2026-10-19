@@ -74,6 +74,8 @@
   // ---------- 圖示（線條） ----------
   const I = p => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   const ICON = {
+    undo: I('<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>'),
+    redo: I('<path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>'),
     h: I('<path d="M6 5v14M18 5v14M6 12h12"/>'),
     ul: I('<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>'),
     ol: I('<path d="M10 6h10M10 12h10M10 18h10M4 5l1.5-1v5M3.5 14.5c.5-1 2.5-1 2.5.3 0 1-2.5 2-2.5 3.2h2.6"/>'),
@@ -98,6 +100,8 @@
     const b = (cmd, label, title) => `<button type="button" data-cmd="${cmd}" title="${title}" tabindex="-1">${label}</button>`;
     return `<div class="rte" data-path="${path}">
       <div class="rte-bar">
+        ${b('undo', ICON.undo, '復原（上一步）')}${b('redo', ICON.redo, '重做')}
+        <i class="sep"></i>
         ${b('bold', '<b>B</b>', '粗體')}${b('italic', '<i>I</i>', '斜體')}${b('underline', '<u>U</u>', '底線')}
         <span class="rte-pop">${b('color', ICON.color, '文字顏色')}
           <span class="rte-swatches">${COLORS.map(([c, n]) => `<button type="button" tabindex="-1" data-cmd="fore" data-v="${c}" title="${n}" style="--c:${c || 'var(--ink)'}"></button>`).join('')}</span></span>
@@ -154,8 +158,43 @@
     document.addEventListener('selectionchange', onSel);
 
     root.addEventListener('mousedown', e => { if (e.target.closest('.rte-bar button')) e.preventDefault(); });
+    // ---- 復原／重做：每個編輯框各自記錄（停頓半秒算一步，最多 100 步） ----
+    const hist = new Map();
+    const keyOf = body => body.closest('.rte')?.dataset.path || '';
+    const H = (body, check = true) => {
+      const k = keyOf(body);
+      let h = hist.get(k);
+      // 內容被別的方式改過（例如重新排序後換了內容）：重新開始記錄，避免復原成別的內容
+      if (check && h && h.timer == null && h.stack[h.idx] !== body.innerHTML) h = null;
+      if (!h) { h = { stack: [body.innerHTML], idx: 0, timer: null }; hist.set(k, h); }
+      return h;
+    };
+    const record = body => {
+      const h = H(body, false); clearTimeout(h.timer); h.timer = null;
+      const cur = body.innerHTML;
+      if (cur === h.stack[h.idx]) return;
+      h.stack = h.stack.slice(0, h.idx + 1); h.stack.push(cur);
+      if (h.stack.length > 100) h.stack.shift();
+      h.idx = h.stack.length - 1;
+    };
+    const later = body => { const h = H(body, false); clearTimeout(h.timer); h.timer = setTimeout(() => record(body), 500); };
+    root.addEventListener('focusin', e => { const b = e.target.closest?.('.rte-body'); if (b) H(b); });
+    // 改動前一刻先記下原本的內容（以防沒有觸發 focus，例如從別處直接打字）
+    root.addEventListener('beforeinput', e => { const b = e.target.closest?.('.rte-body'); if (b && !String(e.inputType).startsWith('history')) H(b); });
+    function travel(body, dir) {
+      record(body);
+      const h = H(body), to = h.idx + dir;
+      if (to < 0 || to >= h.stack.length) return TA.u.toast(dir < 0 ? '已經是最早的內容' : '沒有可以重做的步驟');
+      h.idx = to; body.innerHTML = h.stack[to];
+      body.focus();
+      const r = document.createRange(); r.selectNodeContents(body); r.collapse(false);
+      sel().removeAllRanges(); sel().addRange(r);
+      fire(body);
+    }
+
     root.addEventListener('input', e => {
       const b = e.target.closest?.('.rte-body'); if (!b) return;
+      later(b);
       if (/^(delete|insertParagraph|insertLineBreak|formatBlock)/.test(e.inputType || '')) tidySpans(b);
       fire(b);
     });
@@ -170,6 +209,7 @@
           const url = await upload(f);
           if (img) { img.src = url; img.removeAttribute('data-tmp'); img.classList.remove('uploading'); }
         } catch (err) { img?.remove(); TA.u.toast('圖片上傳失敗：' + err.message, 'err'); }
+        record(body);
         fire(body);
       }
     }
@@ -201,6 +241,8 @@
       const body = btn.closest('.rte').querySelector('.rte-body');
       restore(body);
       const cmd = btn.dataset.cmd;
+      if (cmd === 'undo' || cmd === 'redo') return travel(body, cmd === 'undo' ? -1 : 1);
+      if (cmd !== 'color') record(body);
       exec('styleWithCSS', cmd === 'fore' || cmd === 'mark');
       const cur = () => { const s = sel(); return s.rangeCount ? blockOf(s.anchorNode, body) : null; };
       switch (cmd) {
@@ -256,7 +298,15 @@
         }
       }
       exec('styleWithCSS', false);   // 之後打字、合併段落不要再產生行內樣式
+      record(body);
       fire(body);
+    });
+    // 鍵盤 Ctrl/⌘+Z、Ctrl+Y、⌘+Shift+Z 也用同一套紀錄
+    root.addEventListener('keydown', e => {
+      const b = e.target.closest?.('.rte-body'); if (!b || !(e.ctrlKey || e.metaKey)) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); travel(b, -1); }
+      else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); travel(b, 1); }
     });
     const onDown = e => { if (!e.target.closest('.rte-pop')) root.querySelectorAll('.rte-pop.open').forEach(p => p.classList.remove('open')); };
     document.addEventListener('mousedown', onDown);

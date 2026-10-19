@@ -34,7 +34,7 @@
     statusOf,
     STATUS: { planning: '安排中', ongoing: '旅行中', done: '已完成' },
     on(fn) { listeners.add(fn); return () => listeners.delete(fn); },
-    all() { return trips.filter(t => !t.deleted && !t.kind); },
+    all() { return trips.filter(t => !t.deleted && !t.kind && !t.trashedAt); },
 
     /** 個人足跡：居住地與沒有排行程的造訪紀錄（存在雲端，跟旅程一起同步） */
     profile() {
@@ -48,12 +48,47 @@
     /** 同一種類的所有紀錄（例如訪客新增的願望，每筆一列） */
     records(kind) { return trips.filter(t => t.kind === kind && !t.deleted); },
     saveRecord(id, kind, title, data) { Store.upsert({ ...data, id, kind, v: 2, title }); },
-    get(id) { return trips.find(t => t.id === id && !t.deleted) || null; },
+    get(id) { return trips.find(t => t.id === id && !t.deleted && !t.trashedAt) || null; },
+
+    // ---- 回收桶：刪除的旅程先保留 30 天，期間可以救回 ----
+    TRASH_DAYS: 30,
+    trashed() { return trips.filter(t => !t.deleted && !t.kind && t.trashedAt).sort((a, b) => b.trashedAt.localeCompare(a.trashedAt)); },
+    /** 還剩幾天會被永久刪除 */
+    trashLeft(t) { return Math.max(0, Math.ceil((Date.parse(t.trashedAt) + Store.TRASH_DAYS * 864e5 - Date.now()) / 864e5)); },
+    trash(id) {
+      const t = Store.get(id);
+      if (!t || Store.denied()) return;
+      Store.upsert({ ...t, trashedAt: new Date().toISOString() });
+    },
+    restore(id) {
+      const t = trips.find(x => x.id === id && !x.deleted && x.trashedAt);
+      if (!t || Store.denied()) return;
+      const c = { ...t }; delete c.trashedAt;
+      Store.upsert(c);
+    },
+    /** 永久刪除（連同記帳與這台裝置的離線下載） */
+    purge(id) {
+      if (Store.denied()) return;
+      Store.remove(id);
+      TA.offline?.remove(id).catch(() => { });
+    },
+    /** 超過 30 天的自動永久刪除（只有管理者的裝置會做） */
+    purgeOldTrash() {
+      if (Store.isGuest()) return 0;
+      const old = Store.trashed().filter(t => Store.trashLeft(t) <= 0);
+      old.forEach(t => Store.purge(t.id));
+      return old.length;
+    },
 
     /** 訪客模式：只能看，任何寫入都擋下 */
     isGuest() { return settings.role === 'guest'; },
     /** 這位訪客能不能在這趟旅程新增願望（管理者在「這趟的願望清單」開放） */
     canWish(tripId) { return Store.isGuest() && !!settings.perms?.wishTrips?.includes(tripId); },
+    /** 其他資訊分頁的觀看權限：沒設定 = 所有人；[] = 只有管理者；[訪客編號…] = 管理者＋指定的訪客 */
+    canSee(sec) { return !Store.isGuest() || !Array.isArray(sec?.visibleTo) || sec.visibleTo.includes(settings.perms?.guestId); },
+    /** 訂位代號：訪客只看得到頭尾（雲端也只會傳遮住的版本給訪客） */
+    maskCode(v) { const s = String(v || ''); return s.length <= 2 ? s.replace(/./g, '*') : s[0] + s.slice(1, -1).replace(/./g, '*') + s.slice(-1); },
+    codeOf(v) { return Store.isGuest() ? Store.maskCode(v) : v; },
     denied(quiet) { if (!Store.isGuest()) return false; if (!quiet) TA.u.toast('訪客模式只能瀏覽，無法修改', 'err'); return true; },
 
     upsert(trip, { silent = false, quiet = false } = {}) {
@@ -212,7 +247,12 @@
       if (!Store.hasRemote()) return { pulled: 0, pushed: 0, changed: 0 };
       if (Store._syncP) { await Store._syncP.catch(() => { }); return Store.sync(); }
       Store._syncP = Store._sync();
-      try { return await Store._syncP; } finally { Store._syncP = null; }
+      try {
+        const r = await Store._syncP;
+        // 回收桶超過 30 天的，同步完順便永久刪除（會排進上傳佇列）
+        try { Store.purgeOldTrash(); } catch { }
+        return r;
+      } finally { Store._syncP = null; }
     },
     async _sync() {
       Store.syncing = true; listeners.forEach(fn => fn());
