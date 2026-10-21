@@ -56,6 +56,24 @@
       });
     },
 
+    /** 對話框打開時鎖住後面的頁面（iPhone 也有效）；全部對話框關掉才解鎖，並回到原本的位置 */
+    lockScroll() {
+      if (U._lockY != null) return;
+      U._lockY = window.scrollY;
+      const b = document.body.style;
+      b.position = 'fixed'; b.top = -U._lockY + 'px'; b.left = '0'; b.right = '0'; b.width = '100%';
+      document.documentElement.classList.add('modal-open');
+    },
+    unlockScroll(restore = true) {
+      if (U._lockY == null) return;
+      const y = U._lockY; U._lockY = null;
+      const b = document.body.style;
+      b.position = b.top = b.left = b.right = b.width = '';
+      document.documentElement.classList.remove('modal-open');
+      if (restore) window.scrollTo({ top: y, behavior: 'instant' });
+    },
+    _modals: 0,
+
     modal(html, { title = '', small = false, wide = false } = {}) {
       const wrap = document.createElement('div');
       wrap.className = 'modal-wrap';
@@ -64,10 +82,17 @@
         <div class="modal-body">${html}</div></div>`;
       document.body.appendChild(wrap);
       requestAnimationFrame(() => wrap.classList.add('in'));
+      U._modals++; U.lockScroll();
+      let closed = false;
       const api = {
         el: wrap.querySelector('.modal'),
         onClose: null,
-        close() { wrap.classList.remove('in'); setTimeout(() => wrap.remove(), 180); document.removeEventListener('keydown', onKey); },
+        close() {
+          if (closed) return; closed = true;
+          wrap.classList.remove('in'); setTimeout(() => wrap.remove(), 180); document.removeEventListener('keydown', onKey);
+          U._modals = Math.max(0, U._modals - 1);
+          if (!U._modals) U.unlockScroll();
+        },
       };
       const onKey = e => { if (e.key === 'Escape') { api.close(); api.onClose && api.onClose(); } };
       document.addEventListener('keydown', onKey);

@@ -1392,3 +1392,7 @@ html[data-font="xl"] { font-size: 125%; }
 .si-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
 .si-links .btn { gap: 6px; }
 @media print { .stops .stop-info { display: none; } }
+
+/* 對話框打開時，只有對話框本身可以捲動 */
+.modal-wrap, .modal { overscroll-behavior: contain; }
+html.modal-open { scroll-behavior: auto; }

@@ -44,6 +44,7 @@
     const [name, params] = resolve();
     if (current?.cleanup) current.cleanup();
     U.$$('.modal-wrap').forEach(m => m.remove());
+    U._modals = 0; U.unlockScroll(false);   // 換頁時直接解鎖，不用回到舊位置
     applyRole();
     const el = fresh(name);
     // 訪客不能進入編輯類頁面
