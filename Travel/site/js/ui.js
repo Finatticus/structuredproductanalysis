@@ -3,6 +3,7 @@
   const S = (p, w = 18) => `<svg class="ico" viewBox="0 0 24 24" width="${w}" height="${w}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
   const ICONS = {
     plus: '<path d="M12 5v14M5 12h14"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.4"/>',
     edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>',
     trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
     copy: '<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
@@ -83,6 +84,17 @@
   };
   UI.theme = theme;
   theme.apply();
+
+  // 字體大小：每台裝置自己記住（整個網站的字都用 rem，調整根字級就會一起放大）
+  const FONTS = [{ id: 'm', name: '標準' }, { id: 'l', name: '大' }, { id: 'xl', name: '特大' }];
+  const font = {
+    list: FONTS,
+    get: () => FONTS.some(f => f.id === ls('ta.font')) ? ls('ta.font') : 'm',
+    apply() { const id = font.get(); if (id === 'm') delete document.documentElement.dataset.font; else document.documentElement.dataset.font = id; },
+    set(id) { ls('ta.font', id); font.apply(); },
+  };
+  UI.font = font;
+  font.apply();
 
   window.TA = window.TA || {};
   TA.ui = UI;

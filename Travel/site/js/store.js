@@ -138,7 +138,7 @@
       const re = /<img[^>]+src="(https?:\/\/[^"]+)"/g;
       const own = u => /googleusercontent\.com|drive\.google\.com/.test(u);
       for (const t of Store.all()) {
-        const html = [t.intro, ...(t.days || []).flatMap(d => [d.notes, ...(d.blocks || []).map(b => b.body)]), ...(t.sections || []).map(s => s.body), ...(t.bookings || []).map(b => b.note || '')].join('');
+        const html = [t.intro, ...(t.days || []).flatMap(d => [d.notes, ...(d.blocks || []).map(b => b.body), ...(d.stops || []).map(p => p.info || '')]), ...(t.sections || []).map(s => s.body), ...(t.bookings || []).map(b => b.note || '')].join('');
         for (const m of html.matchAll(re)) if (!own(m[1])) set.add(m[1].replace(/&amp;/g, '&'));
         if (t.cover && /^https?:/.test(t.cover) && !/googleusercontent\.com/.test(t.cover)) set.add(t.cover);
       }

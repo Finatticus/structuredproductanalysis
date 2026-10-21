@@ -83,6 +83,12 @@
         <label class="mini-check"><input type="checkbox" id="theme-auto" ${UI.theme.autoDark() ? 'checked' : ''} ${UI.theme.get() === 'dark' ? 'disabled' : ''}>手機或電腦切到深色模式時，自動改用深色</label>
       </section>
 
+      <section class="panel" id="font-panel">
+        <h3>字體大小</h3>
+        <p class="hint">只會改變這台裝置的顯示。</p>
+        <div class="seg font-seg">${UI.font.list.map(f => `<button type="button" data-font-id="${f.id}" class="${UI.font.get() === f.id ? 'on' : ''}"><span class="fs-a fs-${f.id}">Aa</span>${f.name}</button>`).join('')}</div>
+      </section>
+
       <section class="panel admin-only">
         <h3>雲端資料</h3>
         <p class="hint">所有旅程存在你的 Google 試算表，圖片存在你的 Google Drive。</p>
@@ -157,6 +163,11 @@
       UI.theme.set(b.dataset.themeId);
       U.$$('.theme-opt', el).forEach(x => x.classList.toggle('on', x === b));
       const cb = U.$('#theme-auto', el); if (cb) cb.disabled = b.dataset.themeId === 'dark';
+    });
+    el.addEventListener('click', e => {
+      const b = e.target.closest('[data-font-id]'); if (!b) return;
+      UI.font.set(b.dataset.fontId);
+      U.$$('[data-font-id]', el).forEach(x => x.classList.toggle('on', x === b));
     });
     U.$('#theme-auto', el)?.addEventListener('change', e => UI.theme.set(UI.theme.get(), e.target.checked));
     el.addEventListener('click', async e => {

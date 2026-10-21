@@ -138,6 +138,16 @@
     if (changed && onDone) onDone();
   }
 
+  /** 一趟旅程住過的旅宿：訂位裡的住宿＋每日行程填的住宿（同一間只算一次，括號裡的備註不影響比對） */
+  function hotelStays(t) {
+    const key = s => String(s || '').replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const list = [...(t.bookings || []).filter(b => b.type === 'hotel'), ...(TA.bookings ? TA.bookings.hotelsFromDays(t) : [])];
+    return list.filter(b => key(b.name)).map(b => ({
+      key: key(b.name), name: String(b.name).trim(), url: b.url || '',
+      nights: b.checkin && b.checkout ? Math.max(0, TA.u.diffDays(b.checkin, b.checkout)) : 0,
+    }));
+  }
+
   /** 已完成旅程 + 手動補充的足跡 */
   function stats(trips, profile) {
     const S = TA.store, u = TA.u;
@@ -147,7 +157,7 @@
     for (const t of done) {
       (t.countries || []).forEach(c => countries.add(TA.countries.find(c)?.zh || c));
       (t.cities || []).forEach(c => cities.add(c));
-      (t.days || []).forEach(d => d.hotel && hotels.add(d.hotel.toLowerCase().replace(/\s+/g, ' ').trim()));
+      hotelStays(t).forEach(h => hotels.add(h.key));
       days += t.startDate && t.endDate ? u.diffDays(t.startDate, t.endDate) + 1 : (t.days || []).length;
       km += tripKm(t);
     }
@@ -183,5 +193,5 @@
   }
 
   window.TA = window.TA || {};
-  TA.geo = { countryOf, stats, tripKm, roundKm, dist, HOME, placePoints, cityLL, search, resolve, reverse, backfill };
+  TA.geo = { countryOf, stats, tripKm, roundKm, dist, HOME, placePoints, cityLL, search, resolve, reverse, backfill, hotelStays };
 })();

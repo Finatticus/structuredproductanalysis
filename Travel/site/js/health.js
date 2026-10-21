@@ -18,6 +18,7 @@
     (t.days || []).forEach((d, i) => {
       const day = `Day ${i + 1}（${UI.dot(d.date, false)}）`;
       (d.stops || []).forEach((p, k) => p.url && out.push({ url: p.url, kind: 'link', where: { kind: 'stop', i, k, label: `${day} 站點「${tidy(p.name)}」` } }));
+      (d.stops || []).forEach((p, k) => p.info && fromHtml(p.info, { kind: 'stopinfo', i, k, label: `${day}「${tidy(p.name)}」的介紹` }));
       if (d.hotelUrl) out.push({ url: d.hotelUrl, kind: 'link', where: { kind: 'day', i, field: 'hotelUrl', label: `${day} 住宿連結` } });
       fromHtml(d.notes, { kind: 'day', i, field: 'notes', label: `${day} 備註` });
       (d.blocks || []).forEach((b, j) => fromHtml(b.body, { kind: 'block', i, j, label: `${day}「${b.title || '收合區塊'}」` }));

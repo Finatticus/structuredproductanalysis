@@ -157,7 +157,7 @@
       if (c && c.level !== 'past' && c.days <= 14) out.push({ t, b, sort: c.days, text: `${c.text}（${c.when}）`, level: c.level });
       if (b.type === 'flight' && b.dep) {
         const h = (new Date(b.dep) - Date.now()) / 3600000;
-        if (h > 0 && h <= 48) out.push({ t, b, sort: -1, text: `${h < 24 ? '今天' : '明天'} ${tPart(b.dep)} 起飛${b.from ? '，' + b.from : ''}`, level: 'urgent' });
+        if (h > 0 && h <= 48) out.push({ t, b, sort: -1, text: `${dPart(b.dep) === TA.u.todayStr() ? '今天' : h < 48 && dPart(b.dep) === TA.u.addDays?.(TA.u.todayStr(), 1) ? '明天' : UI.dot(dPart(b.dep), false)} ${tPart(b.dep)} 起飛${b.from ? '，' + b.from : ''}`, level: 'urgent' });
       }
     }
     return out.sort((a, b) => a.sort - b.sort).slice(0, 5);

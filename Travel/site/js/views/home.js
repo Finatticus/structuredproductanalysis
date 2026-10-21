@@ -122,18 +122,16 @@
     }
     if (k === 'hotels') {
       const m = new Map();
-      trips.forEach(t => (t.days || []).forEach(d => {
-        if (!d.hotel) return;
-        const key = d.hotel.toLowerCase().replace(/\s+/g, ' ').trim();
-        const x = m.get(key) || { name: d.hotel, nights: 0, trips: new Map(), url: '' };
-        x.nights++; x.trips.set(t.id, t); if (!x.url && d.hotelUrl) x.url = d.hotelUrl;
-        m.set(key, x);
+      trips.forEach(t => TA.geo.hotelStays(t).forEach(h => {
+        const x = m.get(h.key) || { name: h.name, nights: 0, trips: new Map(), url: '' };
+        x.nights += h.nights; x.trips.set(t.id, t); if (!x.url && h.url) x.url = h.url;
+        m.set(h.key, x);
       }));
       const list = [...m.values()].sort((a, b) => b.trips.size - a.trips.size || b.nights - a.nights);
       return head('住過的旅宿', `共 ${list.reduce((s, x) => s + x.nights, 0)} 晚`) + `<div class="sd-list">${list.map(x => `<div class="sd-row sd-hotel">
         <b>${x.url ? `<a href="${E(x.url)}" target="_blank" rel="noopener">${E(x.name)}</a>` : E(x.name)}</b>
         <span class="sd-trips">${[...x.trips.values()].map(t => `<a href="#/trip/${t.id}">${E(t.title)}</a>`).join('、')}</span>
-        <span class="sd-v">${x.nights} 晚${x.trips.size > 1 ? `<small>住過 ${x.trips.size} 次</small>` : ''}</span></div>`).join('')}</div>`;
+        <span class="sd-v">${x.nights ? x.nights + ' 晚' : ''}${x.trips.size > 1 ? `<small>住過 ${x.trips.size} 次</small>` : ''}</span></div>`).join('')}</div>`;
     }
     return '';
   }

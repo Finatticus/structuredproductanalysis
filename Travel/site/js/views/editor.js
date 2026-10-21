@@ -18,6 +18,7 @@
   const FACT_PRESETS = ['訂位代號', 'eSIM', '保險', '緊急電話', '集合時間', '同行旅伴'];
   const newDay = (date = '', hotel = '') => ({ id: U.uid('d'), date, title: '', stops: [], notes: '', hotel, hotelUrl: '', blocks: [] });
   const newStop = () => ({ id: U.uid('p'), time: '', name: '', url: '' });
+  const tidyName = s => String(s || '').replace(/[!-~]{41,}/g, '…').slice(0, 40);
 
   function chipsHtml(field, values, placeholder, list, trip) {
     return `<div class="chips" data-chips="${field}">
@@ -58,7 +59,7 @@
   function render(el, params) {
     const isNew = !params.id;
     const orig = isNew ? null : S.get(params.id);
-    if (!isNew && !orig) { el.innerHTML = `<div class="empty-box">找不到這段旅程<br><a class="btn" href="#/">回主頁</a></div>`; return; }
+    if (!isNew && !orig) return TA.views.missingTrip(el, params.id);
     let t = isNew ? S.newTrip() : U.clone(orig);
     let dirty = false;
     // 開始編輯時的版本：儲存前比對，避免蓋掉這段期間在別處（另一台裝置、同步）做的修改
@@ -66,7 +67,8 @@
     let base = strip(orig);
     const open = new Set(t.days.length <= 2 ? t.days.map(d => d.id) : []);
     const secOpen = new Set(t.sections.length <= 2 ? t.sections.map(x => x.id) : []);
-    const secMode = {};   // 分頁權限的介面狀態：'some' 時即使還沒勾訪客也顯示訪客清單
+    const secMode = {};
+    const infoOpen = new Set();   // 正在編輯「介紹與資訊」的站點   // 分頁權限的介面狀態：'some' 時即使還沒勾訪客也顯示訪客清單
     let guests = S.guestsCached() || [];
     // 訪客清單讀到後，更新分頁權限的顯示（正在打字時不重畫，以免游標跑掉）
     if (!S.isGuest()) S.guests().then(g => { guests = g; if (t.sections.some(x => Array.isArray(x.visibleTo)) && !el.contains(document.activeElement)) paint(); }).catch(() => { });
@@ -102,13 +104,22 @@
 
     function stopsHtml(d, i) {
       return `<div class="stops-ed" data-i="${i}">
-        ${(d.stops || []).map((p, k) => `<div class="stop-ed" data-k="${k}">
+        ${(d.stops || []).map((p, k) => {
+          const has = !R.isEmpty(p.info), on = infoOpen.has(p.id);
+          return `<div class="stop-wrap${on ? ' info-on' : ''}" data-k="${k}"><div class="stop-ed" data-k="${k}">
           <span class="handle sh-stop" title="拖曳排序">${UI.icon('drag', 16)}</span>
           <input type="time" data-bind="days.${i}.stops.${k}.time" value="${E(p.time)}" title="時間（可空白）">
           <input type="text" class="stop-name" data-bind="days.${i}.stops.${k}.name" value="${E(p.name)}" placeholder="景點、餐廳或交通" data-i="${i}" data-k="${k}">
           <input type="url" class="stop-url" data-bind="days.${i}.stops.${k}.url" value="${E(p.url)}" placeholder="連結（選填）">
+          <button type="button" class="icon-btn stop-info-btn${has ? ' has' : ''}${on ? ' on' : ''}" data-act="stop-info" data-i="${i}" data-k="${k}" title="${has ? '介紹與資訊（已填寫，點一下編輯）' : '新增介紹與資訊：景點介紹、店家資訊…'}" aria-expanded="${on}">${UI.icon('info', 16)}</button>
           <button type="button" class="icon-btn" data-act="stop-del" data-i="${i}" data-k="${k}" title="移除">${UI.icon('x', 14)}</button>
-        </div>`).join('')}
+        </div>
+        ${on ? `<div class="stop-info-ed">
+          <div class="sie-head"><span>${UI.icon('info', 14)}${p.name ? `「${E(tidyName(p.name))}」的介紹與資訊` : '介紹與資訊'}</span><small>旅程頁會在這一站後面顯示小圖示，點開就是這裡的內容</small></div>
+          ${R.editor(`days.${i}.stops.${k}.info`, p.info || '', { simple: true, placeholder: '景點介紹、營業時間、必點、門票、交通方式、照片……' })}
+          <div class="sie-foot"><button type="button" class="btn sm" data-act="stop-info" data-i="${i}" data-k="${k}">${UI.icon('up', 14)}完成，收合</button></div>
+        </div>` : ''}</div>`;
+        }).join('')}
         <button type="button" class="btn sm ghost" data-act="stop-add" data-i="${i}">${UI.icon('plus', 14)}新增一站</button>
       </div>`;
     }
@@ -309,7 +320,7 @@
       }));
       U.$$('.ed-blocks', el).forEach(b => mk(b, '.sh-blk', () => t.days[+b.dataset.i].blocks));
       U.$$('.stops-ed', el).forEach(b => sortables.push(Sortable.create(b, {
-        handle: '.sh-stop', draggable: '.stop-ed', animation: 150, onEnd: ev => {
+        handle: '.sh-stop', draggable: '.stop-wrap', animation: 150, onEnd: ev => {
           if (ev.oldIndex === ev.newIndex) return;
           const arr = t.days[+b.dataset.i].stops; const [m] = arr.splice(ev.oldIndex, 1); arr.splice(ev.newIndex, 0, m); touch(); paint();
         }
@@ -477,7 +488,20 @@
           if (await U.confirm(`刪除第 ${i + 1} 天（${UI.dot(t.days[i].date, false)}）的所有內容？`, { ok: '刪除', danger: true })) { t.days.splice(i, 1); touch(); paint(); }
           return;
         case 'stop-add': t.days[i].stops.push(newStop()); touch(); paint(); U.$$(`.stop-name[data-i="${i}"]`, el).pop()?.focus(); return;
-        case 'stop-del': t.days[i].stops.splice(k, 1); touch(); paint(); return;
+        case 'stop-del': {
+          const p = t.days[i].stops[k];
+          if (p && !R.isEmpty(p.info) && !(await U.confirm(`「${tidyName(p.name) || '這一站'}」有填寫介紹與資訊，確定要移除這一站？`, { ok: '移除', danger: true }))) return;
+          t.days[i].stops.splice(k, 1); touch(); paint(); return;
+        }
+        case 'stop-info': {
+          const p = t.days[i].stops[k]; if (!p) return;
+          const opening = !infoOpen.has(p.id);
+          if (opening) infoOpen.add(p.id); else infoOpen.delete(p.id);
+          paint();
+          if (opening) setTimeout(() => U.$(`.rte[data-path="days.${i}.stops.${k}.info"] .rte-body`, el)?.focus(), 30);
+          else U.$(`.stop-wrap .stop-info-btn[data-i="${i}"][data-k="${k}"]`, el)?.focus({ preventScroll: true });
+          return;
+        }
         case 'blk-add': t.days[i].blocks.push({ id: U.uid('b'), title: a.dataset.title, body: '', open: false }); touch(); paint(); return;
         case 'blk-del': if (await U.confirm('刪除這個區塊？', { ok: '刪除', danger: true })) { t.days[i].blocks.splice(+a.dataset.j, 1); touch(); paint(); } return;
         case 'sec-toggle': { const id = t.sections[k].id; secOpen.has(id) ? secOpen.delete(id) : secOpen.add(id); paint(); return; }
@@ -533,6 +557,13 @@
     async function save() {
       if (el.querySelector('img.uploading')) return U.toast('圖片還在上傳中，請稍候', 'err');
       const cur = isNew ? null : S.get(t.id);
+      // 編輯期間在別的裝置被刪掉了：先問清楚，不要默默救回來
+      if (!isNew && !cur) {
+        const inTrash = S.trashed().some(x => x.id === t.id);
+        const ok = await U.confirm(inTrash ? '這段旅程在你編輯期間，已經在其他地方被刪除（目前在回收桶）。儲存會把它救回來，並用你這份內容，確定要儲存嗎？' : '這段旅程在你編輯期間，已經在其他地方被永久刪除。儲存會用你這份內容重新建立，確定要儲存嗎？', { ok: '儲存並救回' });
+        if (!ok) return;
+        delete t.trashedAt;
+      }
       if (cur && strip(cur) !== base) {
         const ok = await U.confirm('這段旅程在你編輯期間，已經在其他地方（例如另一台裝置）被修改過。現在儲存會用你這份覆蓋那些修改，確定要儲存嗎？', { ok: '用我這份覆蓋', danger: true });
         if (!ok) return;
@@ -542,7 +573,8 @@
       if (!t.title.trim()) t.title = t.cities.join('・') || t.countries.join('・') || '未命名旅程';
       // 整理：清掉空白的站點、淨化圖文內容
       t.days.forEach(d => {
-        d.stops = (d.stops || []).filter(p => p.name.trim() || p.time || p.url);
+        d.stops = (d.stops || []).filter(p => p.name.trim() || p.time || p.url || !R.isEmpty(p.info));
+        d.stops.forEach(p => { if (R.isEmpty(p.info)) delete p.info; else p.info = R.sanitize(p.info); });
         d.notes = R.sanitize(d.notes);
         d.blocks.forEach(b => (b.body = R.sanitize(b.body)));
       });
@@ -579,13 +611,15 @@
       try { f = JSON.parse(sessionStorage.getItem('ta.focus') || 'null'); } catch { }
       if (!f || f.id !== t.id) return;
       sessionStorage.removeItem('ta.focus');
-      if (['day', 'stop', 'block'].includes(f.kind) && t.days[f.i]) open.add(t.days[f.i].id);
+      if (['day', 'stop', 'block', 'stopinfo'].includes(f.kind) && t.days[f.i]) open.add(t.days[f.i].id);
+      if (f.kind === 'stopinfo' && t.days[f.i]?.stops[f.k]) infoOpen.add(t.days[f.i].stops[f.k].id);
       if (f.kind === 'booking' && t.bookings[f.i]) bkOpen.add(t.bookings[f.i].id);
       if (f.kind === 'section' && t.sections[f.k]) secOpen.add(t.sections[f.k].id);
       paint(false);
       const sel = {
         day: f.field && f.field !== 'notes' ? `[data-bind="days.${f.i}.${f.field}"]` : f.field === 'notes' ? `.rte[data-path="days.${f.i}.notes"]` : `#ed-day-${f.i}`,
         stop: `.stop-name[data-i="${f.i}"][data-k="${f.k}"]`,
+        stopinfo: `.rte[data-path="days.${f.i}.stops.${f.k}.info"]`,
         block: `.ed-blocks[data-i="${f.i}"] .ed-block[data-j="${f.j}"]`,
         booking: `.bk-ed[data-i="${f.i}"]`,
         city: `.chip-x[data-city="${CSS.escape(f.name || '')}"]`,

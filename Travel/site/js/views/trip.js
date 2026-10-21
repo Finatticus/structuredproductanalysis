@@ -24,6 +24,24 @@
   const pen = (t, part, label) => TA.store.isGuest() ? '' : `<a class="ed-pen" href="#/trip/${t.id}/edit/${part}" title="${label}" aria-label="${label}">${UI.icon('edit', 14)}</a>`;
   const lockIco = s => Array.isArray(s.visibleTo) && !TA.store.isGuest() ? `<span class="tab-lock" title="${s.visibleTo.length ? '只有你和指定的訪客看得到' : '只有你看得到'}">${UI.icon('lock', 11)}</span>` : '';
 
+  /** 站點的介紹與資訊：小視窗 */
+  function stopInfo(t, dayId, stopId) {
+    const di = t.days.findIndex(d => d.id === dayId), d = t.days[di];
+    const p = d?.stops.find(x => x.id === stopId);
+    if (!p || R.isEmpty(p.info)) return;
+    const hasMap = /google\.[^/]+\/maps|maps\.app\.goo\.gl/.test(p.url || '');
+    const links = [
+      p.url ? `<a class="btn sm ghost" href="${E(p.url)}" target="_blank" rel="noopener">${UI.icon(hasMap ? 'map' : 'link', 14)}${hasMap ? 'Google 地圖' : '開啟連結'}</a>` : '',
+      !hasMap && p.name ? `<a class="btn sm ghost" href="${E(mapQ(tidy(p.name), t))}" target="_blank" rel="noopener">${UI.icon('map', 14)}在地圖查看</a>` : '',
+      S.isGuest() ? '' : `<a class="btn sm ghost" href="#/trip/${t.id}/edit/day-${d.id}" data-close>${UI.icon('edit', 14)}編輯</a>`,
+    ].filter(Boolean).join('');
+    const m = U.modal(`<div class="si-meta">Day ${di + 1}　${UI.dot(d.date, false)}${d.date ? '　' + UI.week(d.date) : ''}${p.time ? `<b>${E(p.time)}</b>` : ''}</div>
+      <div class="rich si-body">${R.view(p.info)}</div>
+      ${links ? `<div class="si-links">${links}</div>` : ''}`, { title: tidy(p.name) || '介紹與資訊' });
+    m.el.classList.add('si-modal');
+    m.el.addEventListener('click', e => { const ft = e.target.closest('.fold-title'); if (ft) ft.parentElement.classList.toggle('open'); });
+  }
+
   function dayHtml(d, i, t) {
     const today = U.todayStr() === d.date;
     const stops = (d.stops || []).filter(p => p.name || p.time);
@@ -38,7 +56,7 @@
       <div class="day-main">
         ${d.title ? `<h3 class="day-title">${E(d.title)}</h3>` : ''}
         ${TA.bookings.dayItems(t, d.date)}
-        ${stops.length ? `<ol class="stops">${stops.map(p => `<li><span class="t">${E(p.time || '')}</span><span class="n" title="${E(p.name)}">${p.url ? `<a href="${E(p.url)}" target="_blank" rel="noopener">${E(tidy(p.name || p.url))}</a>` : E(tidy(p.name))}${p.name && !/google\.[^/]+\/maps|maps\.app\.goo\.gl/.test(p.url || '') ? `<a class="map-ic" href="${E(mapQ(tidy(p.name), t))}" target="_blank" rel="noopener" title="在 Google 地圖查看">${UI.icon('map', 13)}</a>` : ''}</span></li>`).join('')}</ol>` : ''}
+        ${stops.length ? `<ol class="stops">${stops.map(p => `<li><span class="t">${E(p.time || '')}</span><span class="n" title="${E(p.name)}">${p.url ? `<a href="${E(p.url)}" target="_blank" rel="noopener">${E(tidy(p.name || p.url))}</a>` : E(tidy(p.name))}${p.name && !/google\.[^/]+\/maps|maps\.app\.goo\.gl/.test(p.url || '') ? `<a class="map-ic" href="${E(mapQ(tidy(p.name), t))}" target="_blank" rel="noopener" title="在 Google 地圖查看">${UI.icon('map', 13)}</a>` : ''}${R.isEmpty(p.info) ? '' : `<button type="button" class="stop-info" data-stop-info="${E(d.id)}|${E(p.id)}" title="介紹與資訊" aria-label="${E(tidy(p.name))} 的介紹與資訊">${UI.icon('info', 15)}</button>`}</span></li>`).join('')}</ol>` : ''}
         ${rich(d.notes, `days.${i}.notes`)}
         ${d.hotel ? `<div class="stay-line"><span class="lbl">住宿</span>${d.hotelUrl ? `<a href="${E(d.hotelUrl)}" target="_blank" rel="noopener">${E(d.hotel)}</a>` : E(d.hotel)}${/google\.[^/]+\/maps|maps\.app\.goo\.gl/.test(d.hotelUrl || '') ? '' : `<a class="map-ic" href="${E(mapQ(d.hotel, t))}" target="_blank" rel="noopener" title="在 Google 地圖查看">${UI.icon('map', 13)}</a>`}</div>` : ''}
         ${(d.blocks || []).map((b, j) => foldHtml(b.title || '詳細內容', b.body, `days.${i}.blocks.${j}.body`, b.open)).join('')}
@@ -47,9 +65,19 @@
     </article>`;
   }
 
+  /** 找不到旅程：如果是在回收桶裡（例如舊書籤），管理者可以直接救回 */
+  function missing(el, id) {
+    const x = S.isGuest() ? null : S.trashed().find(t => t.id === id);
+    if (!x) { el.innerHTML = `<div class="empty-box">找不到這段旅程<br><a class="btn" href="#/">回主頁</a></div>`; return; }
+    el.innerHTML = `<div class="empty-box">「${E(x.title)}」在回收桶裡，${S.trashLeft(x)} 天後會永久刪除。<br>
+      <a class="btn ghost" href="#/">回主頁</a> <button class="btn primary" data-restore>救回這段旅程</button></div>`;
+    U.$('[data-restore]', el).onclick = () => { S.restore(id); U.toast(`已救回「${x.title}」`); TA.app.rerender(); };
+  }
+  (TA.views = TA.views || {}).missingTrip = missing;
+
   function render(el, { id }) {
     const t = S.get(id);
-    if (!t) { el.innerHTML = `<div class="empty-box">找不到這段旅程<br><a class="btn" href="#/">回主頁</a></div>`; return; }
+    if (!t) return missing(el, id);
     const st = S.statusOf(t);
     const n = UI.nDays(t);
     const left = t.startDate ? U.diffDays(U.todayStr(), t.startDate) : null;
@@ -142,6 +170,8 @@
       }
       const ft = e.target.closest('.fold-title');
       if (ft) { ft.parentElement.classList.toggle('open'); return; }
+      const si = e.target.closest('[data-stop-info]');
+      if (si) { stopInfo(t, ...si.dataset.stopInfo.split('|')); return; }
       const cp = e.target.closest('[data-copy]');
       if (cp) {
         const v = cp.dataset.copy;

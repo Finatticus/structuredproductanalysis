@@ -23,7 +23,7 @@
 
   /** 旅程內容裡用到的所有圖片 */
   function tripImages(t) {
-    const html = [t.intro, ...(t.days || []).flatMap(d => [d.notes, ...(d.blocks || []).map(b => b.body)]), ...(t.sections || []).map(s => s.body), ...(t.bookings || []).map(b => b.note || '')].join('');
+    const html = [t.intro, ...(t.days || []).flatMap(d => [d.notes, ...(d.blocks || []).map(b => b.body), ...(d.stops || []).map(p => p.info || '')]), ...(t.sections || []).map(s => s.body), ...(t.bookings || []).map(b => b.note || '')].join('');
     const set = new Set([...html.matchAll(/<img[^>]+src="(https?:\/\/[^"]+)"/g)].map(m => m[1].replace(/&amp;/g, '&')));
     if (t.cover && /^https?:/.test(t.cover)) set.add(t.cover);
     (t.countries || []).forEach(c => { const k = TA.countries.find(c); if (k) [20, 40, 80].forEach(w => set.add(TA.countries.flagUrl(k, w))); });

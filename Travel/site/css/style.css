@@ -413,7 +413,7 @@ input.big { font-family: var(--serif); font-size: 1.2rem; height: 48px; font-wei
 .ed-day-acts { display: flex; flex: none; }
 .ed-day-body { padding: 10px 0 26px 30px; }
 .stops-ed { display: flex; flex-direction: column; gap: 6px; }
-.stop-ed { display: grid; grid-template-columns: 26px 136px minmax(0, 1fr) minmax(0, .7fr) 34px; gap: 6px; align-items: center; }
+.stop-ed { display: grid; grid-template-columns: 26px 136px minmax(0, 1fr) minmax(0, .7fr) 34px 34px; gap: 6px; align-items: center; }
 .stop-ed .stop-url { color: var(--muted); font-size: .84rem; }
 .stops-ed > .btn { align-self: flex-start; margin-left: 26px; }
 .ed-blocks { display: flex; flex-direction: column; gap: 14px; }
@@ -954,7 +954,7 @@ html { -webkit-tap-highlight-color: transparent; }
   .btn { height: 44px; padding: 0 16px; }
   .btn.sm { height: 36px; }
   .icon-btn { width: 40px; height: 40px; }
-  input[type=text], input[type=url], input[type=date], input[type=time], input[type=datetime-local], input[type=search], input[type=password], input[type=number], select, textarea, .rte-body, .chips input { font-size: 16px !important; }
+  input[type=text], input[type=url], input[type=date], input[type=time], input[type=datetime-local], input[type=search], input[type=password], input[type=number], select, textarea, .rte-body, .chips input { font-size: max(16px, 1rem) !important; }
   input[type=text], input[type=url], input[type=date], input[type=time], input[type=datetime-local], input[type=tel], input[type=search], input[type=password], select { height: 44px; }
 
   /* 置頂列的位置跟著變矮的頂部 */
@@ -996,12 +996,16 @@ html { -webkit-tap-highlight-color: transparent; }
   .rte-bar button { min-width: 38px; height: 38px; flex: none; }
   .rte-tbl { flex: none; }
   .rte-body { min-height: 120px; padding: 12px; }
-  .stop-ed { grid-template-columns: 30px 1fr 40px; grid-template-areas: "h t d" "n n n" "u u u"; row-gap: 4px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .stop-ed { grid-template-columns: 30px 1fr 40px 40px; grid-template-areas: "h t i d" "n n n n" "u u u u"; row-gap: 4px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
   .stop-ed .handle { grid-area: h; }
   .stop-ed input[type=time] { grid-area: t; }
   .stop-ed .stop-name { grid-area: n; }
   .stop-ed .stop-url { grid-area: u; }
   .stop-ed .icon-btn { grid-area: d; }
+  .stop-ed .stop-info-btn { grid-area: i; }
+  .stop-wrap .stop-ed { border-bottom: 0; }
+  .stop-wrap { border-bottom: 1px dashed var(--line); }
+  .stop-info-ed { margin: 0 0 10px; }
   .stops-ed > .btn { margin-left: 0; width: 100%; }
   .ed-block { padding-left: 10px; }
   .ed-block-head { flex-wrap: wrap; }
@@ -1349,3 +1353,42 @@ body.guest .ed-pen { display: none !important; }
 .trash-box .off-row small em { font-style: normal; }
 .trash-box .tr-soon { color: var(--danger, #b42318); }
 .off-row b em.muted { font-style: normal; font-weight: 400; font-size: .8rem; margin-left: 4px; }
+
+
+/* ============ 字體大小 ============ */
+html[data-font="l"] { font-size: 112.5%; }
+html[data-font="xl"] { font-size: 125%; }
+.font-seg button { display: inline-flex; align-items: center; gap: 8px; padding: 0 18px; height: 44px; }
+.font-seg .fs-a { font-family: var(--serif, serif); line-height: 1; }
+.fs-a.fs-m { font-size: 15px; } .fs-a.fs-l { font-size: 18px; } .fs-a.fs-xl { font-size: 21px; }
+/* 字體放大時，手機上旅程頁那排按鈕維持一行、不被切字 */
+@media (max-width: 720px) {
+  html[data-font] .trip-head .head-actions .btn { font-size: min(.8rem, 3.6vw); }
+  html[data-font] .trip-head .head-actions .btn.ghost { font-size: min(.74rem, 3.3vw); }
+}
+
+/* ============ 站點的介紹與資訊 ============ */
+.stop-wrap { display: flex; flex-direction: column; gap: 6px; }
+.stop-info-btn { color: var(--muted); }
+.stop-info-btn.has { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.stop-info-btn.on { color: var(--paper); background: var(--ink); }
+.stop-info-ed { margin: 0 0 8px 32px; padding: 12px 14px 12px; border: 1px solid var(--line-2); border-left: 2px solid var(--accent); background: color-mix(in srgb, var(--ink) 3%, var(--surface)); border-radius: 0 4px 4px 0; }
+.sie-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 8px; }
+.sie-head span { display: inline-flex; align-items: center; gap: 6px; font-size: .86rem; font-weight: 600; color: var(--ink); }
+.sie-head span .ico, .sie-head span svg { color: var(--accent); }
+.sie-head small { color: var(--muted); font-size: .74rem; }
+.stop-info-ed .rte-body { min-height: 96px; }
+.sie-foot { display: flex; justify-content: flex-end; margin-top: 8px; }
+.sie-foot .btn { gap: 4px; }
+@media (max-width: 720px) { .stop-info-ed { margin-left: 0; } }
+
+.stops .stop-info { display: inline-flex; align-items: center; justify-content: center; vertical-align: -3px; width: 24px; height: 24px; margin-left: 4px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--accent); cursor: pointer; }
+.stops .stop-info:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.si-meta { display: flex; align-items: baseline; gap: 10px; margin: -4px 0 12px; color: var(--muted); font-size: .8rem; letter-spacing: .02em; }
+.si-meta b { color: var(--accent); font-weight: 500; font-variant-numeric: tabular-nums; }
+.si-body { font-size: .95rem; }
+.si-body > :first-child { margin-top: 0; }
+.si-body img { border-radius: 3px; }
+.si-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.si-links .btn { gap: 6px; }
+@media print { .stops .stop-info { display: none; } }

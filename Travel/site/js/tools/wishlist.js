@@ -252,7 +252,7 @@
           <p class="lede">${E(trip.title)}　${UI.range(trip.startDate, trip.endDate)}</p>
           <div class="add-row">${S.canWish(trip.id) ? `<button class="btn primary" data-act="gadd">${UI.icon('plus', 16)}新增願望</button>` : ''}<button class="btn primary" data-act="add">${UI.icon('plus', 16)}新增願望</button><a class="btn ghost" href="#/tool/wishlist">全部願望清單</a></div>
           ${S.canWish(trip.id) ? '<p class="hint">旅程主人開放你在這趟新增願望：想去的地方、想吃的店都可以加進來。</p>' : ''}</header>
-        ${mine.length ? mine.map(x => itemHtml(x, { trip })).join('') : '<div class="empty-box">這趟還沒有願望。可以直接新增，或從下方同國家的願望加入。</div>'}
+        ${mine.length ? mine.map(x => itemHtml(x, { trip })).join('') : `<div class="empty-box">這趟還沒有願望。${!S.isGuest() ? '可以直接新增，或從下方同國家的願望加入。' : S.canWish(trip.id) ? '按上方「新增願望」加入你想去的地方。' : ''}</div>`}
         ${suggest.length ? `<section class="wl-suggest"><div class="pk-gh"><span>同國家的其他願望</span><small>${suggest.length}</small></div>
           ${suggest.map(x => `<div class="wl-item sug" data-id="${x.id}"><div class="wl-main"><div class="wl-top"><span class="wl-type">${TYPES[x.type] || '其他'}</span><b class="wl-title">${E(x.title)}</b></div>
             <div class="wl-meta"><span>${E([x.city, x.country].filter(Boolean).join('，'))}</span></div></div>
