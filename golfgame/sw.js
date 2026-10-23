@@ -1,5 +1,5 @@
 // 離線快取：程式與材質快取在手機裡，第二次開啟不用重新下載。更新版本時把 VERSION 加 1。
-const VERSION = 'dixen-v5';
+const VERSION = 'dixen-v9';
 const CORE = [
   './', './index.html', './css/style.css', './manifest.webmanifest',
   './js/main.js', './js/game.js', './js/render.js', './js/terrain.js', './js/physics.js', './js/character.js',

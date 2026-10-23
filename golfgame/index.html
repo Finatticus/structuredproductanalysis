@@ -343,7 +343,7 @@
 
 <!-- ============ 大廳 ============ -->
 <section id="scr-lobby" class="screen app-screen">
-  <header class="appbar"><small id="lb-greet">GOOD EVENING</small><h4 id="lb-name"></h4><p id="lb-stats" class="appbar-sub"></p><button id="btn-logout" class="appbar-act">登出</button></header>
+  <header class="appbar"><small id="lb-greet">GOOD EVENING</small><h4 id="lb-name"></h4><p id="lb-stats" class="appbar-sub"></p><button id="btn-logout" class="appbar-act">登出</button><button id="btn-lobby-set" class="appbar-act set2">⚙ 設定</button></header>
   <div class="body narrow">
     <button class="mode" id="mode-single"><div class="thumb t1"><svg viewBox="0 0 120 120"><use href="#i-driver"/></svg></div><div><b>單人回合</b><span>選球場、梯台、9 / 18 洞</span></div><span class="chev">›</span></button>
     <button class="mode" id="mode-host"><div class="thumb t2"><svg viewBox="0 0 120 120"><use href="#i-flag"/></svg></div><div><b>建立遊戲間</b><span>你的裝置當主機，產生驗證碼</span></div><span class="chev">›</span></button>
@@ -367,7 +367,7 @@
     <h5>風</h5><div id="st-wind" class="seg"></div>
     <h5>果嶺速度</h5><div id="st-greens" class="seg"></div>
     <div class="only-round"><h5>OK 推距離（Gimme）</h5><div id="st-gimme" class="seg"></div></div>
-    <div class="only-round" id="mull-wrap"><h5>重打次數（Mulligan，單人才有）</h5><div id="st-mull" class="seg"></div></div>
+    <div class="only-round" id="mull-wrap"><h5>重打次數（Mulligan，每人每回合）</h5><div id="st-mull" class="seg"></div></div>
     <button id="st-go" class="btn brass big">開始回合</button>
   </div>
 </section>
@@ -505,13 +505,14 @@
       <div class="ball-ring"></div>
       <!-- 直立力道條：手指往下拉，力道從上往下增加 -->
       <div class="power-v">
+        <div class="pv-adj" id="p-adj"></div>
         <div class="num pv-land" id="p-land"></div>
         <b class="num pv-val" id="p-val">0%</b>
         <div class="pv-track">
           <div class="pv-fill" id="p-fill"></div>
           <div class="pv-sweet"></div>
           <div class="pv-needle" id="p-needle"></div>
-          <span class="pv-tick" style="top:0%">0</span><span class="pv-tick" style="top:45.5%">50</span><span class="pv-tick" style="top:90.9%">100</span><span class="pv-tick ov" style="top:100%">110</span>
+          <span class="pv-tick" style="top:0%">0</span><span class="pv-tick" style="top:37.5%">50</span><span class="pv-tick" style="top:75%">100</span><span class="pv-tick ov" style="top:100%">110</span>
         </div>
       </div>
       <div class="aim-row">
@@ -533,6 +534,7 @@
       <button class="hud-btn" data-pm="putt">果嶺</button>
       <button class="hud-btn hidden" id="pb-random">換位置</button>
     </div>
+    <button class="hud-btn ff-btn hidden" id="btn-ff">加速</button>
     <div id="toast" class="toast"></div>
   </div>
 </section>
@@ -544,6 +546,7 @@
   <h3>設定</h3>
   <label class="field dark"><span>GAS 網址（留空 = 本機模式）</span><input id="set-gas" placeholder="https://script.google.com/macros/s/.../exec"></label>
   <label class="field dark"><span>畫質</span><select id="set-quality" class="select"><option value="high">高（建議新手機/電腦）</option><option value="medium">中</option><option value="low">低（舊手機）</option></select></label>
+  <label class="field dark"><span>遊戲畫面字體大小</span><div class="seg fs-seg" id="set-fs"></div></label>
   <label class="check"><input type="checkbox" id="set-sound"> 音效</label>
   <div class="dlg-btns"><button id="set-cancel" class="btn ghost-dark">取消</button><button id="set-save" class="btn brass">儲存</button></div>
 </div></div>
@@ -564,8 +567,8 @@
 </div></div>
 
 <div id="dlg-map" class="dlg"><div class="dlg-box wide map-box">
-  <h3>地圖 <span class="small">點地圖可以瞄準（推桿練習時是換站位）</span></h3>
-  <canvas id="map-big"></canvas>
+  <h3>地圖 <span class="small">兩指縮放、拖曳移動（推桿練習時點果嶺可以換站位）</span></h3>
+  <div class="map-stage"><canvas id="map-big"></canvas><div class="map-ctl"><button id="map-zin">＋</button><button id="map-zout">－</button><button id="map-reset">重設</button></div></div>
   <div class="heat-legend"><span>低</span><i></i><span>高</span><span class="small">果嶺顏色：比平均高 → 紅、低 → 藍、平 → 綠</span></div>
   <div class="dlg-btns"><button id="map-close" class="btn brass">關閉</button></div>
 </div></div>
@@ -580,6 +583,7 @@
 <div id="dlg-menu" class="dlg"><div class="dlg-box wide">
   <h3>選單</h3>
   <div id="gm-card" class="scroll-x"></div>
+  <div class="gm-fs"><span>字體大小</span><div class="seg fs-seg" id="gm-fs"></div></div>
   <div class="dlg-btns wrap">
     <button id="gm-quit" class="btn ghost-dark">離開回合</button>
     <button id="gm-close" class="btn brass">繼續</button>

@@ -15,7 +15,7 @@ export const COURSES = [
   {
     id: 'heron', name: '鷺灣海岸', en: 'Heron Bay Links', style: 'links',
     desc: '臨海林克斯球場。幾乎沒有樹，海風大且常轉向；球道硬、落地後滾很遠；深壺型沙坑掉進去常常只能往旁邊救。',
-    stimp: 8, firm: 1.25, altitude: 8, temp: 17, wind: [7, 18], fairwayW: 44, roughW: 22, corridor: 92, trees: 0.04,
+    stimp: 8, firm: 1.25, altitude: 8, temp: 17, wind: [6, 15], fairwayW: 44, roughW: 22, corridor: 92, trees: 0.04,
     holes: [
       [4, 425, -6, 'sl b3', 9], [4, 398, 10, 'b2 up', 13], [5, 560, -12, 'sl b4', 3], [3, 185, 0, 'b3 sl', 15],
       [4, 445, 8, 'b3 xc', 1], [4, 360, -14, 'b2 dn', 17], [3, 210, 0, 'b4', 11], [5, 575, 14, 'b4 sr', 5], [4, 432, -4, 'b3 up', 7],

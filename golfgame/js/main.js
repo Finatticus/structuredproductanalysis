@@ -66,6 +66,19 @@ function updateModeBadge() {
 }
 
 // ---------------- 設定 ----------------
+// 遊戲畫面字體大小：最大 120%（再大會在手機直向時面板重疊）
+const FONT_SIZES = [[1, '標準'], [1.1, '大'], [1.2, '特大']];
+function applyFontSize(v) {
+  v = FONT_SIZES.some(f => f[0] === v) ? v : 1;
+  document.documentElement.style.setProperty('--fs', v);
+  setSetting('fs', v);
+  ['set-fs', 'gm-fs'].forEach(id => {
+    $(id).innerHTML = FONT_SIZES.map(([f, l]) => `<button type="button" class="${f === v ? 'on' : ''}" data-fs="${f}">${l}</button>`).join('');
+    $(id).querySelectorAll('button').forEach(b => b.onclick = () => applyFontSize(Number(b.dataset.fs)));
+  });
+  if (world) world.resize();
+}
+
 function openSettings() {
   $('set-gas').value = gasUrl();
   $('set-quality').value = getSetting('quality', 'high');
@@ -87,6 +100,8 @@ function initSettings() {
   };
   $('set-cancel').onclick = () => $('dlg-settings').classList.remove('open');
   setSound(getSetting('sound', true));
+  applyFontSize(getSetting('fs', 1));
+  $('btn-lobby-set').onclick = openSettings;
 }
 
 // ---------------- 大廳 ----------------
@@ -278,7 +293,7 @@ function drawHoleThumb(cv, { hole, map }) {
 function roundCfg() {
   return {
     courseId: setup.courseId, holes: setup.holes, tee: setup.tee, mode: setup.kind === 'host' ? setup.mode : 'stroke',
-    wind: setup.wind, stimp: setup.stimp ?? courseById(setup.courseId).stimp, gimme: setup.gimme, mulligans: setup.kind === 'single' ? setup.mulligans : 0,
+    wind: setup.wind, stimp: setup.stimp ?? courseById(setup.courseId).stimp, gimme: setup.gimme, mulligans: setup.kind === 'practice' ? 0 : setup.mulligans,
     practice: setup.kind === 'practice', startHole: 7, seed: Math.floor(Math.random() * 2 ** 31),
   };
 }

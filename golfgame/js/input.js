@@ -27,6 +27,13 @@ export class SwingInput {
 
   get maxDrag() { return clamp(window.innerHeight * 0.34, 140, 300); }
 
+  // 手指往下的距離 → 力道。拉滿 maxDrag = 100%；超過之後要再多拉 40% 才會到 110%（超揮比較難不小心拉到）
+  depthToPower(depth) {
+    const md = this.maxDrag;
+    if (depth <= md) return Math.max(0, depth / md);
+    return 1 + Math.min(0.1, (depth - md) / (md * 0.4) * 0.1);
+  }
+
   // 出桿判定速度（px/ms）。推桿的動作比較輕，門檻低一點
   get strikeSpeed() { return clamp(window.innerHeight * 0.0011, 0.55, 1.3) * (this.putt ? 0.6 : 1); }
 
@@ -44,7 +51,7 @@ export class SwingInput {
     if (!s || e.pointerId !== s.id) return;
     const t = performance.now(), x = e.clientX, y = e.clientY;
     s.samples.push([t, x, y]);
-    while (s.samples.length > 2 && t - s.samples[0][0] > 400) s.samples.shift();
+    while (s.samples.length > 2 && t - s.samples[0][0] > 900) s.samples.shift();
     if (s.mode === 'pending') {
       const dx = x - s.x0, dy = y - s.y0;
       if (Math.hypot(dx, dy) < DECIDE_PX) return;
@@ -64,16 +71,19 @@ export class SwingInput {
       const dt = Math.max(8, t - old[0]);
       const vUp = (old[2] - y) / dt;
       if (vUp > this.strikeSpeed && s.power > 0.03) {
-        // 出桿起點 = 最近 300ms 內最低（最深）的那一點，力道鎖定在那裡
+        // 力道鎖定在「出桿前 0.7 秒內最深的位置」：出桿前手指不小心往上飄一點不會掉力道
         let bottom = s.samples[0];
-        for (const p of s.samples) if (t - p[0] < 300 && p[2] > bottom[2]) bottom = p;
+        for (const p of s.samples) if (t - p[0] < 700 && p[2] > bottom[2]) bottom = p;
         const depth = Math.max(0, bottom[2] - s.y0);
+        // 球路方向從最近 300ms 內的最低點開始算
+        let start = s.samples[0];
+        for (const p of s.samples) if (t - p[0] < 300 && p[2] > start[2]) start = p;
         s.mode = 'strike';
-        s.strike = { x: bottom[1], y: bottom[2], power: clamp(depth / this.maxDrag, 0, 1.1), depth, pathStart: s.path.length - 1 };
+        s.strike = { x: start[1], y: start[2], power: this.depthToPower(depth), depth, pathStart: s.path.length - 1 };
         this.cb.onBack && this.cb.onBack(s.strike.power);
       } else {
         // 上桿中：力道 = 目前手指往下的深度（往上移就變小）
-        s.power = clamp((y - s.y0) / this.maxDrag, 0, 1.1);
+        s.power = this.depthToPower(y - s.y0);
         this.cb.onBack && this.cb.onBack(s.power);
       }
     }

@@ -6,9 +6,9 @@ import { TEE_SETS } from './courses.js';
 const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 const STYLE = {
-  links: { macroA: 2.2, macroL: 120, microA: 1.5, microL: 16, edgeRise: 3, potDepth: 1.5, bunkerSize: [2.4, 3.6] },
-  parkland: { macroA: 4.5, macroL: 110, microA: 0.6, microL: 28, edgeRise: 9, potDepth: 0.75, bunkerSize: [5, 9] },
-  canyon: { macroA: 3.0, macroL: 90, microA: 0.8, microL: 24, edgeRise: 24, potDepth: 0.7, bunkerSize: [4.5, 8] },
+  links: { macroA: 2.2, macroL: 120, microA: 1.5, microL: 16, edgeRise: 3, potDepth: 0.85, bunkerSize: [3.4, 4.6] },
+  parkland: { macroA: 4.5, macroL: 110, microA: 0.6, microL: 28, edgeRise: 9, potDepth: 0.45, bunkerSize: [5, 9] },
+  canyon: { macroA: 3.0, macroL: 90, microA: 0.8, microL: 24, edgeRise: 24, potDepth: 0.45, bunkerSize: [4.5, 8] },
 };
 
 export function buildHole(course, holeIdx, opts = {}) {
@@ -259,9 +259,13 @@ export function buildHole(course, holeIdx, opts = {}) {
   }
 
   // ---------- 8. 高度 ----------
-  const gCenterBase = baseElev(Lp) + st.macroA * nz.fbm(G[0] / st.macroL, G[1] / st.macroL, 3) + 0.55;
+  // 林克斯陸地的平滑地板：高度不低於約 1.3m（海面 -0.9m），下坡洞也不會低到被海面穿透
+  const floorL = x => links ? 0.5 * (x + 0.8 + Math.sqrt((x - 0.8) ** 2 + 1)) : x;
+  const gCenterBase = baseElev(Lp) + st.macroA * nz.fbm(G[0] / st.macroL, G[1] / st.macroL, 3) + 0.55 + (links ? 3.5 : 0);
+  const gCenterBaseF = floorL(gCenterBase - 0.55) + 0.55;
   const teeBase = {};
-  tees.forEach(t => (teeBase[t.id] = baseElev(t.s) + st.macroA * nz.fbm(t.u / st.macroL, t.v / st.macroL, 3) + 0.7));
+  tees.forEach(t => (teeBase[t.id] = baseElev(t.s) + st.macroA * nz.fbm(t.u / st.macroL, t.v / st.macroL, 3) + 0.7 + (links ? 3.5 : 0)));
+  if (links) tees.forEach(t => (teeBase[t.id] = floorL(teeBase[t.id] - 0.7) + 0.7));
   // 大尺度起伏沿中心線取值：球道上只有前後起伏、左右是平的（避免球落地後往側邊滾進樹林），
   // 離開球道 4~30 公尺再慢慢恢復成真正的地形起伏
   const macro = (u, v) => st.macroA * nz.fbm(u / st.macroL, v / st.macroL, 3);
@@ -270,11 +274,12 @@ export function buildHole(course, holeIdx, opts = {}) {
   const macroC = s => { const f = clamp(s, 0, Lp) / 2, i = Math.floor(f); return lerp(macroTab[i], macroTab[Math.min(i + 1, macroTab.length - 1)], f - i); };
   const rawH = (u, v, s, ad) => {
     const w = ss(fwBase / 2 + 4, fwBase / 2 + 30, ad);
-    let hh = baseElev(clamp(s, 0, Lp)) + lerp(macroC(s), macro(u, v), w);
+    // 林克斯球場整體墊高 3.5m，陸地一定高於海面（-0.9m），海面不會從球道透出來閃爍
+    let hh = baseElev(clamp(s, 0, Lp)) + lerp(macroC(s), macro(u, v), w) + (links ? 3.5 : 0);
     const k = 0.12 + 0.88 * ss(fwBase / 2, fwBase / 2 + 20, ad);
     hh += st.microA * nz2.fbm(u / st.microL, v / st.microL, 3) * k;
     if (links) hh += 2.2 * Math.max(0, nz3.fbm(u / 22, v / 22, 2)) * ss(fwBase / 2 + 5, fwBase / 2 + 30, ad);
-    return hh;
+    return floorL(hh);
   };
   waters.forEach(w => { w.level = rawH(w.u, w.v, near(w.u, w.v).s, 0) - 1.1; });
   if (cross) cross.level = rawH(...pointAt(cross.s), cross.s, 0) - (cross.kind === 'chasm' ? 26 : 1.3);
@@ -303,15 +308,16 @@ export function buildHole(course, holeIdx, opts = {}) {
     }
     // 果嶺：平台 + 坡度 + 起伏
     const gr = greenR(u, v);
-    if (gr < 2.0) hh = lerp(gCenterBase + greenShape(u, v), hh, ss(1.15, 2.0, gr));
+    if (gr < 2.0) hh = lerp(gCenterBaseF + greenShape(u, v), hh, ss(1.15, 2.0, gr));
     // 果嶺與果嶺邊不受沙坑、水池影響，坡度只由果嶺本身決定
     const gk = ss(1.12, 1.4, gr);
     // 沙坑凹陷與唇邊
     for (const b of bunkers) {
       const br = bunkerR(b, u, v);
       if (br < 1.6) {
-        hh -= gk * b.depth * ss(1.08, 0.5, br);
-        hh += gk * 0.3 * Math.exp(-(((br - 1.1) / 0.14) ** 2));
+        // 坑底平（半徑 80% 內同一個深度），邊坡較緩，唇邊只微微隆起
+        hh -= gk * b.depth * ss(1.12, 0.8, br);
+        hh += gk * 0.15 * Math.exp(-(((br - 1.12) / 0.12) ** 2));
       }
     }
     const beforeWater = hh;

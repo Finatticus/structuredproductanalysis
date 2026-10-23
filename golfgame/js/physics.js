@@ -177,6 +177,20 @@ export function simulate(launch, env, terrain) {
     }
   }
   frames.push([t, x, y, z]);
+  if (result === 'holed' && terrain.pin) {
+    // 進洞：球滑到洞中央、往下掉 9 公分（掉到地面下就被草地蓋住，看起來就是掉進洞裡）
+    if (!events.some(e => e.type === 'cup')) events.push({ t, type: 'cup' });
+    const [px, pz] = terrain.pin, gy = terrain.height(px, pz);
+    const x0 = x, z0 = z, y0 = y;
+    for (let i = 1; i <= 14; i++) {
+      const k = i / 14;
+      x = x0 + (px - x0) * Math.min(1, k * 2);
+      z = z0 + (pz - z0) * Math.min(1, k * 2);
+      y = Math.min(y0, gy + R) - 0.11 * k * k;
+      frames.push([t + i * 0.018, x, y, z]);
+    }
+    t += 14 * 0.018;
+  }
   if (!carryPt) carryPt = [x, z];
   const sx0 = launch.pos[0], sz0 = launch.pos[2];
   const along = (px, pz) => (px - sx0) * dX + (pz - sz0) * dZ;

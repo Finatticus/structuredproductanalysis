@@ -82,6 +82,8 @@ export class World {
 
   resize() {
     const w = this.canvas.clientWidth || window.innerWidth, h = this.canvas.clientHeight || window.innerHeight;
+    // 視窗被隱藏/切到背景時大小可能是 0，這時不更新（否則比例變成 NaN，鏡頭會壞掉）
+    if (w < 2 || h < 2) return;
     this._w = w; this._h = h;
     this.renderer.setSize(w, h, false);
     const aspect = w / h;
@@ -194,6 +196,7 @@ export class World {
     geo.setAttribute('uv1', new THREE.BufferAttribute(uv1, 2));
     geo.setIndex(new THREE.BufferAttribute(idx, 1));
     geo.computeVertexNormals();
+    this.tgrid = { minU: b.minU, minV: b.minV, step, nx, nz, pos };
     const terrain = new THREE.Mesh(geo, this.terrainMaterial(colorTex, maskTex, style));
     terrain.receiveShadow = true;
     g.add(terrain);
@@ -374,6 +377,26 @@ export class World {
   buildTrees(hole, g) {
     const G = this.treeGeos();
     const leafMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.88, metalness: 0, envMapIntensity: 0.5 });
+    // 樹冠隨風擺動：位移方向 = 風向，幅度隨風速與高度增加，每棵樹相位不同
+    this.windU = this.windU || { uTime: { value: 0 }, uWind: { value: new THREE.Vector2() } };
+    leafMat.onBeforeCompile = sh => {
+      sh.uniforms.uTime = this.windU.uTime;
+      sh.uniforms.uWind = this.windU.uWind;
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nuniform float uTime; uniform vec2 uWind;')
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+          #ifdef USE_INSTANCING
+            mat3 swIm = mat3(instanceMatrix);
+            float swPh = instanceMatrix[3].x * 0.13 + instanceMatrix[3].z * 0.17;
+            float swWs = length(uWind);
+            float swAmt = 0.6 + 0.4 * sin(uTime * (1.1 + swWs * 0.18) + swPh) + 0.15 * sin(uTime * 3.7 + swPh * 2.0);
+            float swH = clamp(position.y + 0.7, 0.0, 1.8);
+            vec3 swD = vec3(uWind.x, 0.0, uWind.y) * swAmt * swH * 0.05;
+            vec3 swL = transpose(swIm) * swD;
+            swL /= vec3(dot(swIm[0], swIm[0]), dot(swIm[1], swIm[1]), dot(swIm[2], swIm[2]));
+            transformed += swL;
+          #endif`);
+    };
     const barkMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2c, roughness: 0.95 });
     const rockMat = new THREE.MeshStandardMaterial({ map: this.tex.rockD, normalMap: this.tex.rockN, color: 0xd29a7a, roughness: 0.95 });
     const cactusMat = new THREE.MeshStandardMaterial({ color: 0x4f6b3a, roughness: 0.75 });
@@ -532,9 +555,25 @@ export class World {
     this.scene.add(sh);
   }
 
+  // 畫面上地形網格（每 1.5m 一個點、三角形內插）的高度。凹下去的地方（沙坑）網格會比物理高度高一點
+  meshHeight(x, z) {
+    const g = this.tgrid;
+    if (!g) return this.hole ? this.hole.height(x, z) : 0;
+    const fi = (x - g.minU) / g.step, fj = (-z - g.minV) / g.step;
+    const i = Math.max(0, Math.min(g.nx - 2, Math.floor(fi))), j = Math.max(0, Math.min(g.nz - 2, Math.floor(fj)));
+    const fx = Math.max(0, Math.min(1, fi - i)), fz = Math.max(0, Math.min(1, fj - j));
+    const H = (ii, jj) => g.pos[((jj * g.nx) + ii) * 3 + 1];
+    const h00 = H(i, j), h10 = H(i + 1, j), h01 = H(i, j + 1), h11 = H(i + 1, j + 1);
+    if (fx + fz <= 1) return h00 + (h10 - h00) * fx + (h01 - h00) * fz;
+    return h11 + (h01 - h11) * (1 - fx) + (h10 - h11) * (1 - fz);
+  }
+
   setBall(x, y, z) {
+    const gh0 = this.hole ? this.hole.height(x, z) : y - BALL_R;
+    // 球在地面上時，畫在「畫面網格」上面，不會看起來陷進沙裡或草裡
+    if (this.hole && y - gh0 < BALL_R + 0.05) y = Math.max(y, this.meshHeight(x, z) + BALL_R);
     this.ball.position.set(x, y, z);
-    const gh = this.hole ? this.hole.height(x, z) : y - BALL_R;
+    const gh = gh0;
     this.ballShadow.position.set(x, gh + 0.01, z);
     const air = y - gh - BALL_R;
     this.ballShadow.visible = air > 0.05;
@@ -555,8 +594,10 @@ export class World {
     // 推桿預測線
     const pl = new THREE.BufferGeometry();
     pl.setAttribute('position', new THREE.BufferAttribute(new Float32Array(600 * 3), 3));
-    this.puttLine = new THREE.Points(pl, new THREE.PointsMaterial({ color: 0xffffff, size: 0.05, transparent: true, opacity: 0.9, depthWrite: false }));
+    this.puttLine = new THREE.Points(pl, new THREE.PointsMaterial({ color: 0xffffff, size: 0.07, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false }));
     this.puttLine.visible = false;
+    this.puttLine.renderOrder = 10;   // 不做深度測試：草地網格起伏不會把引導線蓋掉
+    this.puttLine.frustumCulled = false;
     this.scene.add(this.puttLine);
   }
 
@@ -610,6 +651,106 @@ export class World {
     this.tracer.geometry.setDrawRange(0, (n - 1) * 6);
   }
 
+  // 進洞小動畫：洞口噴出金色、白色小火花（受重力落下、慢慢淡出）
+  cupBurst(x, y, z) {
+    const n = 80;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    const vel = [];
+    const c = new THREE.Color();
+    for (let i = 0; i < n; i++) {
+      pos[i * 3] = x; pos[i * 3 + 1] = y + 0.02; pos[i * 3 + 2] = z;
+      const a = Math.random() * Math.PI * 2, sp = 0.4 + Math.random() * 0.9;
+      vel.push([Math.cos(a) * sp, 1.6 + Math.random() * 1.8, Math.sin(a) * sp]);
+      c.setHSL(0.09 + Math.random() * 0.06, 1, Math.random() < 0.25 ? 0.85 : 0.55);
+      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    if (!this.sparkTex) {
+      // 圓形光點貼圖（中心亮、邊緣漸淡）
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 64;
+      const cx = cv.getContext('2d');
+      const gr = cx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.75)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      cx.fillStyle = gr; cx.fillRect(0, 0, 64, 64);
+      this.sparkTex = new THREE.CanvasTexture(cv);
+    }
+    const mat = new THREE.PointsMaterial({ map: this.sparkTex, size: 0.11, vertexColors: true, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending });
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+    this.scene.add(pts);
+    (this.bursts = this.bursts || []).push({ pts, vel, t: 0, y0: y });
+  }
+
+  updateBursts(dt) {
+    if (!this.bursts || !this.bursts.length) return;
+    for (const b of this.bursts) {
+      b.t += dt;
+      const p = b.pts.geometry.attributes.position;
+      for (let i = 0; i < b.vel.length; i++) {
+        const v = b.vel[i];
+        v[1] -= 6 * dt;
+        p.setXYZ(i, p.getX(i) + v[0] * dt, Math.max(b.y0, p.getY(i) + v[1] * dt), p.getZ(i) + v[2] * dt);
+      }
+      p.needsUpdate = true;
+      b.pts.material.opacity = Math.max(0, 1 - b.t / 1.3);
+    }
+    this.bursts = this.bursts.filter(b => {
+      if (b.t < 1.3) return true;
+      this.scene.remove(b.pts); b.pts.geometry.dispose(); b.pts.material.dispose();   // 貼圖共用，不釋放
+      return false;
+    });
+  }
+
+  // 風紋：鏡頭附近飄過的細白線，數量、速度、亮度隨風速增加（15 mph 最明顯）
+  updateWindStreaks(dt, windVec) {
+    const N = 140;
+    if (!this.streaks) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 6), 3));
+      const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false });
+      this.streaks = new THREE.LineSegments(geo, mat);
+      this.streaks.frustumCulled = false;
+      this.scene.add(this.streaks);
+      this.streakData = Array.from({ length: N }, () => ({ p: new THREE.Vector3(), life: 0, len: 2, phase: Math.random() * 6 }));
+    }
+    const ws = windVec ? Math.hypot(windVec[0], windVec[1]) : 0;
+    const strength = clamp(ws / 6.7, 0, 1);            // 6.7 m/s ≈ 15 mph
+    const count = Math.round(strength * N);
+    this.streaks.visible = count > 0 && !!this.hole;
+    if (!this.streaks.visible) return;
+    this.streaks.material.opacity = 0.12 + 0.28 * strength;
+    const dir = new THREE.Vector3(windVec[0], 0, windVec[1]).normalize();
+    const cam = this.camera.position;
+    const fwd = new THREE.Vector3(); this.camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
+    const center = cam.clone().addScaledVector(fwd, 18);
+    const R = 26;
+    const arr = this.streaks.geometry.attributes.position.array;
+    const speed = ws * 1.6 + 2;
+    for (let i = 0; i < N; i++) {
+      const s = this.streakData[i];
+      if (i >= count) { arr.fill(0, i * 6, i * 6 + 6); continue; }
+      s.life -= dt;
+      const off = s.p.clone().sub(center);
+      if (s.life <= 0 || off.x * off.x + off.z * off.z > R * R) {
+        // 從上風處重新出現
+        const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * R;
+        s.p.set(center.x + Math.cos(a) * r, 0, center.z + Math.sin(a) * r).addScaledVector(dir, -R * 0.5 * Math.random());
+        const gh = this.hole.height(s.p.x, s.p.z);
+        s.p.y = gh + 0.4 + Math.random() * 6;
+        s.life = 1.5 + Math.random() * 2.5;
+        s.len = (1.2 + Math.random() * 2.5) * (0.6 + strength);
+      }
+      s.p.addScaledVector(dir, speed * dt);
+      s.p.y += Math.sin(this.time * 2 + s.phase) * 0.15 * dt;
+      arr[i * 6] = s.p.x; arr[i * 6 + 1] = s.p.y; arr[i * 6 + 2] = s.p.z;
+      arr[i * 6 + 3] = s.p.x - dir.x * s.len; arr[i * 6 + 4] = s.p.y; arr[i * 6 + 5] = s.p.z - dir.z * s.len;
+    }
+    this.streaks.geometry.attributes.position.needsUpdate = true;
+  }
+
   // ---------- 每幀 ----------
   frame(dt, windVec) {
     this.time += dt;
@@ -640,6 +781,9 @@ export class World {
     if (this.greenGrid && this.greenGrid.visible) this.greenGrid.material.opacity = 0.68 + 0.1 * Math.sin(this.time * 2);
     // 落點白點依距離放大，在畫面上大約維持同樣大小
     if (this.target.visible) this.target.scale.setScalar(Math.max(0.3, this.camera.position.distanceTo(this.target.position) * 0.011));
+    this.updateBursts(dt);
+    if (this.windU && windVec) { this.windU.uTime.value = this.time; this.windU.uWind.value.set(windVec[0], windVec[1]); }
+    this.updateWindStreaks(dt, windVec);
     this.updateTracer();
     this.renderer.render(this.scene, this.camera);
   }

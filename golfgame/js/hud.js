@@ -104,9 +104,11 @@ export class Hud {
   setPower(p, label, land) {
     const pct = Math.round(p * 100);
     $('p-val').textContent = label || pct + '%';
-    $('p-fill').style.height = clamp(p / 1.1, 0, 1) * 100 + '%';
+    // 100% 在力道條 75% 的位置，100~110% 佔下面 25%（和手指要多拉的距離一致）
+    const f = p <= 1 ? p * 0.75 : 0.75 + clamp((p - 1) / 0.1, 0, 1) * 0.25;
+    $('p-fill').style.height = f * 100 + '%';
     $('p-fill').classList.toggle('over', p > 1);
-    $('p-needle').style.top = clamp(p / 1.1, 0, 1) * 100 + '%';
+    $('p-needle').style.top = f * 100 + '%';
     $('p-land').textContent = land || '';
   }
 
@@ -115,6 +117,29 @@ export class Hud {
     if (!pos || !pos.visible) { e.classList.add('off'); return; }
     e.classList.remove('off');
     e.style.transform = `translate(${pos.x.toFixed(1)}px, ${pos.y.toFixed(1)}px)`;
+  }
+
+  setAdjust(text, pct = 0) {
+    const e = $('p-adj');
+    e.textContent = text;
+    e.classList.toggle('more', pct > 0);
+  }
+
+  // 力道條上方的「落點 xxx Y」碰到旗桿距離標籤時，自動往上 / 左 / 右移開（選移動最少的方向）
+  avoidPinTag() {
+    // 「落點」和上面的「(預計少 xx%)」一起移動
+    const els = [$('p-land'), $('p-adj')].filter(e => e.textContent);
+    const pin = $('tag-pin');
+    els.forEach(e => (e.style.transform = ''));
+    if (!els.length || pin.style.display === 'none' || $('swing-ui').classList.contains('off')) return;
+    const rs = els.map(e => e.getBoundingClientRect());
+    const a = { left: Math.min(...rs.map(r => r.left)), right: Math.max(...rs.map(r => r.right)), top: Math.min(...rs.map(r => r.top)), bottom: Math.max(...rs.map(r => r.bottom)) };
+    const b = pin.getBoundingClientRect(), pad = 4;
+    if (a.right < b.left - pad || a.left > b.right + pad || a.bottom < b.top - pad || a.top > b.bottom + pad) return;
+    const up = a.bottom - b.top + pad, left = a.right - b.left + pad, right = b.right - a.left + pad;
+    const m = Math.min(up, left, right);
+    const tf = m === up ? `translateY(${-up}px)` : m === left ? `translateX(${-left}px)` : `translateX(${right}px)`;
+    els.forEach(e => (e.style.transform = tf));
   }
 
   swingHint(text) { $('swing-hint').textContent = text; }
@@ -200,16 +225,73 @@ export class Hud {
   drawMini(hole, colorCanvas, ball, target, players) {
     this.mapArgs = [hole, colorCanvas, ball, target, players];
     this.miniBox = this.drawMap(this.mini, ...this.mapArgs);
-    const big = $('map-big');
-    if ($('dlg-map').classList.contains('open')) this.bigBox = this.drawMap(big, ...this.mapArgs);
+    if ($('dlg-map').classList.contains('open')) this.redrawBig();
   }
 
   openBigMap() {
     $('dlg-map').classList.add('open');
-    if (this.mapArgs) this.bigBox = this.drawMap($('map-big'), ...this.mapArgs);
+    this.bigView = { z: 1, pu: 0, pv: 0 };
+    this.redrawBig();
+    if (!this.bigBound) { this.bigBound = true; this.bindBigMap(); }
   }
 
-  drawMap(c, hole, colorCanvas, ball, target, players) {
+  redrawBig() {
+    if (this.mapArgs) this.bigBox = this.drawMap($('map-big'), ...this.mapArgs, this.bigView);
+  }
+
+  // 大地圖手勢：一指拖曳、兩指縮放、滑鼠滾輪縮放、點一下（沒移動）回呼 onBigMapTap
+  bindBigMap() {
+    const c = $('map-big');
+    const pts = new Map();
+    let last = null, moved = 0, downT = 0;
+    const zoomBy = (k) => { const v = this.bigView; v.z = clamp(v.z * k, 1, 14); this.redrawBig(); };
+    const pan = (dx, dy) => {
+      const sc = this.bigBox ? this.bigBox.sc : 1;
+      this.bigView.pu -= dx * 2 / sc;
+      this.bigView.pv += dy * 2 / sc;
+      this.redrawBig();
+    };
+    const state = () => {
+      const a = [...pts.values()];
+      if (a.length === 1) return { x: a[0].x, y: a[0].y, d: 0 };
+      return { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2, d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) };
+    };
+    c.addEventListener('pointerdown', e => {
+      try { c.setPointerCapture(e.pointerId); } catch (err) { /* 某些瀏覽器不支援，忽略 */ }
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      last = state();
+      if (pts.size === 1) { moved = 0; downT = performance.now(); }
+      e.preventDefault();
+    });
+    c.addEventListener('pointermove', e => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const s = state();
+      if (pts.size >= 2 && last.d > 0) zoomBy(s.d / last.d);
+      pan(s.x - last.x, s.y - last.y);
+      moved += Math.hypot(s.x - last.x, s.y - last.y);
+      last = s;
+    });
+    const up = e => {
+      if (!pts.has(e.pointerId)) return;
+      pts.delete(e.pointerId);
+      if (pts.size === 0 && moved < 8 && performance.now() - downT < 500 && this.onBigMapTap) {
+        const r = c.getBoundingClientRect();
+        const w = this.mapToWorld(e.clientX - r.left, e.clientY - r.top, true);
+        if (w) this.onBigMapTap(w);
+      }
+      if (pts.size) last = state();
+    };
+    c.addEventListener('pointerup', up);
+    c.addEventListener('pointercancel', up);
+    c.addEventListener('wheel', e => { e.preventDefault(); zoomBy(Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+    $('map-zin').onclick = () => zoomBy(1.6);
+    $('map-zout').onclick = () => zoomBy(1 / 1.6);
+    $('map-reset').onclick = () => { this.bigView = { z: 1, pu: 0, pv: 0 }; this.redrawBig(); };
+  }
+
+  // view：大地圖的縮放與平移 { z 倍率, pu/pv 平移公尺 }
+  drawMap(c, hole, colorCanvas, ball, target, players, view) {
     if (!colorCanvas) return null;
     const x = c.getContext('2d');
     const W = c.width = c.clientWidth * 2, H = c.height = c.clientHeight * 2;
@@ -223,6 +305,11 @@ export class Hud {
     } else {
       for (const [u, v] of hole.path) { minU = Math.min(minU, u); maxU = Math.max(maxU, u); minV = Math.min(minV, v); maxV = Math.max(maxV, v); }
       minU -= 70; maxU += 70; minV -= 30; maxV += 30;
+    }
+    if (view && (view.z !== 1 || view.pu || view.pv)) {
+      const cu = (minU + maxU) / 2 + view.pu, cv = (minV + maxV) / 2 + view.pv;
+      const hw = (maxU - minU) / 2 / view.z, hh = (maxV - minV) / 2 / view.z;
+      minU = cu - hw; maxU = cu + hw; minV = cv - hh; maxV = cv + hh;
     }
     const sc = Math.min(W / (maxU - minU), H / (maxV - minV));
     const ox = (W - (maxU - minU) * sc) / 2, oy = (H - (maxV - minV) * sc) / 2;

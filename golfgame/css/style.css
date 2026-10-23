@@ -3,7 +3,9 @@
   --cream: #f2ead8; --paper: #f7f3e9; --ink: #1c1d19; --muted: #6d6a5f;
   --brass: #a9864a; --brass2: #d6bb82; --flag: #a3302a; --line: rgba(28, 29, 25, .12);
   --hud: rgba(10, 20, 15, .78);
-  --u: clamp(9px, 1.15vmin + 0.35vmax, 15px);   /* HUD 基本單位，隨螢幕縮放 */
+  --u0: clamp(14px, 1.9vmin + 0.35vmax, 20px);  /* HUD 基本單位，隨螢幕縮放（手機橫向約 14px） */
+  --fs: 1;                                        /* 設定裡的字體大小倍率 */
+  --u: calc(var(--u0) * var(--fs));
   --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px);
 }
@@ -226,7 +228,8 @@ body:not([data-practice]) .practice-only { display: none; }
 .holeno sup { font-size: calc(var(--u) * .85); color: var(--brass2); letter-spacing: .1em; vertical-align: top; margin-right: 3px; }
 .hud-hole .info { border-left: 1px solid rgba(214,187,130,.3); padding-left: var(--u); }
 .hname { font: 500 calc(var(--u) * .95)/1.3 "Noto Serif TC"; color: #fff; }
-.hud-hole .stats { display: flex; gap: var(--u); margin-top: 3px; }
+.hud-hole .stats { display: flex; gap: calc(var(--u) * .8); margin-top: 3px; }
+.hud-hole .stats > div { text-align: center; }
 .hud-hole .stats b { display: block; font: 600 calc(var(--u) * 1.55)/1 "Barlow Condensed"; color: #fff; }
 .hud-hole .stats span { font-size: calc(var(--u) * .62); color: rgba(244,239,226,.6); letter-spacing: .1em; }
 .hud-players { left: calc(var(--u) + var(--safe-l)); top: calc(var(--u) * 7.2 + var(--safe-t)); padding: 6px 10px; display: flex; flex-direction: column; gap: 3px; min-width: calc(var(--u) * 11); }
@@ -253,8 +256,8 @@ body:not([data-practice]) .practice-only { display: none; }
 .hud-club .arrow { font-size: calc(var(--u) * 1.9); color: var(--brass2); width: calc(var(--u) * 2); height: calc(var(--u) * 4); }
 .hud-club .name { font: 700 calc(var(--u) * 1.8)/1 "Barlow Condensed"; color: #fff; }
 .hud-club .sub { font-size: calc(var(--u) * .72); color: rgba(244,239,226,.72); }
-.clubrail { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
-.clubrail i { font: 600 calc(var(--u) * .7)/1 "Barlow Condensed"; font-style: normal; padding: 3px 4px; border-radius: 3px; background: rgba(255,255,255,.08); color: rgba(244,239,226,.7); cursor: pointer; }
+.clubrail { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.clubrail i { font: 600 calc(var(--u) * 1.02)/1 "Barlow Condensed"; font-style: normal; padding: calc(var(--u) * .32) calc(var(--u) * .4); min-width: calc(var(--u) * 1.9); text-align: center; border-radius: 4px; background: rgba(255,255,255,.08); color: rgba(244,239,226,.7); cursor: pointer; }
 .clubrail i.on { background: var(--brass); color: #14130f; }
 
 .hud-swing { left: 50%; transform: translateX(-50%); bottom: calc(var(--u) + var(--safe-b)); padding: calc(var(--u) * .7) calc(var(--u) * 1.2); width: calc(var(--u) * 24); }
@@ -313,7 +316,7 @@ body:not([data-practice]) .practice-only { display: none; }
 
 /* 直式手機：HUD 重新排列 */
 @media (orientation: portrait) {
-  :root { --u: clamp(9px, 2.3vw, 13px); }
+  :root { --u0: clamp(13px, 3.5vw, 17px); }
   .hud-env { width: calc(var(--u) * 14); }
   .minimap { height: calc(var(--u) * 9); }
   .hud-tools { right: auto; left: calc(var(--u) + var(--safe-l)); top: calc(var(--u) * 9 + var(--safe-t)); flex-direction: row; }
@@ -336,18 +339,20 @@ body:not([data-practice]) .practice-only { display: none; }
 }
 
 /* ---------- 擊球區（跟著球的位置） ---------- */
-.swing-ui { position: absolute; left: 0; top: 0; width: 0; height: 0; transition: opacity .2s; }
+/* 擊球區整組再放大 1.3 倍 */
+.swing-ui { --u: calc(var(--u0) * var(--fs) * 1.3); position: absolute; left: 0; top: 0; width: 0; height: 0; transition: opacity .2s; }
 .swing-ui.off { opacity: 0; pointer-events: none; }
-.swing-ui .ball-ring { position: absolute; left: -16px; top: -16px; width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(255,255,255,.75); box-shadow: 0 0 0 1px rgba(0,0,0,.25), inset 0 0 0 1px rgba(0,0,0,.2); }
+.swing-ui .ball-ring { position: absolute; left: calc(var(--u) * -1.1); top: calc(var(--u) * -1.1); width: calc(var(--u) * 2.2); height: calc(var(--u) * 2.2); border-radius: 50%; border: 2px solid rgba(255,255,255,.75); box-shadow: 0 0 0 1px rgba(0,0,0,.25), inset 0 0 0 1px rgba(0,0,0,.2); }
 .power-v { position: absolute; left: calc(var(--u) * 4.2); bottom: calc(var(--u) * -1); height: calc(var(--u) * 15); width: calc(var(--u) * 5); display: flex; flex-direction: column; align-items: center; gap: 3px; pointer-events: none; }
 .pv-val { font: 700 calc(var(--u) * 1.35)/1 "Barlow Condensed"; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.8); white-space: nowrap; }
-.pv-land { font: 600 calc(var(--u) * .95)/1 "Barlow Condensed"; color: var(--brass2); text-shadow: 0 1px 3px #000; white-space: nowrap; }
+.pv-land { font: 700 calc(var(--u) * 1.15)/1 "Barlow Condensed"; color: #ffe08a; background: rgba(10,20,15,.78); border: 1px solid rgba(214,187,130,.45); padding: 3px 7px; border-radius: 6px; white-space: nowrap; }
+.pv-land:empty { display: none; }
 .pv-track { position: relative; flex: 1; width: calc(var(--u) * .9); border-radius: 10px; background: linear-gradient(90deg, #0a0f0c, #1d2721); box-shadow: inset 0 1px 3px rgba(0,0,0,.7), 0 0 0 1px rgba(214,187,130,.35); }
 .pv-fill { position: absolute; left: 0; right: 0; top: 0; height: 0; border-radius: 10px; background: linear-gradient(180deg, #6f5a2f, #c7a463 70%, #efd9a4); }
-.pv-fill.over { background: linear-gradient(180deg, #6f5a2f, #c7a463 75%, #c0463a); }
-.pv-sweet { position: absolute; left: -4px; right: -4px; top: 88.5%; height: 4.5%; border: 1px solid rgba(255,255,255,.85); border-radius: 3px; }
+.pv-fill.over { background: linear-gradient(180deg, #6f5a2f, #c7a463 70%, #efd9a4 74%, #c0463a 76%); }
+.pv-sweet { position: absolute; left: -4px; right: -4px; top: 72.5%; height: 5%; border: 1px solid rgba(255,255,255,.85); border-radius: 3px; }
 .pv-needle { position: absolute; left: -6px; right: -6px; top: 0; height: 2px; background: #fff; box-shadow: 0 0 6px rgba(255,255,255,.8); }
-.pv-tick { position: absolute; left: calc(100% + 5px); transform: translateY(-50%); font: 600 calc(var(--u) * .62) "Barlow Condensed"; color: rgba(244,239,226,.8); text-shadow: 0 1px 2px #000; }
+.pv-tick { position: absolute; left: calc(100% + 5px); transform: translateY(-50%); font: 600 calc(var(--u) * .7) "Barlow Condensed"; color: rgba(244,239,226,.9); text-shadow: 0 1px 2px #000; }
 .pv-tick.ov { color: #f09a8e; }
 .aim-row { position: absolute; top: calc(var(--u) * 2.2); left: 0; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; font-size: calc(var(--u) * .75); color: rgba(244,239,226,.85); text-shadow: 0 1px 3px #000; white-space: nowrap; }
 .aim-row .hud-btn { width: calc(var(--u) * 3); height: calc(var(--u) * 3); border-radius: 50%; background: var(--hud); border: 1px solid rgba(214,187,130,.3); color: var(--brass2); font-size: calc(var(--u) * 1.2); pointer-events: auto; }
@@ -392,10 +397,85 @@ body:not([data-practice]) .practice-only { display: none; }
 .minimap-wrap { position: relative; }
 .map-zoom { position: absolute; right: 5px; bottom: 5px; width: calc(var(--u) * 2.4); height: calc(var(--u) * 2.4); border-radius: 6px; background: rgba(10,20,15,.8); border: 1px solid rgba(214,187,130,.4); color: var(--brass2); font-size: calc(var(--u) * 1.1); line-height: 1; }
 .map-box { display: flex; flex-direction: column; }
-#map-big { width: 100%; height: min(62vh, 560px); border-radius: 10px; background: #2c4426; cursor: crosshair; }
+#map-big { width: 100%; height: min(62vh, 560px); border-radius: 10px; background: #2c4426; cursor: grab; touch-action: none; display: block; }
+.map-stage { position: relative; }
+.map-ctl { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.map-ctl button { min-width: 40px; height: 36px; border-radius: 8px; background: rgba(10,20,15,.8); color: var(--brass2); border: 1px solid rgba(214,187,130,.4); font-size: 16px; padding: 0 8px; }
 .heat-legend { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; flex-wrap: wrap; }
 .heat-legend i { width: 160px; height: 10px; border-radius: 5px; background: linear-gradient(90deg, hsl(230,78%,50%), hsl(120,78%,50%), hsl(0,78%,50%)); }
 /* 球場卡片的預覽按鈕 */
 .course-card { position: relative; }
 .pv-btn { margin-left: auto; flex: none; padding: 6px 10px; border-radius: 16px; border: 1px solid rgba(169,134,74,.5); color: #6e5427; background: #fbf6ea; font-size: 12px; white-space: nowrap; }
 #dlg-preview .hole-grid { max-height: 62vh; overflow-y: auto; }
+
+/* 超揮區（100~110%）標成紅色底 */
+.pv-track::after { content: ""; position: absolute; left: 0; right: 0; top: 75%; bottom: 0; border-radius: 0 0 10px 10px; background: rgba(192,70,58,.28); pointer-events: none; }
+
+/* 手機橫向（畫面矮）：面板縮小，按鈕移到左上，力道條變短，操作說明隱藏 */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hud-env { width: calc(var(--u) * 14); padding: calc(var(--u) * .55); }
+  .compass { width: calc(var(--u) * 4); height: calc(var(--u) * 4); }
+  .minimap { height: calc(var(--u) * 6.5); }
+  .env-grid { margin-top: calc(var(--u) * .35); padding-top: calc(var(--u) * .35); }
+  .hud-tools { right: auto; left: calc(var(--u) + var(--safe-l)); top: calc(var(--u) * 6.6 + var(--safe-t)); flex-direction: row; }
+  .hud-tools .hud-btn { width: calc(var(--u) * 2.6); height: calc(var(--u) * 2.6); font-size: calc(var(--u) * 1.05); }
+  .hud-players { top: calc(var(--u) * 9.6 + var(--safe-t)); }
+  .power-v { height: calc(var(--u) * 10); }
+  .swing-hint { display: none; }
+  .hud-hole { padding: calc(var(--u) * .5) calc(var(--u) * .8); }
+  .holeno { font-size: calc(var(--u) * 2.8); }
+  .hud-club { padding: calc(var(--u) * .4); }
+  .hud-club .clubimg { width: calc(var(--u) * 3.4); height: calc(var(--u) * 3.4); }
+}
+
+/* 手機直向：洞資訊整列在最上面，風/地圖面板在它下方右側，球桿面板精簡 */
+@media (orientation: portrait) {
+  .hud-hole { right: calc(var(--u) + var(--safe-r)); justify-content: flex-start; }
+  .hud-hole .stats { gap: calc(var(--u) * 1.1); }
+  .hud-env { top: calc(var(--u) * 6.9 + var(--safe-t)); width: calc(var(--u) * 11.5); padding: calc(var(--u) * .55); }
+  .compass { width: calc(var(--u) * 3.6); height: calc(var(--u) * 3.6); }
+  .env-grid { gap: 2px 6px; }
+  .env-grid div { font-size: calc(var(--u) * .62); }
+  .env-grid b { font-size: calc(var(--u) * .82); }
+  .minimap { height: calc(var(--u) * 7); }
+  .hud-tools { top: calc(var(--u) * 6.9 + var(--safe-t)); }
+  .practice-bar { top: calc(var(--u) * 10.6 + var(--safe-t)); left: calc(var(--u) + var(--safe-l)); transform: none; }
+  .hud-players { top: calc(var(--u) * 10.6 + var(--safe-t)); }
+  .hud-club { max-width: calc(100% - var(--u) * 2); padding: calc(var(--u) * .4); }
+  .hud-club .sub { display: none; }
+  .hud-club .clubimg { width: calc(var(--u) * 3.4); height: calc(var(--u) * 3.4); }
+  .power-v { height: calc(var(--u) * 11); }
+  .swing-hint { display: none; }
+}
+
+/* 飛行中的加速按鈕 */
+.ff-btn { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--u) * 1.2 + var(--safe-b)); padding: calc(var(--u) * .45) calc(var(--u) * 1.1); border-radius: 20px; background: rgba(10,20,15,.82); border: 1px solid rgba(214,187,130,.5); color: var(--brass2); font: 700 calc(var(--u) * 1) "Noto Sans TC"; }
+.ff-btn.on { background: var(--brass); color: #14130f; }
+
+.appbar-act.set2 { right: 84px; }
+.gm-fs { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; flex-wrap: wrap; }
+
+/* 直向再精簡：擊球區只放大 1.1 倍、球位資訊排成一列、球桿面板不放圖片讓按鈕排兩列 */
+@media (orientation: portrait) {
+  .swing-ui { --u: calc(var(--u0) * var(--fs) * 1.1); }
+  .lie-info { padding: 3px 8px; }
+  .lie-info svg { display: none; }
+  .lie-info .kv { grid-template-columns: repeat(6, auto); gap: 0 5px; align-items: baseline; }
+  .hud-club .clubimg { display: none; }
+  .minimap { height: calc(var(--u) * 5.5); }
+  .power-v { height: calc(var(--u) * 9.5); }
+}
+
+/* 手機橫向（畫面矮）：字體倍率最多 110%，擊球區只放大 1.15 倍，球桿面板不放圖片 */
+@media (max-height: 500px) and (orientation: landscape) {
+  :root { --u: calc(var(--u0) * min(var(--fs), 1.1)); }
+  .swing-ui { --u: calc(var(--u0) * min(var(--fs), 1.1) * 1.15); }
+  .hud-club .clubimg { display: none; }
+  .hud-club { max-width: calc(var(--u) * 21); }
+  .power-v { height: calc(var(--u) * 7.5); }
+}
+
+/* 特殊球位的預計增減（落點碼數上方） */
+.pv-adj { font: 700 calc(var(--u) * .78)/1.1 "Noto Sans TC"; color: #ffd0c8; background: rgba(120,30,24,.82); padding: 2px 6px; border-radius: 5px; white-space: nowrap; }
+.pv-adj.more { color: #d8f5c8; background: rgba(30,90,40,.85); }
+.pv-adj:empty { display: none; }

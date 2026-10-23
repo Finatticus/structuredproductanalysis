@@ -11,7 +11,8 @@ import { CONFIG } from './config.js';
 import { SwingInput } from './input.js';
 import * as sfx from './audio.js';
 
-const WIND = { calm: [0, 0], light: [2, 6], normal: [6, 12], strong: [12, 22] };
+const WIND = { calm: [0, 0], light: [2, 6], normal: [6, 11], strong: [11, 15] };
+const WIND_MAX_MPH = 15;   // 任何情況（含每洞變化、陣風）風速都不超過 15 mph
 const UPV = new THREE.Vector3(0, 1, 0);
 const $ = id => document.getElementById(id);
 // 推桿刻度（碼）：拉到底 = 平地滾這麼遠。一般最長 15 碼，超過才用 20 / 25 碼
@@ -63,28 +64,28 @@ export class Game {
     $('c-rail').onclick = e => { const id = e.target.dataset && e.target.dataset.club; if (id) this.selectClub(id); };
     $('btn-view').onclick = () => { if (this.canControl()) this.cam.mode = this.cam.mode === 'overview' ? 'address' : 'overview'; };
     $('btn-mulligan').onclick = () => this.mulligan();
+    // 加速：只有擊球後、球在飛或滾的時候才會出現，按一下 3 倍速，再按一下恢復
+    $('btn-ff').addEventListener('click', e => {
+      e.stopPropagation();
+      if (!this.flight) return;
+      this.flight.speed = this.flight.speed > 1 ? 1 : 3;
+      $('btn-ff').classList.toggle('on', this.flight.speed > 1);
+      $('btn-ff').textContent = this.flight.speed > 1 ? '3 倍速' : '加速';
+    });
     $('btn-map').addEventListener('click', e => { e.stopPropagation(); this.hud.openBigMap(); });
     $('map-close').onclick = () => $('dlg-map').classList.remove('open');
-    $('map-big').addEventListener('click', e => {
-      const r = e.currentTarget.getBoundingClientRect();
-      const w = this.hud.mapToWorld(e.clientX - r.left, e.clientY - r.top, true);
-      if (!w || !this.canControl()) return;
+    // 地圖只用來看，不能點來改方向（方向只能擊球前左右滑）。點小地圖 = 打開大地圖。
+    // 大地圖：兩指縮放、拖曳移動；練習場推桿模式下，點一下果嶺 = 換站位
+    this.hud.onBigMapTap = w => {
+      if (!this.canControl() || !(this.cfg.practice && this.pmode === 'putt')) return;
       $('dlg-map').classList.remove('open');
-      if (this.cfg.practice && this.pmode === 'putt') this.placePutt(w[0], w[1]);
-      else this.aimAt(w[0], w[1]);
-    });
-    $('minimap').addEventListener('click', e => {
-      if (!this.canControl()) return;
-      const r = e.currentTarget.getBoundingClientRect();
-      const w = this.hud.miniToWorld(e.clientX - r.left, e.clientY - r.top);
-      if (!w) return;
-      // 練習場推桿：點果嶺 = 換站位
-      if (this.cfg.practice && this.pmode === 'putt') { this.placePutt(w[0], w[1]); return; }
-      this.aimAt(w[0], w[1]);
-    });
+      this.placePutt(w[0], w[1]);
+    };
+    $('minimap').addEventListener('click', e => { e.stopPropagation(); this.hud.openBigMap(); });
     document.querySelectorAll('#practice-bar [data-pm]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); if (this.canControl()) this.setPracticeMode(b.dataset.pm); }));
     $('pb-random').addEventListener('click', e => { e.stopPropagation(); if (this.canControl()) this.placePutt(); });
-    $('game-layer').addEventListener('click', () => { if (this.flight) this.flight.speed = 3; if (this.intro) this.intro.t = 99; });
+    // 開場鏡頭可以點一下跳過；球在飛的時候點螢幕不做任何事（以前會 3 倍速快轉，看起來像球被二次擊出）
+    $('game-layer').addEventListener('click', () => { if (this.intro) this.intro.t = 99; });
   }
 
   // ---------------- 回合開始 ----------------
@@ -122,6 +123,7 @@ export class Game {
     this.swingAnim = false;
     this.holeDone = false;
     this.lastShotUndo = null;
+    this.undoP = -1;
     this.running = true;
     this.hud.show(true);
     this.pendingState = null;
@@ -167,7 +169,7 @@ export class Game {
     this.hud.setGreenHeat(this.hole);
     const rng = makeRng(this.seed + idx * 977);
     const dir = this.windBase.dir + (rng() - 0.5) * rad(70);
-    const mph = Math.max(0, this.windBase.mph * (0.75 + rng() * 0.5));
+    const mph = Math.min(WIND_MAX_MPH, Math.max(0, this.windBase.mph * (0.75 + rng() * 0.5)));
     this.wind = [Math.sin(dir) * mph * MPH, -Math.cos(dir) * mph * MPH];
     const tee = this.hole.teePos(this.cfg.tee);
     for (const p of this.players) {
@@ -181,6 +183,8 @@ export class Game {
     this.world.clearTracer();
     this.flight = null;
     this.holeDone = false;
+    this.lastShotUndo = null;
+    this.undoP = -1;
     this.honor = this.honorOrder();
     // 開場：從果嶺上空飛回發球台
     const pin = this.hole.pin, ph = this.hole.height(pin[0], pin[1]);
@@ -230,7 +234,7 @@ export class Game {
 
   serialize(turn) {
     return {
-      k: this.k, turn, shotNo: this.shotNo, matchStatus: this.matchStatus,
+      k: this.k, turn, shotNo: this.shotNo, matchStatus: this.matchStatus, undoP: this.lastShotUndo ? this.lastShotUndo.p : -1,
       players: this.players.map(p => ({ ball: p.ball, lie: p.lie, strokes: p.strokes, holed: p.holed, holePutts: p.holePutts, girDone: p.girDone, prev: p.prev, scores: p.scores, putts: p.putts, fwHit: p.fwHit, fwTotal: p.fwTotal, gir: p.gir, mulligans: p.mulligans, picked: p.picked })),
     };
   }
@@ -239,6 +243,7 @@ export class Game {
     if (this.flight || this.swingAnim) { this.pendingState = s; return; }
     this.shotNo = s.shotNo;
     this.matchStatus = s.matchStatus;
+    this.undoP = s.undoP ?? -1;
     s.players.forEach((q, i) => Object.assign(this.players[i], q));
     if (s.turn < 0) { this.endHole(); return; }
     this.beginTurn(s.turn);
@@ -272,7 +277,16 @@ export class Game {
     this.hud.enableControls(mine);
     this.input.putt = !!this.club.putter;
     this.hud.swingHint(mine ? '往下拉上桿（決定力道），快速往上滑出桿；左右滑調方向' : `等待 ${p.user} 擊球…`);
-    $('btn-mulligan').classList.toggle('hidden', !(mine && !this.net && p.mulligans > 0 && this.lastShotUndo));
+    this.updateMulliganBtn();
+  }
+
+  // 角色的腳踩在畫面上的地面（兩腳位置取比較高的那邊），小腿不會插進沙坑邊坡或草地裡
+  groundGolfer(p) {
+    const o = p.golfer.object.position, q = p.golfer.object.quaternion;
+    const d = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+    let top = -Infinity;
+    for (const k of [-0.28, 0, 0.28]) top = Math.max(top, this.world.meshHeight(o.x + d.x * k, o.z + d.z * k));
+    if (top > o.y) o.y = top;
   }
 
   canControl() {
@@ -340,6 +354,7 @@ export class Game {
     const p = this.players[this.cur];
     const pos = new THREE.Vector3(...p.ball);
     p.golfer.setup(pos, this.aim, this.club.icon);
+    this.groundGolfer(p);
     p.golfer.setVisible(true);
   }
 
@@ -366,11 +381,11 @@ export class Game {
     this.hud.setPlayers(list, this.hole.par, this.cfg.mode);
   }
 
+  // 畫面上的預估落點：一律用球桿本身的平均距離（不管球位），在長草、沙坑時距離要玩家自己判斷
   estCarry(p, power) {
     if (this.club.putter) return 0;
     const t = p.table[this.club.id];
-    const keep = p.lie === SURF.ROUGH ? 0.88 : p.lie === SURF.DEEP ? 0.65 : p.lie === SURF.SAND ? 0.75 : 1;
-    return t.carry * keep * Math.pow(clamp(power, 0.05, 1.1), 1.08);
+    return t.carry * Math.pow(clamp(power, 0.05, 1.1), 1.08);
   }
 
   updateTarget() {
@@ -487,16 +502,38 @@ export class Game {
     else { this.swingAnim = true; this.net.send({ t: 'swing', p: this.cur, input }); this.players[this.cur].golfer.swing(() => {}); }
   }
 
+  // 重打：只能重打自己「最近一桿、而且之後還沒有人擊球」；單人與連線都可以用
+  updateMulliganBtn() {
+    const me = this.players.find(q => q.local);
+    const ok = me && !this.cfg.practice && me.mulligans > 0 && this.undoP === me.idx && !this.flight && !this.swingAnim && !this.holeDone;
+    $('btn-mulligan').classList.toggle('hidden', !ok);
+    if (ok) $('btn-mulligan').textContent = `重打(${me.mulligans})`;
+  }
+
   mulligan() {
+    if (this.flight || this.swingAnim || this.holeDone) return;
+    const me = this.players.find(q => q.local);
+    if (!me) return;
+    if (this.authority) this.doMulligan(me.idx);
+    else this.net.send({ t: 'mulligan', p: me.idx });
+    $('btn-mulligan').classList.add('hidden');
+  }
+
+  // 權威端執行重打：還原那一桿之前的狀態，輪回那位玩家
+  doMulligan(pi) {
     const u = this.lastShotUndo;
-    if (!u || this.net) return;
-    const p = this.players[u.p];
+    if (!u || u.p !== pi || this.holeDone) return;
+    const p = this.players[pi];
     if (p.mulligans <= 0) return;
     Object.assign(p, JSON.parse(u.state));
     p.mulligans--;
     this.lastShotUndo = null;
-    this.hud.toast(`重打 Mulligan（剩 ${p.mulligans} 次）`);
-    this.beginTurn(u.p);
+    const text = `${escapeHtml(p.user)} 重打 Mulligan（剩 ${p.mulligans} 次）`;
+    this.hud.toast(text);
+    if (this.net) this.net.send({ t: 'toast', text });
+    const state = this.serialize(pi);
+    if (this.net) this.net.send({ t: 'state', state });
+    this.applyState(state);
   }
 
   // ---------------- 權威端：計算一桿 ----------------
@@ -510,18 +547,19 @@ export class Game {
     const dist = this.distPin(p);
     const pressure = (lie === SURF.GREEN && p.strokes + 1 <= this.hole.par) || this.holeNo >= 16 || this.cfg.mode === 'match';
     const launch = makeLaunch(input, { club, lie, stats: p.stats, rng, pressure, distToPin: dist, slope: Math.acos(clamp(n[1], 0, 1)), stimp: this.course.stimp, puttScale: this.puttScale });
-    const gust = 1 + rng.normal() * 0.12;
+    const ws = Math.hypot(this.wind[0], this.wind[1]);
+    const gust = ws > 0 ? Math.min(1 + rng.normal() * 0.12, WIND_MAX_MPH * MPH / ws) : 1;
     const res = simulate({ ...launch, pos: p.ball.slice() }, { rho: this.rho, wind: [this.wind[0] * gust, this.wind[1] * gust], rng }, this.hole);
     const msg = {
       t: 'shot', p: pi, input,
       launch: { launchDeg: launch.launchDeg, spin: launch.spin, axisDeg: launch.axisDeg, ...launch.info },
       res: {
         frames: res.frames.filter((_, i) => i % 2 === 0 || i === res.frames.length - 1).map(f => f.map(v => Math.round(v * 1000) / 1000)),
-        events: res.events.filter(e => e.type !== 'bounce' || e.speed > 1.5).slice(0, 12), result: res.result, end: res.end, carry: res.carry, total: res.total,
+        events: res.events.filter(e => e.type !== 'bounce').concat(res.events.filter(e => e.type === 'bounce' && e.speed > 1.5).slice(0, 10)).sort((a, b) => a.t - b.t), result: res.result, end: res.end, carry: res.carry, total: res.total,
         offline: res.offline, apex: res.apex, descent: res.descent, flightTime: res.flightTime, duration: res.duration,
       },
     };
-    if (!this.net) this.lastShotUndo = { p: pi, state: JSON.stringify({ ball: p.ball, lie: p.lie, strokes: p.strokes, holePutts: p.holePutts, girDone: p.girDone, prev: p.prev, holed: false, picked: false }) };
+    this.lastShotUndo = { p: pi, state: JSON.stringify({ ball: p.ball, lie: p.lie, strokes: p.strokes, holePutts: p.holePutts, girDone: p.girDone, prev: p.prev, holed: false, picked: false }) };
     if (this.net) this.net.send(msg);
     this.playShot(msg);
   }
@@ -544,6 +582,8 @@ export class Game {
       const f = msg.res.frames;
       this.flight = { msg, frames: f, t: 0, i: 0, speed: 1, events: msg.res.events.slice(), start: new THREE.Vector3(f[0][1], f[0][2], f[0][3]), putt: !!club.putter, short: msg.res.total < 45, landed: false, endHold: 0 };
       this.world.clearTracer();
+      $('btn-ff').classList.remove('hidden', 'on');
+      $('btn-ff').textContent = '加速';
       if (!club.putter && !this.flight.short) this.cam.mode = 'flight';
       else this.cam.mode = 'follow';
       this.cam.cut = !club.putter && !this.flight.short;
@@ -555,6 +595,7 @@ export class Game {
       return;
     }
     p.golfer.setup(new THREE.Vector3(...p.ball), this.aim, club.icon);
+    this.groundGolfer(p);
     p.golfer.setBackswing(msg.input.power, msg.input.power);
     this.swingAnim = true;
     p.golfer.swing(() => { this.swingAnim = false; startFlight(); });
@@ -579,7 +620,7 @@ export class Game {
         if (e.type === 'bounce') { sfx.playThud(Math.min(1, e.speed / 15)); f.landed = true; }
         else if (e.type === 'tree') sfx.playLeaves();
         else if (e.type === 'splash') sfx.playSplash();
-        else if (e.type === 'cup') sfx.playCup();
+        else if (e.type === 'cup') { sfx.playCup(); const [px, pz] = this.hole.pin; this.world.cupBurst(px, this.hole.height(px, pz), pz); }
       }
       f.vel = new THREE.Vector3(b[1] - a[1], b[2] - a[2], b[3] - a[3]).divideScalar((b[0] - a[0]) || 1);
       if (f.t >= fr[fr.length - 1][0]) {
@@ -595,6 +636,7 @@ export class Game {
   finishShot() {
     const msg = this.flight.msg;
     this.flight = null;
+    $('btn-ff').classList.add('hidden');
     const club = clubById(msg.input.club);
     if (!club.putter && msg.res.result !== 'ob') this.hud.shotData(club, msg.launch, msg.res, this.net ? 10000 : 0);
     if (this.authority) this.resolve(msg);
@@ -771,6 +813,9 @@ export class Game {
   onNet(m) {
     if (!this.running) return;
     switch (m.t) {
+      case 'mulligan':
+        if (this.authority && !this.players[m.p].local) this.doMulligan(m.p);
+        break;
       case 'swing':
         if (this.authority && m.p === this.cur && !this.players[m.p].local) this.executeShot(m.p, m.input);
         break;
@@ -789,6 +834,7 @@ export class Game {
           this.club = clubById(m.club);
           const p = this.players[m.p];
           p.golfer.setup(new THREE.Vector3(...p.ball), this.aim, this.club.icon);
+          this.groundGolfer(p);
           if (m.power > 0.02) p.golfer.setBackswing(m.power, m.power);
           this.updateTarget();
         }
@@ -867,8 +913,12 @@ export class Game {
       cam.dlook.copy(ball);
       k = 2;
     }
-    if (cam.cut) { cam.pos.copy(cam.dpos); cam.look.copy(cam.dlook); cam.cut = false; }
-    const a = 1 - Math.exp(-k * dt);
+    // 鏡頭數值壞掉（NaN）時直接重設到目標位置，不讓它一直卡住
+    const bad = v => !Number.isFinite(v.x) || !Number.isFinite(v.y) || !Number.isFinite(v.z);
+    if (bad(cam.dpos) || bad(cam.dlook)) return;
+    if (cam.cut || bad(cam.pos) || bad(cam.look)) { cam.pos.copy(cam.dpos); cam.look.copy(cam.dlook); cam.cut = false; }
+    // 加速時鏡頭也用同樣倍率追，避免鏡頭落後、看起來像球突然往前衝
+    const a = 1 - Math.exp(-k * dt * (f ? f.speed : 1));
     cam.pos.lerp(cam.dpos, a);
     cam.look.lerp(cam.dlook, Math.min(1, a * 1.6));
     const gh = this.hole.height(cam.pos.x, cam.pos.z);
@@ -883,10 +933,11 @@ export class Game {
     const b = new THREE.Vector3(...p.ball);
     const cam = this.world.camera;
     const portrait = cam.aspect < 1;
+    const short = !portrait && window.innerHeight < 500;   // 手機橫向：球放高一點，留空間給下方按鈕
     const k = Math.tan(31 * Math.PI / 180) / Math.tan(cam.fov / 2 * Math.PI / 180);   // 視角越窄退越遠
     let back, up, f;
-    if (this.club.putter) { back = portrait ? 2.8 : 2.1 * k; up = portrait ? 1.35 : 1.05 + 0.05 * k; f = 0.62; }
-    else { back = portrait ? 5.6 : 3.9 * k; up = portrait ? 1.9 : 1.35 + 0.05 * k; f = portrait ? 0.6 : 0.62; }
+    if (this.club.putter) { back = portrait ? 3.0 : 1.8 * k; up = portrait ? 1.45 : 1.05 + 0.05 * k; f = portrait ? 0.69 : short ? 0.64 : 0.7; }
+    else { back = portrait ? 6.2 : 3.2 * k; up = portrait ? 2.0 : 1.35 + 0.05 * k; f = portrait ? 0.69 : short ? 0.64 : 0.7; }
     const pos = b.clone().addScaledVector(d, -back).add(new THREE.Vector3(0, up, 0));
     const pitch = Math.atan2(up, back) - (f - 0.5) * cam.fov * Math.PI / 180;
     const look = pos.clone().addScaledVector(d, Math.cos(pitch) * 20).add(new THREE.Vector3(0, -Math.sin(pitch) * 20, 0));
@@ -905,6 +956,7 @@ export class Game {
     const atBall = !this.flight && !this.swingAnim && !this.intro && !this.holeDone && this.cam.mode !== 'overview';
     const b = this.world.ball.position;
     this.hud.placeSwingUI(atBall ? this.world.project(b.x, b.y, b.z) : null);
+    this.hud.avoidPinTag();
     // 紅色小箭頭指著預估落點
     if (atBall && this.canControl() && !this.club.putter && this.targetPt) {
       const [tx, tz] = this.targetPt;
@@ -931,5 +983,27 @@ export class Game {
     if (this.club.putter) { this.hud.setPower(pw, toYd(pw * this.puttScale).toFixed(1) + ' Y', ''); return; }
     const land = this.estCarry(p, pw > 0.02 ? pw : 1);
     this.hud.setPower(pw, null, '落點 ' + Math.round(toYd(land)) + ' Y');
+    this.updateLieAdjust(pw);
+  }
+
+  // 特殊球位（長草、深草、沙坑、荒地）：用物理引擎跑一次「沒有失誤」的模擬（含目前的風、真實地形），
+  // 和球桿平均距離比較，顯示「(預計少 xx%)」。落點碼數本身仍顯示球桿平均距離。
+  updateLieAdjust(pw) {
+    const p = this.players[this.cur];
+    const special = [SURF.ROUGH, SURF.DEEP, SURF.SAND, SURF.WASTE].includes(p.lie);
+    if (!special || this.club.putter || !this.hole) { this.hud.setAdjust(''); return; }
+    const power = pw > 0.02 ? pw : 1;
+    const key = [p.lie, this.club.id, power.toFixed(2), this.aim.toFixed(3), p.ball[0].toFixed(1), p.ball[2].toFixed(1)].join('|');
+    if (key === this.adjKey) return;
+    const now = performance.now();
+    if (now - (this.adjTime || 0) < 120) { clearTimeout(this.adjTimer); this.adjTimer = setTimeout(() => this.updateLieAdjust(this.power), 130); return; }
+    this.adjKey = key; this.adjTime = now;
+    const zero = Object.assign(() => 0.5, { normal: () => 0 });
+    const n = this.hole.normal(p.ball[0], p.ball[2]);
+    const l = makeLaunch({ power, curve: 0, aimYaw: this.aim }, { club: this.club, lie: p.lie, stats: p.stats, rng: zero, distToPin: this.distPin(p), slope: Math.acos(clamp(n[1], 0, 1)), stimp: this.course.stimp, puttScale: this.puttScale });
+    const r = simulate({ ...l, pos: p.ball.slice() }, { rho: this.rho, wind: this.wind, rng: zero }, this.hole);
+    const base = this.estCarry(p, power);
+    const pct = Math.round((r.carry / base - 1) * 100);
+    this.hud.setAdjust(pct < 0 ? `(預計少 ${-pct}%)` : pct > 0 ? `(預計多 ${pct}%)` : '(與平均差不多)', pct);
   }
 }
