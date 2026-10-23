@@ -446,6 +446,7 @@
 <section id="scr-game" class="screen game-screen">
   <canvas id="gl"></canvas>
   <div id="game-layer"></div>
+  <canvas id="swing-trail"></canvas>
   <div id="hud" class="hidden">
     <div id="tag-pin" class="tag pin num"></div>
     <div id="tag-land" class="tag land num"></div>
@@ -559,5 +560,13 @@
 </div></div>
 
 <script type="module" src="js/main.js"></script>
+<script>
+  // 直接雙擊 index.html（file://）時瀏覽器會擋掉程式模組，畫面只剩底色，所以給個說明
+  if (location.protocol === 'file:') {
+    document.body.insertAdjacentHTML('beforeend',
+      '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:#0e1f17;color:#f2ead8;z-index:99;font:15px/1.8 sans-serif;text-align:center">' +
+      '<div><b style="font-size:20px">請不要直接雙擊 index.html</b><br>瀏覽器基於安全限制，用檔案方式開啟時不會執行遊戲程式。<br>請用 GitHub Pages 的網址開啟，<br>或在資料夾執行 <code>python .claude/devserver.py 8770</code> 後開 http://localhost:8770</div></div>');
+  }
+</script>
 </body>
 </html>

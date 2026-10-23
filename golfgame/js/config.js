@@ -28,7 +28,11 @@ export const CONFIG = {
 export const ADMIN_USER = 'Michael';
 
 export function gasUrl() {
-  try { return localStorage.getItem('dixen.gas') || CONFIG.GAS_URL; } catch (e) { return CONFIG.GAS_URL; }
+  try {
+    const v = localStorage.getItem('dixen.gas');
+    if (v === 'local') return '';            // 測試用：強制本機模式，不動到正式試算表
+    return v || CONFIG.GAS_URL;
+  } catch (e) { return CONFIG.GAS_URL; }
 }
 
 export function getSetting(k, d) {

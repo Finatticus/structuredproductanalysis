@@ -15,7 +15,7 @@ export const COURSES = [
   {
     id: 'heron', name: '鷺灣海岸', en: 'Heron Bay Links', style: 'links',
     desc: '臨海林克斯球場。幾乎沒有樹，海風大且常轉向；球道硬、落地後滾很遠；深壺型沙坑掉進去常常只能往旁邊救。',
-    stimp: 10, firm: 1.25, altitude: 8, temp: 17, wind: [7, 18], fairwayW: 44, roughW: 22, corridor: 92, trees: 0.04,
+    stimp: 8, firm: 1.25, altitude: 8, temp: 17, wind: [7, 18], fairwayW: 44, roughW: 22, corridor: 92, trees: 0.04,
     holes: [
       [4, 425, -6, 'sl b3', 9], [4, 398, 10, 'b2 up', 13], [5, 560, -12, 'sl b4', 3], [3, 185, 0, 'b3 sl', 15],
       [4, 445, 8, 'b3 xc', 1], [4, 360, -14, 'b2 dn', 17], [3, 210, 0, 'b4', 11], [5, 575, 14, 'b4 sr', 5], [4, 432, -4, 'b3 up', 7],
@@ -25,8 +25,8 @@ export const COURSES = [
   },
   {
     id: 'maple', name: '楓林谷', en: 'Maple Valley', style: 'parkland',
-    desc: '林間公園型球場。球道兩側高大樹林，多處水池，果嶺起伏大、速度快，考驗開球準度與推桿判讀。',
-    stimp: 11.5, firm: 0.92, altitude: 220, temp: 22, wind: [2, 9], fairwayW: 32, roughW: 18, corridor: 70, trees: 1.0,
+    desc: '林間公園型球場。球道兩側高大樹林，多處水池，果嶺起伏較多，考驗開球準度與推桿判讀。',
+    stimp: 8.5, firm: 0.92, altitude: 220, temp: 22, wind: [2, 9], fairwayW: 32, roughW: 18, corridor: 70, trees: 1.0,
     holes: [
       [4, 402, 8, 'b2 tr', 7], [5, 538, -14, 'b3 wl', 3], [3, 176, 0, 'b3 wc', 15], [4, 365, 12, 'b2 dn', 11],
       [4, 428, -8, 'b3 wr', 1], [3, 192, 0, 'b2 up', 17], [4, 412, -6, 'b3 wr', 5], [5, 556, 10, 'b3 xc', 9], [4, 389, 0, 'b2 wc up', 13],
@@ -37,7 +37,7 @@ export const COURSES = [
   {
     id: 'canyon', name: '赤岩峽谷', en: 'Red Rock Canyon', style: 'canyon',
     desc: '高海拔沙漠球場，空氣稀薄，球多飛約 6%。多洞必須飛越峽谷，球道外是荒地與岩石，果嶺最硬最快。',
-    stimp: 12, firm: 1.15, altitude: 1600, temp: 29, wind: [3, 12], fairwayW: 34, roughW: 10, corridor: 78, trees: 0.25,
+    stimp: 9, firm: 1.15, altitude: 1600, temp: 29, wind: [3, 12], fairwayW: 34, roughW: 10, corridor: 78, trees: 0.25,
     holes: [
       [4, 440, -8, 'b2 ww', 9], [5, 590, 12, 'b3 xc ww', 3], [4, 410, -12, 'b2 wl', 11], [3, 205, 0, 'b2 wc DN', 15],
       [4, 455, 6, 'b3 ww up', 1], [5, 610, -10, 'b3 xc', 5], [3, 230, 0, 'b3 wc', 13], [4, 395, 14, 'b2 wr dn', 17], [4, 470, -6, 'b3 ww UP', 7],

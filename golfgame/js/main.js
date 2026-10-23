@@ -112,11 +112,11 @@ function initLobby() {
     if (t === 'records') openRecords();
     if (t === 'admin') openAdmin();
   });
-  $('btn-logout').onclick = () => { session.user = null; show('scr-login'); };
+  $('btn-logout').onclick = () => { session.user = null; setSetting('login', null); $('li-pass').value = ''; show('scr-login'); };
 }
 
 // ---------------- 回合設定 ----------------
-const setup = { kind: 'single', courseId: 'maple', holes: 'all', tee: 'blue', mode: 'stroke', wind: 'course', greens: 'course', gimme: 1, mulligans: 2, startHole: 0 };
+const setup = { kind: 'single', courseId: 'maple', holes: 'all', tee: 'blue', mode: 'stroke', wind: 'course', stimp: null, gimme: 1, mulligans: 2, startHole: 0 };
 function openSetup(kind) {
   setup.kind = kind;
   $('st-title').textContent = { single: '單人回合', host: '建立遊戲間', practice: '練習場' }[kind];
@@ -134,7 +134,7 @@ function renderSetup() {
       <canvas class="cthumb" data-thumb="${c.id}"></canvas>
       <div class="txt"><b>${c.name}</b><em>${c.en}</em><span>${courseYards(c, 'black').toLocaleString()} Y · Par 72 · Stimp ${c.stimp}</span></div>
     </button>`).join('');
-  document.querySelectorAll('.course-card').forEach(b => b.onclick = () => { setup.courseId = b.dataset.course; renderSetup(); });
+  document.querySelectorAll('.course-card').forEach(b => b.onclick = () => { setup.courseId = b.dataset.course; setup.stimp = null; renderSetup(); });
   drawThumbs();
   const seg = (id, key, opts) => {
     $(id).innerHTML = opts.map(([v, l]) => `<button class="${setup[key] === v ? 'on' : ''}" data-v="${v}">${l}</button>`).join('');
@@ -145,7 +145,17 @@ function renderSetup() {
   seg('st-tee', 'tee', TEE_SETS.map(t => [t.id, `${t.name} ${courseYards(c, t.id).toLocaleString()}`]));
   seg('st-mode', 'mode', [['stroke', '比桿賽'], ['match', '比洞賽']]);
   seg('st-wind', 'wind', [['course', '球場預設'], ['calm', '無風'], ['light', '微風'], ['normal', '一般'], ['strong', '強風']]);
-  seg('st-greens', 'greens', [['slow', '慢'], ['course', `標準 ${c.stimp}`], ['fast', '快']]);
+  // 果嶺速度：數字可調（Stimp 6.0~13.0，每次 0.5），預設為球場標準
+  const stimp = setup.stimp ?? c.stimp;
+  $('st-greens').innerHTML = `<button data-d="-0.5">−</button><b class="stimp num">${stimp.toFixed(1)}</b><button data-d="0.5">＋</button>` +
+    `<button class="${setup.stimp === null ? 'on' : ''}" data-std="1">標準 ${c.stimp.toFixed(1)}</button>` +
+    `<span class="small">台灣一般球場約 8，數字越大越快</span>`;
+  $('st-greens').querySelectorAll('button').forEach(b => b.onclick = () => {
+    if (b.dataset.std) setup.stimp = null;
+    else setup.stimp = Math.min(13, Math.max(6, Math.round((stimp + Number(b.dataset.d)) * 2) / 2));
+    if (setup.stimp === c.stimp) setup.stimp = null;
+    renderSetup();
+  });
   seg('st-gimme', 'gimme', [[0, '無'], [1, '1 碼'], [2, '2 碼'], [3, '3 碼']]);
   seg('st-mull', 'mulligans', [[0, '0'], [1, '1'], [2, '2'], [4, '4']]);
   $('st-hole').innerHTML = c.holes.map((h, i) => `<option value="${i}" ${setup.startHole === i ? 'selected' : ''}>第 ${i + 1} 洞 · Par ${h[0]} · ${teeYards(c, i, setup.tee)} Y</option>`).join('');
@@ -183,7 +193,7 @@ const thumbCache = {};
 function roundCfg() {
   return {
     courseId: setup.courseId, holes: setup.holes, tee: setup.tee, mode: setup.kind === 'host' ? setup.mode : 'stroke',
-    wind: setup.wind, greens: setup.greens, gimme: setup.gimme, mulligans: setup.kind === 'single' ? setup.mulligans : 0,
+    wind: setup.wind, stimp: setup.stimp ?? courseById(setup.courseId).stimp, gimme: setup.gimme, mulligans: setup.kind === 'single' ? setup.mulligans : 0,
     practice: setup.kind === 'practice', startHole: setup.startHole, seed: Math.floor(Math.random() * 2 ** 31),
   };
 }
@@ -549,6 +559,26 @@ initSetup();
 initRooms();
 initGameMenu();
 initChar();
-show('scr-login');
+autoLogin();
+
+// 記住上次登入的帳號：打開就直接進大廳（帳號被停用或密碼被改才回到登入畫面）
+async function autoLogin() {
+  const saved = getSetting('login', null);
+  if (!saved || !saved.user) { show('scr-login'); return; }
+  ui.loading(true, '登入中…', 0);
+  session.user = saved.user; session.pass = saved.pass;
+  try {
+    const r = await call('login');
+    session.isAdmin = r.isAdmin;
+    session.profile = r.profile;
+    enterLobby();
+  } catch (e) {
+    session.user = null;
+    show('scr-login');
+    msg('li-msg', e.message);
+  } finally {
+    ui.loading(false);
+  }
+}
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 window.__dixen = { get game() { return game; }, get world() { return world; }, session };

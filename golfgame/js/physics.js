@@ -150,7 +150,7 @@ export function simulate(launch, env, terrain) {
       const gx = -G * n[1] * n[0] * -1, gz = -G * n[1] * n[2] * -1; // 重力沿坡面的水平分量 ≈ G·n_y·(n_x, n_z)
       let sp = Math.hypot(vx, vz);
       const slopeAcc = Math.hypot(gx, gz);
-      if (sp < 0.02 && slopeAcc < gnd.crr * G * 1.15) { vx = vz = 0; break; }
+      if (sp < 0.03 && slopeAcc < gnd.crr * G * 1.3) { vx = vz = 0; break; }
       let ax = gx, az = gz;
       if (sp > 1e-4) { ax -= gnd.crr * G * vx / sp; az -= gnd.crr * G * vz / sp; }
       const ovx = vx, ovz = vz;
@@ -214,7 +214,7 @@ export function makeLaunch(input, ctx) {
     const dist = Math.max(0.2, input.power * ctx.puttScale);
     let v0 = Math.sqrt(2 * crr * G * dist);
     v0 *= 1 + n() * d.touchSigma * pm;
-    const yaw = input.aimYaw + rad(input.curve * 2.5 + n() * d.lineSigma * pm);
+    const yaw = input.aimYaw + rad(input.curve * 1.5 + n() * d.lineSigma * pm);
     return { speed: v0, launchDeg: 0, yaw, spin: 0, axisDeg: 0, rollOnly: true, info: { clubMph: 0, smash: 0, ballMph: v0 / MPH } };
   }
 

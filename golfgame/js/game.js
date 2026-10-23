@@ -14,7 +14,8 @@ import * as sfx from './audio.js';
 const WIND = { calm: [0, 0], light: [2, 6], normal: [6, 12], strong: [12, 22] };
 const UPV = new THREE.Vector3(0, 1, 0);
 const $ = id => document.getElementById(id);
-const PUTT_SCALES = [3, 4.5, 6, 9, 12, 15, 20, 25, 30];
+// 推桿刻度（碼）：拉到底 = 平地滾這麼遠。一般最長 15 碼，超過才用 20 / 25 碼
+const PUTT_SCALES = [3, 5, 8, 10, 12, 15, 20, 25].map(y => y * YD);
 const SCORE_NAME = { '-4': '信天翁 Condor', '-3': '信天翁 Albatross', '-2': '老鷹 Eagle', '-1': '小鳥 Birdie', '0': '平標準桿 Par', '1': '柏忌 Bogey', '2': '雙柏忌 Double Bogey', '3': '三柏忌 Triple Bogey' };
 
 export class Game {
@@ -25,7 +26,7 @@ export class Game {
     this.cam = { pos: new THREE.Vector3(0, 30, 30), look: new THREE.Vector3(), dpos: new THREE.Vector3(), dlook: new THREE.Vector3(), k: 3, mode: 'address' };
     this.input = new SwingInput($('game-layer'), {
       onStart: () => this.hud.hideShotData(),
-      onAim: dx => this.nudgeAim(dx * 0.12),
+      onAim: dx => this.nudgeAim(dx * 0.05),
       onBack: p => this.onBack(p),
       onThrough: c => this.hud.setPower(this.power, c),
       onSwing: s => this.onSwing(s),
@@ -37,8 +38,11 @@ export class Game {
     const loop = now => {
       const dt = Math.min(0.05, (now - this.last) / 1000);
       this.last = now;
-      if (this.running) this.update(dt);
       requestAnimationFrame(loop);
+      // 洞還在載入時不更新；單一幀出錯也不能讓整個迴圈停掉
+      if (this.running && this.ready) {
+        try { this.update(dt); } catch (e) { console.error(e); }
+      }
     };
     requestAnimationFrame(loop);
   }
@@ -75,8 +79,7 @@ export class Game {
     this.authority = !net || isHost;
     this.isHost = isHost;
     const base = courseById(cfg.courseId);
-    const stimpAdj = cfg.greens === 'slow' ? -1.5 : cfg.greens === 'fast' ? 1.5 : 0;
-    this.course = { ...base, stimp: base.stimp + stimpAdj };
+    this.course = { ...base, stimp: Number(cfg.stimp) > 0 ? Number(cfg.stimp) : base.stimp };
     this.holeList = cfg.practice ? [cfg.startHole || 0] : cfg.holes === 'front' ? [0, 1, 2, 3, 4, 5, 6, 7, 8] : cfg.holes === 'back' ? [9, 10, 11, 12, 13, 14, 15, 16, 17] : [...Array(18).keys()];
     this.seed = cfg.seed;
     const rng = makeRng(cfg.seed);
@@ -96,6 +99,14 @@ export class Game {
     this.matchStatus = 0;
     this.k = 0;
     this.shotNo = 0;
+    // 重置上一回合留下的狀態（離開後再進來不能沿用）
+    this.ready = false;
+    this.cur = undefined;
+    this.intro = null;
+    this.flight = null;
+    this.swingAnim = false;
+    this.holeDone = false;
+    this.lastShotUndo = null;
     this.running = true;
     this.hud.show(true);
     this.pendingState = null;
@@ -130,6 +141,7 @@ export class Game {
   get holeNo() { return this.holeList[this.k] + 1; }
 
   async loadHole(k) {
+    this.ready = false;
     this.k = k;
     const idx = this.holeList[k];
     this.ui.loading(true, `第 ${idx + 1} 洞 準備中…`);
@@ -149,6 +161,7 @@ export class Game {
     const yd = teeYards(this.course, idx, this.cfg.tee);
     this.hud.setHole(this.hole, idx + 1, yd, this.course.name);
     this.ui.loading(false);
+    this.ready = true;
     this.world.clearTracer();
     this.flight = null;
     this.holeDone = false;
@@ -227,7 +240,8 @@ export class Game {
     const mine = this.canControl();
     this.input.enabled = mine;
     this.hud.enableControls(mine);
-    this.hud.swingHint(mine ? '在下方往下拉上桿，再往上推擊球' : `等待 ${p.user} 擊球…`);
+    this.input.putt = !!this.club.putter;
+    this.hud.swingHint(mine ? '往下拉上桿（決定力道），快速往上滑出桿；左右滑調方向' : `等待 ${p.user} 擊球…`);
     $('btn-mulligan').classList.toggle('hidden', !(mine && !this.net && p.mulligans > 0 && this.lastShotUndo));
   }
 
@@ -288,8 +302,8 @@ export class Game {
   calcPuttScale(p) {
     const d = this.distPin(p);
     const elev = this.hole.height(...this.hole.pin) - p.ball[1];
-    const eff = d * 1.3 + Math.max(0, elev) * 10;
-    return PUTT_SCALES.find(s => s >= eff) || 30;
+    const eff = d * 1.2 + Math.max(0, elev) * 8;
+    return PUTT_SCALES.find(s => s >= eff) || PUTT_SCALES[PUTT_SCALES.length - 1];
   }
 
   setupGolfer() {
@@ -307,8 +321,8 @@ export class Game {
     const pinH = this.hole.height(...this.hole.pin);
     this.hud.setWind(this.wind, this.aim, this.temp, pinH - p.ball[1], this.course.stimp, this.course.firm);
     const carry = this.estCarry(p, Math.max(this.power, 1));
-    this.hud.setLie(p.lie, dist, carry, this.club.putter ? Math.round(this.puttScale / FT) : 0);
-    this.hud.setPower(this.power, this.curve, this.club.putter ? Math.round(this.power * this.puttScale / FT) + ' FT' : null);
+    this.hud.setLie(p.lie, dist, carry, this.club.putter ? Math.round(toYd(this.puttScale)) : 0);
+    this.hud.setPower(this.power, this.curve, this.club.putter ? toYd(this.power * this.puttScale).toFixed(1) + ' Y' : null);
     this.updateTarget();
     this.updatePlayersHud();
   }
@@ -370,7 +384,7 @@ export class Game {
   // ---------------- 操作 ----------------
   nudgeAim(degDelta) {
     if (!this.canControl()) return;
-    this.aim += rad(degDelta) * (this.club.putter ? 0.35 : 1);
+    this.aim += rad(degDelta) * (this.club.putter ? 0.4 : 1);
     this.afterAimChange();
   }
 
@@ -407,6 +421,7 @@ export class Game {
     this.club = clubById(id);
     if (this.club.putter !== prevPutt) this.aim = this.defaultAim(this.players[this.cur], this.club);
     this.world.greenGrid.visible = this.club.putter;
+    this.input.putt = !!this.club.putter;
     this.afterAimChange();
   }
 
@@ -414,7 +429,7 @@ export class Game {
     if (!this.canControl()) return;
     this.power = p;
     this.players[this.cur].golfer.setBackswing(p, p);
-    this.hud.setPower(p, 0, this.club.putter ? Math.round(p * this.puttScale / FT) + ' FT' : null);
+    this.hud.setPower(p, 0, this.club.putter ? toYd(p * this.puttScale).toFixed(1) + ' Y' : null);
     const now = performance.now();
     if (now - (this.lastTargetUpd || 0) > 60) { this.lastTargetUpd = now; this.updateTarget(); }
     this.sendAimPreview();
@@ -654,6 +669,7 @@ export class Game {
 
   quit() {
     this.running = false;
+    this.ready = false;
     this.input.enabled = false;
     this.flight = null;
     this.swingAnim = false;
@@ -775,13 +791,16 @@ export class Game {
 
   addressCam(p, d, r) {
     const b = new THREE.Vector3(...p.ball);
-    if (this.club.putter) {
-      return { pos: b.clone().addScaledVector(d, -2.6).addScaledVector(r, 0.35).add(new THREE.Vector3(0, 1.3, 0)), look: b.clone().addScaledVector(d, 3.5).addScaledVector(r, -0.2) };
-    }
-    if (this.world.camera.aspect < 1) {
-      return { pos: b.clone().addScaledVector(d, -5.2).addScaledVector(r, 0.1).add(new THREE.Vector3(0, 1.8, 0)), look: b.clone().addScaledVector(d, 30).addScaledVector(r, -0.6).add(new THREE.Vector3(0, 1.2, 0)) };
-    }
-    return { pos: b.clone().addScaledVector(d, -4.4).addScaledVector(r, 0.55).add(new THREE.Vector3(0, 1.7, 0)), look: b.clone().addScaledVector(d, 30).addScaledVector(r, -1.5).add(new THREE.Vector3(0, 1.2, 0)) };
+    const cam = this.world.camera;
+    // 視角越窄鏡頭退越遠，讓角色在直式/橫式畫面裡大小差不多
+    const k = Math.tan(31 * Math.PI / 180) / Math.tan(cam.fov / 2 * Math.PI / 180);
+    const portrait = cam.aspect < 1;
+    const at = (back, side, up, lookFwd, lookSide, lookUp) => ({
+      pos: b.clone().addScaledVector(d, -back).addScaledVector(r, side).add(new THREE.Vector3(0, up, 0)),
+      look: b.clone().addScaledVector(d, lookFwd).addScaledVector(r, lookSide).add(new THREE.Vector3(0, lookUp, 0)),
+    });
+    if (this.club.putter) return portrait ? at(2.6, 0.35, 1.3, 3.5, -0.2, 0) : at(2.4 * k, 0.5, 1.15 + 0.15 * k, 3.5, -0.3, 0);
+    return portrait ? at(5.2, 0.1, 1.8, 30, -0.6, 1.2) : at(3.8 * k, 0.55 * k, 1.55 + 0.1 * k, 30, -1.5, 1.2);
   }
 
   updateTags() {
@@ -790,7 +809,7 @@ export class Game {
     const [px, pz] = this.hole.pin;
     const ph = this.hole.height(px, pz);
     const dist = this.hole.distToPin(this.world.ball.position.x, this.world.ball.position.z);
-    const txt = dist < 25 ? (dist / FT).toFixed(0) + ' FT' : Math.round(toYd(dist)) + ' Y';
+    const txt = dist < 27 ? toYd(dist).toFixed(1) + ' Y' : Math.round(toYd(dist)) + ' Y';
     this.hud.tag('tag-pin', this.world.project(px, ph + 2.6, pz), txt);
     if (this.targetPt && !this.flight && !this.club.putter && this.canControl()) {
       const [tx, tz] = this.targetPt;

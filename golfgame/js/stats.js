@@ -60,8 +60,8 @@ export function derive(stats) {
     sandSigma: 1.7 - s.bunker * 0.009,              // 沙坑誤差倍率
     roughKeep: 0.80 + s.recovery * 0.0018,          // 長草球速保留
     roughSigma: 1.5 - s.recovery * 0.005,           // 長草誤差倍率
-    touchSigma: 0.09 - s.touch * 0.0007,            // 推桿力道誤差（比例）
-    lineSigma: 1.6 - s.line * 0.012,                // 推桿方向誤差（度）
+    touchSigma: 0.06 - s.touch * 0.0004,            // 推桿力道誤差（比例）
+    lineSigma: 1.0 - s.line * 0.007,                // 推桿方向誤差（度）
     readMeters: 1 + s.reading * 0.08,               // 預測推桿線長度（公尺）
     pressureMul: Math.max(1, 1.6 - s.mental * 0.009),// 關鍵球誤差倍率
   };

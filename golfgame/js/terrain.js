@@ -121,7 +121,7 @@ export function buildHole(course, holeIdx, opts = {}) {
   const G = path[path.length - 1];
   const endDir = dirAt(Lp);
   const gRot = Math.atan2(endDir[0], endDir[1]) + rad((rng() - 0.5) * 50);
-  const grx = (par === 3 ? 12.5 : 13.5) + rng() * 3.5, gry = (par === 3 ? 13 : 14.5) + rng() * 4;
+  const grx = (par === 3 ? 10.5 : 11) + rng() * 2, gry = (par === 3 ? 11 : 11.5) + rng() * 2;
   const gPh = [rng() * 6.28, rng() * 6.28];
   const gLocal = (u, v) => {
     const du = u - G[0], dv = v - G[1];
@@ -134,10 +134,10 @@ export function buildHole(course, holeIdx, opts = {}) {
     return Math.hypot(lu / grx, lv / gry) * (1 + 0.07 * Math.sin(3 * th + gPh[0]) + 0.045 * Math.sin(5 * th + gPh[1]));
   };
   const fringeR = 1 + 2.2 / Math.min(grx, gry);
-  const slopeBack = 0.012 + rng() * 0.016, slopeSide = (rng() - 0.5) * 0.024;
+  const slopeBack = 0.008 + rng() * 0.01, slopeSide = (rng() - 0.5) * 0.014;
   const bumps = [];
-  const nb = 1 + (rng() < 0.6 ? 1 : 0) + (course.stimp >= 11.5 && rng() < 0.4 ? 1 : 0);
-  for (let i = 0; i < nb; i++) bumps.push({ lu: (rng() - 0.5) * grx * 1.2, lv: (rng() - 0.5) * gry * 1.2, a: (rng() < 0.5 ? -1 : 1) * (0.18 + rng() * 0.3), s: 3.5 + rng() * 3 });
+  const nb = 1 + (rng() < 0.5 ? 1 : 0);
+  for (let i = 0; i < nb; i++) bumps.push({ lu: (rng() - 0.5) * grx * 1.2, lv: (rng() - 0.5) * gry * 1.2, a: (rng() < 0.5 ? -1 : 1) * (0.05 + rng() * 0.07), s: 4 + rng() * 2.5 });
   const greenShape = (u, v) => {
     const [lu, lv] = gLocal(u, v);
     let hh = lv * slopeBack + lu * slopeSide;
@@ -296,15 +296,18 @@ export function buildHole(course, holeIdx, opts = {}) {
     }
     // 果嶺：平台 + 坡度 + 起伏
     const gr = greenR(u, v);
-    if (gr < 1.9) hh = lerp(gCenterBase + greenShape(u, v), hh, ss(1.05, 1.9, gr));
+    if (gr < 2.0) hh = lerp(gCenterBase + greenShape(u, v), hh, ss(1.15, 2.0, gr));
+    // 果嶺與果嶺邊不受沙坑、水池影響，坡度只由果嶺本身決定
+    const gk = ss(1.12, 1.4, gr);
     // 沙坑凹陷與唇邊
     for (const b of bunkers) {
       const br = bunkerR(b, u, v);
       if (br < 1.6) {
-        hh -= b.depth * ss(1.08, 0.5, br);
-        hh += 0.3 * Math.exp(-(((br - 1.1) / 0.14) ** 2));
+        hh -= gk * b.depth * ss(1.08, 0.5, br);
+        hh += gk * 0.3 * Math.exp(-(((br - 1.1) / 0.14) ** 2));
       }
     }
+    const beforeWater = hh;
     // 水池 / 峽谷
     for (const w of waters) {
       const wr = waterR(w, u, v);
@@ -317,6 +320,7 @@ export function buildHole(course, holeIdx, opts = {}) {
         }
       }
     }
+    hh = lerp(beforeWater, hh, gk);
     if (cross) {
       const cd = crossDist(s, d);
       if (cd < (cross.kind === 'chasm' ? 2 : 5)) {

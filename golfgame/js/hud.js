@@ -93,8 +93,8 @@ export class Hud {
 
   setLie(lie, distPin, landing, puttScaleFt) {
     $('l-lie').textContent = SURF_NAME[lie];
-    $('l-pin').textContent = distPin < 30 && lie <= 3 ? (distPin / 0.3048).toFixed(0) + ' FT' : Math.round(toYd(distPin)) + ' Y';
-    $('l-land').textContent = puttScaleFt ? '最大 ' + puttScaleFt + ' FT' : Math.round(toYd(landing)) + ' Y';
+    $('l-pin').textContent = distPin < 27 ? toYd(distPin).toFixed(1) + ' Y' : Math.round(toYd(distPin)) + ' Y';
+    $('l-land').textContent = puttScaleFt ? '最大 ' + puttScaleFt + ' Y' : Math.round(toYd(landing)) + ' Y';
     $('l-land-lbl').textContent = puttScaleFt ? '推桿刻度' : '預估落點';
     $('l-icon').setAttribute('href', lie === 3 ? '#i-green' : '#i-lie');
   }

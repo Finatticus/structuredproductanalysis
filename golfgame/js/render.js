@@ -81,9 +81,12 @@ export class World {
 
   resize() {
     const w = this.canvas.clientWidth || window.innerWidth, h = this.canvas.clientHeight || window.innerHeight;
+    this._w = w; this._h = h;
     this.renderer.setSize(w, h, false);
-    this.camera.aspect = w / h;
-    this.camera.fov = w < h ? 62 : 48;
+    const aspect = w / h;
+    this.camera.aspect = aspect;
+    // 橫向寬螢幕時限制水平視角約 72°，避免畫面邊緣的人物和樹被拉寬變胖
+    this.camera.fov = aspect < 1 ? 62 : Math.min(50, 2 * Math.atan(Math.tan(36 * Math.PI / 180) / aspect) * 180 / Math.PI);
     this.camera.updateProjectionMatrix();
   }
 
@@ -588,6 +591,8 @@ export class World {
   // ---------- 每幀 ----------
   frame(dt, windVec) {
     this.time += dt;
+    // 手機轉向時 resize 事件可能比版面更新早，所以每幀檢查一次畫布大小
+    if (this.canvas.clientWidth !== this._w || this.canvas.clientHeight !== this._h) this.resize();
     // 球在遠處放大，維持最小可見尺寸
     const d = this.camera.position.distanceTo(this.ball.position);
     this.ball.scale.setScalar(Math.max(1, d * 0.0028 / (2 * BALL_R)));
