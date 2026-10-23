@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dixen Golf 說明文件</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&family=Barlow+Condensed:wght@500;600&family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet">
+<style>
+:root { --deep:#0e1f17; --forest:#1d3a2a; --cream:#f2ead8; --paper:#f7f3e9; --ink:#1c1d19; --muted:#6d6a5f; --brass:#a9864a; --brass2:#d6bb82; --flag:#a3302a; --line:rgba(28,29,25,.12); }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--paper); color:var(--ink); font-family:"Noto Sans TC",system-ui,sans-serif; line-height:1.75; font-size:15px; }
+header { background:var(--deep); color:var(--cream); border-bottom:3px solid var(--brass); }
+header .wrap { padding:34px 16px 28px; }
+.wm { font-family:"Cormorant Garamond",serif; font-size:34px; letter-spacing:.28em; }
+header p { color:rgba(242,234,216,.7); font-size:13px; }
+.wrap { max-width:980px; margin:0 auto; padding:0 16px; }
+nav.toc { position:sticky; top:0; z-index:5; background:rgba(247,243,233,.96); border-bottom:1px solid var(--line); backdrop-filter:blur(4px); }
+nav.toc .wrap { display:flex; gap:6px; flex-wrap:wrap; padding-top:10px; padding-bottom:10px; }
+nav.toc a { font-size:13px; padding:4px 12px; border-radius:14px; text-decoration:none; color:var(--forest); border:1px solid var(--line); background:#fff; }
+nav.toc a.part { background:var(--forest); color:var(--cream); border-color:var(--forest); }
+h1.part { font:700 28px/1.3 "Noto Serif TC",serif; color:var(--forest); margin:56px 0 6px; padding-top:10px; }
+h1.part small { display:block; font:600 13px "Barlow Condensed"; letter-spacing:.24em; color:var(--brass); }
+h2 { font:700 21px/1.4 "Noto Serif TC",serif; margin:38px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+h3 { font:700 16px "Noto Serif TC",serif; margin:22px 0 6px; color:var(--forest); }
+p, li { margin:6px 0; }
+ul, ol { padding-left:22px; }
+code, .mono { font-family:Consolas,"Courier New",monospace; font-size:13px; background:#ece5d4; padding:1px 5px; border-radius:4px; }
+pre { background:#13261c; color:#e8e2d0; padding:14px 16px; border-radius:10px; overflow-x:auto; font-size:13px; line-height:1.6; margin:10px 0; }
+pre code { background:none; padding:0; color:inherit; }
+table { border-collapse:collapse; width:100%; margin:10px 0; font-size:13.5px; background:#fff; }
+th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+th { background:var(--forest); color:var(--cream); font-weight:500; }
+td.n { font-family:"Barlow Condensed"; font-size:15px; white-space:nowrap; }
+.scroll { overflow-x:auto; }
+.alert { border:2px solid var(--flag); background:#fbeeea; border-radius:12px; padding:18px 20px; margin:26px 0; }
+.alert h3 { color:var(--flag); margin-top:0; font-size:18px; }
+.alert .tag { display:inline-block; background:var(--flag); color:#fff; font-size:12px; padding:2px 10px; border-radius:12px; margin-bottom:6px; letter-spacing:.1em; }
+.note { border-left:4px solid var(--brass); background:#fff; padding:10px 14px; border-radius:0 8px 8px 0; margin:12px 0; font-size:14px; }
+.grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; }
+.card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+.card b { font-family:"Noto Serif TC"; }
+.formula { background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 14px; font-family:Consolas,monospace; font-size:13px; margin:8px 0; overflow-x:auto; white-space:pre; }
+.small { font-size:13px; color:var(--muted); }
+footer { text-align:center; color:var(--muted); font-size:12px; padding:50px 0 60px; }
+@media (max-width:600px) { body { font-size:14px; } h1.part { font-size:23px; } }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="wm">DIXEN GOLF</div>
+  <p>說明文件 · 第一版 · 2026-10-23<br>上半部：遊玩方式與內容　下半部：程式邏輯、物理公式與機率</p>
+</div></header>
+
+<nav class="toc"><div class="wrap">
+  <a class="part" href="#play">一、遊玩方式</a>
+  <a href="#start">快速開始</a><a href="#controls">操作</a><a href="#hud">畫面</a><a href="#rules">規則</a><a href="#courses">球場</a><a href="#stats">素質</a><a href="#multi">雙人</a>
+  <a class="part" href="#tech">二、程式邏輯</a>
+  <a href="#deploy">部署</a><a href="#gas">GAS 資料</a><a href="#physics">物理</a><a href="#launch">擊球與機率</a><a href="#gen">球場生成</a><a href="#net">連線</a><a href="#render">畫面</a><a href="#mixamo">Mixamo</a><a href="#files">檔案</a>
+</div></nav>
+
+<main class="wrap">
+
+<div class="alert">
+  <span class="tag">重點提醒</span>
+  <h3>⚠ 角色目前是「內建角色」，之後可以換成 Mixamo 寫實真人角色</h3>
+  <p>第一版用的是程式內建的角色模型（穿 Polo 衫、戴帽子、會揮桿）。程式已經留好接口，可以換成 <b>Adobe Mixamo</b> 的寫實真人角色與動作捕捉揮桿動作。</p>
+  <p><b>要換的時候，直接跟 Claude 說「我要改用 Mixamo 角色」，Claude 會一步一步教你</b>：怎麼登入 Mixamo、挑哪個角色、下載哪幾個動作（Golf Drive / Golf Putt / Idle）、檔案放哪裡、怎麼調整。</p>
+  <p class="small">技術細節在下半部 <a href="#mixamo">「Mixamo 寫實角色接口」</a>。</p>
+</div>
+
+<!-- =================================================================== -->
+<h1 class="part" id="play"><small>PART ONE</small>一、遊玩方式與內容</h1>
+
+<h2 id="start">快速開始</h2>
+<ol>
+  <li>用手機瀏覽器打開網站（GitHub Pages 網址）。</li>
+  <li><b>加到主畫面</b>：iPhone 用 Safari →「分享」→「加入主畫面」；Android 用 Chrome →「⋮」→「加到主畫面」。之後從主畫面圖示打開就是全螢幕，跟 APP 一樣。</li>
+  <li>第一次進來先「註冊新帳號」。註冊後帳號是停用（N）狀態，要等管理員 Michael 在遊戲裡的「管理」頁面打開（Y）才能登入。</li>
+  <li>建議<b>橫向</b>拿手機玩，畫面比較大；直向也可以玩。</li>
+</ol>
+<div class="note">第一次開遊戲會下載約 10MB 的寫實材質（草地、沙、岩石、真實天空），之後會存在手機裡，不用再下載。</div>
+
+<h3>大廳</h3>
+<div class="grid2">
+  <div class="card"><b>單人回合</b><br>選球場、9 洞 / 18 洞、梯台、風、果嶺速度、OK 推距離、重打次數。打完成績會存到 Google 試算表，並獲得能力點。</div>
+  <div class="card"><b>建立遊戲間</b><br>你的手機當主機，畫面會出現 6 位數驗證碼，給朋友輸入就能一起打。可選比桿賽或比洞賽。</div>
+  <div class="card"><b>加入遊戲間</b><br>輸入朋友給的 6 位數驗證碼。</div>
+  <div class="card"><b>練習場</b><br>任選一洞反覆打，不計分。進洞會自動回到發球台，選單裡可以「回到發球台」或「換下一洞」。</div>
+</div>
+<p>下方分頁：<b>紀錄</b>（最近 40 回合）、<b>角色</b>（外觀與素質）、<b>管理</b>（只有 Michael 看得到）。</p>
+
+<h2 id="controls">擊球操作</h2>
+<table>
+  <tr><th style="width:28%">動作</th><th>怎麼做</th></tr>
+  <tr><td>揮桿</td><td>在畫面<b>下半部</b>按住，<b>往下拉</b> = 上桿（角色同步上桿），拉越長力道越大；接著<b>往上推</b> = 下桿擊球。推回起點上方會立刻擊球，或推到一半放開也會擊球。只往下拉就放開 = 取消。</td></tr>
+  <tr><td>力道</td><td>拉到底是 100%。再多拉一點可以到 110%（「超揮」），多一點距離但誤差會大很多（力量條變紅）。</td></tr>
+  <tr><td>曲球</td><td>往上推的方向決定曲球：<b>直直往上 = 直球</b>；偏右推 = 右曲（Fade）；偏左推 = 左曲（Draw）。偏 4° 以內都算直球。偏越多彎越多，最大約等於旋轉軸 ±20°。</td></tr>
+  <tr><td>瞄準</td><td>預設自動瞄準（一開始都是直線）：開球對準球道中央「預估落點」，打得到果嶺時對準旗桿。調整方向的方式：<br>① 在畫面<b>上半部左右拖曳</b>；② 按 ◀ ▶（按住會連續轉，每下 0.5°，推桿時更細）；③ <b>點右上小地圖</b>的任何位置，直接瞄那裡。</td></tr>
+  <tr><td>選桿</td><td>系統會依距離、球位、高低差自動選桿。可以按球桿卡片左右的 ‹ › 換，或直接點下面的小標籤（1W、7I…）。</td></tr>
+  <tr><td>推桿</td><td>球在果嶺上會自動換推桿，並顯示坡度格線（越紅越陡）。往下拉的長度 = 平地上會滾多遠，HUD 顯示「推桿刻度」（例如最大 20 FT）與目前力道（FT）。會顯示一段預測推桿線，長度由「讀果嶺」素質決定。</td></tr>
+  <tr><td>俯瞰 ⛶</td><td>切換高空俯瞰，看清楚落點附近的障礙。再按一次回到第三人稱。</td></tr>
+  <tr><td>重打</td><td>單人回合可以設定重打（Mulligan）次數，打完一桿後按「重打」回到擊球前。</td></tr>
+  <tr><td>快轉</td><td>球在飛的時候點一下畫面 = 3 倍速。洞的開場鏡頭點一下可以跳過。</td></tr>
+</table>
+
+<h3>鏡頭流程</h3>
+<ol>
+  <li>每洞開始：從果嶺上空飛回發球台（開場）。</li>
+  <li>準備擊球：<b>第三人稱</b>，鏡頭在角色斜後方，看得到自己的角色上桿、揮桿。</li>
+  <li>擊球瞬間：切到模擬器式的<b>球後視角</b>，接著<b>追球鏡頭</b>跟著球飛、落地、滾動。</li>
+  <li>推桿與 45 碼內短切：鏡頭留在後方，視線跟著球。</li>
+</ol>
+
+<h2 id="hud">畫面資訊</h2>
+<table>
+  <tr><th style="width:24%">位置</th><th>內容</th></tr>
+  <tr><td>左上</td><td>洞號、球場、標準桿（PAR）、碼數、差點順序（HCP）、第幾桿。雙人時下面會列出兩人目前對標準桿成績（比洞賽顯示幾 UP）。</td></tr>
+  <tr><td>右上</td><td>風向羅盤（箭頭朝上 = 順風、朝下 = 逆風，相對你瞄準的方向）、風速 mph、高低差（呎）、氣溫、果嶺速度（Stimp）、球道硬度、小地圖。</td></tr>
+  <tr><td>左下</td><td>目前球桿與平均 Carry / Total（依你的素質、空氣密度計算）。</td></tr>
+  <tr><td>中下</td><td>揮桿力道條（白框是 100% 附近）、曲球指示。</td></tr>
+  <tr><td>右下</td><td>球位（發球台 / 球道 / 長草 / 沙坑…）、距旗、預估落點。</td></tr>
+  <tr><td>3D 畫面中</td><td>紅色標籤 = 旗桿距離；白色圈 = 預估落點（依力道即時變化，不含風）；金色線 = 彈道軌跡。</td></tr>
+  <tr><td>擊球後</td><td>擊球數據面板：球速、桿頭速度、擊球效率、發射角、後旋、旋轉軸、Carry、Total、偏移、最高點、落地角、滯空時間。</td></tr>
+</table>
+
+<h2 id="rules">規則</h2>
+<ul>
+  <li><b>擊球順序</b>：開球依上一洞成績（打得好的先，第一洞主機先）；之後一律<b>離洞最遠的人先打</b>。</li>
+  <li><b>水障礙 / 峽谷</b>：罰 1 桿，在球最後離開陸地的位置往後退 2 公尺以上，在不是障礙的地方抛球。</li>
+  <li><b>出界 OB</b>：罰 1 桿，回到原位重打（擊球距離與罰桿）。</li>
+  <li><b>OK 推（Gimme）</b>：球停在果嶺上、離洞在設定距離內，自動算進洞，加 1 桿。</li>
+  <li><b>撿球</b>：一洞打到標準桿 2 倍還沒進，自動撿球，成績記為標準桿 2 倍（避免卡關）。</li>
+  <li><b>比洞賽</b>：每洞桿數少的人贏一洞，顯示「ALL SQUARE」或「某人 N UP」，18 洞打完結算。</li>
+  <li>打完 9 洞得 1 能力點、18 洞得 2 能力點（練習場不算）。</li>
+</ul>
+<h3>記分卡記號</h3>
+<p>比照實體記分卡：圓圈 = 小鳥、雙圓圈 = 老鷹以上、方框 = 柏忌、雙方框 = 雙柏忌以上。</p>
+
+<h2 id="courses">三座球場</h2>
+<p>每座 18 洞、Par 72，四組梯台：黑（100%）、藍（94%）、白（88%）、紅（78%）。</p>
+<div class="scroll"><table>
+  <tr><th>球場</th><th>風格</th><th>黑梯</th><th>果嶺 Stimp</th><th>環境</th><th>特色</th></tr>
+  <tr><td><b>鷺灣海岸</b><br>Heron Bay Links</td><td>臨海林克斯</td><td class="n">7,086 Y</td><td class="n">10</td><td>海拔 8m、17°C、風 7~18 mph</td><td>幾乎無樹、海在一側（落海 = 水障礙）、球道硬（彈跳 ×1.25）、深壺型沙坑、球道外是金黃色長草（深草）。</td></tr>
+  <tr><td><b>楓林谷</b><br>Maple Valley</td><td>林間公園</td><td class="n">6,912 Y</td><td class="n">11.5</td><td>海拔 220m、22°C、風 2~9 mph</td><td>兩側高大樹林（有楓樹）、多處水池與溪流、果嶺較快起伏大、球道偏軟。</td></tr>
+  <tr><td><b>赤岩峽谷</b><br>Red Rock Canyon</td><td>高海拔沙漠</td><td class="n">7,240 Y</td><td class="n">12</td><td>海拔 1,600m、29°C、風 3~12 mph</td><td>空氣稀薄球多飛約 6~8%、要飛越峽谷、球道外是紅色荒地（可以打但會損失距離）、岩石與仙人掌、果嶺最快最硬。</td></tr>
+</table></div>
+<p>每洞的標準桿、碼數、狗腿方向、障礙都寫在 <code>js/courses.js</code>；地形由程式依這些資料生成（見下半部「球場生成」）。風、氣溫每回合隨機，每洞再小幅變化，每一桿還有陣風（±12%）。</p>
+
+<h2 id="stats">角色素質</h2>
+<p>每個帳號有 13 項素質，<b>基準值都是 50、上限 99</b>。用能力點升級：</p>
+<table style="max-width:420px"><tr><th>素質區間</th><th>升 1 點要花</th></tr><tr><td>50 → 69</td><td>1 點</td></tr><tr><td>70 → 84</td><td>2 點</td></tr><tr><td>85 → 99</td><td>3 點</td></tr></table>
+<ul>
+  <li>新帳號送 <b>30 點</b>；打完 9 洞 +1、18 洞 +2；管理員可以另外加減點數。</li>
+  <li>每個帳號有 <b>10 次免費「重新分配」</b>：所有素質重設回 50、退回全部用掉的點數。用完可以請管理員加次數。</li>
+  <li>還沒按「儲存」前可以按「−」反悔。</li>
+</ul>
+<div class="scroll"><table>
+  <tr><th>分類</th><th>素質</th><th>影響什麼</th><th>50 時</th><th>99 時</th></tr>
+  <tr><td rowspan="3">長打</td><td>力量 Power</td><td>桿頭速度（一號木）</td><td class="n">100 mph</td><td class="n">117.6 mph</td></tr>
+  <tr><td>擊球效率 Contact</td><td>擊球效率倍率 / 打偏甜蜜點程度（標準差）</td><td class="n">×1.00 / 0.040</td><td class="n">×1.039 / 0.020</td></tr>
+  <tr><td>彈道控制 Launch</td><td>發射角誤差（標準差）</td><td class="n">1.3°</td><td class="n">0.61°</td></tr>
+  <tr><td rowspan="3">方向</td><td>準度 Accuracy</td><td>桿面角度誤差（標準差）</td><td class="n">1.9°</td><td class="n">0.82°</td></tr>
+  <tr><td>穩定度 Consistency</td><td>力道浮動（標準差）</td><td class="n">3.75%</td><td class="n">1.55%</td></tr>
+  <tr><td>曲球控制 Shaping</td><td>刻意曲球的彎曲量誤差</td><td class="n">29%</td><td class="n">8%</td></tr>
+  <tr><td rowspan="4">短桿</td><td>旋轉控制 Spin</td><td>8 號鐵以下後旋倍率</td><td class="n">×1.00</td><td class="n">×1.147</td></tr>
+  <tr><td>切球 Chipping</td><td>55 碼內挖起桿：距離誤差 / 方向誤差倍率</td><td class="n">6% / ×0.75</td><td class="n">2.1% / ×0.5</td></tr>
+  <tr><td>沙坑 Bunker</td><td>球道沙坑球速保留 / 誤差倍率</td><td class="n">74.5% / ×1.25</td><td class="n">86.8% / ×0.81</td></tr>
+  <tr><td>脫困 Recovery</td><td>長草球速保留 / 誤差倍率</td><td class="n">89% / ×1.25</td><td class="n">97.8% / ×1.0</td></tr>
+  <tr><td rowspan="3">推桿</td><td>推桿距離感 Touch</td><td>推桿力道誤差</td><td class="n">5.5%</td><td class="n">2.1%</td></tr>
+  <tr><td>推桿方向 Putting Line</td><td>推桿方向誤差</td><td class="n">1.0°</td><td class="n">0.41°</td></tr>
+  <tr><td>讀果嶺 Green Reading</td><td>預測推桿線長度</td><td class="n">5 m</td><td class="n">8.9 m</td></tr>
+  <tr><td>心理</td><td>抗壓 Mental</td><td>關鍵球誤差倍率（推 Par 以內、最後 3 洞、比洞賽）</td><td class="n">×1.15</td><td class="n">×1.00（67 以上）</td></tr>
+</table></div>
+
+<h3>角色外觀</h3>
+<p>角色頁可以選男 / 女體型、膚色、髮色、上衣、褲子、帽子顏色，左邊會即時預覽並每 6 秒示範一次揮桿。</p>
+
+<h2 id="multi">雙人連線</h2>
+<ol>
+  <li>主機：大廳 →「建立遊戲間」→ 設定好 →「建立遊戲間」，畫面出現 6 位數驗證碼（10 分鐘內使用比較保險，最長保留 6 小時）。</li>
+  <li>朋友：大廳 →「加入遊戲間」→ 輸入驗證碼。</li>
+  <li>主機看到朋友「已就緒」後按「開始回合」。</li>
+</ol>
+<ul>
+  <li>主機的裝置是伺服器：所有物理計算都在主機算，再把結果傳給朋友，所以兩邊看到的完全一樣。</li>
+  <li>連線方式顯示「直連（WebRTC）」= 兩支手機直接傳資料，最快；顯示「GAS 轉送」= 網路擋住直連（常見於某些電信 4G/5G），改由 Google 試算表伺服器轉送，每次動作會慢約 1~2 秒，但因為高爾夫是輪流打，一樣可以玩。</li>
+  <li>輪到對方時，你會看到對方的角色瞄準、上桿（直連時即時同步）。</li>
+  <li>兩人各自的成績會存到各自的玩家工作頁。雙人回合不能重打。</li>
+</ul>
+
+<!-- =================================================================== -->
+<h1 class="part" id="tech"><small>PART TWO</small>二、程式邏輯、公式與機率</h1>
+
+<h2 id="deploy">部署步驟</h2>
+<h3>1. Google Apps Script 後端</h3>
+<ol>
+  <li>建立一個新的 Google 試算表。</li>
+  <li>選單「擴充功能」→「Apps Script」，把 <code>gas/Code.gs</code> 的內容全部貼上，存檔。</li>
+  <li>上方函式選 <code>setup</code> → 執行（第一次會要求授權，按允許）。會建立「Account」工作頁和 Michael 帳號（密碼 1220、啟用 Y）。</li>
+  <li>右上「部署」→「新增部署作業」→ 類型選「網頁應用程式」，執行身分「我」，存取權「所有人」→ 部署 → 複製「網頁應用程式網址」（結尾是 <code>/exec</code>）。</li>
+  <li>把網址貼到 <code>js/config.js</code> 的 <code>GAS_URL: ''</code> 引號裡；或打開遊戲登入畫面右上角 ⚙ 設定貼上（只存在那台裝置）。建議貼在 config.js，大家都會用到。</li>
+  <li>之後改了 Code.gs，要「部署」→「管理部署作業」→ 編輯 → 版本選「新版本」才會生效（網址不變）。</li>
+</ol>
+<h3>2. GitHub Pages 網站</h3>
+<ol>
+  <li>在 GitHub 建立一個 repository，把整個資料夾的檔案上傳（<code>index.html</code>、<code>css/</code>、<code>js/</code>、<code>assets/</code>、<code>manifest.webmanifest</code>、<code>sw.js</code>、<code>README.html</code>；<code>gas/</code> 可以一起放，但它不會在網站上執行；<code>style-sample.html</code>、<code>.claude/</code> 可以不傳）。</li>
+  <li>repository 的 Settings → Pages → Source 選「Deploy from a branch」，分支選 main、資料夾選 /(root) → Save。</li>
+  <li>約 1 分鐘後網址會出現（<code>https://帳號.github.io/repo名稱/</code>）。</li>
+  <li>更新程式後，把 <code>sw.js</code> 第一行的 <code>VERSION</code> 數字加 1，手機重新打開兩次就會拿到新版。</li>
+</ol>
+<div class="note"><b>本機模式</b>：GAS_URL 留空時，帳號、成績存在那台裝置的瀏覽器裡（預設有 Michael / 1220），方便測試。本機模式下的遊戲間只能在同一台電腦開兩個分頁互連。</div>
+
+<h2 id="gas">GAS 資料結構</h2>
+<h3>「Account」工作頁</h3>
+<table style="max-width:520px"><tr><th>A 帳號</th><th>B 密碼</th><th>C 啟用</th></tr><tr><td>Michael</td><td>1220</td><td>Y</td></tr><tr><td>（新註冊）</td><td>（明文）</td><td>N</td></tr></table>
+<ul>
+  <li>第 1 列是標題。帳號比對<b>分大小寫</b>（Michael ≠ michael），但註冊時不允許只差大小寫的重複帳號。</li>
+  <li>你可以直接在試算表改 C 欄的 Y/N，效果跟遊戲裡的管理頁一樣。</li>
+  <li>只有 <code>Michael</code> 有管理員權限，且不能被停用。</li>
+</ul>
+<h3>玩家專屬工作頁（工作頁名稱 = 帳號）</h3>
+<table>
+  <tr><th>位置</th><th>內容</th></tr>
+  <tr><td>A1:B11</td><td>帳號、能力點、剩餘重新分配次數（初始 10）、素質（JSON）、外觀（JSON）、總回合數、最佳 18 洞、建立時間、最後登入、已用能力點、累計獲得點數</td></tr>
+  <tr><td>第 14 列</td><td>回合紀錄標題：日期、球場、洞數、梯台、桿數、對標準桿、推桿數、上球道、標準桿上果嶺、模式、同組、每洞桿數（JSON）</td></tr>
+  <tr><td>第 15 列起</td><td>每打完一回合新增一列</td></tr>
+</table>
+<h3>API（POST JSON，Content-Type 為 text/plain 以避開 CORS 預檢）</h3>
+<p>每個請求都帶 <code>user</code>、<code>pass</code> 驗證（帳號必須是 Y）。動作：<code>register</code>、<code>login</code>、<code>getProfile</code>、<code>saveProfile</code>、<code>saveRound</code>、<code>getRounds</code>；管理員：<code>listAccounts</code>、<code>setActive</code>、<code>grantPoints</code>、<code>grantRespecs</code>；遊戲間：<code>createRoom</code>、<code>getRoom</code>、<code>joinRoom</code>、<code>updateRoom</code>、<code>sendMsg</code>、<code>getMsgs</code>、<code>closeRoom</code>。</p>
+<p>防作弊（簡單版）：<code>saveProfile</code> 時伺服器只允許能力點、重新分配次數往下減；只有在重新分配次數減少時，能力點才能退回到「累計獲得點數」。能力點只能由打完回合或管理員增加。</p>
+<p>遊戲間資料（驗證碼、WebRTC 連線資料、轉送訊息）放在 GAS 的 <code>CacheService</code>，6 小時自動消失，不會在試算表留下垃圾。</p>
+
+<h2 id="physics">物理引擎（js/physics.js）</h2>
+<h3>空氣密度</h3>
+<div class="formula">P   = 101325 × (1 − 2.25577×10⁻⁵ × 海拔)^5.25588     (Pa)
+ρ   = P / (287.05 × (氣溫 + 273.15))                 (kg/m³)
+例：楓林谷 220m 22°C → ρ ≈ 1.17；赤岩峽谷 1600m 29°C → ρ ≈ 0.98（球飛更遠）</div>
+<h3>飛行（每秒 240 步數值積分）</h3>
+<div class="formula">球：半徑 r = 0.021335 m、質量 m = 0.04593 kg、截面積 A = πr²
+相對風速 v_rel = v − 風(高度)
+旋轉參數 S = r·ω / |v_rel|
+阻力係數 Cd = 0.215 + 0.30·S
+升力係數 Cl = min(0.34, 1.8·S − 1.5·S²)
+加速度 a = g + (½ρA|v|/m)·(−Cd·v_rel + Cl·|v_rel|·L̂)     L̂ = 旋轉軸 × v_rel（單位向量）
+旋轉衰減 ω(t) = ω₀·e^(−t/25s)</div>
+<p>係數是用 PGA Tour TrackMan 平均數據回歸出來的：Driver 167 mph / 10.9° / 2686 rpm → 模擬 Carry 271.6 碼（實際 275）；7 號鐵 120 mph / 16.3° / 7097 rpm → 170.6 碼（實際 172）。</p>
+<h3>風</h3>
+<div class="formula">顯示風速 = 10 公尺高度的風
+實際風(h) = 風₁₀ × clamp( ln(h/0.05) / ln(10/0.05), 0.3, 1.25 )     （對數風廓線：離地越高風越大）
+每一桿陣風：風 × (1 + N(0, 0.12))</div>
+<h3>旋轉軸與曲球</h3>
+<p>純後旋時旋轉軸水平朝右；旋轉軸傾斜 θ 度產生側旋，θ &gt; 0 往右彎（Fade/Slice），θ &lt; 0 往左彎（Draw/Hook）。</p>
+<h3>落地與彈跳</h3>
+<div class="formula">法向速度 vn' = −e × vn
+切向速度 vt' = max(−1, |vt| × keep × (1 − min(0.6, 0.02·|vn|)) − 後旋煞車)
+後旋煞車 = r·ω × 0.55 × (果嶺 1.0 / 其他 0.6) × clamp(|vn|/12, 0.2, 1.2)
+每次彈跳後 ω × 0.45；法向速度 &lt; 0.6 m/s 改為滾動</div>
+<div class="scroll"><table>
+  <tr><th>地面</th><th>e（彈性）</th><th>keep（切向保留）</th><th>crr（滾動阻力）</th></tr>
+  <tr><td>發球台</td><td class="n">0.30</td><td class="n">0.62</td><td class="n">0.12</td></tr>
+  <tr><td>球道</td><td class="n">0.32</td><td class="n">0.70</td><td class="n">0.11</td></tr>
+  <tr><td>果嶺邊</td><td class="n">0.27</td><td class="n">0.62</td><td class="n">0.085</td></tr>
+  <tr><td>果嶺</td><td class="n">0.22</td><td class="n">0.62</td><td class="n">由 Stimp 計算</td></tr>
+  <tr><td>長草</td><td class="n">0.15</td><td class="n">0.42</td><td class="n">0.36</td></tr>
+  <tr><td>深草</td><td class="n">0.07</td><td class="n">0.22</td><td class="n">0.75</td></tr>
+  <tr><td>沙坑</td><td class="n">0.03</td><td class="n">0.10</td><td class="n">1.6</td></tr>
+  <tr><td>荒地</td><td class="n">0.20</td><td class="n">0.50</td><td class="n">0.30</td></tr>
+</table></div>
+<p>球場硬度 firm（鷺灣 1.25、楓林 0.92、赤岩 1.15）：球道/果嶺/發球台的 e × firm、keep × (0.85 + 0.15·firm)、球道 crr ÷ firm。</p>
+<h3>滾動與果嶺速度</h3>
+<div class="formula">Stimp 定義：球以 1.83 m/s 滾出，在平地滾 Stimp 呎停下
+果嶺 crr = 1.83² / (2 × Stimp × 0.3048) / 9.81      （Stimp 11 → crr ≈ 0.051）
+滾動加速度 = 重力沿坡面分量 g·n_y·(n_x, n_z) − crr·g·(速度方向)
+停止條件：速度 &lt; 0.02 m/s 且坡度推力 &lt; 1.15·crr·g</div>
+<h3>進洞</h3>
+<ul>
+  <li>洞杯半徑 5.4 cm。球心經過洞杯範圍且速度 &lt; 1.35 m/s → 進洞。</li>
+  <li>太快但經過洞杯中心 70% 範圍內 → 擦邊（Lip-out）：方向隨機偏轉 ±40°、速度 × 0.6。</li>
+  <li>空中直接飛進（水平速度 &lt; 3 m/s）也算。</li>
+</ul>
+<h3>樹</h3>
+<p>每棵樹的樹冠是一顆碰撞球、樹幹是細柱。球穿過樹冠：速度 × (0.25~0.5 隨機)、方向隨機偏 ±63°、後旋 × 0.3、往下掉。灌木（林克斯）是一個圓柱範圍。</p>
+
+<h2 id="launch">擊球參數與機率（makeLaunch）</h2>
+<p>所有隨機都是常態分布 N(0, σ)，亂數種子由「回合種子 + 洞 + 第幾桿 + 玩家」決定（可重現，主機算一次傳給客人）。</p>
+<h3>全揮桿</h3>
+<div class="formula">桿頭速度 = (82 + 0.36 × 力量) × 球桿比例 × 力道係數
+  力道係數 = 力道（0~1）；超揮 1.0~1.1 時 = 1 + (力道−1)×0.5，且所有誤差 × (1 + (力道−1)×8)
+力道浮動 = 1 + N(0, σ力道)            σ力道 = 0.06 − 0.00045×穩定度（55 碼內挖起桿改用切球 σ）
+打偏程度 mis = |N(0, σ打偏)| × 球位誤差倍率    σ打偏 = 0.06 − 0.0004×擊球效率
+擊球效率 = 球桿 smash × (0.96 + 0.0008×擊球效率) × (1 − 1.6×mis)
+球速 = 桿頭速度 × 力道浮動 × 擊球效率 × 球位保留
+發射角 = 球桿發射角 × (0.85 + 0.15×力道) + 球位加成 + N(0, 2.0 − 0.014×彈道控制)
+後旋 = 球桿後旋 × (桿頭速度 / (113 × 球桿比例)) × (0.6 + 0.4×力道) × 球位旋轉倍率
+       （8 號鐵以下 × (0.85 + 0.003×旋轉控制)；打偏時 × (1 ± 2.5×mis)）
+桿面誤差 = N(0, 3.0 − 0.022×準度) × 球位誤差倍率 × 抗壓倍率
+想打的旋轉軸 = 推的方向 × 20°（−1~1）
+實際彎曲 = 想打的 × (1 + N(0, 0.5 − 0.0042×曲球控制))
+旋轉軸 = 實際彎曲 + 2.0 × 桿面誤差
+起飛方向 = 瞄準 + 0.75 × 桿面誤差 − 0.36 × 實際彎曲     （曲球會先往反方向開出去再彎回來）</div>
+<h3>球位修正</h3>
+<div class="scroll"><table>
+  <tr><th>球位</th><th>球速保留</th><th>後旋倍率</th><th>誤差倍率</th><th>發射角</th></tr>
+  <tr><td>發球台 / 球道 / 果嶺邊</td><td class="n">100%（球道上打一號木 93%、誤差 ×1.3）</td><td class="n">1</td><td class="n">1</td><td class="n">—</td></tr>
+  <tr><td>長草</td><td class="n">0.80 + 0.0018×脫困</td><td class="n">0.62（飛球）</td><td class="n">1.5 − 0.005×脫困</td><td class="n">+1.2°</td></tr>
+  <tr><td>深草</td><td class="n">長草 × 0.72</td><td class="n">0.45</td><td class="n">長草 × 1.5</td><td class="n">+3°</td></tr>
+  <tr><td>荒地</td><td class="n">(長草+0.05) × 0.95</td><td class="n">0.7</td><td class="n">長草 × 1.1</td><td class="n">—</td></tr>
+  <tr><td>球道沙坑</td><td class="n">0.62 + 0.0025×沙坑</td><td class="n">0.8</td><td class="n">1.7 − 0.009×沙坑</td><td class="n">—</td></tr>
+  <tr><td>果嶺邊沙坑（55 碼內挖起桿）</td><td class="n">爆炸球 0.42 + (沙坑保留 − 0.62)×0.8</td><td class="n">0.55</td><td class="n">同上</td><td class="n">+6°</td></tr>
+</table></div>
+<p>斜坡站位：誤差再 × (1 + min(0.8, 坡度×6) × (1.2 − 長草保留))。</p>
+<h3>推桿</h3>
+<div class="formula">平地滾動距離 D = 力道 × 推桿刻度（3/4.5/6/9/12/15/20/25/30 公尺，自動選 ≥ 距離×1.3 + 上坡×10 的最小值）
+初速 v₀ = √(2 × crr × g × D) × (1 + N(0, 0.09 − 0.0007×距離感) × 抗壓倍率)
+方向 = 瞄準 + 推的方向×2.5° + N(0, 1.6 − 0.012×推桿方向) × 抗壓倍率
+在果嶺邊推桿：crr × 1.6</div>
+<p>預測推桿線：用「距離感、方向、抗壓都是 99」的無誤差模擬跑一次，只畫出前 (1 + 0.08×讀果嶺) 公尺。推桿預設瞄準洞口，不幫你讀線。</p>
+<h3>抗壓（關鍵球）</h3>
+<p>以下情況所有誤差 × max(1, 1.6 − 0.009×抗壓)：在果嶺上推「Par 或更好」、第 16~18 洞、比洞賽。</p>
+<h3>自動選桿 / 預設瞄準 / 距離表</h3>
+<ul>
+  <li>距離表：每回合開始，用你的素質、無誤差、無風、該球場空氣密度，在平坦球道上模擬每支桿 100% 的 Carry 與 Total。</li>
+  <li>自動選桿：需要距離 = 距旗 + 高低差 × 0.9，選「Carry × 球位保留 ≥ 需要距離 − 3m」裡最短的桿；開球且 Par 4/5 選一號木；果嶺上推桿；55 碼內沙坑選 SW。</li>
+  <li>預設瞄準：打得到旗桿就瞄旗桿；打不到就瞄球道中心線上「預估總距離」的位置。</li>
+</ul>
+
+<h2 id="gen">球場生成（js/terrain.js）</h2>
+<ol>
+  <li><b>中心線</b>：依碼數與狗腿角度畫出折線（Par 4 在 200~255m 轉彎、Par 5 兩個轉角），用 ±18m 移動平均平滑。</li>
+  <li><b>球道</b>：沿中心線，寬度 = 球場基準寬（鷺灣 44m、楓林 32m、赤岩 34m）× (1 ± 雜訊)；有 <code>tr</code> 特徵的洞 × 0.85。</li>
+  <li><b>果嶺</b>：橢圓（半徑 12.5~18m）加波浪邊緣；坡度 = 後高前低 1.2~2.8% + 左右 ±1.2% + 1~3 個高斯起伏（±0.18~0.48m）；整體墊高 0.55m。</li>
+  <li><b>沙坑</b>：果嶺周圍依 b0~b4 數量環繞；Par 4/5 在落點區（215~265m、Par 5 另有 380~440m）加球道沙坑；林克斯是小而深的壺型（深 1.5m）。</li>
+  <li><b>水 / 峽谷</b>：wl/wr 落點區旁的池塘、wc 果嶺前、xc 橫越（溪流寬 7m、峽谷寬 26m 深 26m）、sl/sr 一整側是海。赤岩峽谷的水都換成峽谷。</li>
+  <li><b>高度</b>：起點到果嶺的高低差（UP/DN ±14m、up/dn ±6m）+ 大尺度雜訊 + 小起伏（球道上壓平 80%）+ 走廊外地形抬升（峽谷是平頂台地與岩壁）。</li>
+  <li><b>樹</b>：在長草外圍隨機撒點，越靠近走廊邊越密（形成樹牆），彼此保持距離；遠景另外撒一圈只畫不碰撞的樹。</li>
+  <li><b>旗桿</b>：每回合依種子在果嶺上試 10 個位置，選坡度最小的。</li>
+  <li>地面種類優先順序：界外 → 海 → 水/峽谷 → 果嶺 → 沙坑 → 果嶺邊 → 發球台 → 球道 → 海灘荒地 → 長草 → 深草/荒地。</li>
+</ol>
+<p>同一個種子在任何裝置都生成完全一樣的洞，所以雙人時只需要傳種子。</p>
+
+<h2 id="net">連線協定（js/net.js）</h2>
+<ol>
+  <li>主機建立 WebRTC 連線、等候選位址收集完成（最多 3.5 秒），把 offer 存到 GAS <code>createRoom</code>，拿到 6 位數驗證碼。</li>
+  <li>客人用驗證碼 <code>getRoom</code> 取得 offer，產生 answer，<code>joinRoom</code> 存回去。主機每 2 秒輪詢，拿到 answer 就完成直連。STUN：Google 公用伺服器。</li>
+  <li>12 秒內沒直連成功 → 改用 GAS 轉送（<code>sendMsg</code> / <code>getMsgs</code>，每 1.5 秒輪詢）。直連成功後仍每 6 秒輪詢一次當備援。每則訊息有唯一 id，重複的會丟掉。</li>
+  <li>訊息：<code>hello</code>（交換玩家素質與外觀）、<code>start</code>（回合設定與種子）、<code>swing</code>（客人 → 主機：力道、曲球、瞄準、球桿）、<code>shot</code>（主機 → 客人：擊球參數與 30fps 軌跡）、<code>state</code>（主機 → 客人：所有球位、桿數、輪到誰）、<code>aim</code>（瞄準預覽，只走直連）、<code>toast</code>、<code>next</code>（下一洞）、<code>leave</code>。</li>
+</ol>
+
+<h2 id="render">畫面（js/render.js、js/character.js）</h2>
+<ul>
+  <li>Three.js r160、ACES 色調映射、PCF 柔和陰影（陰影範圍跟著球或角色移動）。</li>
+  <li>天空與環境光：Poly Haven 的真實全景天空 HDR（kloofendal_48d_partly_cloudy_puresky，CC0）。</li>
+  <li>地形材質：先依地面種類畫一張顏色圖（約每像素 0.3m，含割草條紋、果嶺棋盤紋、果嶺邊），再在著色器裡疊上 Poly Haven 照片材質的明暗細節（草地 leafy_grass、沙 coast_sand_01、岩石 rock_face_03，都是 CC0）與法線貼圖；越遠細節越淡；赤岩峽谷的陡坡自動換成三平面投影的岩石材質。</li>
+  <li>水面：反射天空的低粗糙度材質 + 程式產生的漣漪法線貼圖並持續流動。</li>
+  <li>樹：多顆凹凸球合併成樹冠（闊葉、楓樹）、多層錐體（松樹）、杜松、仙人掌、岩石，全部用 Instancing 一次畫出。</li>
+  <li>球：遠處自動放大維持可見、地面投影圓點、金色彈道線（面向鏡頭的帶狀網格）。</li>
+  <li>內建角色：膠囊體組成，外觀可換色；揮桿用「手臂平面 + 球桿平面」關鍵影格，手臂和腿用兩段式 IK 求解，所以雙手永遠握在桿上、腳不會滑；下桿時球桿比手慢（延遲釋放）。</li>
+  <li>音效：WebAudio 即時合成（擊球、落地、樹葉、落水、進洞），不需要音效檔。</li>
+  <li>畫質設定（高/中/低）調整解析度倍率、陰影大小、地形網格密度、樹木數量。</li>
+</ul>
+
+<h2 id="mixamo">⚠ Mixamo 寫實角色接口（重點）</h2>
+<div class="alert">
+  <span class="tag">提醒自己</span>
+  <h3>要換寫實角色時，跟 Claude 說「我要改用 Mixamo 角色」</h3>
+  <p>大致流程（Claude 會帶你做）：</p>
+  <ol>
+    <li>到 mixamo.com 用 Adobe 帳號登入（免費）。</li>
+    <li>挑一個寫實角色，下載成 FBX → 存成 <code>assets/character/model.fbx</code>。</li>
+    <li>搜尋動作「Golf Drive」「Golf Putt」「Idle」（下載時選 Without Skin），存成 <code>drive.fbx</code>、<code>putt.fbx</code>、<code>idle.fbx</code> 放同一個資料夾。</li>
+    <li>把 <code>js/config.js</code> 裡 <code>CHARACTER.mode</code> 從 <code>'procedural'</code> 改成 <code>'mixamo'</code>。</li>
+    <li>可能需要微調：<code>topFraction</code>（上桿頂點在動作中的比例）、<code>impactFraction</code>（擊球瞬間比例）、<code>ballDistance</code>（站位距離）、<code>clubRotation</code>（球桿在手上的角度）。</li>
+  </ol>
+  <p>程式端已完成：<code>js/character.js</code> 的 <code>MixamoGolfer</code> 類別會載入 FBX、用 AnimationMixer 播放，上桿時把揮桿動作停在對應時間點，放開後播完並在擊球瞬間觸發擊球；球桿綁在右手骨頭（<code>mixamorigRightHand</code>）。載入失敗會自動退回內建角色。</p>
+</div>
+
+<h2 id="files">檔案說明</h2>
+<div class="scroll"><table>
+  <tr><th>檔案</th><th>用途</th></tr>
+  <tr><td><code>index.html</code></td><td>所有畫面、HUD、寫實 SVG 圖示</td></tr>
+  <tr><td><code>css/style.css</code></td><td>樣式（深綠 / 奶油白 / 黃銅配色，HUD 依螢幕自動縮放，直向/橫向各有排版）</td></tr>
+  <tr><td><code>js/config.js</code></td><td>GAS 網址、角色模式、Mixamo 參數、STUN 伺服器</td></tr>
+  <tr><td><code>js/main.js</code></td><td>畫面流程：登入、大廳、設定、遊戲間、角色、紀錄、管理、記分卡</td></tr>
+  <tr><td><code>js/game.js</code></td><td>回合流程、輪流順序、判定、鏡頭、連線同步</td></tr>
+  <tr><td><code>js/physics.js</code></td><td>飛行、彈跳、滾動、推桿、擊球參數與機率</td></tr>
+  <tr><td><code>js/stats.js</code></td><td>13 項素質定義、升級花費、素質 → 物理數值</td></tr>
+  <tr><td><code>js/clubs.js</code></td><td>14 支球桿數據</td></tr>
+  <tr><td><code>js/courses.js</code></td><td>三座球場 54 洞資料、梯台</td></tr>
+  <tr><td><code>js/terrain.js</code></td><td>球場生成、地面顏色圖</td></tr>
+  <tr><td><code>js/render.js</code></td><td>3D 場景</td></tr>
+  <tr><td><code>js/character.js</code></td><td>內建角色、Mixamo 接口</td></tr>
+  <tr><td><code>js/hud.js</code> / <code>js/input.js</code></td><td>畫面資訊 / 揮桿手勢</td></tr>
+  <tr><td><code>js/net.js</code> / <code>js/api.js</code></td><td>雙人連線 / GAS 呼叫與本機模式</td></tr>
+  <tr><td><code>js/audio.js</code></td><td>合成音效</td></tr>
+  <tr><td><code>gas/Code.gs</code></td><td>Google Apps Script 後端（貼到試算表的 Apps Script）</td></tr>
+  <tr><td><code>assets/textures/</code></td><td>Poly Haven CC0 材質與天空 HDR</td></tr>
+  <tr><td><code>assets/icons/</code></td><td>主畫面圖示</td></tr>
+  <tr><td><code>manifest.webmanifest</code> / <code>sw.js</code></td><td>加到主畫面設定 / 離線快取</td></tr>
+  <tr><td><code>style-sample.html</code></td><td>最初的風格樣張（不用上傳）</td></tr>
+</table></div>
+
+<h2>已知限制（第一版）</h2>
+<ul>
+  <li>內建角色是公仔風，不是真人；寫實角色請走 Mixamo（見上方提醒）。</li>
+  <li>球場地形是程式生成，不是逐洞手工雕刻；之後新增球場或調整特定洞，改 <code>js/courses.js</code> 的資料即可。</li>
+  <li>雙人限 2 人。直連失敗時改用 GAS 轉送，會慢 1~2 秒。</li>
+  <li>密碼以明文存放在試算表（依需求設計），僅適合私人使用。</li>
+  <li>舊手機若卡頓，請到登入畫面 ⚙ 把畫質調成「中」或「低」。</li>
+</ul>
+
+</main>
+<footer>Dixen Golf · 私人使用 · 材質來源 Poly Haven (CC0)</footer>
+</body>
+</html>
