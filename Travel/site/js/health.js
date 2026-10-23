@@ -33,6 +33,20 @@
   }
   const tidy = s => String(s || '').replace(/[!-~]{41,}/g, m => (m.match(/^[^,%/+]{1,20}/) || [''])[0] + '…').slice(0, 40);
 
+  /** 從提醒文字找出「幾月幾日後可訂」的日期，例如 11/1、11月1日、2026/11/1；沒寫年份時取出發日之前最近的那一天 */
+  function openDate(text, t) {
+    const m = String(text).match(/(?:(\d{4})\s*[\/.\-年]\s*)?(\d{1,2})\s*[\/.\-月]\s*(\d{1,2})/);
+    if (!m) return null;
+    const mo = +m[2], da = +m[3];
+    if (mo < 1 || mo > 12 || da < 1 || da > 31) return null;
+    const pad = n => String(n).padStart(2, '0');
+    const ref = t.startDate || U.todayStr();
+    let y = m[1] ? +m[1] : +ref.slice(0, 4);
+    let iso = `${y}-${pad(mo)}-${pad(da)}`;
+    if (!m[1] && t.startDate && iso > t.startDate) iso = `${y - 1}-${pad(mo)}-${pad(da)}`;
+    return iso;
+  }
+
   /** 不需要連網的檢查（很快） */
   function quickChecks() {
     const issues = [];
@@ -47,6 +61,15 @@
         (d.stops || []).forEach((p, k) => { if (GARBLED(p.name)) add(t, 'garbled', `站點名稱含有殘留的網址：「${tidy(p.name)}」`, { kind: 'stop', i, k, label: day }); });
         if (/(%[0-9A-F]{2}){6,}/i.test(textOf(d.notes))) add(t, 'garbled', '備註裡有一長串編碼過的網址文字', { kind: 'day', i, field: 'notes', label: day });
       });
+      // 站點的待訂提醒
+      const done = S.statusOf(t) === 'done', today = U.todayStr();
+      (t.days || []).forEach((d, i) => (d.stops || []).forEach((p, k) => {
+        const todo = (p.todo || '').trim(); if (!todo) return;
+        const where = { kind: 'stoptodo', i, k, label: `Day ${i + 1}（${UI.dot(d.date, false)}）` };
+        if (done) return add(t, 'todoold', `旅程已經結束，「${tidy(p.name) || '這一站'}」還留著「（${todo}）」，可以移除了`, where);
+        const open = openDate(todo, t);
+        if (open && open <= today) add(t, 'todo', `「${tidy(p.name) || '這一站'}」標註「（${todo}）」，${open === today ? '今天' : UI.dot(open, false) + ' 起'}已經可以訂了`, where);
+      }));
       // 城市
       for (const c of t.cities || []) if (!TA.geo.cityLL(c, t)) add(t, 'city', `城市「${c}」找不到位置（地圖、距離、天氣不會包含它）`, { kind: 'city', name: c, label: '基本資訊' });
       // 空白的天
@@ -118,7 +141,7 @@
     return { issues, linkNote, counts: { images: imgUrls.length, links: linkUrls.length } };
   }
 
-  const TYPES = { garbled: '殘留的亂碼網址', image: '打不開的圖片', link: '失效或不完整的連結', city: '找不到位置的城市', empty: '沒有內容的天', range: '日期不在旅程範圍內' };
+  const TYPES = { todo: '可以訂位了', todoold: '已結束旅程的待訂提醒', garbled: '殘留的亂碼網址', image: '打不開的圖片', link: '失效或不完整的連結', city: '找不到位置的城市', empty: '沒有內容的天', range: '日期不在旅程範圍內' };
 
   function listHtml(issues) {
     if (!issues.length) return '<p class="hc-ok">沒有發現問題。</p>';

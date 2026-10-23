@@ -413,7 +413,7 @@ input.big { font-family: var(--serif); font-size: 1.2rem; height: 48px; font-wei
 .ed-day-acts { display: flex; flex: none; }
 .ed-day-body { padding: 10px 0 26px 30px; }
 .stops-ed { display: flex; flex-direction: column; gap: 6px; }
-.stop-ed { display: grid; grid-template-columns: 26px 136px minmax(0, 1fr) minmax(0, .7fr) 34px 34px; gap: 6px; align-items: center; }
+.stop-ed { display: grid; grid-template-columns: 26px 136px minmax(0, 1fr) minmax(0, .7fr) 34px 34px 34px; gap: 6px; align-items: center; }
 .stop-ed .stop-url { color: var(--muted); font-size: .84rem; }
 .stops-ed > .btn { align-self: flex-start; margin-left: 26px; }
 .ed-blocks { display: flex; flex-direction: column; gap: 14px; }
@@ -996,13 +996,16 @@ html { -webkit-tap-highlight-color: transparent; }
   .rte-bar button { min-width: 38px; height: 38px; flex: none; }
   .rte-tbl { flex: none; }
   .rte-body { min-height: 120px; padding: 12px; }
-  .stop-ed { grid-template-columns: 30px 1fr 40px 40px; grid-template-areas: "h t i d" "n n n n" "u u u u"; row-gap: 4px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .stop-ed { grid-template-columns: 30px 1fr 40px 40px 40px; grid-template-areas: "h t f i d" "n n n n n" "u u u u u"; row-gap: 4px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
   .stop-ed .handle { grid-area: h; }
   .stop-ed input[type=time] { grid-area: t; }
-  .stop-ed .stop-name { grid-area: n; }
+
   .stop-ed .stop-url { grid-area: u; }
   .stop-ed .icon-btn { grid-area: d; }
   .stop-ed .stop-info-btn { grid-area: i; }
+  .stop-ed .stop-more-btn { grid-area: f; }
+  .stop-ed .stop-name-box { grid-area: n; }
+  .stop-todo-row { margin-left: 0 !important; }
   .stop-wrap .stop-ed { border-bottom: 0; }
   .stop-wrap { border-bottom: 1px dashed var(--line); }
   .stop-info-ed { margin: 0 0 10px; }
@@ -1396,3 +1399,105 @@ html[data-font="xl"] { font-size: 125%; }
 /* 對話框打開時，只有對話框本身可以捲動 */
 .modal-wrap, .modal { overscroll-behavior: contain; }
 html.modal-open { scroll-behavior: auto; }
+
+/* ============ 站點提醒（還沒訂位、待訂票） ============ */
+mark.stop-todo { background: var(--mark); color: var(--ink); padding: 1px 3px; margin-right: 4px; border-radius: 2px; font-weight: 500; white-space: nowrap; }
+.stop-todo-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 4px 32px; }
+.std-lbl { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; color: var(--muted); }
+.std-input { display: inline-flex; align-items: center; gap: 2px; padding: 0 6px; background: var(--mark); border-radius: 3px; }
+.std-input span { color: var(--ink-2); font-weight: 500; }
+.std-input input { width: 11em; border: 0 !important; background: transparent !important; padding: 6px 2px; font-weight: 500; color: var(--ink); box-shadow: none !important; }
+.std-presets { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.std-presets .chip-tg { font-size: .76rem; padding: 3px 9px; }
+
+.todo-box { margin: 0 0 22px; padding: 14px 18px 12px; border: 1px solid var(--line-2); border-left: 3px solid var(--mark); background: color-mix(in srgb, var(--mark) 22%, var(--surface)); border-radius: 0 4px 4px 0; }
+.todo-h { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-weight: 600; font-size: .92rem; margin-bottom: 8px; }
+.todo-h .ico, .todo-h svg { color: var(--accent); }
+.todo-h small { font-weight: 400; color: var(--muted); font-size: .74rem; }
+.todo-box ul { list-style: none; margin: 0; padding: 0; }
+.todo-box li a { display: grid; grid-template-columns: 11.5em minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px dashed var(--line-2); font-size: .88rem; align-items: baseline; }
+.todo-box li:first-child a { border-top: 0; }
+.todo-box li a:hover .td-what { text-decoration: underline; text-underline-offset: 3px; }
+.td-when { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.td-what { min-width: 0; overflow-wrap: anywhere; }
+.stops li.flash { animation: stopflash 2.4s ease; }
+@keyframes stopflash { 0%, 40% { background: color-mix(in srgb, var(--mark) 70%, transparent); } 100% { background: transparent; } }
+@media (max-width: 720px) {
+  .todo-box { padding: 12px 14px 10px; }
+  .todo-box li a { grid-template-columns: 1fr; gap: 2px; }
+  .std-input { flex: 1 1 auto; }
+  .std-input input { width: 100%; min-width: 8em; }
+}
+@media print { .todo-box { break-inside: avoid; } }
+@media (max-width: 720px) {
+  .stop-todo-row .std-lbl { order: 0; }
+  .stop-todo-row .std-input { order: 1; flex: 1 1 0; }
+  .stop-todo-row > .icon-btn { order: 2; }
+  .stop-todo-row .std-presets { order: 3; flex: 1 1 100%; }
+}
+
+/* ============ 站點的「⋯」選單：重點、備案、提醒、移動方式 ============ */
+.stop-ed { position: relative; }
+.stop-name-box { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.stop-name-box .stop-name { flex: 1; min-width: 0; }
+.sn-star { display: inline-flex; color: var(--accent); flex: none; }
+.sn-star svg { fill: currentColor; }
+.sn-alt { flex: none; font-style: normal; font-size: .72rem; color: var(--muted); border: 1px dashed var(--line-2); border-radius: 3px; padding: 1px 6px; }
+.stop-wrap.is-star .stop-name { font-weight: 600; }
+.stop-wrap.is-alt .stop-name { color: var(--muted); }
+.stop-more-btn { color: var(--muted); }
+.stop-more-btn.has { color: var(--ink); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.stop-more-btn.on { color: var(--paper); background: var(--ink); }
+.stop-menu { position: absolute; z-index: 20; right: 76px; top: calc(100% + 4px); width: 264px; padding: 4px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.12); display: flex; flex-direction: column; }
+.stop-menu button { display: grid; grid-template-columns: 26px 1fr 16px; align-items: center; gap: 8px; padding: 8px 10px; border: 0; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer; border-radius: 4px; }
+.stop-menu button:hover, .stop-menu button:focus-visible { background: color-mix(in srgb, var(--ink) 6%, transparent); outline: none; }
+.stop-menu b { display: block; font-weight: 500; font-size: .86rem; }
+.stop-menu small { display: block; color: var(--muted); font-size: .72rem; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stop-menu span { min-width: 0; }
+.stop-menu em { font-style: normal; color: var(--accent); font-weight: 600; }
+.sm-ic { display: inline-flex; justify-content: center; color: var(--accent); }
+.sm-alt { font-size: .74rem; font-weight: 600; border: 1px dashed currentColor; border-radius: 3px; width: 20px; height: 20px; align-items: center; }
+.stop-move-row { display: flex; align-items: center; gap: 8px; margin: 0 0 4px 32px; }
+.smv-lbl { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; color: var(--muted); flex: none; }
+.stop-move-row input { flex: 1; min-width: 0; max-width: 320px; padding-top: 6px; padding-bottom: 6px; font-size: .86rem; }
+@media (max-width: 720px) {
+  .stop-menu { right: 0; top: 46px; width: min(290px, calc(100vw - 32px)); }
+  .stop-move-row { margin-left: 0; }
+  .stop-move-row input { max-width: none; }
+}
+
+/* 旅程頁：重點、備案、移動方式 */
+.stops li.star .n { font-weight: 600; }
+.st-star { font-style: normal; color: var(--accent); margin-right: 4px; }
+.stops li.alt .n, .stops li.alt .t { color: var(--muted); }
+.stops li.alt .n a { color: var(--muted); }
+.stops li.alt::before { border-style: dashed; }
+.st-alt { font-size: .82em; margin-right: 2px; }
+.stops li.move { padding: 0 0 2px; }
+.stops li.move::before { display: none; }
+.stops li.move .mv { font-size: .76rem; color: var(--muted); letter-spacing: .02em; padding-left: 2px; }
+.stops li.move .mv::before { content: '↓ '; color: var(--line-2); }
+
+/* ============ 刪除後復原 ============ */
+.toast.undo { display: flex; align-items: center; gap: 14px; padding: 8px 8px 8px 18px; position: relative; overflow: hidden; }
+.toast.undo button { border: 0; background: color-mix(in srgb, var(--paper) 18%, transparent); color: var(--paper); font: inherit; font-weight: 600; padding: 5px 14px; border-radius: 3px; cursor: pointer; }
+.toast.undo button:hover { background: color-mix(in srgb, var(--paper) 30%, transparent); }
+.toast.undo i { position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: var(--accent); transform-origin: left; animation: undo-bar linear forwards; }
+@keyframes undo-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (max-width: 720px) { .toast.undo { justify-content: space-between; } }
+
+/* ============ 列印：站點標示與介紹 ============ */
+.pr-info { display: none; }
+.pr-opt { margin: 4px 0 2px; }
+@media print {
+  .todo-box, .stops .stop-info, .toast { display: none !important; }
+  body.print-info .stops li .pr-info { display: block; grid-column: 2; margin: 2px 0 8px; padding: 2px 0 2px 10px; border-left: 1px solid #999; font-size: .86em; color: #222; }
+  body.print-info .pr-info img { max-height: 220px; width: auto; }
+  mark.stop-todo { background: none !important; color: #000 !important; border: 1px solid #000; border-bottom-width: 2px; padding: 0 3px; }
+  .stops li.star .n { font-weight: 700; color: #000; }
+  .st-star { color: #000 !important; }
+  .stops li.alt .n, .stops li.alt .t, .stops li.alt .n a { color: #666 !important; }
+  .st-alt { font-style: italic; }
+  .stops li.move .mv { color: #333; }
+  .stops li.move .mv::before { color: #666; }
+}

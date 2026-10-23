@@ -29,7 +29,7 @@
       const hotels = new Set();
       (t.days || []).forEach((d, i) => {
         const dayLabel = `Day ${i + 1}　${UI.dot(d.date, false)}`;
-        (d.stops || []).forEach(p => { if (hit(p.name)) out.push({ ...base, kind: 'stop', title: p.name.replace(/[!-~]{41,}/g, '…'), sub: dayLabel + (p.time ? '　' + p.time : ''), score: 20, tab: 'plan', jump: 'day-' + d.id }); });
+        (d.stops || []).forEach(p => { if (hit(p.name + ' ' + (p.todo || ''))) out.push({ ...base, kind: 'stop', title: (p.todo ? `（${p.todo}）` : '') + p.name.replace(/[!-~]{41,}/g, '…'), sub: dayLabel + (p.time ? '　' + p.time : ''), score: 20, tab: 'plan', jump: 'day-' + d.id }); });
         if (d.title && hit(d.title)) out.push({ ...base, kind: 'stop', title: d.title, sub: dayLabel, score: 22, tab: 'plan', jump: 'day-' + d.id });
         if (d.hotel && hit(d.hotel) && !hotels.has(d.hotel)) { hotels.add(d.hotel); out.push({ ...base, kind: 'hotel', title: d.hotel, sub: dayLabel, score: 25, tab: 'plan', jump: 'day-' + d.id }); }
         (d.stops || []).forEach(p => { if (p.info && !hit(p.name)) { const it = TA.rich.textOf(p.info); if (hit(it)) out.push({ ...base, kind: 'stop', title: p.name.replace(/[!-~]{41,}/g, '…') || snippet(it), sub: dayLabel + '　介紹：' + snippet(it), score: 12, tab: 'plan', jump: 'day-' + d.id }); } });

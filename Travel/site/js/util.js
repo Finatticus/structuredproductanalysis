@@ -35,6 +35,23 @@
       return h % 360;
     },
 
+    /** 「已刪除・復原」：ms 毫秒內按復原就呼叫 onUndo；回傳 dismiss() 可提早收掉 */
+    undoToast(msg, onUndo, ms = 5000) {
+      let box = U.$('#toasts');
+      if (!box) { box = document.createElement('div'); box.id = 'toasts'; document.body.appendChild(box); }
+      U.$$('.toast.undo', box).forEach(x => x._dismiss && x._dismiss());   // 一次只留一個
+      const t = document.createElement('div');
+      t.className = 'toast undo';
+      t.innerHTML = `<span></span><button type="button">復原</button><i style="animation-duration:${ms}ms"></i>`;
+      t.firstChild.textContent = msg;
+      box.appendChild(t);
+      let done = false;
+      const dismiss = () => { if (done) return; done = true; clearTimeout(timer); t.classList.add('out'); setTimeout(() => t.remove(), 300); };
+      t._dismiss = dismiss;
+      const timer = setTimeout(dismiss, ms);
+      t.querySelector('button').onclick = () => { if (done) return; dismiss(); onUndo(); };
+      return { dismiss };
+    },
     toast(msg, type = 'ok') {
       let box = U.$('#toasts');
       if (!box) { box = document.createElement('div'); box.id = 'toasts'; document.body.appendChild(box); }

@@ -24,6 +24,20 @@
   const pen = (t, part, label) => TA.store.isGuest() ? '' : `<a class="ed-pen" href="#/trip/${t.id}/edit/${part}" title="${label}" aria-label="${label}">${UI.icon('edit', 14)}</a>`;
   const lockIco = s => Array.isArray(s.visibleTo) && !TA.store.isGuest() ? `<span class="tab-lock" title="${s.visibleTo.length ? '只有你和指定的訪客看得到' : '只有你看得到'}">${UI.icon('lock', 11)}</span>` : '';
 
+  /** 行前備註上方：還沒訂位、待訂票的站點（只有管理者看得到） */
+  function todoBox(t) {
+    if (S.isGuest()) return '';
+    const list = [];
+    (t.days || []).forEach((d, i) => (d.stops || []).forEach(p => { if ((p.todo || '').trim()) list.push({ d, i, p }); }));
+    if (!list.length) return '';
+    return `<section class="todo-box">
+      <div class="todo-h">${UI.icon('bell', 15)}還有 ${list.length} 項待處理<small>在編輯每日行程時，站點右邊的鈴鐺可以加上或移除提醒</small></div>
+      <ul>${list.map(({ d, i, p }) => `<li><a href="#" data-jump="stop-${E(p.id)}">
+        <span class="td-when">Day ${i + 1}　${UI.dot(d.date, false)}${d.date ? ' ' + UI.week(d.date).replace('星期', '週') : ''}${p.time ? '　' + E(p.time) : ''}</span>
+        <span class="td-what"><mark class="stop-todo">（${E(p.todo)}）</mark>${E(tidy(p.name)) || '（未命名）'}</span></a></li>`).join('')}</ul>
+    </section>`;
+  }
+
   /** 站點的介紹與資訊：小視窗 */
   function stopInfo(t, dayId, stopId) {
     const di = t.days.findIndex(d => d.id === dayId), d = t.days[di];
@@ -32,7 +46,6 @@
     const hasMap = /google\.[^/]+\/maps|maps\.app\.goo\.gl/.test(p.url || '');
     const links = [
       p.url ? `<a class="btn sm ghost" href="${E(p.url)}" target="_blank" rel="noopener">${UI.icon(hasMap ? 'map' : 'link', 14)}${hasMap ? 'Google 地圖' : '開啟連結'}</a>` : '',
-      !hasMap && p.name ? `<a class="btn sm ghost" href="${E(mapQ(tidy(p.name), t))}" target="_blank" rel="noopener">${UI.icon('map', 14)}在地圖查看</a>` : '',
       S.isGuest() ? '' : `<a class="btn sm ghost" href="#/trip/${t.id}/edit/day-${d.id}" data-close>${UI.icon('edit', 14)}編輯</a>`,
     ].filter(Boolean).join('');
     const m = U.modal(`<div class="si-meta">Day ${di + 1}　${UI.dot(d.date, false)}${d.date ? '　' + UI.week(d.date) : ''}${p.time ? `<b>${E(p.time)}</b>` : ''}</div>
@@ -44,7 +57,7 @@
 
   function dayHtml(d, i, t) {
     const today = U.todayStr() === d.date;
-    const stops = (d.stops || []).filter(p => p.name || p.time);
+    const stops = (d.stops || []).filter(p => p.name || p.time || p.todo || p.move);
     const empty = !stops.length && R.isEmpty(d.notes) && !d.hotel && !(d.blocks || []).length;
     return `<article class="day${today ? ' today' : ''}" id="day-${d.id}">
       <div class="day-side">
@@ -56,7 +69,7 @@
       <div class="day-main">
         ${d.title ? `<h3 class="day-title">${E(d.title)}</h3>` : ''}
         ${TA.bookings.dayItems(t, d.date)}
-        ${stops.length ? `<ol class="stops">${stops.map(p => `<li><span class="t">${E(p.time || '')}</span><span class="n" title="${E(p.name)}">${p.url ? `<a href="${E(p.url)}" target="_blank" rel="noopener">${E(tidy(p.name || p.url))}</a>` : E(tidy(p.name))}${p.name && !/google\.[^/]+\/maps|maps\.app\.goo\.gl/.test(p.url || '') ? `<a class="map-ic" href="${E(mapQ(tidy(p.name), t))}" target="_blank" rel="noopener" title="在 Google 地圖查看">${UI.icon('map', 13)}</a>` : ''}${R.isEmpty(p.info) ? '' : `<button type="button" class="stop-info" data-stop-info="${E(d.id)}|${E(p.id)}" title="介紹與資訊" aria-label="${E(tidy(p.name))} 的介紹與資訊">${UI.icon('info', 15)}</button>`}</span></li>`).join('')}</ol>` : ''}
+        ${stops.length ? `<ol class="stops">${stops.map((p, x) => `<li id="stop-${E(p.id)}" class="${[p.star && 'star', p.alt && 'alt'].filter(Boolean).join(' ')}"><span class="t">${E(p.time || '')}</span><span class="n" title="${E(p.name)}">${p.star ? `<i class="st-star" aria-label="重點行程">★</i>` : ''}${p.alt ? '<span class="st-alt">（備案）</span>' : ''}${p.todo ? `<mark class="stop-todo">（${E(p.todo)}）</mark>` : ''}${p.url ? `<a href="${E(p.url)}" target="_blank" rel="noopener">${E(tidy(p.name || p.url))}</a>` : E(tidy(p.name))}${R.isEmpty(p.info) ? '' : `<button type="button" class="stop-info" data-stop-info="${E(d.id)}|${E(p.id)}" title="介紹與資訊" aria-label="${E(tidy(p.name))} 的介紹與資訊">${UI.icon('info', 15)}</button>`}</span>${R.isEmpty(p.info) ? '' : `<div class="pr-info rich">${R.view(p.info)}</div>`}</li>${p.move ? `<li class="move"><span class="t"></span><span class="mv">${E(p.move)}</span></li>` : ''}`).join('')}</ol>` : ''}
         ${rich(d.notes, `days.${i}.notes`)}
         ${d.hotel ? `<div class="stay-line"><span class="lbl">住宿</span>${d.hotelUrl ? `<a href="${E(d.hotelUrl)}" target="_blank" rel="noopener">${E(d.hotel)}</a>` : E(d.hotel)}${/google\.[^/]+\/maps|maps\.app\.goo\.gl/.test(d.hotelUrl || '') ? '' : `<a class="map-ic" href="${E(mapQ(d.hotel, t))}" target="_blank" rel="noopener" title="在 Google 地圖查看">${UI.icon('map', 13)}</a>`}</div>` : ''}
         ${(d.blocks || []).map((b, j) => foldHtml(b.title || '詳細內容', b.body, `days.${i}.blocks.${j}.body`, b.open)).join('')}
@@ -137,6 +150,7 @@
             ${t.days.map((d, i) => `<a href="#" data-jump="day-${d.id}" class="${U.todayStr() === d.date ? 'today' : ''}"><b>${String(i + 1).padStart(2, '0')}</b><span>${UI.dot(d.date, false)}</span><em>${E(d.title || (d.stops || [])[0]?.name || '')}</em></a>`).join('')}
           </aside>
           <div class="days">
+            ${todoBox(t)}
             ${R.isEmpty(t.intro) ? '' : `<section class="intro" id="intro"><div class="intro-lbl">行前備註${pen(t, 'intro', '編輯行前備註')}</div>${rich(t.intro, 'intro')}</section>`}
             ${t.days.length ? t.days.map((d, i) => dayHtml(d, i, t)).join('') : `<div class="empty-box">還沒有每日行程<br><a class="btn primary" href="#/trip/${t.id}/edit">開始安排</a></div>`}
           </div>
@@ -191,11 +205,30 @@
         return;
       }
       const j = e.target.closest('[data-jump]');
-      if (j) { e.preventDefault(); document.getElementById(j.dataset.jump)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+      if (j) {
+        e.preventDefault();
+        const node = document.getElementById(j.dataset.jump);
+        if (!node) return;
+        const isStop = j.dataset.jump.startsWith('stop-');
+        node.scrollIntoView({ behavior: 'smooth', block: isStop ? 'center' : 'start' });
+        if (isStop) { node.classList.remove('flash'); void node.offsetWidth; node.classList.add('flash'); setTimeout(() => node.classList.remove('flash'), 2600); }
+        return;
+      }
       if (e.target.closest('[data-act="print"]')) {
-        U.$$('[data-pane]', el).forEach(p => (p.hidden = false));
-        U.$$('.fold', el).forEach(d => d.classList.add('open'));
-        setTimeout(() => window.print(), 100);
+        const go = withInfo => {
+          document.body.classList.toggle('print-info', !!withInfo);
+          U.$$('[data-pane]', el).forEach(p => (p.hidden = false));
+          U.$$('.fold', el).forEach(d => d.classList.add('open'));
+          window.addEventListener('afterprint', () => document.body.classList.remove('print-info'), { once: true });
+          setTimeout(() => window.print(), 150);
+        };
+        const nInfo = (t.days || []).reduce((s, d) => s + (d.stops || []).filter(p => !R.isEmpty(p.info)).length, 0);
+        if (!nInfo) return go(false);
+        const m = U.modal(`<p>要一起印出站點的介紹與資訊（ⓘ 的內容）嗎？這趟有 ${nInfo} 站有填寫。</p>
+          <label class="mini-check pr-opt"><input type="checkbox" id="pr-info" checked>一起印出站點介紹（會印在每一站下方）</label>
+          <p class="hint">適合印給家人帶在身上；只想看行程骨架就取消勾選。</p>
+          <div class="modal-actions"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="pr-go">${UI.icon('print', 16)}列印</button></div>`, { title: '列印', small: true });
+        U.$('#pr-go', m.el).onclick = () => { const w = U.$('#pr-info', m.el).checked; m.close(); go(w); };
       }
     });
 

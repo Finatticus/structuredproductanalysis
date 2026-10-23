@@ -18,6 +18,9 @@
   const FACT_PRESETS = ['訂位代號', 'eSIM', '保險', '緊急電話', '集合時間', '同行旅伴'];
   const newDay = (date = '', hotel = '') => ({ id: U.uid('d'), date, title: '', stops: [], notes: '', hotel, hotelUrl: '', blocks: [] });
   const newStop = () => ({ id: U.uid('p'), time: '', name: '', url: '' });
+  const TODO_PRESETS = ['還沒訂位', '待訂票', '待確認', ' 後可訂位'];
+  /** 提醒文字：去掉使用者自己打的括號，顯示時會自動加上 */
+  const cleanTodo = s => String(s || '').trim().replace(/^[（(【\[]+|[）)】\]]+$/g, '').trim();
   const tidyName = s => String(s || '').replace(/[!-~]{41,}/g, '…').slice(0, 40);
 
   function chipsHtml(field, values, placeholder, list, trip) {
@@ -68,6 +71,9 @@
     const open = new Set(t.days.length <= 2 ? t.days.map(d => d.id) : []);
     const secOpen = new Set(t.sections.length <= 2 ? t.sections.map(x => x.id) : []);
     const secMode = {};
+    const moveOpen = new Set();   // 正在填移動方式的站點
+    let menuOpen = null;          // 打開「⋯」選單的站點
+    const todoOpen = new Set();   // 正在加提醒的站點（還沒填字之前也要顯示輸入框）
     const infoOpen = new Set();   // 正在編輯「介紹與資訊」的站點   // 分頁權限的介面狀態：'some' 時即使還沒勾訪客也顯示訪客清單
     let guests = S.guestsCached() || [];
     // 訪客清單讀到後，更新分頁權限的顯示（正在打字時不重畫，以免游標跑掉）
@@ -95,6 +101,19 @@
     } catch { }
 
     const saveDraft = U.debounce(() => { if (!dirty) return; try { localStorage.setItem(draftKey, JSON.stringify({ at: new Date().toISOString(), trip: t })); } catch { } }, 600);
+    /** 刪除後 5 秒內可以復原（放回原本的位置） */
+    let undoT = null;
+    function removeWithUndo(arr, idx, msg) {
+      const [item] = arr.splice(idx, 1);
+      if (!item) return;
+      touch(); paint();
+      undoT = U.undoToast(msg, () => { arr.splice(Math.min(idx, arr.length), 0, item); touch(); paint(); U.toast('已復原'); });
+    }
+    function closeMenu() {
+      menuOpen = null;
+      U.$$('.stop-menu', el).forEach(m => m.remove());
+      U.$$('.stop-more-btn.on', el).forEach(b => { b.classList.remove('on'); b.setAttribute('aria-expanded', 'false'); });
+    }
     const touch = () => { dirty = true; el.querySelector('.ed-state')?.classList.add('dirty'); saveDraft(); };
     function setPath(path, val) {
       const keys = path.split('.'); let o = t;
@@ -106,14 +125,35 @@
       return `<div class="stops-ed" data-i="${i}">
         ${(d.stops || []).map((p, k) => {
           const has = !R.isEmpty(p.info), on = infoOpen.has(p.id);
-          return `<div class="stop-wrap${on ? ' info-on' : ''}" data-k="${k}"><div class="stop-ed" data-k="${k}">
+          const todo = (p.todo || '').trim(), todoOn = !!todo || todoOpen.has(p.id);
+          const move = (p.move || '').trim(), moveOn = !!move || moveOpen.has(p.id);
+          const flags = [p.star && '重點行程', p.alt && '備案', todo && '提醒：' + todo, move && '移動：' + move].filter(Boolean);
+          return `<div class="stop-wrap${on ? ' info-on' : ''}${p.star ? ' is-star' : ''}${p.alt ? ' is-alt' : ''}" data-k="${k}"><div class="stop-ed" data-k="${k}">
           <span class="handle sh-stop" title="拖曳排序">${UI.icon('drag', 16)}</span>
           <input type="time" data-bind="days.${i}.stops.${k}.time" value="${E(p.time)}" title="時間（可空白）">
-          <input type="text" class="stop-name" data-bind="days.${i}.stops.${k}.name" value="${E(p.name)}" placeholder="景點、餐廳或交通" data-i="${i}" data-k="${k}">
+          <span class="stop-name-box">${p.star ? `<i class="sn-star" title="重點行程">${UI.icon('star', 13)}</i>` : ''}${p.alt ? '<i class="sn-alt">備案</i>' : ''}<input type="text" class="stop-name" data-bind="days.${i}.stops.${k}.name" value="${E(p.name)}" placeholder="景點、餐廳或交通" data-i="${i}" data-k="${k}"></span>
           <input type="url" class="stop-url" data-bind="days.${i}.stops.${k}.url" value="${E(p.url)}" placeholder="連結（選填）">
+          <button type="button" class="icon-btn stop-more-btn${flags.length ? ' has' : ''}${menuOpen === p.id ? ' on' : ''}" data-act="stop-more" data-i="${i}" data-k="${k}" title="${flags.length ? E(flags.join('、')) : '更多：重點行程、備案、提醒、移動方式'}" aria-haspopup="menu" aria-expanded="${menuOpen === p.id}">${UI.icon('more', 16)}</button>
+          ${menuOpen === p.id ? `<div class="stop-menu" role="menu">
+            <button type="button" role="menuitemcheckbox" aria-checked="${!!p.star}" data-act="stop-star" data-i="${i}" data-k="${k}"><span class="sm-ic">${UI.icon('star', 15)}</span><span><b>重點行程</b><small>名稱前加 ★、字加粗</small></span><em>${p.star ? '✓' : ''}</em></button>
+            <button type="button" role="menuitemcheckbox" aria-checked="${!!p.alt}" data-act="stop-alt" data-i="${i}" data-k="${k}"><span class="sm-ic sm-alt">備</span><span><b>備案</b><small>淡色顯示，前面寫（備案）</small></span><em>${p.alt ? '✓' : ''}</em></button>
+            <button type="button" role="menuitem" data-act="stop-todo" data-i="${i}" data-k="${k}"><span class="sm-ic">${UI.icon('bell', 15)}</span><span><b>待訂位／待訂票提醒</b><small>${todo ? E(todo) : '例如：還沒訂位、11/1 後可訂位'}</small></span><em>${todo ? '✓' : ''}</em></button>
+            <button type="button" role="menuitem" data-act="stop-move" data-i="${i}" data-k="${k}"><span class="sm-ic">${UI.icon('walk', 15)}</span><span><b>到下一站的移動方式</b><small>${move ? E(move) : '例如：步行 10 分、Grab 20 分'}</small></span><em>${move ? '✓' : ''}</em></button>
+          </div>` : ''}
           <button type="button" class="icon-btn stop-info-btn${has ? ' has' : ''}${on ? ' on' : ''}" data-act="stop-info" data-i="${i}" data-k="${k}" title="${has ? '介紹與資訊（已填寫，點一下編輯）' : '新增介紹與資訊：景點介紹、店家資訊…'}" aria-expanded="${on}">${UI.icon('info', 16)}</button>
           <button type="button" class="icon-btn" data-act="stop-del" data-i="${i}" data-k="${k}" title="移除">${UI.icon('x', 14)}</button>
         </div>
+        ${todoOn ? `<div class="stop-todo-row">
+          <span class="std-lbl">${UI.icon('bell', 13)}提醒</span>
+          <label class="std-input"><span>（</span><input type="text" class="stop-todo" data-bind="days.${i}.stops.${k}.todo" value="${E(todo)}" placeholder="例如：還沒訂位" data-i="${i}" data-k="${k}" maxlength="30"><span>）</span></label>
+          <span class="std-presets">${TODO_PRESETS.map(v => `<button type="button" class="chip-tg" data-act="stop-todo-set" data-i="${i}" data-k="${k}" data-v="${E(v)}">${E(v.replace(/^ /, '__ 月 __ 日'))}</button>`).join('')}</span>
+          <button type="button" class="icon-btn" data-act="stop-todo-clear" data-i="${i}" data-k="${k}" title="移除提醒">${UI.icon('x', 14)}</button>
+        </div>` : ''}
+        ${moveOn ? `<div class="stop-move-row">
+          <span class="smv-lbl">${UI.icon('walk', 13)}到下一站</span>
+          <input type="text" class="stop-move" data-bind="days.${i}.stops.${k}.move" value="${E(move)}" placeholder="例如：步行 10 分、Grab 20 分、BTS 3 站" list="dl-move" data-i="${i}" data-k="${k}" maxlength="40">
+          <button type="button" class="icon-btn" data-act="stop-move-clear" data-i="${i}" data-k="${k}" title="移除移動方式">${UI.icon('x', 14)}</button>
+        </div>` : ''}
         ${on ? `<div class="stop-info-ed">
           <div class="sie-head"><span>${UI.icon('info', 14)}${p.name ? `「${E(tidyName(p.name))}」的介紹與資訊` : '介紹與資訊'}</span><small>旅程頁會在這一站後面顯示小圖示，點開就是這裡的內容</small></div>
           ${R.editor(`days.${i}.stops.${k}.info`, p.info || '', { simple: true, placeholder: '景點介紹、營業時間、必點、門票、交通方式、照片……' })}
@@ -121,7 +161,8 @@
         </div>` : ''}</div>`;
         }).join('')}
         <button type="button" class="btn sm ghost" data-act="stop-add" data-i="${i}">${UI.icon('plus', 14)}新增一站</button>
-      </div>`;
+      </div>
+      ${i === 0 ? `<datalist id="dl-move">${['步行 5 分', '步行 10 分', '步行 15 分', '計程車 15 分', 'Grab 20 分', '捷運', '公車', '火車', '開車 30 分'].map(v => `<option value="${v}">`).join('')}</datalist>` : ''}`;
     }
 
     function dayHtml(d, i) {
@@ -427,6 +468,7 @@
     }
 
     el.addEventListener('click', async e => {
+      if (menuOpen && !e.target.closest('.stop-menu, [data-act="stop-more"]')) closeMenu();
       const cd = e.target.closest('[data-chip-del]');
       if (cd) { const f = cd.closest('.chips').dataset.chips; t[f].splice(+cd.dataset.chipDel, 1); touch(); refreshChips(f, false); return; }
       const cc = e.target.closest('.chip-x[data-city]');
@@ -485,13 +527,55 @@
           t.days.splice(i + 1, 0, c); open.add(c.id); touch(); paint(); return;
         }
         case 'day-del':
-          if (await U.confirm(`刪除第 ${i + 1} 天（${UI.dot(t.days[i].date, false)}）的所有內容？`, { ok: '刪除', danger: true })) { t.days.splice(i, 1); touch(); paint(); }
+          if (await U.confirm(`刪除第 ${i + 1} 天（${UI.dot(t.days[i].date, false)}）的所有內容？`, { ok: '刪除', danger: true })) removeWithUndo(t.days, i, `已刪除第 ${i + 1} 天`);
           return;
         case 'stop-add': t.days[i].stops.push(newStop()); touch(); paint(); U.$$(`.stop-name[data-i="${i}"]`, el).pop()?.focus(); return;
         case 'stop-del': {
-          const p = t.days[i].stops[k];
-          if (p && !R.isEmpty(p.info) && !(await U.confirm(`「${tidyName(p.name) || '這一站'}」有填寫介紹與資訊，確定要移除這一站？`, { ok: '移除', danger: true }))) return;
-          t.days[i].stops.splice(k, 1); touch(); paint(); return;
+          const p = t.days[i].stops[k]; if (!p) return;
+          removeWithUndo(t.days[i].stops, k, `已刪除「${tidyName(p.name) || '這一站'}」`); return;
+        }
+        case 'stop-more': {
+          const p = t.days[i].stops[k]; if (!p) return;
+          menuOpen = menuOpen === p.id ? null : p.id; paint();
+          U.$('.stop-menu button', el)?.focus({ preventScroll: true });
+          return;
+        }
+        case 'stop-star': case 'stop-alt': {
+          const p = t.days[i].stops[k]; if (!p) return;
+          const key = act === 'stop-star' ? 'star' : 'alt';
+          if (p[key]) delete p[key]; else p[key] = true;
+          menuOpen = null; touch(); paint(); return;
+        }
+        case 'stop-move': {
+          const p = t.days[i].stops[k]; if (!p) return;
+          menuOpen = null; moveOpen.add(p.id); paint();
+          U.$(`.stop-move[data-i="${i}"][data-k="${k}"]`, el)?.focus();
+          return;
+        }
+        case 'stop-move-clear': {
+          const p = t.days[i].stops[k]; if (!p) return;
+          delete p.move; moveOpen.delete(p.id); touch(); paint(); return;
+        }
+        case 'stop-todo': {
+          const p = t.days[i].stops[k]; if (!p) return;
+          menuOpen = null;
+          if ((p.todo || '').trim()) { U.$(`.stop-todo[data-i="${i}"][data-k="${k}"]`, el)?.focus(); return; }
+          if (todoOpen.has(p.id)) todoOpen.delete(p.id); else todoOpen.add(p.id);
+          paint();
+          if (todoOpen.has(p.id)) U.$(`.stop-todo[data-i="${i}"][data-k="${k}"]`, el)?.focus();
+          return;
+        }
+        case 'stop-todo-set': {
+          const p = t.days[i].stops[k]; if (!p) return;
+          const v = a.dataset.v;
+          p.todo = v.startsWith(' ') ? v : v; touch(); todoOpen.add(p.id); paint();
+          const inp = U.$(`.stop-todo[data-i="${i}"][data-k="${k}"]`, el);
+          if (inp) { inp.focus(); if (v.startsWith(' ')) inp.setSelectionRange(0, 0); else inp.setSelectionRange(v.length, v.length); }
+          return;
+        }
+        case 'stop-todo-clear': {
+          const p = t.days[i].stops[k]; if (!p) return;
+          delete p.todo; todoOpen.delete(p.id); touch(); paint(); return;
         }
         case 'stop-info': {
           const p = t.days[i].stops[k]; if (!p) return;
@@ -503,7 +587,7 @@
           return;
         }
         case 'blk-add': t.days[i].blocks.push({ id: U.uid('b'), title: a.dataset.title, body: '', open: false }); touch(); paint(); return;
-        case 'blk-del': if (await U.confirm('刪除這個區塊？', { ok: '刪除', danger: true })) { t.days[i].blocks.splice(+a.dataset.j, 1); touch(); paint(); } return;
+        case 'blk-del': { const b = t.days[i].blocks[+a.dataset.j]; if (b) removeWithUndo(t.days[i].blocks, +a.dataset.j, `已刪除「${b.title || '收合區塊'}」`); return; }
         case 'sec-toggle': { const id = t.sections[k].id; secOpen.has(id) ? secOpen.delete(id) : secOpen.add(id); paint(); return; }
         case 'sec-vis': {
           const sec = t.sections[k], v = a.dataset.v;
@@ -523,7 +607,7 @@
           t.sections.push(ns); secOpen.add(ns.id); touch(); paint();
           setTimeout(() => U.$$('.ed-sec', el).pop()?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50); return;
         }
-        case 'sec-del': if (await U.confirm(`刪除「${t.sections[k].title}」分頁？`, { ok: '刪除', danger: true })) { t.sections.splice(k, 1); touch(); paint(); } return;
+        case 'sec-del': if (await U.confirm(`刪除「${t.sections[k].title}」分頁？`, { ok: '刪除', danger: true })) removeWithUndo(t.sections, k, `已刪除「${t.sections[k].title || '分頁'}」分頁`); return;
         case 'sec-up': case 'sec-down': {
           const to = act === 'sec-up' ? k - 1 : k + 1;
           if (to < 0 || to >= t.sections.length) return;
@@ -543,7 +627,7 @@
         case 'bk-toggle': { const id = t.bookings[i].id; bkOpen.has(id) ? bkOpen.delete(id) : bkOpen.add(id); paint(); return; }
         case 'bk-dup': { const c = U.clone(t.bookings[i]); c.id = U.uid('k'); c.code = ''; t.bookings.splice(i + 1, 0, c); bkOpen.add(c.id); touch(); paint(); return; }
         case 'bk-del':
-          if (await U.confirm(`刪除「${TA.bookings.titleOf(t.bookings[i])}」？`, { ok: '刪除', danger: true })) { t.bookings.splice(i, 1); touch(); paint(); }
+          if (t.bookings[i]) removeWithUndo(t.bookings, i, `已刪除「${TA.bookings.titleOf(t.bookings[i])}」`);
           return;
         case 'bk-from-days': {
           const add = TA.bookings.hotelsFromDays(t);
@@ -573,7 +657,12 @@
       if (!t.title.trim()) t.title = t.cities.join('・') || t.countries.join('・') || '未命名旅程';
       // 整理：清掉空白的站點、淨化圖文內容
       t.days.forEach(d => {
-        d.stops = (d.stops || []).filter(p => p.name.trim() || p.time || p.url || !R.isEmpty(p.info));
+        d.stops.forEach(p => {
+          const v = cleanTodo(p.todo); if (v) p.todo = v; else delete p.todo;
+          const mv = String(p.move || '').trim(); if (mv) p.move = mv; else delete p.move;
+          if (!p.star) delete p.star; if (!p.alt) delete p.alt;
+        });
+        d.stops = (d.stops || []).filter(p => p.name.trim() || p.time || p.url || p.todo || !R.isEmpty(p.info));
         d.stops.forEach(p => { if (R.isEmpty(p.info)) delete p.info; else p.info = R.sanitize(p.info); });
         d.notes = R.sanitize(d.notes);
         d.blocks.forEach(b => (b.body = R.sanitize(b.body)));
@@ -597,7 +686,10 @@
       if (focused) { location.hash = `#/trip/${t.id}`; return; }
       el.querySelector('.ed-state')?.classList.remove('dirty');
     }
-    const onKey = e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); } };
+    const onKey = e => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
+      if (e.key === 'Escape' && menuOpen) closeMenu();
+    };
     document.addEventListener('keydown', onKey);
     const onUnload = e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } };
     window.addEventListener('beforeunload', onUnload);
@@ -611,7 +703,7 @@
       try { f = JSON.parse(sessionStorage.getItem('ta.focus') || 'null'); } catch { }
       if (!f || f.id !== t.id) return;
       sessionStorage.removeItem('ta.focus');
-      if (['day', 'stop', 'block', 'stopinfo'].includes(f.kind) && t.days[f.i]) open.add(t.days[f.i].id);
+      if (['day', 'stop', 'block', 'stopinfo', 'stoptodo'].includes(f.kind) && t.days[f.i]) open.add(t.days[f.i].id);
       if (f.kind === 'stopinfo' && t.days[f.i]?.stops[f.k]) infoOpen.add(t.days[f.i].stops[f.k].id);
       if (f.kind === 'booking' && t.bookings[f.i]) bkOpen.add(t.bookings[f.i].id);
       if (f.kind === 'section' && t.sections[f.k]) secOpen.add(t.sections[f.k].id);
@@ -620,6 +712,7 @@
         day: f.field && f.field !== 'notes' ? `[data-bind="days.${f.i}.${f.field}"]` : f.field === 'notes' ? `.rte[data-path="days.${f.i}.notes"]` : `#ed-day-${f.i}`,
         stop: `.stop-name[data-i="${f.i}"][data-k="${f.k}"]`,
         stopinfo: `.rte[data-path="days.${f.i}.stops.${f.k}.info"]`,
+        stoptodo: `.stop-todo[data-i="${f.i}"][data-k="${f.k}"]`,
         block: `.ed-blocks[data-i="${f.i}"] .ed-block[data-j="${f.j}"]`,
         booking: `.bk-ed[data-i="${f.i}"]`,
         city: `.chip-x[data-city="${CSS.escape(f.name || '')}"]`,
@@ -637,7 +730,7 @@
     })();
 
     return {
-      cleanup() { document.removeEventListener('keydown', onKey); window.removeEventListener('beforeunload', onUnload); sortables.forEach(s => s.destroy()); uninstall(); },
+      cleanup() { undoT && undoT.dismiss(); document.removeEventListener('keydown', onKey); window.removeEventListener('beforeunload', onUnload); sortables.forEach(s => s.destroy()); uninstall(); },
       canLeave() { return !dirty || window.confirm('有尚未儲存的變更，確定要離開嗎？（草稿已暫存，下次打開可以還原）'); },
     };
   }
