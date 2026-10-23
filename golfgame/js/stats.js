@@ -50,7 +50,7 @@ export function derive(stats) {
     smashMul: 0.96 + s.contact * 0.0008,            // 擊球效率倍率
     mishitSigma: 0.06 - s.contact * 0.0004,         // 打偏甜蜜點的程度（標準差）
     launchSigma: 2.0 - s.launch * 0.014,            // 發射角誤差（度）
-    faceSigma: 3.0 - s.accuracy * 0.022,            // 桿面角度誤差（度）
+    faceSigma: 2.6 - s.accuracy * 0.019,            // 桿面角度誤差（度）
     powerSigma: 0.06 - s.consistency * 0.00045,     // 力道浮動（比例）
     shapeSigma: 0.5 - s.shaping * 0.0042,           // 曲球彎曲量誤差（比例）
     spinMul: 0.85 + s.spin * 0.003,                 // 短鐵/挖起桿後旋倍率

@@ -4,6 +4,7 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { paintMaps } from './terrain.js';
 import { makeNoise, makeRng, clamp } from './util.js';
+import { heatColor } from './hud.js';
 
 const BALL_R = 0.021335;
 const QUALITY = {
@@ -471,16 +472,17 @@ export class World {
     g.add(grp);
   }
 
-  // 果嶺坡度格線（推桿時顯示），顏色越紅坡越陡
+  // 果嶺高低格線（推桿時顯示）：比果嶺平均高 → 紅、低 → 藍、平 → 綠
   buildGreenGrid(hole, g) {
     const gr = hole.green;
     const pts = [], cols = [];
     const R = Math.max(gr.rx, gr.ry) * 1.3;
     const col = new THREE.Color();
+    const gs = hole.greenStats();
     const addSeg = (u0, v0, u1, v1) => {
       const h0 = hole.heightUV(u0, v0) + 0.02, h1 = hole.heightUV(u1, v1) + 0.02;
-      const sl = Math.abs(h1 - h0) / Math.hypot(u1 - u0, v1 - v0);
-      col.setHSL(clamp(0.33 - sl * 6, 0, 0.33), 0.9, 0.62);
+      const [cr, cg, cb] = heatColor(((h0 + h1) / 2 - 0.02 - gs.h0) / gs.range);
+      col.setRGB(cr / 255, cg / 255, cb / 255, THREE.SRGBColorSpace);
       pts.push(u0, h0, -v0, u1, h1, -v1);
       cols.push(col.r, col.g, col.b, col.r, col.g, col.b);
     };
@@ -495,9 +497,28 @@ export class World {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-    this.greenGrid = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.45, depthWrite: false }));
+    this.greenGrid = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.75, depthWrite: false }));
     this.greenGrid.visible = false;
     g.add(this.greenGrid);
+  }
+
+  // 練習場沙坑：把發球台換成一片沙地（傳 null 隱藏）
+  setSandPatch(tee) {
+    if (!this.sandPatch) {
+      const tex = this.tex.sandD.clone();
+      tex.needsUpdate = true;
+      tex.repeat.set(3, 2);
+      const m = new THREE.MeshStandardMaterial({ map: tex, normalMap: this.tex.sandN, color: 0xf2e6c8, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      const g = new THREE.PlaneGeometry(12, 9, 1, 1);
+      g.rotateX(-Math.PI / 2);
+      this.sandPatch = new THREE.Mesh(g, m);
+      this.sandPatch.receiveShadow = true;
+      this.scene.add(this.sandPatch);
+    }
+    this.sandPatch.visible = !!tee && !!this.hole;
+    if (!this.sandPatch.visible) return;
+    this.sandPatch.position.set(tee.u, this.hole.heightUV(tee.u, tee.v) + 0.004, -tee.v);
+    this.sandPatch.rotation.y = -Math.atan2(tee.dir[0], tee.dir[1]);
   }
 
   // ---------- 球、陰影、彈道、瞄準 ----------
@@ -521,13 +542,14 @@ export class World {
   }
 
   buildMarkers() {
-    // 落點目標圈
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.15, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide }));
-    ring.rotation.x = -Math.PI / 2;
-    const inner = new THREE.Mesh(new THREE.RingGeometry(0.25, 0.36, 32), ring.material);
-    inner.rotation.x = -Math.PI / 2;
+    // 預估落點：一個白點（外圈一點深色邊，在亮草地上也看得到）
+    const edge = new THREE.Mesh(new THREE.CircleGeometry(0.62, 32), new THREE.MeshBasicMaterial({ color: 0x0b1510, transparent: true, opacity: 0.45, depthWrite: false }));
+    edge.rotation.x = -Math.PI / 2;
+    const dot = new THREE.Mesh(new THREE.CircleGeometry(0.5, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.92, depthWrite: false }));
+    dot.rotation.x = -Math.PI / 2;
+    dot.position.y = 0.01;
     const tgt = this.target = new THREE.Group();
-    tgt.add(ring, inner);
+    tgt.add(edge, dot);
     tgt.renderOrder = 5;
     this.scene.add(tgt);
     // 推桿預測線
@@ -542,7 +564,7 @@ export class World {
     this.target.visible = visible;
     if (!visible || !this.hole) return;
     this.target.position.set(x, this.hole.height(x, z) + 0.08, z);
-    this.target.scale.setScalar(scale);
+
   }
 
   setPuttLine(points) {
@@ -615,7 +637,9 @@ export class World {
       this.flagCloth.computeVertexNormals();
       if (ws > 0.1) this.flagMesh.rotation.y = Math.atan2(-windVec[1], windVec[0]);
     }
-    if (this.greenGrid && this.greenGrid.visible) this.greenGrid.material.opacity = 0.35 + 0.1 * Math.sin(this.time * 2);
+    if (this.greenGrid && this.greenGrid.visible) this.greenGrid.material.opacity = 0.68 + 0.1 * Math.sin(this.time * 2);
+    // 落點白點依距離放大，在畫面上大約維持同樣大小
+    if (this.target.visible) this.target.scale.setScalar(Math.max(0.3, this.camera.position.distanceTo(this.target.position) * 0.011));
     this.updateTracer();
     this.renderer.render(this.scene, this.camera);
   }

@@ -147,6 +147,7 @@ export class ProceduralGolfer {
     holder.rotation.x = -(Math.PI / 2 - lam);
     holder.add(head);
     head.castShadow = shaft.castShadow = gr.castShadow = true;
+    this.headMesh = head;
     this.club.add(holder);
     this.clubLen = g.len;
   }
@@ -205,6 +206,18 @@ export class ProceduralGolfer {
     this.object.position.copy(ballPos).sub(off);
     this.object.position.y = ballPos.y - 0.021;
     this.pose(this.phase);
+    // 微調站位：球放在桿面「中間、正前方」，不和桿頭重疊
+    this.object.updateMatrixWorld(true);
+    if (this.headMesh) {
+      const box = new THREE.Box3().setFromObject(this.headMesh);
+      const c = box.getCenter(V());
+      let front = -Infinity;
+      for (const x of [box.min.x, box.max.x]) for (const z of [box.min.z, box.max.z]) front = Math.max(front, x * d.x + z * d.z);
+      const along = (ballPos.x * d.x + ballPos.z * d.z) - 0.0213 - 0.004 - front;
+      const side = (ballPos.x * r.x + ballPos.z * r.z) - (c.x * r.x + c.z * r.z);
+      this.object.position.addScaledVector(d, along).addScaledVector(r, side);
+      this.object.updateMatrixWorld(true);
+    }
   }
 
   // 骨盆/胸/頭的位置

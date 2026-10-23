@@ -1,9 +1,9 @@
 // 揮桿手勢（比照真實揮桿：上桿可以慢，下桿要快）
 //   往下拉 = 上桿，手指離起點越遠力道越大；慢慢往上移只是把力道收小，不會擊球。
 //   要「快速」往上滑（下桿）才會出桿；放開或只是慢慢移動都不會擊球。
-//   出桿那一段的方向決定曲球：直直往上 = 直球、偏右 = 右曲、偏左 = 左曲。
+//   出桿那一段的方向決定球路：Straight / Draw / Fade / Hook / Slice（見 classify）。
 //   一開始就左右滑 = 調整瞄準方向。
-// 擊球後在畫面上留下手指軌跡 2.5 秒（灰色 = 上桿、金色 = 出桿、虛線 = 正上方參考線）。
+// 揮完後在畫面上畫出平滑過的揮桿軌跡與球路名稱約 3 秒。
 import { clamp } from './util.js';
 
 const WINDOW_MS = 70;        // 計算速度用的時間窗
@@ -75,7 +75,6 @@ export class SwingInput {
         // 上桿中：力道 = 目前手指往下的深度（往上移就變小）
         s.power = clamp((y - s.y0) / this.maxDrag, 0, 1.1);
         this.cb.onBack && this.cb.onBack(s.power);
-        this.drawTrail(false);
       }
     }
     if (s.mode === 'strike') {
@@ -87,23 +86,29 @@ export class SwingInput {
     }
   }
 
-  curveFrom(st, x, y) {
+  // 出桿方向 → 球路分級（偏角 = 出桿那一段相對正上方的角度，右正左負）
+  //   全揮桿：< 4° Straight 直球；4~12° Draw 小左曲 / Fade 小右曲（旋轉軸 2~8°）；
+  //           > 12° Hook 左曲 / Slice 右曲（旋轉軸 12~28°，偏 35° 以上封頂）
+  //   推桿：  < 4° 直球；超過就是推偏（最多 ±1.5°）
+  classify(st, x, y) {
     const dy = st.y - y, dx = x - st.x;
-    if (dy < 8) return 0;
-    let ang = Math.atan2(dx, dy) * 180 / Math.PI;
-    if (Math.abs(ang) < 4) ang = 0;             // 偏 4° 以內視為直球
-    else ang -= Math.sign(ang) * 4;
-    return clamp(ang / 24, -1, 1);
+    const deg = dy < 8 ? 0 : Math.atan2(dx, dy) * 180 / Math.PI;
+    const a = Math.abs(deg), sg = Math.sign(deg);
+    if (a < 4) return { curve: 0, deg, shape: SHAPES.straight };
+    if (this.putt) return { curve: sg * clamp((a - 4) / 20, 0, 1), deg, shape: sg > 0 ? SHAPES.push : SHAPES.pull };
+    if (a < 12) return { curve: sg * (2 + (a - 4) / 8 * 6) / 30, deg, shape: sg > 0 ? SHAPES.fade : SHAPES.draw };
+    return { curve: sg * (12 + Math.min(a - 12, 23) / 23 * 16) / 30, deg, shape: sg > 0 ? SHAPES.slice : SHAPES.hook };
   }
+
+  curveFrom(st, x, y) { return this.classify(st, x, y).curve; }
 
   fire(x, y) {
     const s = this.state;
     if (!s) return;
-    const st = s.strike;
-    const curve = this.curveFrom(st, x, y);
+    const c = this.classify(s.strike, x, y);
     this.state = null;
-    this.drawTrail(true, s, x, y, curve);
-    this.cb.onSwing && this.cb.onSwing({ power: st.power, curve });
+    this.drawTrail(s, x, y, c);
+    this.cb.onSwing && this.cb.onSwing({ power: s.strike.power, curve: c.curve, shape: c.shape.key });
   }
 
   up(e) {
@@ -137,59 +142,99 @@ export class SwingInput {
     this.tctx.clearRect(0, 0, this.trail.width, this.trail.height);
   }
 
-  drawTrail(final, s = this.state, ex, ey, curve) {
-    if (!s) return;
+  // 揮完才畫：把手指軌跡重新取樣、平滑後畫出，並標示球路
+  drawTrail(s, ex, ey, c) {
     const [ox, oy] = this.sizeTrail();
     const x = this.tctx;
     x.clearRect(0, 0, this.trail.width, this.trail.height);
     x.lineCap = x.lineJoin = 'round';
     const pts = s.path.map(([px, py]) => [px - ox, py - oy]);
-    const split = final && s.strike ? s.strike.pathStart : pts.length - 1;
-    // 起點
-    x.fillStyle = 'rgba(255,255,255,.6)';
-    x.beginPath(); x.arc(s.x0 - ox, s.y0 - oy, 5, 0, Math.PI * 2); x.fill();
-    // 上桿
-    x.strokeStyle = 'rgba(255,255,255,.55)';
-    x.lineWidth = 3;
-    x.setLineDash([]);
-    x.beginPath();
-    pts.slice(0, split + 1).forEach(([px, py], i) => (i ? x.lineTo(px, py) : x.moveTo(px, py)));
-    x.stroke();
-    if (!final || !s.strike) return;
+    const split = s.strike.pathStart;
     const sx = s.strike.x - ox, sy = s.strike.y - oy;
+    const back = smoothPath([[s.x0 - ox, s.y0 - oy], ...pts.slice(0, split + 1), [sx, sy]]);
+    const down = smoothPath([[sx, sy], ...pts.slice(split + 1), [ex - ox, ey - oy]]);
+    const curve = (line, color, width) => {
+      x.strokeStyle = color; x.lineWidth = width;
+      x.beginPath();
+      x.moveTo(line[0][0], line[0][1]);
+      for (let i = 1; i < line.length - 1; i++) {
+        const mx = (line[i][0] + line[i + 1][0]) / 2, my = (line[i][1] + line[i + 1][1]) / 2;
+        x.quadraticCurveTo(line[i][0], line[i][1], mx, my);
+      }
+      const l = line[line.length - 1];
+      x.lineTo(l[0], l[1]);
+      x.stroke();
+    };
+    // 上桿：細白線
+    curve(back, 'rgba(255,255,255,.45)', 3);
     // 正上方參考線
-    x.strokeStyle = 'rgba(255,255,255,.45)';
-    x.lineWidth = 1.5;
-    x.setLineDash([6, 6]);
-    x.beginPath(); x.moveTo(sx, sy); x.lineTo(sx, sy - Math.max(80, s.strike.depth + 40)); x.stroke();
+    x.strokeStyle = 'rgba(255,255,255,.4)'; x.lineWidth = 1.5; x.setLineDash([6, 7]);
+    x.beginPath(); x.moveTo(sx, sy); x.lineTo(sx, sy - Math.max(90, s.strike.depth + 50)); x.stroke();
     x.setLineDash([]);
-    // 出桿軌跡
-    x.strokeStyle = '#e7c46e';
-    x.lineWidth = 5;
-    x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 6;
-    x.beginPath();
-    x.moveTo(sx, sy);
-    pts.slice(split + 1).forEach(([px, py]) => x.lineTo(px, py));
-    x.lineTo(ex - ox, ey - oy);
-    x.stroke();
+    // 出桿：依球路上色
+    const col = c.shape.color;
+    x.shadowColor = 'rgba(0,0,0,.55)'; x.shadowBlur = 8;
+    curve(down, col, 7);
     x.shadowBlur = 0;
-    // 箭頭
-    const ang = Math.atan2((ey - oy) - sy, (ex - ox) - sx);
-    x.fillStyle = '#e7c46e';
+    const n = down.length, tip = down[n - 1], prev = down[Math.max(0, n - 3)];
+    const ang = Math.atan2(tip[1] - prev[1], tip[0] - prev[0]);
+    x.fillStyle = col;
     x.beginPath();
-    x.moveTo(ex - ox, ey - oy);
-    x.lineTo(ex - ox - 14 * Math.cos(ang - 0.45), ey - oy - 14 * Math.sin(ang - 0.45));
-    x.lineTo(ex - ox - 14 * Math.cos(ang + 0.45), ey - oy - 14 * Math.sin(ang + 0.45));
+    x.moveTo(tip[0] + 6 * Math.cos(ang), tip[1] + 6 * Math.sin(ang));
+    x.lineTo(tip[0] - 16 * Math.cos(ang - 0.5), tip[1] - 16 * Math.sin(ang - 0.5));
+    x.lineTo(tip[0] - 16 * Math.cos(ang + 0.5), tip[1] - 16 * Math.sin(ang + 0.5));
     x.fill();
-    // 標示偏角
-    const deg = Math.atan2(ex - s.strike.x, s.strike.y - ey) * 180 / Math.PI;
-    const label = Math.abs(curve) < 0.01 ? `直球　偏 ${Math.abs(deg).toFixed(0)}°` : `${curve > 0 ? '右曲' : '左曲'}　偏 ${deg > 0 ? '右' : '左'} ${Math.abs(deg).toFixed(0)}°`;
-    x.font = '600 15px "Noto Sans TC", sans-serif';
-    x.fillStyle = 'rgba(10,20,15,.75)';
-    const w = x.measureText(label).width + 18;
-    x.fillRect(sx + 14, sy - 30, w, 26);
+    // 球路名稱
+    const W = this.trail.clientWidth;
+    const lx = clamp(sx, 110, W - 110), ly = Math.max(70, Math.min(sy - Math.max(90, s.strike.depth + 50), tip[1]) - 30);
+    x.textAlign = 'center';
+    x.fillStyle = 'rgba(10,20,15,.78)';
+    roundRect(x, lx - 100, ly - 40, 200, 64, 12); x.fill();
+    x.fillStyle = col;
+    x.font = '700 30px "Barlow Condensed", sans-serif';
+    x.fillText(c.shape.en.toUpperCase(), lx, ly - 6);
     x.fillStyle = '#fff';
-    x.fillText(label, sx + 23, sy - 12);
-    this.fadeTimer = setTimeout(() => this.trail.classList.add('fade'), 2500);
+    x.font = '500 14px "Noto Sans TC", sans-serif';
+    x.fillText(`${c.shape.zh}　${c.deg >= 0 ? '偏右' : '偏左'} ${Math.abs(c.deg).toFixed(0)}°`, lx, ly + 15);
+    x.textAlign = 'left';
+    this.fadeTimer = setTimeout(() => this.trail.classList.add('fade'), 2800);
   }
+}
+
+export const SHAPES = {
+  straight: { key: 'straight', en: 'Straight', zh: '直球', color: '#9fd18a' },
+  draw: { key: 'draw', en: 'Draw', zh: '小左曲', color: '#e7c46e' },
+  fade: { key: 'fade', en: 'Fade', zh: '小右曲', color: '#e7c46e' },
+  hook: { key: 'hook', en: 'Hook', zh: '左曲', color: '#e2786b' },
+  slice: { key: 'slice', en: 'Slice', zh: '右曲', color: '#e2786b' },
+  pull: { key: 'pull', en: 'Pull', zh: '推偏左', color: '#e7c46e' },
+  push: { key: 'push', en: 'Push', zh: '推偏右', color: '#e7c46e' },
+};
+
+// 每 6px 重新取樣，再做 7 點移動平均（保留頭尾）
+function smoothPath(raw) {
+  const pts = [raw[0]];
+  for (const p of raw) {
+    const l = pts[pts.length - 1];
+    const d = Math.hypot(p[0] - l[0], p[1] - l[1]);
+    if (d >= 6) {
+      const k = Math.floor(d / 6);
+      for (let i = 1; i <= k; i++) pts.push([l[0] + (p[0] - l[0]) * i / k, l[1] + (p[1] - l[1]) * i / k]);
+    }
+  }
+  const last = raw[raw.length - 1];
+  if (pts.length === 1 || pts[pts.length - 1] !== last) pts.push(last);
+  if (pts.length < 5) return pts;
+  return pts.map((p, i) => {
+    if (i === 0 || i === pts.length - 1) return p;
+    let sx = 0, sy = 0, c = 0;
+    for (let k = -3; k <= 3; k++) { const q = pts[Math.min(pts.length - 1, Math.max(0, i + k))]; sx += q[0]; sy += q[1]; c++; }
+    return [sx / c, sy / c];
+  });
+}
+
+function roundRect(x, l, t, w, h, r) {
+  x.beginPath();
+  x.moveTo(l + r, t); x.arcTo(l + w, t, l + w, t + h, r); x.arcTo(l + w, t + h, l, t + h, r);
+  x.arcTo(l, t + h, l, t, r); x.arcTo(l, t, l + w, t, r); x.closePath();
 }

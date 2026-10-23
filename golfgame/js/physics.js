@@ -251,11 +251,11 @@ export function makeLaunch(input, ctx) {
   spin *= 1 + mis * 2.5 * (n() > 0 ? 1 : -0.4);
 
   const faceErr = n() * d.faceSigma * sig * pm * lieSig * (shortGame ? d.chipFace : 1);
-  const intended = clamp(input.curve, -1, 1) * 20;                 // 想打的旋轉軸（度），±20°
+  const intended = clamp(input.curve, -1, 1) * 30;                 // 出桿方向決定的旋轉軸（度），Draw/Fade 2~8°、Hook/Slice 12~28°
   const shaped = intended * (1 + n() * d.shapeSigma * pm);
-  const axisDeg = shaped + faceErr * 2.0;
-  // 起飛方向：桿面誤差的 75% + 為了讓曲球彎回目標線而預先反向開出去
-  const yaw = input.aimYaw + rad(faceErr * 0.75 - shaped * 0.36);
+  const axisDeg = shaped + faceErr * 1.5;
+  // 起飛方向：桿面誤差的 75%；小曲球會先往反方向開出去再彎回來，大曲球（Hook/Slice）只補 8° 份量，所以會彎出目標線
+  const yaw = input.aimYaw + rad(faceErr * 0.75 - Math.sign(shaped) * Math.min(Math.abs(shaped), 8) * 0.36);
 
   return {
     speed: ballMph * MPH, launchDeg, yaw, spin: Math.max(600, spin), axisDeg,

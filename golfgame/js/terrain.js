@@ -262,9 +262,16 @@ export function buildHole(course, holeIdx, opts = {}) {
   const gCenterBase = baseElev(Lp) + st.macroA * nz.fbm(G[0] / st.macroL, G[1] / st.macroL, 3) + 0.55;
   const teeBase = {};
   tees.forEach(t => (teeBase[t.id] = baseElev(t.s) + st.macroA * nz.fbm(t.u / st.macroL, t.v / st.macroL, 3) + 0.7));
+  // 大尺度起伏沿中心線取值：球道上只有前後起伏、左右是平的（避免球落地後往側邊滾進樹林），
+  // 離開球道 4~30 公尺再慢慢恢復成真正的地形起伏
+  const macro = (u, v) => st.macroA * nz.fbm(u / st.macroL, v / st.macroL, 3);
+  const macroTab = [];
+  for (let s = 0; s <= Lp + 2; s += 2) { const p = pointAt(s); macroTab.push(macro(p[0], p[1])); }
+  const macroC = s => { const f = clamp(s, 0, Lp) / 2, i = Math.floor(f); return lerp(macroTab[i], macroTab[Math.min(i + 1, macroTab.length - 1)], f - i); };
   const rawH = (u, v, s, ad) => {
-    let hh = baseElev(clamp(s, 0, Lp)) + st.macroA * nz.fbm(u / st.macroL, v / st.macroL, 3);
-    const k = 0.2 + 0.8 * ss(fwBase / 2, fwBase / 2 + 20, ad);
+    const w = ss(fwBase / 2 + 4, fwBase / 2 + 30, ad);
+    let hh = baseElev(clamp(s, 0, Lp)) + lerp(macroC(s), macro(u, v), w);
+    const k = 0.12 + 0.88 * ss(fwBase / 2, fwBase / 2 + 20, ad);
     hh += st.microA * nz2.fbm(u / st.microL, v / st.microL, 3) * k;
     if (links) hh += 2.2 * Math.max(0, nz3.fbm(u / 22, v / 22, 2)) * ss(fwBase / 2 + 5, fwBase / 2 + 30, ad);
     return hh;
@@ -440,7 +447,23 @@ export function buildHole(course, holeIdx, opts = {}) {
     },
     teePos(teeId) {
       const t = tees.find(q => q.id === teeId) || tees[1];
-      return [t.u, H(t.u, -t.v), -t.v];
+      return [t.u, H(t.u, -t.v) + 0.0213, -t.v];   // 球心在地面上一個半徑
+    },
+    // 果嶺高度統計：平均高度與最大高低差（色階用）
+    greenStats() {
+      if (api._gs) return api._gs;
+      let sum = 0, n = 0;
+      const hs = [];
+      for (let i = -20; i <= 20; i++) for (let j = -20; j <= 20; j++) {
+        const u = G[0] + i * 0.7, v = G[1] + j * 0.7;
+        if (greenR(u, v) >= 1) continue;
+        const h = height(u, v);
+        hs.push(h); sum += h; n++;
+      }
+      const h0 = sum / Math.max(1, n);
+      const range = Math.max(0.12, ...hs.map(h => Math.abs(h - h0)));
+      api._gs = { h0, range };
+      return api._gs;
     },
     // 球道上第 dist 公尺處的中心點（給預設瞄準用）
     centerAt(s) { const p = pointAt(s); return [p[0], -p[1]]; },
@@ -455,10 +478,11 @@ const PALETTE = {
   canyon: { fair: [100, 142, 60], fair2: [88, 130, 52], cut: [84, 122, 50], rough: [92, 116, 54], deep: [178, 112, 72], green: [94, 144, 62], green2: [84, 134, 56], fringe: [90, 136, 58], sand: [222, 200, 160], waste: [186, 118, 76], tee: [108, 158, 64], ob: [170, 104, 66] },
 };
 
-export function paintMaps(hole) {
+// opts.px：每像素幾公尺（縮圖用大一點的值，畫得很快）
+export function paintMaps(hole, opts = {}) {
   const { bbox } = hole;
   const w = bbox.maxU - bbox.minU, h = bbox.maxV - bbox.minV;
-  const px = Math.max(0.3, Math.max(w, h) / 2048);
+  const px = opts.px || Math.max(0.3, Math.max(w, h) / 2048);
   const W = Math.round(w / px), Hh = Math.round(h / px);
   const pal = PALETTE[hole.course.style];
   const color = document.createElement('canvas');

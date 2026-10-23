@@ -91,24 +91,30 @@ export class Hud {
     $('hud-club').classList.toggle('disabled', !mine);
   }
 
-  setLie(lie, distPin, landing, puttScaleFt) {
+  // puttElev：推桿時球到洞的高低差（公尺，正 = 上坡）；不是推桿傳 null
+  setLie(lie, distPin, landing, puttElev) {
     $('l-lie').textContent = SURF_NAME[lie];
     $('l-pin').textContent = distPin < 27 ? toYd(distPin).toFixed(1) + ' Y' : Math.round(toYd(distPin)) + ' Y';
-    $('l-land').textContent = puttScaleFt ? '最大 ' + puttScaleFt + ' Y' : Math.round(toYd(landing)) + ' Y';
-    $('l-land-lbl').textContent = puttScaleFt ? '推桿刻度' : '預估落點';
+    const putt = puttElev !== null && puttElev !== undefined;
+    $('l-land').textContent = putt ? (Math.abs(puttElev) < 0.01 ? '平' : (puttElev > 0 ? '上坡 ' : '下坡 ') + toYd(Math.abs(puttElev)).toFixed(2) + ' Y') : Math.round(toYd(landing)) + ' Y';
+    $('l-land-lbl').textContent = putt ? '高低差' : '預估落點';
     $('l-icon').setAttribute('href', lie === 3 ? '#i-green' : '#i-lie');
   }
 
-  setPower(p, curve, label) {
+  setPower(p, label, land) {
     const pct = Math.round(p * 100);
     $('p-val').textContent = label || pct + '%';
-    $('p-fill').style.width = clamp(p / 1.1, 0, 1) * 100 + '%';
+    $('p-fill').style.height = clamp(p / 1.1, 0, 1) * 100 + '%';
     $('p-fill').classList.toggle('over', p > 1);
-    $('p-needle').style.left = clamp(p / 1.1, 0, 1) * 100 + '%';
-    const c = curve || 0;
-    document.querySelectorAll('#p-shape span').forEach(s => s.classList.remove('on'));
-    $(c < -0.08 ? 'ps-draw' : c > 0.08 ? 'ps-fade' : 'ps-straight').classList.add('on');
-    $('p-curve').style.left = (50 + c * 45) + '%';
+    $('p-needle').style.top = clamp(p / 1.1, 0, 1) * 100 + '%';
+    $('p-land').textContent = land || '';
+  }
+
+  placeSwingUI(pos) {
+    const e = $('swing-ui');
+    if (!pos || !pos.visible) { e.classList.add('off'); return; }
+    e.classList.remove('off');
+    e.style.transform = `translate(${pos.x.toFixed(1)}px, ${pos.y.toFixed(1)}px)`;
   }
 
   swingHint(text) { $('swing-hint').textContent = text; }
@@ -133,7 +139,8 @@ export class Hud {
     this.toastTimer = setTimeout(() => { t.className = 'toast'; }, ms);
   }
 
-  shotData(club, info, res, wind) {
+  // autoHideMs = 0：一直顯示到玩家點一下；連線模式傳 10000，最多 10 秒
+  shotData(club, info, res, autoHideMs = 0) {
     const box = $('shot-data');
     const m = (label, val, unit, hero) => `<div class="${hero ? 'hero' : ''}"><span>${label}</span><b class="num">${val}<small>${unit}</small></b></div>`;
     const off = toYd(res.offline);
@@ -151,61 +158,161 @@ export class Hud {
       m('落地角 Descent', res.descent.toFixed(0), '°'),
       m('滯空 Hang Time', res.flightTime.toFixed(1), 's'),
     ].join('');
-    box.querySelector('h3').textContent = `SHOT DATA · ${club.name}`;
+    box.querySelector('h3').innerHTML = `SHOT DATA · ${club.name}<small>點一下關閉</small>`;
     box.classList.add('show');
     clearTimeout(this.sdTimer);
-    this.sdTimer = setTimeout(() => box.classList.remove('show'), 5000);
+    if (autoHideMs) this.sdTimer = setTimeout(() => box.classList.remove('show'), autoHideMs);
+    if (!box.dataset.bound) {
+      box.dataset.bound = '1';
+      // 面板上或面板外任何地方點一下都關閉；這一下只用來關面板，不會開始揮桿
+      window.addEventListener('pointerdown', e => {
+        if (!this.shotDataOpen()) return;
+        this.hideShotData();
+        e.stopPropagation();
+        e.preventDefault();
+      }, true);
+    }
   }
 
-  hideShotData() { $('shot-data').classList.remove('show'); }
+  hideShotData() { clearTimeout(this.sdTimer); $('shot-data').classList.remove('show'); }
+  shotDataOpen() { return $('shot-data').classList.contains('show'); }
 
-  // 小地圖：上方 = 果嶺方向
+  // 果嶺高低色階：比果嶺平均高 → 紅、低 → 藍、差不多 → 綠（漸層）
+  setGreenHeat(hole) {
+    const g = hole.green, st = hole.greenStats();
+    const R = Math.max(g.rx, g.ry) * 1.35, res = 0.25;
+    const n = Math.ceil(2 * R / res);
+    const c = document.createElement('canvas');
+    c.width = c.height = n;
+    const x = c.getContext('2d'), img = x.createImageData(n, n);
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+      const u = g.u - R + (i + 0.5) * res, v = g.v + R - (j + 0.5) * res;
+      if (hole.greenR(u, v) >= 1) continue;
+      const [r, gg, bb] = heatColor((hole.heightUV(u, v) - st.h0) / st.range);
+      const o = (j * n + i) * 4;
+      img.data[o] = r; img.data[o + 1] = gg; img.data[o + 2] = bb; img.data[o + 3] = 235;
+    }
+    x.putImageData(img, 0, 0);
+    this.heat = { canvas: c, minU: g.u - R, maxU: g.u + R, minV: g.v - R, maxV: g.v + R };
+  }
+
+  // 小地圖：上方 = 果嶺方向；球在果嶺附近時自動放大到果嶺
   drawMini(hole, colorCanvas, ball, target, players) {
-    if (!colorCanvas) return;
-    const c = this.mini, x = this.miniCtx;
+    this.mapArgs = [hole, colorCanvas, ball, target, players];
+    this.miniBox = this.drawMap(this.mini, ...this.mapArgs);
+    const big = $('map-big');
+    if ($('dlg-map').classList.contains('open')) this.bigBox = this.drawMap(big, ...this.mapArgs);
+  }
+
+  openBigMap() {
+    $('dlg-map').classList.add('open');
+    if (this.mapArgs) this.bigBox = this.drawMap($('map-big'), ...this.mapArgs);
+  }
+
+  drawMap(c, hole, colorCanvas, ball, target, players) {
+    if (!colorCanvas) return null;
+    const x = c.getContext('2d');
     const W = c.width = c.clientWidth * 2, H = c.height = c.clientHeight * 2;
     const b = hole.bbox;
-    // 只畫球道走廊的範圍
-    const pad = 30;
     let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
-    for (const [u, v] of hole.path) { minU = Math.min(minU, u); maxU = Math.max(maxU, u); minV = Math.min(minV, v); maxV = Math.max(maxV, v); }
-    minU -= pad + 40; maxU += pad + 40; minV -= pad; maxV += pad;
+    const nearGreen = hole.distToPin(ball[0], ball[2]) < 45;
+    if (nearGreen) {
+      const g = hole.green, R = Math.max(g.rx, g.ry) * 1.3;
+      minU = Math.min(g.u - R, ball[0] - 4); maxU = Math.max(g.u + R, ball[0] + 4);
+      minV = Math.min(g.v - R, -ball[2] - 4); maxV = Math.max(g.v + R, -ball[2] + 4);
+    } else {
+      for (const [u, v] of hole.path) { minU = Math.min(minU, u); maxU = Math.max(maxU, u); minV = Math.min(minV, v); maxV = Math.max(maxV, v); }
+      minU -= 70; maxU += 70; minV -= 30; maxV += 30;
+    }
     const sc = Math.min(W / (maxU - minU), H / (maxV - minV));
     const ox = (W - (maxU - minU) * sc) / 2, oy = (H - (maxV - minV) * sc) / 2;
     const toPx = (u, v) => [ox + (u - minU) * sc, oy + (maxV - v) * sc];
     x.fillStyle = '#2c4426';
     x.fillRect(0, 0, W, H);
-    const sx = (minU - b.minU) / (b.maxU - b.minU) * colorCanvas.width, sw = (maxU - minU) / (b.maxU - b.minU) * colorCanvas.width;
-    const sy = (b.maxV - maxV) / (b.maxV - b.minV) * colorCanvas.height, sh = (maxV - minV) / (b.maxV - b.minV) * colorCanvas.height;
-    x.drawImage(colorCanvas, sx, sy, sw, sh, ox, oy, (maxU - minU) * sc, (maxV - minV) * sc);
-    // 水
-    x.fillStyle = 'rgba(40,80,95,0.9)';
-    this.miniBox = { toPx, minU, maxU, minV, maxV, sc, ox, oy, W, H };
-    const [pu, pv] = [hole.pin[0], -hole.pin[1]];
+    // 底圖：整張顏色圖照比例貼上（超出範圍的部分自然被裁掉）
+    const [ax, ay] = toPx(b.minU, b.maxV);
+    x.imageSmoothingEnabled = true;
+    x.drawImage(colorCanvas, ax, ay, (b.maxU - b.minU) * sc, (b.maxV - b.minV) * sc);
+    if (this.heat) {
+      const h = this.heat, [hx, hy] = toPx(h.minU, h.maxV);
+      x.drawImage(h.canvas, hx, hy, (h.maxU - h.minU) * sc, (h.maxV - h.minV) * sc);
+    }
     const [bx, by] = toPx(ball[0], -ball[2]);
     if (target) {
       const [tx, ty] = toPx(target[0], -target[1]);
-      x.strokeStyle = 'rgba(255,255,255,0.9)'; x.lineWidth = 2; x.setLineDash([6, 6]);
+      x.strokeStyle = 'rgba(255,255,255,0.95)'; x.lineWidth = 2; x.setLineDash([6, 6]);
       x.beginPath(); x.moveTo(bx, by); x.lineTo(tx, ty); x.stroke(); x.setLineDash([]);
-      x.beginPath(); x.arc(tx, ty, 7, 0, Math.PI * 2); x.stroke();
+      x.fillStyle = '#fff'; x.beginPath(); x.arc(tx, ty, 5, 0, Math.PI * 2); x.fill();
     }
-    const [fx, fy] = toPx(pu, pv);
-    x.strokeStyle = '#f2ead0'; x.lineWidth = 2;
-    x.beginPath(); x.moveTo(fx, fy); x.lineTo(fx, fy - 16); x.stroke();
-    x.fillStyle = '#b73a31'; x.beginPath(); x.moveTo(fx, fy - 16); x.lineTo(fx + 10, fy - 13); x.lineTo(fx, fy - 10); x.fill();
+    const [fx, fy] = toPx(hole.pin[0], -hole.pin[1]);
+    const fl = Math.max(16, W / 28);   // 旗子大小跟著地圖放大
+    x.fillStyle = '#111'; x.beginPath(); x.arc(fx, fy, fl * 0.2, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = '#f2ead0'; x.lineWidth = Math.max(2, fl / 8);
+    x.beginPath(); x.moveTo(fx, fy); x.lineTo(fx, fy - fl); x.stroke();
+    x.fillStyle = '#b73a31'; x.beginPath(); x.moveTo(fx, fy - fl); x.lineTo(fx + fl * 0.65, fy - fl * 0.8); x.lineTo(fx, fy - fl * 0.6); x.fill();
     for (const p of players || []) {
       if (!p.ball || p.holed) continue;
       const [qx, qy] = toPx(p.ball[0], -p.ball[2]);
       x.fillStyle = p.current ? '#ffffff' : '#d6bb82';
       x.strokeStyle = '#111'; x.lineWidth = 1.5;
-      x.beginPath(); x.arc(qx, qy, 5, 0, Math.PI * 2); x.fill(); x.stroke();
+      x.beginPath(); x.arc(qx, qy, Math.max(5, W / 110), 0, Math.PI * 2); x.fill(); x.stroke();
     }
+    return { minU, maxV, sc, ox, oy };
   }
 
-  miniToWorld(px, py) {
-    const m = this.miniBox;
+  // 畫面座標（CSS px）→ 世界座標
+  mapToWorld(px, py, big) {
+    const m = big ? this.bigBox : this.miniBox;
     if (!m) return null;
     const u = m.minU + (px * 2 - m.ox) / m.sc, v = m.maxV - (py * 2 - m.oy) / m.sc;
     return [u, -v];
   }
+
+  miniToWorld(px, py) { return this.mapToWorld(px, py, false); }
+
+  // 頭頂提醒（黃底黑字），ms 毫秒後消失
+  lieWarn(text, ms = 5000) {
+    const e = $('lie-warn');
+    e.textContent = text;
+    e.classList.add('show');
+    clearTimeout(this.warnTimer);
+    this.warnTimer = setTimeout(() => e.classList.remove('show'), ms);
+  }
+
+  hideLieWarn() { clearTimeout(this.warnTimer); $('lie-warn').classList.remove('show'); }
+
+  // 指向落點白點的紅色小箭頭；白點在畫面外時貼著邊緣指過去
+  pointTarget(pos) {
+    const e = $('tgt-arrow');
+    if (!pos) { e.style.display = 'none'; return; }
+    const W = this.root.clientWidth, H = this.root.clientHeight, m = 40;
+    let x = pos.x, y = pos.y, ang = 0;
+    const inside = pos.visible && x > m && x < W - m && y > m && y < H - m;
+    if (!inside) {
+      const cx = W / 2, cy = H / 2;
+      let dx = x - cx, dy = y - cy;
+      if (!pos.visible) { dx = -dx; dy = -dy; }
+      const k = Math.min((W / 2 - m) / Math.abs(dx || 1e-6), (H / 2 - m) / Math.abs(dy || 1e-6));
+      x = cx + dx * k; y = cy + dy * k;
+      ang = Math.atan2(dy, dx) * 180 / Math.PI - 90;
+    }
+    e.style.display = '';
+    e.classList.toggle('edge', !inside);
+    e.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${ang.toFixed(1)}deg)`;
+  }
+}
+
+// t: −1（最低）~ 0（平均）~ 1（最高）→ 藍 ~ 綠 ~ 紅
+export function heatColor(t) {
+  t = Math.max(-1, Math.min(1, t));
+  const hue = t >= 0 ? 120 - t * 120 : 120 - t * 110;
+  return hslToRgb(hue / 360, 0.78, 0.5);
+}
+
+function hslToRgb(h, s, l) {
+  const f = n => {
+    const k = (n + h * 12) % 12, a = s * Math.min(l, 1 - l);
+    return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))));
+  };
+  return [f(0), f(8), f(4)];
 }

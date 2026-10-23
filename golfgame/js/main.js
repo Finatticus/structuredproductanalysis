@@ -124,6 +124,8 @@ function openSetup(kind) {
   document.querySelectorAll('.only-host').forEach(e => e.classList.toggle('hidden', kind !== 'host'));
   document.querySelectorAll('.only-round').forEach(e => e.classList.toggle('hidden', kind === 'practice'));
   document.querySelectorAll('.only-practice').forEach(e => e.classList.toggle('hidden', kind !== 'practice'));
+  document.querySelectorAll('.only-round-or-host').forEach(e => e.classList.toggle('hidden', kind === 'practice'));
+  if (kind === 'practice') { setup.courseId = 'maple'; setup.stimp = null; }
   renderSetup();
   show('scr-setup');
 }
@@ -133,8 +135,13 @@ function renderSetup() {
     <button class="course-card ${c.id === setup.courseId ? 'on' : ''}" data-course="${c.id}">
       <canvas class="cthumb" data-thumb="${c.id}"></canvas>
       <div class="txt"><b>${c.name}</b><em>${c.en}</em><span>${courseYards(c, 'black').toLocaleString()} Y · Par 72 · Stimp ${c.stimp}</span></div>
+      <span class="pv-btn" data-pv="${c.id}">⛳ 18 洞預覽</span>
     </button>`).join('');
-  document.querySelectorAll('.course-card').forEach(b => b.onclick = () => { setup.courseId = b.dataset.course; setup.stimp = null; renderSetup(); });
+  document.querySelectorAll('.course-card').forEach(b => b.onclick = e => {
+    const pv = e.target.closest('[data-pv]');
+    if (pv) { e.stopPropagation(); openPreview(pv.dataset.pv); return; }
+    setup.courseId = b.dataset.course; setup.stimp = null; renderSetup();
+  });
   drawThumbs();
   const seg = (id, key, opts) => {
     $(id).innerHTML = opts.map(([v, l]) => `<button class="${setup[key] === v ? 'on' : ''}" data-v="${v}">${l}</button>`).join('');
@@ -158,8 +165,6 @@ function renderSetup() {
   });
   seg('st-gimme', 'gimme', [[0, '無'], [1, '1 碼'], [2, '2 碼'], [3, '3 碼']]);
   seg('st-mull', 'mulligans', [[0, '0'], [1, '1'], [2, '2'], [4, '4']]);
-  $('st-hole').innerHTML = c.holes.map((h, i) => `<option value="${i}" ${setup.startHole === i ? 'selected' : ''}>第 ${i + 1} 洞 · Par ${h[0]} · ${teeYards(c, i, setup.tee)} Y</option>`).join('');
-  $('st-hole').onchange = e => { setup.startHole = Number(e.target.value); };
 }
 
 function drawThumbs() {
@@ -190,11 +195,91 @@ function drawThumbs() {
 }
 const thumbCache = {};
 
+// ---------- 18 洞預覽 ----------
+const holeThumbs = {};
+let previewToken = 0;
+function holeFeatures(course, spec) {
+  const [par, , bend, feat] = spec;
+  const F = new Set(feat.split(/\s+/));
+  const canyon = course.style === 'canyon';
+  const out = [];
+  if (Math.abs(bend) >= 8) out.push(bend < 0 ? '狗腿左' : '狗腿右');
+  if (F.has('sl')) out.push('左側是海');
+  if (F.has('sr')) out.push('右側是海');
+  if (F.has('wl')) out.push(canyon ? '左側深谷' : '左側水池');
+  if (F.has('wr')) out.push(canyon ? '右側深谷' : '右側水池');
+  if (F.has('wc')) out.push(canyon ? '果嶺前深谷' : '果嶺前水池');
+  if (F.has('xc')) out.push(canyon ? '要飛越峽谷' : course.style === 'links' ? '橫越小溪' : '橫越溪流');
+  if (F.has('UP')) out.push('大上坡'); else if (F.has('up')) out.push('上坡');
+  if (F.has('DN')) out.push('大下坡'); else if (F.has('dn')) out.push('下坡');
+  if (F.has('tr')) out.push('樹林窄球道');
+  if (F.has('ww')) out.push('兩側荒地');
+  if (F.has('b4')) out.push('沙坑很多'); else if (F.has('b3')) out.push('沙坑多');
+  return out.length ? out.join('、') : (par === 3 ? '直接攻果嶺' : '直線洞');
+}
+
+function openPreview(id) {
+  $('pv-title').textContent = courseById(id).name + ' · 18 洞預覽';
+  $('dlg-preview').classList.add('open');
+  renderPreview(id);
+}
+
+function renderPreview(id) {
+  const c = courseById(id);
+  const tee = TEE_SETS.find(t => t.id === setup.tee);
+  const token = ++previewToken;
+  const front = c.holes.slice(0, 9).reduce((a, h) => a + h[0], 0);
+  $('st-prev-sum').textContent = `${tee.name} ${courseYards(c, setup.tee).toLocaleString()} Y · 前九 Par ${front} · 後九 Par ${72 - front}`;
+  $('st-preview').innerHTML = c.holes.map((h, i) => `
+    <div class="hole-card"><canvas data-h="${i}" width="124" height="200"></canvas>
+      <div class="hc"><b>${i + 1}<em>PAR ${h[0]}</em></b>${teeYards(c, i, setup.tee)} Y · HCP ${h[4]}<br><i>${holeFeatures(c, h)}</i></div></div>`).join('');
+  // 縮圖一洞一洞慢慢畫，不卡畫面
+  import('./terrain.js').then(({ buildHole, paintMaps }) => {
+    let i = 0;
+    const next = () => {
+      if (token !== previewToken || i >= 18) return;
+      const key = c.id + i;
+      if (!holeThumbs[key]) {
+        const hole = buildHole(c, i, { pinSeed: 1 });
+        holeThumbs[key] = { hole, map: paintMaps(hole, { px: 2.5 }) };
+      }
+      const cv = document.querySelector(`#st-preview canvas[data-h="${i}"]`);
+      if (cv) drawHoleThumb(cv, holeThumbs[key]);
+      i++;
+      setTimeout(next, 0);
+    };
+    next();
+  });
+}
+
+function drawHoleThumb(cv, { hole, map }) {
+  const x = cv.getContext('2d'), W = cv.width, H = cv.height;
+  const b = hole.bbox;
+  let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+  for (const [u, v] of hole.path) { minU = Math.min(minU, u); maxU = Math.max(maxU, u); minV = Math.min(minV, v); maxV = Math.max(maxV, v); }
+  const pad = 35;
+  minU -= pad; maxU += pad; minV -= 20; maxV += 25;
+  const sc = Math.min(W / (maxU - minU), H / (maxV - minV));
+  const cu = (minU + maxU) / 2, cvv = (minV + maxV) / 2;
+  const toPx = (u, v) => [W / 2 + (u - cu) * sc, H / 2 - (v - cvv) * sc];
+  x.fillStyle = '#2c4426'; x.fillRect(0, 0, W, H);
+  const [x0, y0] = toPx(b.minU, b.maxV);
+  x.drawImage(map.color, x0, y0, (b.maxU - b.minU) * sc, (b.maxV - b.minV) * sc);
+  const [px, py] = toPx(hole.pin[0], -hole.pin[1]);
+  x.strokeStyle = '#f2ead0'; x.lineWidth = 2;
+  x.beginPath(); x.moveTo(px, py); x.lineTo(px, py - 14); x.stroke();
+  x.fillStyle = '#b73a31'; x.beginPath(); x.moveTo(px, py - 14); x.lineTo(px + 9, py - 11); x.lineTo(px, py - 8); x.fill();
+  const t = hole.tees.find(q => q.id === setup.tee) || hole.tees[1];
+  const [tx, ty] = toPx(t.u, t.v);
+  x.fillStyle = '#fff'; x.strokeStyle = '#111'; x.lineWidth = 1.5;
+  x.beginPath(); x.arc(tx, ty, 4, 0, Math.PI * 2); x.fill(); x.stroke();
+}
+
 function roundCfg() {
   return {
     courseId: setup.courseId, holes: setup.holes, tee: setup.tee, mode: setup.kind === 'host' ? setup.mode : 'stroke',
     wind: setup.wind, stimp: setup.stimp ?? courseById(setup.courseId).stimp, gimme: setup.gimme, mulligans: setup.kind === 'single' ? setup.mulligans : 0,
-    practice: setup.kind === 'practice', startHole: setup.startHole, seed: Math.floor(Math.random() * 2 ** 31),
+    practice: setup.kind === 'practice', startHole: 7, seed: Math.floor(Math.random() * 2 ** 31),
   };
 }
 
@@ -350,19 +435,6 @@ function initGameMenu() {
     game.quit();
     net = null;
     enterLobby();
-  };
-  $('gm-tee').onclick = () => {
-    if (!game.cfg.practice) return;
-    const p = game.players[0];
-    Object.assign(p, { ball: game.hole.teePos(game.cfg.tee), strokes: 0, holed: false });
-    $('dlg-menu').classList.remove('open');
-    game.beginTurn(0);
-  };
-  $('gm-nexthole').onclick = () => {
-    if (!game.cfg.practice) return;
-    $('dlg-menu').classList.remove('open');
-    game.holeList = [(game.holeList[0] + 1) % 18];
-    game.loadHole(0);
   };
   $('rr-done').onclick = () => { $('dlg-round').classList.remove('open'); game.quit(); net = null; enterLobby(); };
 }
@@ -559,6 +631,7 @@ initSetup();
 initRooms();
 initGameMenu();
 initChar();
+$('pv-close').onclick = () => { previewToken++; $('dlg-preview').classList.remove('open'); };
 autoLogin();
 
 // 記住上次登入的帳號：打開就直接進大廳（帳號被停用或密碼被改才回到登入畫面）

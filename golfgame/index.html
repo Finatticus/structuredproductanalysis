@@ -348,7 +348,7 @@
     <button class="mode" id="mode-single"><div class="thumb t1"><svg viewBox="0 0 120 120"><use href="#i-driver"/></svg></div><div><b>單人回合</b><span>選球場、梯台、9 / 18 洞</span></div><span class="chev">›</span></button>
     <button class="mode" id="mode-host"><div class="thumb t2"><svg viewBox="0 0 120 120"><use href="#i-flag"/></svg></div><div><b>建立遊戲間</b><span>你的裝置當主機，產生驗證碼</span></div><span class="chev">›</span></button>
     <button class="mode" id="mode-join"><div class="thumb t3"><svg viewBox="0 0 120 120"><use href="#i-tee"/></svg></div><div><b>加入遊戲間</b><span>輸入朋友給的 6 位數驗證碼</span></div><span class="chev">›</span></button>
-    <button class="mode" id="mode-practice"><div class="thumb t4"><svg viewBox="0 0 120 120"><use href="#i-ball"/></svg></div><div><b>練習場</b><span>任選一洞反覆練習，不計分</span></div><span class="chev">›</span></button>
+    <button class="mode" id="mode-practice"><div class="thumb t4"><svg viewBox="0 0 120 120"><use href="#i-ball"/></svg></div><div><b>練習場</b><span>發球台、沙坑、果嶺推桿，不計分</span></div><span class="chev">›</span></button>
   </div>
   <nav class="tabbar"><button data-tab="lobby" class="on"><i></i>大廳</button><button data-tab="records"><i></i>紀錄</button><button data-tab="char"><i></i>角色</button><button data-tab="admin" class="admin-only"><i></i>管理</button></nav>
 </section>
@@ -357,10 +357,11 @@
 <section id="scr-setup" class="screen app-screen">
   <header class="appbar"><small>ROUND SETUP</small><h4 id="st-title">單人回合</h4><button id="st-back" class="appbar-act">返回</button></header>
   <div class="body narrow scroll">
-    <h5>球場</h5>
+    <div class="only-round-or-host"><h5>球場</h5>
     <div id="st-courses" class="course-list"></div>
+    </div>
     <div class="only-round"><h5>洞數</h5><div id="st-holes" class="seg"></div></div>
-    <div class="only-practice hidden"><h5>練習哪一洞</h5><select id="st-hole" class="select"></select></div>
+    <div class="only-practice hidden"><p class="small" style="margin-top:14px">練習場在楓林谷。可以隨時切換：<b>發球台</b>（木桿、鐵桿，每球都回到發球台）、<b>沙坑</b>（發球台換成沙地）、<b>果嶺</b>（推桿，點小地圖選站位）。</p></div>
     <h5>梯台</h5><div id="st-tee" class="seg"></div>
     <div class="only-host hidden"><h5>賽制</h5><div id="st-mode" class="seg"></div></div>
     <h5>風</h5><div id="st-wind" class="seg"></div>
@@ -449,7 +450,9 @@
   <canvas id="swing-trail"></canvas>
   <div id="hud" class="hidden">
     <div id="tag-pin" class="tag pin num"></div>
-    <div id="tag-land" class="tag land num"></div>
+    <div id="tag-ball" class="tag ball num"></div>
+    <div id="tgt-arrow" class="tgt-arrow"></div>
+    <div id="lie-warn" class="lie-warn"></div>
     <div id="turn-banner" class="turn-banner hidden"></div>
 
     <div class="hud-panel hud-hole">
@@ -459,8 +462,8 @@
         <div class="stats">
           <div><b class="num" id="h-par">4</b><span>PAR</span></div>
           <div><b class="num" id="h-yards">0</b><span>YARDS</span></div>
-          <div><b class="num" id="h-hcp">1</b><span>HCP</span></div>
-          <div><b class="num" id="h-stroke">1</b><span>STROKE</span></div>
+          <div><b class="num" id="h-hcp">1</b><span>HCP(難度)</span></div>
+          <div><b class="num" id="h-stroke">1</b><span>STROKE(桿)</span></div>
         </div>
       </div>
     </div>
@@ -481,7 +484,7 @@
         <div>高低差<b class="num" id="e-elev"></b></div><div>氣溫<b class="num" id="e-temp"></b></div>
         <div>果嶺<b class="num" id="e-stimp"></b></div><div>硬度<b class="num" id="e-firm"></b></div>
       </div>
-      <canvas id="minimap" class="minimap"></canvas>
+      <div class="minimap-wrap"><canvas id="minimap" class="minimap"></canvas><button class="hud-btn map-zoom" id="btn-map" title="放大地圖">⤢</button></div>
     </div>
 
     <div class="hud-panel hud-club" id="hud-club">
@@ -491,33 +494,45 @@
       <button class="hud-btn arrow" id="btn-club-next">›</button>
     </div>
 
-    <div class="hud-panel hud-swing">
-      <div class="swing-row"><span class="lbl">揮桿力道 POWER</span><b class="num" id="p-val">0%</b></div>
-      <div class="meter"><div class="fill" id="p-fill"></div><div class="sweet"></div><div class="needle" id="p-needle"></div></div>
-      <div class="swing-scale num"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span><span class="ov">110</span></div>
-      <div class="curve-track"><i id="p-curve"></i></div>
-      <div class="shape" id="p-shape"><span id="ps-draw">左曲 Draw</span><span id="ps-straight" class="on">直球</span><span id="ps-fade">右曲 Fade</span></div>
-      <div class="hint" id="swing-hint"></div>
-    </div>
-
-    <div class="hud-panel hud-lie">
-      <svg viewBox="0 0 120 120"><use id="l-icon" href="#i-lie"/></svg>
-      <div class="kv"><span>球位</span><b id="l-lie"></b><span>距旗</span><b class="num" id="l-pin"></b><span id="l-land-lbl">預估落點</span><b class="num" id="l-land"></b></div>
-    </div>
-
     <div class="hud-tools">
       <button class="hud-btn" id="btn-menu" title="選單">☰</button>
       <button class="hud-btn" id="btn-view" title="俯瞰">⛶</button>
       <button class="hud-btn hidden" id="btn-mulligan">重打</button>
     </div>
-    <div class="hud-aim">
-      <button class="hud-btn" id="btn-aim-l">◀</button>
-      <span>瞄準</span>
-      <button class="hud-btn" id="btn-aim-r">▶</button>
+
+    <!-- 擊球區：整組跟著球在畫面上的位置移動（球在圓圈正中間） -->
+    <div id="swing-ui" class="swing-ui">
+      <div class="ball-ring"></div>
+      <!-- 直立力道條：手指往下拉，力道從上往下增加 -->
+      <div class="power-v">
+        <div class="num pv-land" id="p-land"></div>
+        <b class="num pv-val" id="p-val">0%</b>
+        <div class="pv-track">
+          <div class="pv-fill" id="p-fill"></div>
+          <div class="pv-sweet"></div>
+          <div class="pv-needle" id="p-needle"></div>
+          <span class="pv-tick" style="top:0%">0</span><span class="pv-tick" style="top:45.5%">50</span><span class="pv-tick" style="top:90.9%">100</span><span class="pv-tick ov" style="top:100%">110</span>
+        </div>
+      </div>
+      <div class="aim-row">
+        <button class="hud-btn" id="btn-aim-l">◀</button>
+        <span>瞄準</span>
+        <button class="hud-btn" id="btn-aim-r">▶</button>
+        <div class="lie-info">
+          <svg viewBox="0 0 120 120"><use id="l-icon" href="#i-lie"/></svg>
+          <div class="kv"><span>球位</span><b id="l-lie"></b><span>距旗</span><b class="num" id="l-pin"></b><span id="l-land-lbl">預估落點</span><b class="num" id="l-land"></b></div>
+        </div>
+      </div>
+      <div class="swing-hint" id="swing-hint"></div>
     </div>
-    <div class="swing-pad"><i></i></div>
 
     <div id="shot-data" class="hud-panel shot-data"><h3>SHOT DATA</h3><div class="metrics"></div></div>
+    <div id="practice-bar" class="hud-panel practice-bar hidden">
+      <button class="hud-btn" data-pm="range">發球台</button>
+      <button class="hud-btn" data-pm="bunker">沙坑</button>
+      <button class="hud-btn" data-pm="putt">果嶺</button>
+      <button class="hud-btn hidden" id="pb-random">換位置</button>
+    </div>
     <div id="toast" class="toast"></div>
   </div>
 </section>
@@ -548,12 +563,24 @@
   <div class="dlg-btns"><button id="rr-done" class="btn brass">回到大廳</button></div>
 </div></div>
 
+<div id="dlg-map" class="dlg"><div class="dlg-box wide map-box">
+  <h3>地圖 <span class="small">點地圖可以瞄準（推桿練習時是換站位）</span></h3>
+  <canvas id="map-big"></canvas>
+  <div class="heat-legend"><span>低</span><i></i><span>高</span><span class="small">果嶺顏色：比平均高 → 紅、低 → 藍、平 → 綠</span></div>
+  <div class="dlg-btns"><button id="map-close" class="btn brass">關閉</button></div>
+</div></div>
+
+<div id="dlg-preview" class="dlg"><div class="dlg-box wide">
+  <h3 id="pv-title">18 洞預覽</h3>
+  <p class="small" id="st-prev-sum"></p>
+  <div id="st-preview" class="hole-grid"></div>
+  <div class="dlg-btns"><button id="pv-close" class="btn brass">關閉</button></div>
+</div></div>
+
 <div id="dlg-menu" class="dlg"><div class="dlg-box wide">
   <h3>選單</h3>
   <div id="gm-card" class="scroll-x"></div>
   <div class="dlg-btns wrap">
-    <button id="gm-tee" class="btn ghost-dark practice-only">回到發球台</button>
-    <button id="gm-nexthole" class="btn ghost-dark practice-only">換下一洞</button>
     <button id="gm-quit" class="btn ghost-dark">離開回合</button>
     <button id="gm-close" class="btn brass">繼續</button>
   </div>

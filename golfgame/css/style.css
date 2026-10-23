@@ -216,7 +216,7 @@ body:not([data-practice]) .practice-only { display: none; }
 #swing-trail { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; transition: opacity .6s; }
 #swing-trail.fade { opacity: 0; }
 #hud { position: absolute; inset: 0; z-index: 2; pointer-events: none; color: #f4efe2; font-size: var(--u); }
-#hud.waiting .hud-swing, #hud.waiting .hud-aim, #hud.waiting .swing-pad { opacity: .35; }
+#hud.waiting .power-v, #hud.waiting .hud-aim, #hud.waiting .swing-pad, #hud.waiting .swing-hint { opacity: .35; }
 .hud-panel { position: absolute; background: var(--hud); border: 1px solid rgba(214,187,130,.22); border-radius: calc(var(--u) * .7); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .hud-btn, .minimap, .hud-club, .hud-tools, .hud-aim, .shot-data { pointer-events: auto; }
 .lbl { font-size: calc(var(--u) * .72); letter-spacing: .14em; color: var(--brass2); text-transform: uppercase; }
@@ -302,6 +302,7 @@ body:not([data-practice]) .practice-only { display: none; }
 
 .shot-data { left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.96); padding: calc(var(--u) * 1.2); width: min(92vw, calc(var(--u) * 40)); opacity: 0; pointer-events: none !important; transition: opacity .3s, transform .3s; background: rgba(12,26,19,.92); }
 .shot-data.show { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto !important; }
+.shot-data h3 small { float: right; letter-spacing: .05em; color: rgba(241,235,220,.5); font-size: .95em; }
 .shot-data h3 { font: 600 calc(var(--u) * .8)/1 "Noto Sans TC"; letter-spacing: .2em; color: var(--brass2); margin-bottom: 10px; }
 .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: rgba(214,187,130,.15); border: 1px solid rgba(214,187,130,.15); border-radius: 8px; overflow: hidden; }
 .metrics div { background: #10241a; padding: calc(var(--u) * .5) calc(var(--u) * .7); }
@@ -333,3 +334,68 @@ body:not([data-practice]) .practice-only { display: none; }
   .minimap { height: calc(var(--u) * 8); }
   .hud-club .sub { display: none; }
 }
+
+/* ---------- 擊球區（跟著球的位置） ---------- */
+.swing-ui { position: absolute; left: 0; top: 0; width: 0; height: 0; transition: opacity .2s; }
+.swing-ui.off { opacity: 0; pointer-events: none; }
+.swing-ui .ball-ring { position: absolute; left: -16px; top: -16px; width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(255,255,255,.75); box-shadow: 0 0 0 1px rgba(0,0,0,.25), inset 0 0 0 1px rgba(0,0,0,.2); }
+.power-v { position: absolute; left: calc(var(--u) * 4.2); bottom: calc(var(--u) * -1); height: calc(var(--u) * 15); width: calc(var(--u) * 5); display: flex; flex-direction: column; align-items: center; gap: 3px; pointer-events: none; }
+.pv-val { font: 700 calc(var(--u) * 1.35)/1 "Barlow Condensed"; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.8); white-space: nowrap; }
+.pv-land { font: 600 calc(var(--u) * .95)/1 "Barlow Condensed"; color: var(--brass2); text-shadow: 0 1px 3px #000; white-space: nowrap; }
+.pv-track { position: relative; flex: 1; width: calc(var(--u) * .9); border-radius: 10px; background: linear-gradient(90deg, #0a0f0c, #1d2721); box-shadow: inset 0 1px 3px rgba(0,0,0,.7), 0 0 0 1px rgba(214,187,130,.35); }
+.pv-fill { position: absolute; left: 0; right: 0; top: 0; height: 0; border-radius: 10px; background: linear-gradient(180deg, #6f5a2f, #c7a463 70%, #efd9a4); }
+.pv-fill.over { background: linear-gradient(180deg, #6f5a2f, #c7a463 75%, #c0463a); }
+.pv-sweet { position: absolute; left: -4px; right: -4px; top: 88.5%; height: 4.5%; border: 1px solid rgba(255,255,255,.85); border-radius: 3px; }
+.pv-needle { position: absolute; left: -6px; right: -6px; top: 0; height: 2px; background: #fff; box-shadow: 0 0 6px rgba(255,255,255,.8); }
+.pv-tick { position: absolute; left: calc(100% + 5px); transform: translateY(-50%); font: 600 calc(var(--u) * .62) "Barlow Condensed"; color: rgba(244,239,226,.8); text-shadow: 0 1px 2px #000; }
+.pv-tick.ov { color: #f09a8e; }
+.aim-row { position: absolute; top: calc(var(--u) * 2.2); left: 0; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; font-size: calc(var(--u) * .75); color: rgba(244,239,226,.85); text-shadow: 0 1px 3px #000; white-space: nowrap; }
+.aim-row .hud-btn { width: calc(var(--u) * 3); height: calc(var(--u) * 3); border-radius: 50%; background: var(--hud); border: 1px solid rgba(214,187,130,.3); color: var(--brass2); font-size: calc(var(--u) * 1.2); pointer-events: auto; }
+.lie-info { position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 6px; background: var(--hud); border: 1px solid rgba(214,187,130,.22); border-radius: 8px; padding: 4px 9px 4px 5px; text-shadow: none; }
+.lie-info svg { width: calc(var(--u) * 2.6); height: calc(var(--u) * 2.6); }
+.lie-info .kv { display: grid; grid-template-columns: auto auto; gap: 0 8px; font-size: calc(var(--u) * .68); color: rgba(244,239,226,.7); }
+.lie-info .kv b { font: 600 calc(var(--u) * .9)/1.2 "Barlow Condensed"; color: #fff; text-align: right; }
+.lie-info .kv b:not(.num) { font-family: "Noto Sans TC"; font-size: calc(var(--u) * .72); }
+.swing-hint { position: absolute; top: calc(var(--u) * 5.8); left: 0; transform: translateX(-50%); font-size: calc(var(--u) * .7); color: rgba(244,239,226,.7); text-shadow: 0 1px 3px #000; white-space: nowrap; pointer-events: none; }
+#hud.waiting .swing-ui { opacity: .4; }
+@media (orientation: portrait) {
+  .power-v { height: calc(var(--u) * 17); }
+  .lie-info { left: auto; right: auto; top: calc(100% + 6px); transform: translateX(-50%); left: 50%; }
+  .swing-hint { top: calc(var(--u) * 10.5); white-space: normal; width: 80vw; text-align: center; }
+}
+
+/* 練習場切換列 */
+.practice-bar { left: 50%; transform: translateX(-50%); top: calc(var(--u) + var(--safe-t)); display: flex; gap: 4px; padding: 4px; pointer-events: auto; }
+.practice-bar .hud-btn { padding: calc(var(--u) * .4) calc(var(--u) * 1); border-radius: 16px; font-size: calc(var(--u) * .9); color: rgba(244,239,226,.8); }
+.practice-bar .hud-btn.on { background: var(--brass); color: #14130f; font-weight: 700; }
+@media (orientation: portrait) { .practice-bar { top: calc(var(--u) * 13 + var(--safe-t)); } }
+
+/* 18 洞預覽 */
+.hole-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.hole-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; }
+.hole-card canvas { width: 62px; height: 100px; flex: none; background: #3e6b35; display: block; }
+.hole-card .hc { padding: 6px 8px; font-size: 11px; color: var(--muted); line-height: 1.45; }
+.hole-card .hc b { display: block; font: 700 15px "Barlow Condensed"; color: var(--forest); letter-spacing: .02em; }
+.hole-card .hc b em { font-style: normal; color: var(--brass); margin-left: 4px; font-size: 13px; }
+.hole-card .hc i { font-style: normal; color: #4c4a40; }
+
+/* 落點箭頭、飛行碼數、球位提醒 */
+.tgt-arrow { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+.tgt-arrow::before { content: ""; position: absolute; left: -9px; top: -34px; border: 9px solid transparent; border-top: 14px solid #e0362b; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); animation: tgtBob 1s ease-in-out infinite; }
+.tgt-arrow.edge::before { top: -11px; animation: none; }
+@keyframes tgtBob { 50% { transform: translateY(-6px); } }
+.tag.ball { background: rgba(10,20,15,.75); font-size: calc(var(--u) * 1.15); border: 1px solid rgba(214,187,130,.4); }
+.lie-warn { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); background: #f2c230; color: #14130f; font-weight: 700; font-size: calc(var(--u) * .95); padding: 6px 12px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,.4); max-width: 70vw; text-align: center; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: normal; width: max-content; }
+.lie-warn.show { opacity: 1; }
+.lie-warn::after { content: ""; position: absolute; left: 50%; bottom: -8px; margin-left: -8px; border: 8px solid transparent; border-bottom: 0; border-top-color: #f2c230; }
+/* 小地圖放大 */
+.minimap-wrap { position: relative; }
+.map-zoom { position: absolute; right: 5px; bottom: 5px; width: calc(var(--u) * 2.4); height: calc(var(--u) * 2.4); border-radius: 6px; background: rgba(10,20,15,.8); border: 1px solid rgba(214,187,130,.4); color: var(--brass2); font-size: calc(var(--u) * 1.1); line-height: 1; }
+.map-box { display: flex; flex-direction: column; }
+#map-big { width: 100%; height: min(62vh, 560px); border-radius: 10px; background: #2c4426; cursor: crosshair; }
+.heat-legend { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; flex-wrap: wrap; }
+.heat-legend i { width: 160px; height: 10px; border-radius: 5px; background: linear-gradient(90deg, hsl(230,78%,50%), hsl(120,78%,50%), hsl(0,78%,50%)); }
+/* 球場卡片的預覽按鈕 */
+.course-card { position: relative; }
+.pv-btn { margin-left: auto; flex: none; padding: 6px 10px; border-radius: 16px; border: 1px solid rgba(169,134,74,.5); color: #6e5427; background: #fbf6ea; font-size: 12px; white-space: nowrap; }
+#dlg-preview .hole-grid { max-height: 62vh; overflow-y: auto; }

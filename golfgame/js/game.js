@@ -28,7 +28,7 @@ export class Game {
       onStart: () => this.hud.hideShotData(),
       onAim: dx => this.nudgeAim(dx * 0.05),
       onBack: p => this.onBack(p),
-      onThrough: c => this.hud.setPower(this.power, c),
+      onThrough: () => {},
       onSwing: s => this.onSwing(s),
       onCancel: () => this.onCancel(),
     });
@@ -63,12 +63,27 @@ export class Game {
     $('c-rail').onclick = e => { const id = e.target.dataset && e.target.dataset.club; if (id) this.selectClub(id); };
     $('btn-view').onclick = () => { if (this.canControl()) this.cam.mode = this.cam.mode === 'overview' ? 'address' : 'overview'; };
     $('btn-mulligan').onclick = () => this.mulligan();
+    $('btn-map').addEventListener('click', e => { e.stopPropagation(); this.hud.openBigMap(); });
+    $('map-close').onclick = () => $('dlg-map').classList.remove('open');
+    $('map-big').addEventListener('click', e => {
+      const r = e.currentTarget.getBoundingClientRect();
+      const w = this.hud.mapToWorld(e.clientX - r.left, e.clientY - r.top, true);
+      if (!w || !this.canControl()) return;
+      $('dlg-map').classList.remove('open');
+      if (this.cfg.practice && this.pmode === 'putt') this.placePutt(w[0], w[1]);
+      else this.aimAt(w[0], w[1]);
+    });
     $('minimap').addEventListener('click', e => {
       if (!this.canControl()) return;
       const r = e.currentTarget.getBoundingClientRect();
       const w = this.hud.miniToWorld(e.clientX - r.left, e.clientY - r.top);
-      if (w) this.aimAt(w[0], w[1]);
+      if (!w) return;
+      // 練習場推桿：點果嶺 = 換站位
+      if (this.cfg.practice && this.pmode === 'putt') { this.placePutt(w[0], w[1]); return; }
+      this.aimAt(w[0], w[1]);
     });
+    document.querySelectorAll('#practice-bar [data-pm]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); if (this.canControl()) this.setPracticeMode(b.dataset.pm); }));
+    $('pb-random').addEventListener('click', e => { e.stopPropagation(); if (this.canControl()) this.placePutt(); });
     $('game-layer').addEventListener('click', () => { if (this.flight) this.flight.speed = 3; if (this.intro) this.intro.t = 99; });
   }
 
@@ -149,13 +164,14 @@ export class Game {
     await new Promise(r => setTimeout(r, 30));
     this.hole = buildHole(this.course, idx, { pinSeed: this.seed + idx * 31 });
     await this.world.loadHole(this.hole);
+    this.hud.setGreenHeat(this.hole);
     const rng = makeRng(this.seed + idx * 977);
     const dir = this.windBase.dir + (rng() - 0.5) * rad(70);
     const mph = Math.max(0, this.windBase.mph * (0.75 + rng() * 0.5));
     this.wind = [Math.sin(dir) * mph * MPH, -Math.cos(dir) * mph * MPH];
     const tee = this.hole.teePos(this.cfg.tee);
     for (const p of this.players) {
-      Object.assign(p, { ball: tee.slice(), lie: SURF.TEE, strokes: 0, holed: false, holePutts: 0, girDone: false, prev: null, picked: false });
+      Object.assign(p, { ball: tee.slice(), lie: SURF.TEE, strokes: 0, holed: false, holePutts: 0, girDone: false, prev: null, picked: false, lieOverride: null });
       p.pars[k] = this.hole.par;
     }
     const yd = teeYards(this.course, idx, this.cfg.tee);
@@ -176,6 +192,15 @@ export class Game {
       l0: new THREE.Vector3(pin[0], ph, pin[1]).addScaledVector(back, -60),
     };
     this.hud.toast(`<small>第 ${idx + 1} 洞</small><b>PAR ${this.hole.par} · ${yd} Y</b>`, 2600, 'big');
+    $('practice-bar').classList.toggle('hidden', !this.cfg.practice);
+    if (this.cfg.practice) {
+      this.intro = null;
+      this.puttSpot = null;
+      this.pClub = this.pClub || 'D';
+      $('h-course').textContent = '練習場 · ' + this.course.name;
+      this.setPracticeMode('range');
+      return;
+    }
     if (this.authority) this.nextTurn();
   }
 
@@ -226,16 +251,21 @@ export class Game {
     for (const q of this.players) q.golfer.setVisible(q === p);
     this.world.clearTracer();
     this.world.setBall(p.ball[0], p.ball[1], p.ball[2]);
-    p.lie = this.hole.surface(p.ball[0], p.ball[2]);
+    p.lie = p.lieOverride ?? this.hole.surface(p.ball[0], p.ball[2]);
     const dist = this.distPin(p);
-    this.club = this.autoClub(p, dist);
+    this.club = this.cfg.practice ? clubById(this.pmode === 'putt' ? 'PT' : this.pClub || 'D') : this.autoClub(p, dist);
+    this.world.setSandPatch(this.cfg.practice && this.pmode === 'bunker' ? this.hole.tees.find(t => t.id === this.cfg.tee) : null);
     this.aim = this.defaultAim(p, this.club);
     this.power = 0;
     this.curve = 0;
     this.puttScale = this.calcPuttScale(p);
     this.setupGolfer();
     this.cam.mode = 'address';
-    this.world.greenGrid.visible = p.lie === SURF.GREEN || (this.club.putter && p.lie === SURF.FRINGE);
+    this.world.greenGrid.visible = !!this.club.putter;
+    // 特殊球位：頭頂黃底提醒 5 秒
+    const warn = { [SURF.ROUGH]: '長草：球速會變慢、後旋變少，請評估球桿和揮桿力道', [SURF.DEEP]: '深草：距離可能少一半，請評估球桿和揮桿力道',
+      [SURF.SAND]: '沙坑：球速會大幅降低，請評估球桿和揮桿力道', [SURF.WASTE]: '荒地：距離會變短，請評估球桿和揮桿力道' }[p.lie];
+    if (warn && p.local) this.hud.lieWarn(warn, 5000); else this.hud.hideLieWarn();
     this.refreshHud();
     const mine = this.canControl();
     this.input.enabled = mine;
@@ -321,8 +351,8 @@ export class Game {
     const pinH = this.hole.height(...this.hole.pin);
     this.hud.setWind(this.wind, this.aim, this.temp, pinH - p.ball[1], this.course.stimp, this.course.firm);
     const carry = this.estCarry(p, Math.max(this.power, 1));
-    this.hud.setLie(p.lie, dist, carry, this.club.putter ? Math.round(toYd(this.puttScale)) : 0);
-    this.hud.setPower(this.power, this.curve, this.club.putter ? toYd(this.power * this.puttScale).toFixed(1) + ' Y' : null);
+    this.hud.setLie(p.lie, dist, carry, this.club.putter ? pinH - (p.ball[1] - 0.0213) : null);
+    this.showPower(this.power);
     this.updateTarget();
     this.updatePlayersHud();
   }
@@ -417,10 +447,16 @@ export class Game {
 
   selectClub(id) {
     if (!this.canControl()) return;
+    if (this.cfg.practice) {
+      // 練習場：選推桿就到果嶺，選其他球桿就回到發球台（或沙坑）
+      const c = clubById(id);
+      if (c.putter && this.pmode !== 'putt') return this.setPracticeMode('putt');
+      if (!c.putter) { this.pClub = id; if (this.pmode === 'putt') return this.setPracticeMode('range'); }
+    }
     const prevPutt = this.club.putter;
     this.club = clubById(id);
     if (this.club.putter !== prevPutt) this.aim = this.defaultAim(this.players[this.cur], this.club);
-    this.world.greenGrid.visible = this.club.putter;
+    this.world.greenGrid.visible = !!this.club.putter;
     this.input.putt = !!this.club.putter;
     this.afterAimChange();
   }
@@ -429,7 +465,7 @@ export class Game {
     if (!this.canControl()) return;
     this.power = p;
     this.players[this.cur].golfer.setBackswing(p, p);
-    this.hud.setPower(p, 0, this.club.putter ? toYd(p * this.puttScale).toFixed(1) + ' Y' : null);
+    this.showPower(p);
     const now = performance.now();
     if (now - (this.lastTargetUpd || 0) > 60) { this.lastTargetUpd = now; this.updateTarget(); }
     this.sendAimPreview();
@@ -469,7 +505,7 @@ export class Game {
     this.shotNo++;
     const rng = makeRng((this.seed ^ hashStr(this.holeList[this.k] + ':' + this.shotNo + ':' + pi)) >>> 0);
     const club = clubById(input.club);
-    const lie = this.hole.surface(p.ball[0], p.ball[2]);
+    const lie = p.lieOverride ?? this.hole.surface(p.ball[0], p.ball[2]);
     const n = this.hole.normal(p.ball[0], p.ball[2]);
     const dist = this.distPin(p);
     const pressure = (lie === SURF.GREEN && p.strokes + 1 <= this.hole.par) || this.holeNo >= 16 || this.cfg.mode === 'match';
@@ -502,6 +538,7 @@ export class Game {
     this.world.setTarget(0, 0, 1, false);
     this.world.setPuttLine(null);
     $('btn-mulligan').classList.add('hidden');
+    this.hud.hideLieWarn();
     const startFlight = () => {
       sfx.playHit(club.icon, clamp(msg.input.power, 0.3, 1));
       const f = msg.res.frames;
@@ -559,7 +596,7 @@ export class Game {
     const msg = this.flight.msg;
     this.flight = null;
     const club = clubById(msg.input.club);
-    if (!club.putter && msg.res.result !== 'ob') this.hud.shotData(club, msg.launch, msg.res, this.wind);
+    if (!club.putter && msg.res.result !== 'ob') this.hud.shotData(club, msg.launch, msg.res, this.net ? 10000 : 0);
     if (this.authority) this.resolve(msg);
     else if (this.pendingState) { const s = this.pendingState; this.pendingState = null; this.applyState(s); }
   }
@@ -568,6 +605,7 @@ export class Game {
   resolve(msg) {
     const p = this.players[msg.p];
     const r = msg.res;
+    if (this.cfg.practice) return this.resolvePractice(p, r);
     const club = clubById(msg.input.club);
     const lieBefore = p.lie;
     const firstShot = p.strokes === 0;
@@ -607,13 +645,63 @@ export class Game {
       p.scores[this.k] = p.strokes;
       p.putts[this.k] = p.holePutts;
     }
-    if (this.cfg.practice && p.holed) {
-      toasts.push('練習模式：回到發球台');
-      const tee = this.hole.teePos(this.cfg.tee);
-      Object.assign(p, { ball: tee, lie: SURF.TEE, strokes: 0, holed: false, holePutts: 0, girDone: false, picked: false });
-    }
     if (toasts.length) { if (this.net) this.net.send({ t: 'toast', text: toasts.join('<br>') }); this.hud.toast(toasts.join('<br>'), 2600, p.holed ? 'big' : ''); }
     setTimeout(() => this.nextTurn(), toasts.length ? 1400 : 500);
+  }
+
+  // ---------------- 練習場 ----------------
+  // 不計桿數。發球台 / 沙坑：每球都回到原位；果嶺：每球回到自己選的站位
+  resolvePractice(p, r) {
+    let msgText = '';
+    if (r.result === 'holed') msgText = '進洞！';
+    else if (r.result === 'water' || r.result === 'chasm') msgText = '落水';
+    else if (r.result === 'ob') msgText = '出界';
+    else if (this.pmode === 'putt') msgText = `差 ${toYd(this.hole.distToPin(r.end[0], r.end[2])).toFixed(1)} Y`;
+    if (msgText) this.hud.toast(msgText, 1600, r.result === 'holed' ? 'big' : '');
+    if (this.pmode === 'putt') p.ball = this.puttSpot.slice();
+    else p.ball = this.hole.teePos(this.cfg.tee);
+    p.strokes = 0;
+    p.holed = false;
+    setTimeout(() => this.nextTurn(), r.result === 'holed' ? 1300 : 900);
+  }
+
+  setPracticeMode(mode) {
+    this.pmode = mode;
+    const p = this.players[0];
+    document.querySelectorAll('#practice-bar [data-pm]').forEach(b => b.classList.toggle('on', b.dataset.pm === mode));
+    $('pb-random').classList.toggle('hidden', mode !== 'putt');
+    if (mode === 'putt') {
+      if (!this.puttSpot) return this.placePutt();
+      p.ball = this.puttSpot.slice();
+      p.lieOverride = null;
+    } else {
+      p.ball = this.hole.teePos(this.cfg.tee);
+      p.lieOverride = mode === 'bunker' ? SURF.SAND : null;
+      if (mode === 'bunker' && (!this.pClub || !clubById(this.pClub).wedge)) this.pClub = 'SW';
+      if (mode === 'range' && this.pClub === 'SW' && this.prevRangeClub) this.pClub = this.prevRangeClub;
+    }
+    if (mode === 'range' && this.pClub) this.prevRangeClub = this.pClub;
+    this.hud.swingHint(mode === 'putt' ? '點右上小地圖的果嶺可以換站位' : mode === 'bunker' ? '沙坑練習：發球台換成沙地' : '往下拉上桿，快速往上滑出桿；左右滑調方向');
+    this.beginTurn(0);
+  }
+
+  // 推桿站位：給位置就放在那裡（必須在果嶺上），沒給就隨機 2~9 碼
+  placePutt(x, z) {
+    const [px, pz] = this.hole.pin;
+    if (x === undefined) {
+      for (let i = 0; i < 40; i++) {
+        const a = Math.random() * Math.PI * 2, d = (2 + Math.random() * 7) * YD;
+        const qx = px + Math.cos(a) * d, qz = pz + Math.sin(a) * d;
+        if (this.hole.surface(qx, qz) === SURF.GREEN) { x = qx; z = qz; break; }
+      }
+      if (x === undefined) { x = px + 3; z = pz; }
+    } else if (this.hole.surface(x, z) !== SURF.GREEN && this.hole.surface(x, z) !== SURF.FRINGE) {
+      this.hud.toast('請點在果嶺上', 1200);
+      return;
+    }
+    this.puttSpot = [x, this.hole.height(x, z) + 0.0213, z];
+    this.pmode = 'putt';
+    this.setPracticeMode('putt');
   }
 
   // 落水：找到球最後一次在陸地上的位置，往回退 2 公尺抛球
@@ -772,9 +860,10 @@ export class Game {
       }
     } else if (f) {
       // 推桿 / 短切：鏡頭留在後方，視線跟球
-      cam.dpos.copy(f.start).addScaledVector(d, -2.8).addScaledVector(r, -0.4).add(new THREE.Vector3(0, f.putt ? 1.3 : 2.2, 0));
+      // 鏡頭在球的右後方、比較高（人物站在左側，才不會擋住滾動中的球）
+      cam.dpos.copy(f.start).addScaledVector(d, -2.4).addScaledVector(r, f.putt ? 1.3 : 0.8).add(new THREE.Vector3(0, f.putt ? 1.9 : 2.4, 0));
       const dd = ball.distanceTo(f.start);
-      if (dd > 6) cam.dpos.lerp(ball.clone().addScaledVector(d, -3).add(new THREE.Vector3(0, 1.6, 0)), clamp((dd - 6) / 12, 0, 0.8));
+      if (dd > 3) cam.dpos.lerp(ball.clone().addScaledVector(d, -3).addScaledVector(r, 0.6).add(new THREE.Vector3(0, 1.7, 0)), clamp((dd - 3) / 10, 0, 0.85));
       cam.dlook.copy(ball);
       k = 2;
     }
@@ -789,18 +878,19 @@ export class Game {
     world.shadowFocus = f ? ball : p.golfer.object.position;
   }
 
+  // 準備擊球的鏡頭：在球的正後方，球在畫面水平正中間、垂直約 60% 的位置（擊球區圓圈就在球上）
   addressCam(p, d, r) {
     const b = new THREE.Vector3(...p.ball);
     const cam = this.world.camera;
-    // 視角越窄鏡頭退越遠，讓角色在直式/橫式畫面裡大小差不多
-    const k = Math.tan(31 * Math.PI / 180) / Math.tan(cam.fov / 2 * Math.PI / 180);
     const portrait = cam.aspect < 1;
-    const at = (back, side, up, lookFwd, lookSide, lookUp) => ({
-      pos: b.clone().addScaledVector(d, -back).addScaledVector(r, side).add(new THREE.Vector3(0, up, 0)),
-      look: b.clone().addScaledVector(d, lookFwd).addScaledVector(r, lookSide).add(new THREE.Vector3(0, lookUp, 0)),
-    });
-    if (this.club.putter) return portrait ? at(2.6, 0.35, 1.3, 3.5, -0.2, 0) : at(2.4 * k, 0.5, 1.15 + 0.15 * k, 3.5, -0.3, 0);
-    return portrait ? at(5.2, 0.1, 1.8, 30, -0.6, 1.2) : at(3.8 * k, 0.55 * k, 1.55 + 0.1 * k, 30, -1.5, 1.2);
+    const k = Math.tan(31 * Math.PI / 180) / Math.tan(cam.fov / 2 * Math.PI / 180);   // 視角越窄退越遠
+    let back, up, f;
+    if (this.club.putter) { back = portrait ? 2.8 : 2.1 * k; up = portrait ? 1.35 : 1.05 + 0.05 * k; f = 0.62; }
+    else { back = portrait ? 5.6 : 3.9 * k; up = portrait ? 1.9 : 1.35 + 0.05 * k; f = portrait ? 0.6 : 0.62; }
+    const pos = b.clone().addScaledVector(d, -back).add(new THREE.Vector3(0, up, 0));
+    const pitch = Math.atan2(up, back) - (f - 0.5) * cam.fov * Math.PI / 180;
+    const look = pos.clone().addScaledVector(d, Math.cos(pitch) * 20).add(new THREE.Vector3(0, -Math.sin(pitch) * 20, 0));
+    return { pos, look };
   }
 
   updateTags() {
@@ -811,10 +901,35 @@ export class Game {
     const dist = this.hole.distToPin(this.world.ball.position.x, this.world.ball.position.z);
     const txt = dist < 27 ? toYd(dist).toFixed(1) + ' Y' : Math.round(toYd(dist)) + ' Y';
     this.hud.tag('tag-pin', this.world.project(px, ph + 2.6, pz), txt);
-    if (this.targetPt && !this.flight && !this.club.putter && this.canControl()) {
+    // 擊球區（圓圈、力道條、瞄準、球位資訊）跟著球在畫面上的位置
+    const atBall = !this.flight && !this.swingAnim && !this.intro && !this.holeDone && this.cam.mode !== 'overview';
+    const b = this.world.ball.position;
+    this.hud.placeSwingUI(atBall ? this.world.project(b.x, b.y, b.z) : null);
+    // 紅色小箭頭指著預估落點
+    if (atBall && this.canControl() && !this.club.putter && this.targetPt) {
       const [tx, tz] = this.targetPt;
-      const c = Math.hypot(tx - p.ball[0], tz - p.ball[2]);
-      this.hud.tag('tag-land', this.world.project(tx, this.hole.height(tx, tz) + 0.5, tz), '落點 ' + Math.round(toYd(c)) + ' Y');
-    } else this.hud.tag('tag-land', null);
+      this.hud.pointTarget(this.world.project(tx, this.hole.height(tx, tz) + 0.2, tz));
+    } else this.hud.pointTarget(null);
+    // 飛行 / 滾動中：碼數跟著球
+    const f = this.flight;
+    if (f) {
+      const dist = Math.hypot(b.x - f.start.x, b.z - f.start.z);
+      this.hud.tag('tag-ball', this.world.project(b.x, b.y + 0.15, b.z), f.putt ? toYd(dist).toFixed(1) + ' Y' : Math.round(toYd(dist)) + ' Y');
+    } else this.hud.tag('tag-ball', null);
+    // 頭頂提醒跟著角色
+    const warn = $('lie-warn');
+    if (warn.classList.contains('show')) {
+      const o = p.golfer.object.position;
+      const q = this.world.project(o.x, o.y + 2.1, o.z);
+      warn.style.transform = `translate(${q.x.toFixed(1)}px, ${q.y.toFixed(1)}px) translate(-50%, -100%)`;
+    }
+  }
+
+  // 力道條：上面顯示力道（推桿顯示碼數），下面顯示這個力道的預估落點
+  showPower(pw) {
+    const p = this.players[this.cur];
+    if (this.club.putter) { this.hud.setPower(pw, toYd(pw * this.puttScale).toFixed(1) + ' Y', ''); return; }
+    const land = this.estCarry(p, pw > 0.02 ? pw : 1);
+    this.hud.setPower(pw, null, '落點 ' + Math.round(toYd(land)) + ' Y');
   }
 }
