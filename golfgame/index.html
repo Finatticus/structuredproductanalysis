@@ -411,7 +411,7 @@
   <header class="appbar"><small>CHARACTER</small><h4>角色與素質</h4></header>
   <div class="body char-body scroll">
     <div class="char-left">
-      <canvas id="ch-canvas"></canvas>
+      <div class="ch-stage"><canvas id="ch-canvas"></canvas><div id="ch-loading" class="ch-loading hidden">角色載入中…</div></div>
       <div id="ch-look"></div>
     </div>
     <div class="char-right">
@@ -448,6 +448,7 @@
   <canvas id="gl"></canvas>
   <div id="game-layer"></div>
   <canvas id="swing-trail"></canvas>
+  <div id="shape-tag" class="shape-tag"></div>
   <div id="hud" class="hidden">
     <div id="tag-pin" class="tag pin num"></div>
     <div id="tag-ball" class="tag ball num"></div>
@@ -530,8 +531,8 @@
       <button class="hud-btn" data-pm="putt">果嶺</button>
       <button class="hud-btn hidden" id="pb-random">換位置</button>
     </div>
-    <button class="hud-btn ff-btn hidden" id="btn-ff">加速</button>
     <div id="toast" class="toast"></div>
+    <div id="celebrate" class="celebrate"><canvas></canvas><div class="cb-inner"><small class="cb-name"></small><b class="cb-title"></b><span class="cb-sub"></span></div></div>
   </div>
 </section>
 
@@ -590,6 +591,7 @@
 
 <div id="dlg-menu" class="dlg"><div class="dlg-box wide">
   <h3>選單</h3>
+  <div id="gm-room" class="gm-room hidden"></div>
   <div id="gm-card" class="scroll-x"></div>
   <div class="gm-fs"><span>字體大小</span><div class="seg fs-seg" id="gm-fs"></div></div>
   <div class="dlg-btns wrap">
