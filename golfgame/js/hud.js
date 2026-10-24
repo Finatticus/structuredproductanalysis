@@ -47,8 +47,18 @@ export class Hud {
 
   setPlayer(p, strokes, isMine, multi) {
     $('h-stroke').textContent = strokes + 1;
-    $('turn-banner').innerHTML = multi ? `<b>${escapeHtml(p.user)}</b>${isMine ? '　輪到你了' : '　擊球中…'}` : '';
-    $('turn-banner').classList.toggle('hidden', !multi);
+    const tb = $('turn-banner');
+    tb.innerHTML = multi ? `<b>${escapeHtml(p.user)}</b>${isMine ? '　輪到你了' : '　擊球中…'}` : '';
+    tb.classList.toggle('hidden', !multi);
+    tb.classList.toggle('mine', multi && isMine);
+    // 連線時剛輪到自己：先在畫面中間放大彈出 1 秒，再縮回上方；輪到對方就只顯示在上方
+    const key = `${$('h-hole').textContent}:${p.user}:${strokes}`;
+    if (multi && isMine && key !== this.turnKey) {
+      tb.classList.remove('pop'); void tb.offsetWidth; tb.classList.add('pop');
+      clearTimeout(this.turnTimer);
+      this.turnTimer = setTimeout(() => tb.classList.remove('pop'), 1000);
+    }
+    this.turnKey = multi && isMine ? key : null;
   }
 
   setPlayers(players, par, mode) {
@@ -177,7 +187,53 @@ export class Hud {
     this.toastTimer = setTimeout(() => { t.className = 'toast'; }, ms);
   }
 
-  // autoHideMs = 0：一直顯示到玩家點一下；連線模式傳 10000，最多 10 秒
+  // 老鷹 / 信天翁 / 一桿進洞：全畫面金色慶祝動畫 3 秒（金色紙花從上方灑下、中間大字放大彈出）
+  celebrate(title, sub, name) {
+    const box = $('celebrate');
+    box.querySelector('.cb-name').textContent = name || '';
+    box.querySelector('.cb-title').textContent = title;
+    box.querySelector('.cb-sub').textContent = sub;
+    box.classList.remove('show'); void box.offsetWidth; box.classList.add('show');
+    const cv = box.querySelector('canvas'), x = cv.getContext('2d');
+    const dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+    cv.width = W * dpr; cv.height = H * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const COLS = ['#e7c477', '#f6e3ae', '#c49a4c', '#fff6dc', '#2f6b45', '#b2332b'];
+    const bits = Array.from({ length: Math.round(Math.min(220, W * 0.25)) }, () => ({
+      x: Math.random() * W, y: -Math.random() * H * 0.6 - 10, vx: (Math.random() - 0.5) * 60, vy: 90 + Math.random() * 160,
+      w: 5 + Math.random() * 7, h: 3 + Math.random() * 4, r: Math.random() * 6, vr: (Math.random() - 0.5) * 10, sway: Math.random() * 6,
+      c: COLS[Math.floor(Math.random() * COLS.length)],
+    }));
+    const t0 = performance.now();
+    cancelAnimationFrame(this.cbRaf);
+    let last = t0;
+    const step = now => {
+      const t = (now - t0) / 1000, dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      x.clearRect(0, 0, W, H);
+      // 中間放射金光
+      const glow = x.createRadialGradient(W / 2, H * 0.42, 0, W / 2, H * 0.42, Math.max(W, H) * 0.6);
+      const a = Math.min(1, t * 3) * Math.max(0, 1 - Math.max(0, t - 2.4) / 0.6);
+      glow.addColorStop(0, `rgba(240,205,120,${0.45 * a})`);
+      glow.addColorStop(1, 'rgba(240,205,120,0)');
+      x.fillStyle = glow; x.fillRect(0, 0, W, H);
+      x.save(); x.translate(W / 2, H * 0.42); x.rotate(t * 0.25);
+      x.fillStyle = `rgba(255,236,180,${0.16 * a})`;
+      for (let i = 0; i < 12; i++) { x.rotate(Math.PI / 6); x.beginPath(); x.moveTo(0, 0); x.lineTo(Math.max(W, H), -40); x.lineTo(Math.max(W, H), 40); x.fill(); }
+      x.restore();
+      for (const b of bits) {
+        b.vy += 30 * dt; b.x += (b.vx + Math.sin(t * 3 + b.sway) * 40) * dt; b.y += b.vy * dt; b.r += b.vr * dt;
+        x.save(); x.translate(b.x, b.y); x.rotate(b.r); x.scale(1, Math.abs(Math.cos(b.r * 1.3)) + 0.2);
+        x.globalAlpha = a; x.fillStyle = b.c; x.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); x.restore();
+      }
+      if (t < 3) this.cbRaf = requestAnimationFrame(step);
+      else { x.clearRect(0, 0, W, H); box.classList.remove('show'); }
+    };
+    this.cbRaf = requestAnimationFrame(step);
+    clearTimeout(this.cbTimer);
+    this.cbTimer = setTimeout(() => box.classList.remove('show'), 3100);   // 背景分頁不跑動畫時也會關掉
+  }
+
+  // autoHideMs = 0：一直顯示到玩家點一下；連線模式傳 3000，3 秒自動關閉
   shotData(club, info, res, autoHideMs = 0) {
     const box = $('shot-data');
     const m = (label, val, unit, hero) => `<div class="${hero ? 'hero' : ''}"><span>${label}</span><b class="num">${val}<small>${unit}</small></b></div>`;

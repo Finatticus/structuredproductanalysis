@@ -1,6 +1,6 @@
 // 第三人稱角色
 // ProceduralGolfer：程式內建角色（不需外部檔案）。手臂與腿用兩段 IK 求解，球桿是剛體，雙手永遠握在桿上。
-// MixamoGolfer：預留的寫實角色介面，把 Mixamo 下載的 FBX 放進 assets/character/ 並在 config.js 切換。
+// 寫實角色（Mixamo）在 mixamo.js，兩者對外介面相同。
 // 兩者對外介面相同：setup() / setBackswing() / swing() / update() / setLook() / object
 import * as THREE from 'three';
 import { clamp, lerp } from './util.js';
@@ -116,14 +116,15 @@ export class ProceduralGolfer {
     this.rig.add(this.club);
   }
 
-  buildClub(type) {
-    // 只有換球桿（或站位角度改變）才重建；舊的模型要釋放，否則每次瞄準都會漏記憶體、越玩越卡
-    const key = type + ':' + (this.lie || 0.9).toFixed(3);
+  buildClub(type, lenOverride) {
+    // 只有換球桿（或站位角度、長度改變）才重建；舊的模型要釋放，否則每次瞄準都會漏記憶體、越玩越卡
+    const key = type + ':' + (this.lie || 0.9).toFixed(3) + ':' + (lenOverride || 0).toFixed(3);
     if (this._clubKey === key) return;
     this._clubKey = key;
     this.club.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
     this.club.clear();
-    const g = CLUB_GEOM[type] || CLUB_GEOM.iron;
+    const g = { ...(CLUB_GEOM[type] || CLUB_GEOM.iron) };
+    if (lenOverride) g.len = lenOverride;      // 寫實角色依站位算出的長度
     const chrome = new THREE.MeshStandardMaterial({ color: 0xd8dde0, roughness: 0.18, metalness: 1 });
     const black = new THREE.MeshStandardMaterial({ color: 0x15171a, roughness: 0.35, metalness: 0.3 });
     const grip = new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.9 });
@@ -388,98 +389,6 @@ export class ProceduralGolfer {
       this.pose(ph);
       if (t >= 1) { this.anim = null; this.phase = 3; this.finished = true; }
     }
-  }
-
-  setVisible(v) { this.object.visible = v; }
-}
-
-// ---------------- Mixamo 寫實角色（預留） ----------------
-// 檔案放在 assets/character/：model.fbx（角色）、idle.fbx、drive.fbx、putt.fbx（動作）
-// 在 js/config.js 把 CHARACTER.mode 改成 'mixamo' 即可切換，詳見 README。
-export class MixamoGolfer {
-  constructor(look, cfg) {
-    this.cfg = cfg;
-    this.object = new THREE.Group();
-    this.ready = false;
-    this.fallback = new ProceduralGolfer(look);
-  }
-
-  async load() {
-    const { FBXLoader } = await import('three/addons/loaders/FBXLoader.js');
-    const ld = new FBXLoader();
-    const get = url => new Promise((res, rej) => ld.load(url, res, undefined, rej));
-    const c = this.cfg;
-    const model = await get(c.model);
-    model.scale.setScalar(c.scale);
-    model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    this.model = model;
-    this.object.add(model);
-    this.mixer = new THREE.AnimationMixer(model);
-    const clips = {};
-    // 動作檔各自載入；沒有放（例如 idle.fbx 是選用的）就略過，不會讓整個角色載入失敗
-    for (const k of ['idle', 'drive', 'putt']) {
-      if (!c[k]) continue;
-      try {
-        const f = await get(c[k]);
-        if (f.animations && f.animations[0]) clips[k] = this.mixer.clipAction(f.animations[0]);
-      } catch (err) {
-        console.info(`[Dixen] 沒有找到 ${c[k]}，略過`);
-      }
-    }
-    if (!clips.drive) throw new Error('缺少 drive.fbx（揮桿動作）');
-    this.clips = clips;
-    // 球桿綁在右手骨頭上
-    this.hand = model.getObjectByName(c.handBone || 'mixamorigRightHand');
-    this.clubHolder = new THREE.Group();
-    if (this.hand) this.hand.add(this.clubHolder);
-    this.ready = true;
-  }
-
-  setLook(look) { this.fallback.setLook(look); }
-
-  setup(ballPos, yaw, clubIcon) {
-    if (!this.ready) return;
-    this.isPutt = clubIcon === 'putter';
-    const d = V(Math.sin(yaw), 0, -Math.cos(yaw)), r = V(Math.cos(yaw), 0, Math.sin(yaw));
-    // Mixamo 動作預設面向 +Z；讓角色面向球（右向量 r），站在球的左側
-    this.object.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(r.clone().negate(), UP, d).multiply(new THREE.Matrix4().makeRotationY(Math.PI / 2)));
-    this.object.position.copy(ballPos).addScaledVector(r, -(this.cfg.ballDistance || 0.9));
-    this.object.position.y = ballPos.y - 0.021;
-    this.fallback.lie = 1.0;
-    this.fallback.buildClub(clubIcon);
-    this.clubHolder.add(this.fallback.club);
-    const cr = this.cfg.clubRotation || [0, 0, 0];
-    this.fallback.club.position.set(0, 0, 0);
-    this.fallback.club.rotation.set(cr[0], cr[1], cr[2]);
-    this.finished = false;
-    this.action = this.clips[this.isPutt ? 'putt' : 'drive'];
-    Object.values(this.clips).forEach(a => a.stop());
-    if (this.action) { this.action.play(); this.action.paused = true; this.action.time = 0; }
-    this.mixer.update(0);
-    this.swinging = null;
-  }
-
-  setBackswing(p) {
-    if (!this.action || this.swinging) return;
-    const dur = this.action.getClip().duration;
-    this.action.time = dur * this.cfg.topFraction * clamp(p, 0, 1);
-    this.mixer.update(0);
-  }
-
-  swing(onImpact) {
-    if (!this.action) { onImpact(); return; }
-    const dur = this.action.getClip().duration;
-    this.swinging = { impactAt: dur * this.cfg.impactFraction, onImpact, fired: false };
-    this.action.paused = false;
-    if (this.action.time < dur * this.cfg.topFraction * 0.9) this.action.time = dur * this.cfg.topFraction * 0.9;
-  }
-
-  update(dt) {
-    if (!this.ready) return;
-    this.mixer.update(dt);
-    const s = this.swinging;
-    if (s && !s.fired && this.action.time >= s.impactAt) { s.fired = true; s.onImpact && s.onImpact(); }
-    if (s && this.action.time >= this.action.getClip().duration - 0.02) { this.action.paused = true; this.swinging = null; this.finished = true; }
   }
 
   setVisible(v) { this.object.visible = v; }

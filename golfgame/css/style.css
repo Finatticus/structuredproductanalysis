@@ -448,10 +448,6 @@ body:not([data-practice]) .practice-only { display: none; }
   .swing-hint { display: none; }
 }
 
-/* 飛行中的加速按鈕 */
-.ff-btn { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--u) * 1.2 + var(--safe-b)); padding: calc(var(--u) * .45) calc(var(--u) * 1.1); border-radius: 20px; background: rgba(10,20,15,.82); border: 1px solid rgba(214,187,130,.5); color: var(--brass2); font: 700 calc(var(--u) * 1) "Noto Sans TC"; }
-.ff-btn.on { background: var(--brass); color: #14130f; }
-
 .appbar-act.set2 { right: 84px; }
 .gm-fs { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; flex-wrap: wrap; }
 
@@ -532,3 +528,59 @@ body:not([data-practice]) .practice-only { display: none; }
 .sd-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 4px 0; border-top: 1px dashed rgba(28,29,25,.12); }
 .sd-row span { color: var(--muted); white-space: nowrap; }
 .sd-row b { text-align: right; color: var(--forest); font-weight: 600; }
+
+.ch-stage { position: relative; }
+.ch-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--muted); }
+.char-pick { flex-wrap: wrap; }
+.char-pick .chip { margin: 2px 0; }
+
+/* 力道條：長度跟手指往下拉的距離一樣（拉滿 100% = 畫面高度 34%，110% 再多 40%），手指移多少、指針就走多少，比較好控制 */
+.power-v { height: auto; }
+.pv-track { flex: none; height: min(calc(clamp(140px, 34vh, 300px) * 1.4), 46vh); }
+@media (orientation: portrait) { .pv-track { height: min(calc(clamp(140px, 34vh, 300px) * 1.4), 26vh); } }   /* 直向上方有地圖面板，不能太長 */
+
+/* 手機橫向：風速 / 地圖面板貼齊右邊（瀏海在左邊時不用讓出右邊的安全邊距），寬度再縮一點，不要擠到擊球區 */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hud-env { right: calc(var(--u) * .4 + var(--safe-r)); top: calc(var(--u) * .4 + var(--safe-t)); width: calc(var(--u) * 12.5); }
+  .hud-lie { right: calc(var(--u) * .4 + var(--safe-r)); }
+  .hud-hole { left: calc(var(--u) * .4 + var(--safe-l)); top: calc(var(--u) * .4 + var(--safe-t)); }
+  .hud-club { left: calc(var(--u) * .4 + var(--safe-l)); }
+}
+:root[data-notch="left"] { --safe-r: 0px; }
+:root[data-notch="right"] { --safe-l: 0px; }
+
+/* 揮桿後的球路名稱：放在左側中間，不擋住球的飛行 / 滾動 */
+.shape-tag { position: absolute; z-index: 4; left: calc(var(--u) * .6 + var(--safe-l)); top: 44%; transform: translateX(-12px); opacity: 0; pointer-events: none; background: rgba(10,20,15,.8); border: 1px solid rgba(214,187,130,.3); border-radius: 10px; padding: calc(var(--u) * .35) calc(var(--u) * .8); transition: opacity .3s, transform .3s; }
+.shape-tag.show { opacity: 1; transform: none; }
+.shape-tag b { display: block; font: 700 calc(var(--u) * 1.6)/1 "Barlow Condensed"; letter-spacing: .04em; }
+.shape-tag span { display: block; margin-top: 2px; font-size: calc(var(--u) * .72); color: #fff; white-space: nowrap; }
+@media (orientation: portrait) { .shape-tag { top: 38%; } }
+
+/* 老鷹 / 信天翁 / 一桿進洞慶祝（3 秒） */
+.celebrate { position: absolute; inset: 0; z-index: 30; pointer-events: none; opacity: 0; transition: opacity .3s; }
+.celebrate.show { opacity: 1; }
+.celebrate canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cb-inner { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.3); text-align: center; white-space: nowrap; opacity: 0; }
+.celebrate.show .cb-inner { animation: cb-pop 3s cubic-bezier(.2,1.4,.4,1) forwards; }
+.cb-name { display: block; font: 600 calc(var(--u) * 1.1) "Noto Sans TC"; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.7); letter-spacing: .08em; }
+.cb-title { display: block; font: 800 calc(var(--u) * 6)/1 "Barlow Condensed"; letter-spacing: .06em; background: linear-gradient(180deg, #fff6dc 10%, #e7c477 45%, #a5772f 80%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 10px rgba(0,0,0,.55)); }
+.cb-sub { display: inline-block; margin-top: calc(var(--u) * .4); padding: 4px 16px; border-radius: 20px; background: rgba(10,20,15,.8); border: 1px solid rgba(231,196,119,.6); color: #f6e3ae; font: 700 calc(var(--u) * 1.2) "Noto Sans TC"; }
+@keyframes cb-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.3); }
+  14% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  24% { transform: translate(-50%, -50%) scale(1); }
+  82% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.15); }
+}
+@media (orientation: portrait) { .cb-title { font-size: calc(var(--u) * 4.4); } }
+
+/* 輪到自己：中間彈出 1 秒再縮回上方 */
+.turn-banner { transition: top .45s cubic-bezier(.3,.9,.3,1), transform .45s cubic-bezier(.3,.9,.3,1), font-size .45s, padding .45s, box-shadow .45s; z-index: 6; }
+.turn-banner.mine { border-color: rgba(231,196,119,.75); }
+.turn-banner.pop { top: 40%; transform: translate(-50%, -50%) scale(1); font-size: calc(var(--u) * 2.2); padding: calc(var(--u) * .7) calc(var(--u) * 2.2); border-radius: 40px; box-shadow: 0 0 0 2px rgba(231,196,119,.6), 0 10px 40px rgba(0,0,0,.55); animation: turn-pop .35s cubic-bezier(.2,1.5,.4,1); }
+@keyframes turn-pop { from { transform: translate(-50%, -50%) scale(.4); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+/* 選單裡的遊戲間驗證碼 */
+.gm-room { margin: 4px 0 12px; padding: 10px 14px; border-radius: 10px; background: #f3ecdb; border: 1px solid rgba(169,134,74,.45); color: #4a3a1c; font-size: 14px; }
+.gm-room b { font: 700 26px/1.1 "Barlow Condensed"; letter-spacing: .12em; color: #7a5a24; margin-left: 6px; }
+.gm-room span { display: block; margin-top: 4px; font-size: 12.5px; color: #6e5a36; }

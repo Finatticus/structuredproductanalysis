@@ -6,8 +6,9 @@ import { simulate, makeLaunch, distanceTable, airDensity, SURF, AVG_SEEDS } from
 import { CLUBS, clubById, clubIndex } from './clubs.js';
 import { courseById, teeYards } from './courses.js';
 import { makeRng, hashStr, toYd, YD, MPH, FT, clamp, lerp, rad, smooth, fmtToPar, escapeHtml } from './util.js';
-import { ProceduralGolfer, MixamoGolfer } from './character.js';
-import { CONFIG } from './config.js';
+import { ProceduralGolfer } from './character.js';
+import { MixamoGolfer } from './mixamo.js';
+import { characterDef, ANIM_BASE } from './config.js';
 import { SwingInput } from './input.js';
 import * as sfx from './audio.js';
 
@@ -28,7 +29,7 @@ export class Game {
     this.ui = ui;
     this.cam = { pos: new THREE.Vector3(0, 30, 30), look: new THREE.Vector3(), dpos: new THREE.Vector3(), dlook: new THREE.Vector3(), k: 3, mode: 'address' };
     this.input = new SwingInput($('game-layer'), {
-      onStart: () => this.hud.hideShotData(),
+      onStart: () => { this.hud.hideShotData(); const p = this.players && this.players[this.cur]; if (p && p.golfer.skipPre) p.golfer.skipPre(); },
       onAim: dx => this.nudgeAim(dx * 0.05),
       onBack: p => this.onBack(p),
       onThrough: () => {},
@@ -69,14 +70,6 @@ export class Game {
     $('cl-close').onclick = () => $('dlg-clubs').classList.remove('open');
     $('btn-view').onclick = () => { if (this.canControl()) this.cam.mode = this.cam.mode === 'overview' ? 'address' : 'overview'; };
     $('btn-mulligan').onclick = () => this.mulligan();
-    // 加速：只有擊球後、球在飛或滾的時候才會出現，按一下 3 倍速，再按一下恢復
-    $('btn-ff').addEventListener('click', e => {
-      e.stopPropagation();
-      if (!this.flight) return;
-      this.flight.speed = this.flight.speed > 1 ? 1 : 3;
-      $('btn-ff').classList.toggle('on', this.flight.speed > 1);
-      $('btn-ff').textContent = this.flight.speed > 1 ? '3 倍速' : '加速';
-    });
     $('btn-map').addEventListener('click', e => { e.stopPropagation(); this.hud.openBigMap(); });
     $('map-close').onclick = () => $('dlg-map').classList.remove('open');
     // 地圖只用來看，不能點來改方向（方向只能擊球前左右滑）。點小地圖 = 打開大地圖。
@@ -90,11 +83,17 @@ export class Game {
     document.querySelectorAll('#practice-bar [data-pm]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); if (this.canControl()) this.setPracticeMode(b.dataset.pm); }));
     $('pb-random').addEventListener('click', e => { e.stopPropagation(); if (this.canControl()) this.placePutt(); });
     // 開場鏡頭可以點一下跳過；球在飛的時候點螢幕不做任何事（以前會 3 倍速快轉，看起來像球被二次擊出）
-    $('game-layer').addEventListener('click', () => { if (this.intro) this.intro.t = 99; });
+    $('game-layer').addEventListener('click', () => {
+      if (this.intro) this.intro.t = 99;
+      // 寫實角色的走位 / 準備動作：點一下直接停在準備擊球姿勢
+      const p = this.players && this.players[this.cur];
+      if (p && p.golfer.skipPre) p.golfer.skipPre();
+    });
   }
 
   // ---------------- 回合開始 ----------------
-  async start(cfg, players, net = null, isHost = true) {
+  // resume：中途重新連回來時，對方傳來的目前進度（第幾洞、每個人的成績與球位）
+  async start(cfg, players, net = null, isHost = true, resume = null) {
     this.cfg = cfg;
     this.net = net;
     this.authority = !net || isHost;
@@ -108,13 +107,20 @@ export class Game {
     this.windBase = { dir: rng() * Math.PI * 2, mph: lerp(range[0], range[1], rng()) };
     this.temp = this.course.temp + (rng() - 0.5) * 6;
     this.rho = airDensity(this.course.altitude, this.temp);
+    // 寫實角色要先下載（第一次較久，之後從手機快取讀取）
+    const golfers = players.map(p => this.makeGolfer(p.look));
+    if (golfers.some(g => g.loading)) {
+      this.ui.loading(true, '載入角色中…（第一次需要下載，之後會快很多）');
+      await Promise.all(golfers.map(g => g.loading));
+      golfers.forEach((g, i) => { if (g.failed) { golfers[i] = new ProceduralGolfer(players[i].look); this.hud.toast('角色載入失敗，已改用內建角色', 3500); } });
+    }
     this.players = players.map((p, i) => {
-      const golfer = this.makeGolfer(p.look);
+      const golfer = golfers[i];
       this.world.scene.add(golfer.object);
       golfer.setVisible(false);
       return {
         ...p, idx: i, golfer, table: distanceTable(p.stats, CLUBS, this.course, this.rho),
-        scores: [], putts: [], pars: [], fwHit: 0, fwTotal: 0, gir: 0, mulligans: cfg.mulligans || 0,
+        scores: [], putts: [], pars: [], fwHit: 0, fwTotal: 0, gir: 0, mulligans: cfg.mulligans || 0, away: false,
       };
     });
     this.matchStatus = 0;
@@ -132,32 +138,95 @@ export class Game {
     this.running = true;
     this.hud.show(true);
     this.pendingState = null;
-    if (net) net.on(m => this.onNet(m));
-    await this.loadHole(0);
+    this.pendingResume = null;
+    this.servedRj = null;
+    this.roundOver = false;
+    this.startedAt = Date.now();
+    clearInterval(this.hbTimer);
+    if (net) {
+      net.on(m => { if (this.net === net) this.onNet(m); });     // 離開後又回來時，舊連線的訊息不處理
+      this.lastHeard = this.lastTick = Date.now();
+      this.hbTimer = setInterval(() => this.heartbeat(), 4000);
+    }
+    if (resume) await this.applyResume(resume);
+    else await this.loadHole(0);
   }
 
-  makeGolfer(look) {
-    if (CONFIG.CHARACTER.mode === 'mixamo') {
-      const g = new MixamoGolfer(look, CONFIG.CHARACTER.mixamo);
-      g.load().catch(err => {
-        console.warn('Mixamo 角色載入失敗，改用內建角色', err);
-        this.hud.toast('Mixamo 角色載入失敗，已改用內建角色', 3500);
-        g.object.add(g.fallback.object);
-        g.ready = false;
-      });
-      // 載入完成前先用內建角色
-      const proxy = {
-        object: g.object,
-        setLook: l => g.setLook(l),
-        setup: (...a) => (g.ready ? g.setup(...a) : (g.object.add(g.fallback.object), g.fallback.object.position.set(0, 0, 0), g.fallback.setup(...a))),
-        setBackswing: (...a) => (g.ready ? g.setBackswing(...a) : g.fallback.setBackswing(...a)),
-        swing: cb => (g.ready ? g.swing(cb) : g.fallback.swing(cb)),
-        update: dt => (g.ready ? g.update(dt) : g.fallback.update(dt)),
-        setVisible: v => { g.object.visible = v; },
-      };
-      return proxy;
+  // 目前還在遊戲裡的玩家（對方離開後就不算）
+  present() { return this.players.filter(p => !p.away); }
+  remote() { return this.players.find(p => !p.local); }
+
+  // ---------------- 連線：離開 / 斷線 / 重新連回 ----------------
+  // 每 4 秒打一次招呼（直連時每次都送、轉送時 8 秒一次）；30 秒沒收到對方任何訊息就當作離開
+  heartbeat() {
+    if (!this.net || !this.running) return;
+    const now = Date.now();
+    // 自己的手機剛從休眠醒來（計時器停過）：不能拿這段時間判斷對方斷線
+    if (now - this.lastTick > 10000) this.lastHeard = now;
+    this.lastTick = now;
+    this.hbN = (this.hbN || 0) + 1;
+    const r = this.remote();
+    if (r && !r.away) {
+      if (this.net.mode === 'p2p' || this.hbN % 2 === 0) this.net.send({ t: 'ping' }, { volatile: this.net.mode === 'p2p' });
+      if (now - this.lastHeard > 30000) this.markAway(r, '連線中斷');
     }
-    return new ProceduralGolfer(look);
+    if (this.pendingResume) this.trySendResume();
+  }
+
+  // 對方離開：改成自己一個人打完；對方的洞數之後比照自己的桿數
+  markAway(p, why) {
+    if (p.away) return;
+    p.away = true;
+    const code = this.net && this.net.code ? `，對方可以用驗證碼 ${this.net.code} 回來接續` : '';
+    this.hud.toast(`<b>${escapeHtml(p.user)} ${why}</b><small>改為單人繼續${code}</small>`, 4500);
+    this.authority = true;               // 剩下的人自己判定
+    this.updatePlayersHud();
+    if (this.holeDone) this.ui.enableHoleNext();
+    else if (this.players[this.cur] === p && !this.flight && !this.swingAnim && this.ready) this.nextTurn();
+    else if (this.ready) this.refreshHud();
+  }
+
+  // 對方用驗證碼回來：等目前這一桿 / 這一洞結束後，把進度整個傳給他
+  trySendResume() {
+    const user = this.pendingResume;
+    const p = this.players.find(q => q.user === user && !q.local);
+    if (!p) { this.pendingResume = null; return; }
+    if (!this.ready || this.flight || this.swingAnim || this.holeDone || !this.authority) return;
+    this.pendingResume = null;
+    p.away = false;
+    this.lastHeard = Date.now();
+    const state = this.serialize(this.cur ?? this.pickNext());
+    this.net.send({ t: 'resume', to: user, cfg: this.cfg, players: this.players.map(q => ({ user: q.user, stats: q.stats, look: q.look })), state });
+    this.hud.toast(`<b>${escapeHtml(user)} 回來了</b><small>繼續兩人比賽</small>`, 3000);
+    this.updatePlayersHud();
+    this.refreshHud();
+  }
+
+  // 收到進度：載入那一洞，套用每個人的成績與球位；判定交給對方
+  async applyResume(m) {
+    this.authority = false;
+    this.flight = null;
+    this.swingAnim = false;
+    this.holeDone = false;
+    this.pendingState = null;
+    this.ui.closeHoleResult();
+    this.lastHeard = Date.now();
+    await this.loadHole(m.state.k);
+    this.pendingState = null;
+    this.applyState(m.state);
+    this.updatePlayersHud();
+  }
+
+  // 依玩家選的角色建立：寫實角色（Mixamo）要先載入模型與動作，載入失敗就用內建角色
+  makeGolfer(look) {
+    const def = characterDef(look && look.model);
+    if (!def.file) return new ProceduralGolfer(look);
+    const g = new MixamoGolfer(def, { animBase: ANIM_BASE });
+    g.loading = g.load().catch(err => {
+      console.warn('寫實角色載入失敗，改用內建角色', err);
+      g.failed = true;
+    });
+    return g;
   }
 
   get holeNo() { return this.holeList[this.k] + 1; }
@@ -211,6 +280,7 @@ export class Game {
       return;
     }
     if (this.authority) this.nextTurn();
+    else if (this.pendingState && this.pendingState.k === k) { const s = this.pendingState; this.pendingState = null; this.applyState(s); }
   }
 
   honorOrder() {
@@ -221,7 +291,7 @@ export class Game {
 
   // 權威端決定下一位
   pickNext() {
-    const live = this.players.filter(p => !p.holed);
+    const live = this.players.filter(p => !p.holed && !p.away);
     if (!live.length) return -1;
     const onTee = live.filter(p => p.strokes === 0);
     if (onTee.length) return this.honor.find(i => onTee.includes(this.players[i]));
@@ -240,12 +310,12 @@ export class Game {
   serialize(turn) {
     return {
       k: this.k, turn, shotNo: this.shotNo, matchStatus: this.matchStatus, undoP: this.lastShotUndo ? this.lastShotUndo.p : -1,
-      players: this.players.map(p => ({ ball: p.ball, lie: p.lie, strokes: p.strokes, holed: p.holed, holePutts: p.holePutts, girDone: p.girDone, prev: p.prev, scores: p.scores, putts: p.putts, fwHit: p.fwHit, fwTotal: p.fwTotal, gir: p.gir, mulligans: p.mulligans, picked: p.picked })),
+      players: this.players.map(p => ({ ball: p.ball, lie: p.lie, strokes: p.strokes, holed: p.holed, holePutts: p.holePutts, girDone: p.girDone, prev: p.prev, scores: p.scores, putts: p.putts, fwHit: p.fwHit, fwTotal: p.fwTotal, gir: p.gir, mulligans: p.mulligans, picked: p.picked, away: p.away, pars: p.pars })),
     };
   }
 
   applyState(s) {
-    if (this.flight || this.swingAnim) { this.pendingState = s; return; }
+    if (this.flight || this.swingAnim || !this.ready) { this.pendingState = s; return; }   // 球洞還在載入時先存著
     this.shotNo = s.shotNo;
     this.matchStatus = s.matchStatus;
     this.undoP = s.undoP ?? -1;
@@ -289,9 +359,11 @@ export class Game {
   // 角色的腳踩在畫面上的地面（兩腳位置取比較高的那邊），小腿不會插進沙坑邊坡或草地裡
   groundGolfer(p) {
     const o = p.golfer.object.position, q = p.golfer.object.quaternion;
-    const d = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+    // 寫實角色：腳在腰部正下方、沿目標方向左右張開；內建角色：本地 x 軸就是目標方向
+    const c = p.golfer.feetCenter ? p.golfer.feetCenter() : o;
+    const d = p.golfer.feetCenter ? new THREE.Vector3(Math.sin(this.aim), 0, -Math.cos(this.aim)) : new THREE.Vector3(1, 0, 0).applyQuaternion(q);
     let top = -Infinity;
-    for (const k of [-0.28, 0, 0.28]) top = Math.max(top, this.world.meshHeight(o.x + d.x * k, o.z + d.z * k));
+    for (const k of [-0.28, 0, 0.28]) top = Math.max(top, this.world.meshHeight(c.x + d.x * k, c.z + d.z * k));
     if (top > o.y) o.y = top;
   }
 
@@ -373,7 +445,7 @@ export class Game {
   refreshHud() {
     const p = this.players[this.cur];
     const dist = this.distPin(p);
-    this.hud.setPlayer(p, p.strokes, this.canControl(), this.players.length > 1);
+    this.hud.setPlayer(p, p.strokes, this.canControl(), this.present().length > 1);
     this.hud.setClub(this.club, p.table, this.canControl());
     const pinH = this.hole.height(...this.hole.pin);
     this.hud.setWind(this.wind, this.aim, this.temp, pinH - p.ball[1], this.course.stimp, this.course.firm);
@@ -385,8 +457,9 @@ export class Game {
   }
 
   updatePlayersHud() {
-    const list = this.players.map(p => ({ user: p.user, scores: p.scores, pars: p.pars, current: p.idx === this.cur }));
-    if (this.cfg.mode === 'match' && this.players.length === 2) {
+    // 對方離開時左邊只剩自己
+    const list = this.present().map(p => ({ user: p.user, scores: p.scores, pars: p.pars, current: p.idx === this.cur }));
+    if (this.cfg.mode === 'match' && this.players.length === 2 && list.length === 2) {
       const m = this.matchStatus;
       list.matchText = m === 0 ? 'ALL SQUARE' : `${escapeHtml(this.players[m > 0 ? 0 : 1].user)} ${Math.abs(m)} UP`;
     }
@@ -501,6 +574,9 @@ export class Game {
 
   onCancel() {
     this.power = 0;
+    // 放開手指沒有出桿：角色回到擊球準備姿勢
+    const g = this.players[this.cur] && this.players[this.cur].golfer;
+    if (g && !this.swingAnim && !this.flight) g.setBackswing(0, 0);
     if (this.players[this.cur]) this.setupGolfer();
     this.refreshHud();
   }
@@ -595,8 +671,6 @@ export class Game {
       const f = msg.res.frames;
       this.flight = { msg, frames: f, t: 0, i: 0, speed: 1, events: msg.res.events.slice(), start: new THREE.Vector3(f[0][1], f[0][2], f[0][3]), putt: !!club.putter, short: msg.res.total < 45, landed: false, endHold: 0 };
       this.world.clearTracer();
-      $('btn-ff').classList.remove('hidden', 'on');
-      $('btn-ff').textContent = '加速';
       if (!club.putter && !this.flight.short) this.cam.mode = 'flight';
       else this.cam.mode = 'follow';
       this.cam.cut = !club.putter && !this.flight.short;
@@ -649,9 +723,10 @@ export class Game {
   finishShot() {
     const msg = this.flight.msg;
     this.flight = null;
-    $('btn-ff').classList.add('hidden');
     const club = clubById(msg.input.club);
-    if (!club.putter && msg.res.result !== 'ob') this.hud.shotData(club, msg.launch, msg.res, this.net ? 10000 : 0);
+    // 連線模式只顯示自己的 SHOT DATA，而且 3 秒後自動關閉，不影響比賽節奏
+    const mine = !this.net || (this.players[msg.p] && this.players[msg.p].local);
+    if (mine && !club.putter && msg.res.result !== 'ob') this.hud.shotData(club, msg.launch, msg.res, this.net ? 3000 : 0);
     if (this.authority) this.resolve(msg);
     else if (this.pendingState) { const s = this.pendingState; this.pendingState = null; this.applyState(s); }
   }
@@ -690,18 +765,36 @@ export class Game {
       p.holed = true; p.strokes++; p.holePutts++;
       toasts.push('OK！　給推');
     }
+    // Double Par：打完標準桿兩倍的桿數（5 桿洞第 10 桿、4 桿洞第 8 桿、3 桿洞第 6 桿）還沒進洞就強制結束這一洞
     if (!p.holed && !this.cfg.practice && p.strokes >= this.hole.par * 2) {
       p.holed = true; p.picked = true; p.strokes = this.hole.par * 2;
-      toasts.push(`已達 ${this.hole.par * 2} 桿，撿球`);
+      toasts.push(`Double Par（+${this.hole.par}）<br><small>已打 ${this.hole.par * 2} 桿，這一洞結束</small>`);
     }
+    let party = null;
     if (p.holed) {
       const diff = p.strokes - this.hole.par;
-      if (!p.picked) toasts.push(p.strokes === 1 ? '一桿進洞！HOLE IN ONE!' : (SCORE_NAME[diff] || `+${diff}`));
+      // 低於標準桿 2 桿以上（老鷹、信天翁、一桿進洞）：放 3 秒慶祝動畫，不另外跳文字
+      if (!p.picked && diff <= -2) party = this.celebration(p, diff);
+      else if (!p.picked) toasts.push(p.strokes === 1 ? '一桿進洞！HOLE IN ONE!' : (SCORE_NAME[diff] || `+${diff}`));
       p.scores[this.k] = p.strokes;
       p.putts[this.k] = p.holePutts;
     }
+    if (party) { if (this.net) this.net.send({ t: 'celebrate', ...party }); this.playCelebration(party); }
     if (toasts.length) { if (this.net) this.net.send({ t: 'toast', text: toasts.join('<br>') }); this.hud.toast(toasts.join('<br>'), 2600, p.holed ? 'big' : ''); }
-    setTimeout(() => this.nextTurn(), toasts.length ? 1400 : 500);
+    setTimeout(() => this.nextTurn(), party ? 3200 : toasts.length ? 1400 : 500);
+  }
+
+  celebration(p, diff) {
+    const zh = { '-2': '老鷹', '-3': '信天翁', '-4': '禿鷹' }[diff] || '神桿';
+    const en = { '-2': 'EAGLE', '-3': 'ALBATROSS', '-4': 'CONDOR' }[diff] || 'AMAZING';
+    return p.strokes === 1
+      ? { title: 'HOLE IN ONE', sub: `一桿進洞　${zh} ${diff}`, name: p.user }
+      : { title: en, sub: `${zh}　${diff}`, name: p.user };
+  }
+
+  playCelebration(c) {
+    this.hud.celebrate(c.title, c.sub, this.players.length > 1 ? c.name : '');
+    sfx.playCheer();
   }
 
   // ---------------- 練習場 ----------------
@@ -781,6 +874,9 @@ export class Game {
     if (this.holeDone) return;
     this.holeDone = true;
     this.input.enabled = false;
+    // 離開的人：這一洞比照還在的人的桿數（回來接著打才公平）
+    const ref = this.present()[0];
+    if (ref) for (const p of this.players) if (p.away && !p.scores[this.k]) { p.scores[this.k] = ref.scores[this.k]; p.putts[this.k] = ref.putts[this.k]; p.pars[this.k] = this.hole.par; }
     if (this.cfg.mode === 'match' && this.players.length === 2) {
       const [a, b] = this.players.map(p => p.scores[this.k]);
       if (a < b) this.matchStatus++; else if (b < a) this.matchStatus--;
@@ -795,6 +891,7 @@ export class Game {
 
   endRound() {
     this.running = false;
+    this.roundOver = true;
     this.ui.showRoundResult(this);
   }
 
@@ -810,7 +907,7 @@ export class Game {
     };
   }
 
-  quit() {
+  quit(opts = {}) {
     this.running = false;
     this.ready = false;
     this.input.enabled = false;
@@ -819,13 +916,33 @@ export class Game {
     if (this.players) for (const p of this.players) this.world.scene.remove(p.golfer.object);
     this.world.disposeHole();
     this.hud.show(false);
-    if (this.net) { this.net.close(); this.net = null; }
+    clearInterval(this.hbTimer);
+    // 對方還在打的話不關閉遊戲間，自己之後還能用驗證碼回來接續
+    const keep = !!this.net && !this.roundOver && !!this.players && this.players.some(p => !p.local && !p.away) && opts.keepRoom !== false;
+    if (this.net) { this.net.close(keep); this.net = null; }
   }
 
   // ---------------- 連線訊息 ----------------
   onNet(m) {
     if (!this.running) return;
+    if (m.t[0] !== '_') this.lastHeard = Date.now();
+    const r = this.remote();
+    // 對方回來（重新輸入驗證碼）或從休眠醒來：把目前進度傳給他
+    // （剛開局的 15 秒內是加入時重送的招呼，不算；同一次重新加入只處理一次）
+    if (m.t === 'hello') {
+      if (!m.rj || !m.player || !r || m.player.user !== r.user || m.rj === this.servedRj) return;
+      if (!r.away && Date.now() - this.startedAt < 15000) return;
+      if (!r.away) this.markAway(r, '重新連線中');
+      this.servedRj = m.rj;
+      this.pendingResume = r.user;
+      this.trySendResume();
+      return;
+    }
+    if (r && r.away && m.t === 'ping' && this.authority) { this.pendingResume = r.user; this.trySendResume(); return; }
     switch (m.t) {
+      case 'resume':
+        if (m.to === (this.players.find(p => p.local) || {}).user) this.applyResume(m);
+        break;
       case 'mulligan':
         if (this.authority && !this.players[m.p].local) this.doMulligan(m.p);
         break;
@@ -855,6 +972,9 @@ export class Game {
       case 'toast':
         this.hud.toast(m.text, 2600);
         break;
+      case 'celebrate':
+        this.playCelebration(m);
+        break;
       case 'next':
         if (!this.authority) {
           this.ui.closeHoleResult();
@@ -862,7 +982,7 @@ export class Game {
         }
         break;
       case 'leave':
-        this.hud.toast('對方已離開遊戲', 4000);
+        if (r) this.markAway(r, '已離開遊戲');
         break;
     }
   }

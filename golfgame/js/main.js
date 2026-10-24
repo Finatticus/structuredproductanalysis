@@ -1,7 +1,7 @@
 // 介面流程：登入/註冊 → 大廳 → 單人 / 建立遊戲間 / 加入遊戲間 / 練習場；角色素質、紀錄、管理員
 import * as THREE from 'three';
 import { session, call, isLocalMode } from './api.js';
-import { gasUrl, getSetting, setSetting, ADMIN_USER } from './config.js';
+import { gasUrl, getSetting, setSetting, ADMIN_USER, CHARACTERS, characterDef, ANIM_BASE } from './config.js';
 import { STATS, STAT_DETAIL, BASE, MAX, costFor, spentFor, normalizeStats, DEFAULT_LOOK, LOOK_OPTIONS, START_RESPECS } from './stats.js';
 import { COURSES, COURSE_GROUPS, TEE_SETS, courseYards, teeYards, courseById } from './courses.js';
 import { World } from './render.js';
@@ -9,6 +9,7 @@ import { Hud } from './hud.js';
 import { Game } from './game.js';
 import { Net } from './net.js';
 import { ProceduralGolfer } from './character.js';
+import { MixamoGolfer } from './mixamo.js';
 import { escapeHtml, fmtToPar } from './util.js';
 import { setSound, unlockAudio } from './audio.js';
 
@@ -68,6 +69,16 @@ function updateModeBadge() {
 // ---------------- 設定 ----------------
 // 遊戲畫面字體大小：最大 120%（再大會在手機直向時面板重疊）
 const FONT_SIZES = [[1, '標準'], [1.1, '大'], [1.2, '特大']];
+// 手機橫向時瀏海只在一邊，但系統給的安全邊距左右都有；記下瀏海在哪一邊，另一邊的面板就能貼齊螢幕邊緣
+function updateNotchSide() {
+  const ang = screen.orientation ? screen.orientation.angle : (window.orientation || 0);
+  const land = window.innerWidth > window.innerHeight;
+  document.documentElement.dataset.notch = !land ? '' : (ang === 90 ? 'left' : ang === 270 || ang === -90 ? 'right' : '');
+}
+updateNotchSide();
+window.addEventListener('resize', updateNotchSide);
+if (screen.orientation) screen.orientation.addEventListener('change', updateNotchSide);
+
 function applyFontSize(v) {
   v = FONT_SIZES.some(f => f[0] === v) ? v : 1;
   document.documentElement.style.setProperty('--fs', v);
@@ -317,7 +328,9 @@ async function hostRoom() {
   guestInfo = null;
   if (net) net.close();
   net = new Net();
+  let hostStarted = false;
   net.on(m => {
+    if (hostStarted) return;          // 開打後的訊息交給遊戲處理
     if (m.t === '_guest') $('rm-guest').querySelector('.st').textContent = '連線中';
     if (m.t === 'hello' && !m.host) {
       guestInfo = m.player;
@@ -336,6 +349,7 @@ async function hostRoom() {
   }
   $('rm-start').onclick = () => {
     const players = [{ ...me(), local: true }, { ...guestInfo, local: false }];
+    hostStarted = true;
     net.send({ t: 'start', cfg, players: players.map(p => ({ user: p.user, stats: p.stats, look: p.look })) });
     startGame(cfg, players, net, true);
   };
@@ -350,14 +364,24 @@ function initRooms() {
     if (net) net.close();
     net = new Net();
     try {
-      const room = await net.join(code);
+      const room = await net.join(code, session.user);
       $('jn-form').classList.add('hidden');
       $('jn-wait').classList.remove('hidden');
-      $('jn-host').textContent = room.host;
-      net.send({ t: 'hello', player: me() });
-      const resend = setInterval(() => { if (!net || net.closed || started) return clearInterval(resend); net.send({ t: 'hello', player: me() }); }, 8000);
+      $('jn-host').textContent = room.host === session.user ? room.guest : room.host;
+      if (net.rejoin) { $('jn-info').textContent = '正在接續比賽，等對方打完這一桿…'; $('jn-link').textContent = 'GAS 轉送'; }
+      // rj：這一次加入的編號；比賽進行中時，對方收到後會把目前進度傳回來（重新連回接續）
+      const rj = Math.random().toString(36).slice(2, 10);
+      net.send({ t: 'hello', player: me(), rj });
+      const resend = setInterval(() => { if (!net || net.closed || started) return clearInterval(resend); net.send({ t: 'hello', player: me(), rj }); }, 8000);
       let started = false;
       net.on(m => {
+        if (m.t === 'resume' && m.to === session.user && !started) {
+          started = true;
+          clearInterval(resend);
+          const players = m.players.map(p => ({ ...p, local: p.user === session.user }));
+          startGame(m.cfg, players, net, false, m);
+          return;
+        }
         if (m.t === '_status') $('jn-link').textContent = m.mode === 'p2p' ? '直連（WebRTC）' : 'GAS 轉送';
         if (m.t === 'hello' && m.host) $('jn-info').textContent = `${courseById(m.cfg.courseId).name} · ${m.cfg.mode === 'match' ? '比洞賽' : '比桿賽'}`;
         if (m.t === 'start' && !started) {
@@ -388,7 +412,7 @@ const ui = {
       $('hr-body').innerHTML = g.players.map(p => {
         const s = p.scores[k], d = s - g.hole.par;
         const tot = p.scores.reduce((a, v, i) => a + (v ? v - p.pars[i] : 0), 0);
-        const name = p.picked ? '撿球' : s === 1 ? '一桿進洞' : ({ '-3': '信天翁', '-2': '老鷹', '-1': '小鳥', 0: '平標準桿', 1: '柏忌', 2: '雙柏忌' }[d] ?? `+${d}`);
+        const name = p.picked ? `Double Par（+${g.hole.par}）` : s === 1 ? '一桿進洞' : ({ '-3': '信天翁', '-2': '老鷹', '-1': '小鳥', 0: '平標準桿', 1: '柏忌', 2: '雙柏忌' }[d] ?? `+${d}`);
         return `<div class="hr-row"><b>${escapeHtml(p.user)}</b><span class="hr-score ${d < 0 ? 'under' : d > 0 ? 'over' : ''}">${s}</span><span>${name}</span><span class="num">總計 ${fmtToPar(tot)}</span></div>`;
       }).join('') + (g.cfg.mode === 'match' && g.players.length === 2 ? `<div class="hr-match">${g.matchStatus === 0 ? 'ALL SQUARE' : escapeHtml(g.players[g.matchStatus > 0 ? 0 : 1].user) + ' ' + Math.abs(g.matchStatus) + ' UP'}</div>` : '');
       $('hr-card').innerHTML = scorecardHtml(g);
@@ -401,6 +425,11 @@ const ui = {
     });
   },
   closeHoleResult() { $('dlg-hole').classList.remove('open'); },
+  // 主機離開後由自己判定：「等待主機…」的按鈕改成可以按
+  enableHoleNext() {
+    const btn = $('hr-next');
+    if (btn.disabled) { btn.disabled = false; btn.textContent = '下一洞'; }
+  },
   async showRoundResult(g) {
     show('scr-game');
     const box = $('dlg-round');
@@ -428,18 +457,32 @@ async function ensureWorld() {
   game = new Game(world, hud, ui);
 }
 
-async function startGame(cfg, players, netObj = null, isHost = true) {
+async function startGame(cfg, players, netObj = null, isHost = true, resume = null) {
   show('scr-game');
   document.body.toggleAttribute('data-practice', !!cfg.practice);
   await ensureWorld();
-  await game.start(cfg, players, netObj, isHost);
+  await game.start(cfg, players, netObj, isHost, resume);
 }
 
 function initGameMenu() {
-  $('btn-menu').onclick = () => { $('gm-card').innerHTML = game ? scorecardHtml(game) : ''; $('dlg-menu').classList.add('open'); };
+  $('btn-menu').onclick = () => {
+    $('gm-card').innerHTML = game ? scorecardHtml(game) : '';
+    // 連線模式：顯示遊戲間驗證碼，不小心離開時用「加入遊戲」輸入這組號碼就能回來接續
+    const code = game && game.net && game.net.code;
+    $('gm-room').classList.toggle('hidden', !code);
+    if (code) $('gm-room').innerHTML = `遊戲間驗證碼 <b class="num">${code.slice(0, 3)} ${code.slice(3)}</b><span>不小心離開時，到大廳「加入遊戲」輸入這組號碼，就能回來接續比賽</span>`;
+    $('dlg-menu').classList.add('open');
+  };
   $('gm-close').onclick = () => $('dlg-menu').classList.remove('open');
   $('gm-quit').onclick = () => {
-    if (!confirm('確定離開這一回合？目前成績不會儲存。')) return;
+    const other = game.net && game.players.find(p => !p.local && !p.away);
+    const text = other
+      ? `確定離開這一場比賽？
+
+離開後 ${other.user} 會改成一個人打完剩下的洞，你的成績不會儲存。
+要回來接續的話，到大廳「加入遊戲」輸入驗證碼 ${game.net.code}；你沒打到的洞會比照 ${other.user} 的桿數。`
+      : '確定離開這一回合？目前成績不會儲存。';
+    if (!confirm(text)) return;
     $('dlg-menu').classList.remove('open');
     if (game.net) game.net.send({ t: 'leave' });
     game.quit();
@@ -513,8 +556,19 @@ function renderChar() {
   });
   const look = draft.look;
   const sw = (key, list) => `<div class="look-row"><span>${{ skin: '膚色', hair: '髮色', shirt: '上衣', pants: '褲子', cap: '帽子' }[key]}</span>${list.map(c => `<button class="swatch ${look[key] === c ? 'on' : ''}" style="background:${c}" data-lk="${key}" data-lv="${c}"></button>`).join('')}</div>`;
-  $('ch-look').innerHTML = `<div class="look-row"><span>體型</span>${LOOK_OPTIONS.body.map(([v, l]) => `<button class="chip ${look.body === v ? 'on' : ''}" data-lk="body" data-lv="${v}">${l}</button>`).join('')}</div>` +
-    ['skin', 'hair', 'shirt', 'pants', 'cap'].map(k => sw(k, LOOK_OPTIONS[k])).join('');
+  // 角色選擇（寫實角色外觀由模型決定；只有經典角色可以換顏色）
+  const model = characterDef(look.model).id;
+  const pick = `<div class="look-row char-pick"><span>角色</span>${CHARACTERS.map(c => `<button class="chip ${model === c.id ? 'on' : ''}" data-model="${c.id}">${c.name}</button>`).join('')}</div>`;
+  const colors = model === 'classic'
+    ? `<div class="look-row"><span>體型</span>${LOOK_OPTIONS.body.map(([v, l]) => `<button class="chip ${look.body === v ? 'on' : ''}" data-lk="body" data-lv="${v}">${l}</button>`).join('')}</div>` + ['skin', 'hair', 'shirt', 'pants', 'cap'].map(k => sw(k, LOOK_OPTIONS[k])).join('')
+    : '<p class="small">寫實角色的外觀由模型決定。第一次選用要下載約 1.5～6MB，之後會存在手機裡。</p>';
+  $('ch-look').innerHTML = pick + colors;
+  $('ch-look').querySelectorAll('[data-model]').forEach(b => b.onclick = () => {
+    if (draft.look.model === b.dataset.model) return;
+    draft.look.model = b.dataset.model;
+    renderChar();
+    stopPreview(); startPreview();
+  });
   $('ch-look').querySelectorAll('[data-lk]').forEach(b => b.onclick = () => { draft.look[b.dataset.lk] = b.dataset.lv; renderChar(); if (preview) preview.golfer.setLook(draft.look); });
 }
 
@@ -577,9 +631,25 @@ function startPreview() {
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
-  const golfer = new ProceduralGolfer(draft.look);
-  golfer.setup(new THREE.Vector3(0, 0.021, 0), 0, 'iron');
+  const def = characterDef(draft.look.model);
+  const ballPos = new THREE.Vector3(0, 0.021, 0);
+  let golfer = new ProceduralGolfer(draft.look);
+  golfer.setup(ballPos, 0, 'iron');
   scene.add(golfer.object);
+  if (def.file) {
+    // 寫實角色：先顯示「載入中」，下載完換上去
+    golfer.setVisible(false);
+    $('ch-loading').classList.remove('hidden');
+    const mg = new MixamoGolfer(def, { animBase: ANIM_BASE });
+    mg.load().then(() => {
+      if (!preview || preview.golfer !== golfer) return;
+      scene.remove(golfer.object);
+      golfer = mg; preview.golfer = mg;
+      scene.add(mg.object);
+      mg.setup(ballPos, 0, 'iron'); mg.skipPre();
+      $('ch-loading').classList.add('hidden');
+    }).catch(() => { $('ch-loading').textContent = '角色載入失敗'; });
+  } else $('ch-loading').classList.add('hidden');
   const ball = new THREE.Mesh(new THREE.SphereGeometry(0.0213, 16, 12), new THREE.MeshStandardMaterial({ color: 0xffffff }));
   ball.position.set(0, 0.021, 0);
   scene.add(ball);
@@ -594,11 +664,11 @@ function startPreview() {
     const c = golfer.object.position.clone().add(new THREE.Vector3(0, 0.9, 0));
     cam.position.set(c.x + Math.sin(a) * 4.2, 1.5, c.z + Math.cos(a) * 4.2);
     cam.lookAt(c);
-    // 每 6 秒示範一次揮桿
+    // 每 7 秒示範一次揮桿（寫實角色也一樣：停在準備姿勢 → 上桿 → 揮桿）
     swingT += dt;
-    if (swingT > 6) { swingT = 0; golfer.setup(new THREE.Vector3(0, 0.021, 0), 0, 'iron'); }
+    if (swingT > 7) { swingT = 0; golfer.finished = false; golfer.setup(ballPos, 0, 'iron'); if (golfer.skipPre) golfer.skipPre(); }
     else if (swingT > 2 && swingT < 3) golfer.setBackswing((swingT - 2) / 1);
-    else if (swingT >= 3 && !golfer.anim && !golfer.finished) golfer.swing(() => {});
+    else if (swingT >= 3 && !golfer.anim && !golfer.swinging && !golfer.finished) golfer.swing(() => {});
     golfer.update(dt);
     r.render(scene, cam);
     requestAnimationFrame(loop);

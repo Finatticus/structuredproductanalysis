@@ -66,11 +66,24 @@ export class Net {
     }
   }
 
-  async join(code) {
+  // user：自己的帳號。已經在這個遊戲間裡（中途離開又回來）就不再登記、不重新直連，直接用 GAS 轉送
+  async join(code, user) {
     this.isHost = false;
     this.code = code;
     const room = await call('getRoom', { code });
     this.hostUser = room.host;
+    this.rejoin = !!user && (room.host === user || room.guest === user);
+    // 之前留在遊戲間的舊訊息不處理（例如上一次的「開始」），只看加入之後的
+    try {
+      const old = await call('getMsgs', { code, since: 0 });
+      for (const m of old) this.lastSeq = Math.max(this.lastSeq, m.seq);
+    } catch (e) { /* 沒有訊息 */ }
+    if (this.rejoin) {
+      this.mode = 'relay';
+      this.emit({ t: '_status', mode: 'relay' });
+      this.pollMsgs();
+      return room;
+    }
     let answer = null;
     if (room.offer) {
       const pc = this.newPc();
@@ -109,13 +122,13 @@ export class Net {
   }
 
   receive(m) {
-    if (!m || !m.id || this.seen.has(m.id)) return;
+    if (this.closed || !m || !m.id || this.seen.has(m.id)) return;
     this.seen.add(m.id);
     this.emit(m);
   }
 
   send(m, opts = {}) {
-    m.id = (this.isHost ? 'h' : 'g') + (++this.counter) + '_' + Date.now().toString(36);
+    m.id = (this.isHost ? 'h' : 'g') + (++this.counter) + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     if (this.dc && this.dc.readyState === 'open') {
       try { this.dc.send(JSON.stringify(m)); return; } catch (e) { /* 改走轉送 */ }
     }
@@ -123,9 +136,11 @@ export class Net {
     call('sendMsg', { code: this.code, msg: m }).catch(err => this.emit({ t: '_error', error: err.message }));
   }
 
-  close() {
+  // keepRoom：遊戲間留著（對方還在打，自己之後還能用驗證碼回來）。沒指定時：主機關閉遊戲間、客人不關
+  close(keepRoom = !this.isHost) {
     this.closed = true;
+    this.handlers = [];
     try { this.dc && this.dc.close(); this.pc && this.pc.close(); } catch (e) { /* 已關閉 */ }
-    if (this.isHost && this.code) call('closeRoom', { code: this.code }).catch(() => {});
+    if (!keepRoom && this.code) call('closeRoom', { code: this.code }).catch(() => {});
   }
 }

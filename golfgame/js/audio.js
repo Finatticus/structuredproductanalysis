@@ -101,3 +101,27 @@ export function playLeaves() {
   env(c, f, t, 0.02, 0.35, 0.4);
   n.start(t);
 }
+
+// 老鷹 / 信天翁慶祝：觀眾歡呼（濾波雜訊慢慢升起再退）+ 上行和弦鐘聲
+export function playCheer() {
+  const c = enabled && ac();
+  if (!c) return;
+  const t = c.currentTime;
+  const n = noise(c, 3);
+  const f = c.createBiquadFilter();
+  f.type = 'bandpass'; f.frequency.value = 1100; f.Q.value = 0.6;
+  n.connect(f);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.32, t + 0.5);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 2.9);
+  f.connect(g); g.connect(c.destination);
+  n.start(t);
+  [523, 659, 784, 1047].forEach((hz, i) => {
+    const o = c.createOscillator();
+    o.type = 'triangle';
+    o.frequency.value = hz;
+    env(c, o, t + i * 0.12, 0.005, 0.18, 0.9);
+    o.start(t + i * 0.12); o.stop(t + i * 0.12 + 1);
+  });
+}

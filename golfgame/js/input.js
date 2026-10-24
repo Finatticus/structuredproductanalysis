@@ -194,20 +194,13 @@ export class SwingInput {
     x.lineTo(tip[0] - 16 * Math.cos(ang - 0.5), tip[1] - 16 * Math.sin(ang - 0.5));
     x.lineTo(tip[0] - 16 * Math.cos(ang + 0.5), tip[1] - 16 * Math.sin(ang + 0.5));
     x.fill();
-    // 球路名稱
-    const W = this.trail.clientWidth;
-    const lx = clamp(sx, 110, W - 110), ly = Math.max(70, Math.min(sy - Math.max(90, s.strike.depth + 50), tip[1]) - 30);
-    x.textAlign = 'center';
-    x.fillStyle = 'rgba(10,20,15,.78)';
-    roundRect(x, lx - 100, ly - 40, 200, 64, 12); x.fill();
-    x.fillStyle = col;
-    x.font = '700 30px "Barlow Condensed", sans-serif';
-    x.fillText(c.shape.en.toUpperCase(), lx, ly - 6);
-    x.fillStyle = '#fff';
-    x.font = '500 14px "Noto Sans TC", sans-serif';
-    x.fillText(`${c.shape.zh}　${c.deg >= 0 ? '偏右' : '偏左'} ${Math.abs(c.deg).toFixed(0)}°`, lx, ly + 15);
-    x.textAlign = 'left';
-    this.fadeTimer = setTimeout(() => this.trail.classList.add('fade'), 2800);
+    // 球路名稱放在畫面左側（不擋住畫面中間球飛行 / 滾動的動畫）；手指軌跡很快就淡掉
+    const tag = document.getElementById('shape-tag');
+    tag.innerHTML = `<b style="color:${col}">${c.shape.en.toUpperCase()}</b><span>${c.shape.zh}　${c.deg >= 0 ? '偏右' : '偏左'} ${Math.abs(c.deg).toFixed(0)}°</span>`;
+    tag.classList.remove('show'); void tag.offsetWidth; tag.classList.add('show');
+    clearTimeout(this.tagTimer);
+    this.tagTimer = setTimeout(() => tag.classList.remove('show'), 2600);
+    this.fadeTimer = setTimeout(() => this.trail.classList.add('fade'), 700);
   }
 }
 
@@ -241,10 +234,4 @@ function smoothPath(raw) {
     for (let k = -3; k <= 3; k++) { const q = pts[Math.min(pts.length - 1, Math.max(0, i + k))]; sx += q[0]; sy += q[1]; c++; }
     return [sx / c, sy / c];
   });
-}
-
-function roundRect(x, l, t, w, h, r) {
-  x.beginPath();
-  x.moveTo(l + r, t); x.arcTo(l + w, t, l + w, t + h, r); x.arcTo(l + w, t + h, l, t + h, r);
-  x.arcTo(l, t + h, l, t, r); x.arcTo(l, t, l + w, t, r); x.closePath();
 }
