@@ -1,5 +1,5 @@
 // 物理引擎：飛行（重力 + 空氣阻力 + 馬格努斯升力 + 風）、落地彈跳、滾動、推桿、進洞判定
-import { MPH, clamp, rad, deg } from './util.js';
+import { MPH, clamp, rad, deg, makeRng } from './util.js';
 import { derive } from './stats.js';
 
 export const SURF = { TEE: 0, FAIRWAY: 1, FRINGE: 2, GREEN: 3, ROUGH: 4, DEEP: 5, SAND: 6, WATER: 7, OB: 8, CHASM: 9, WASTE: 10 };
@@ -116,6 +116,7 @@ export function simulate(launch, env, terrain) {
         if (!landed) {
           landed = true; carryPt = [x, z]; flightTime = t;
           descent = deg(Math.atan2(-vy, Math.hypot(vx, vz)));
+          if (launch.carryOnly) break;     // 只要飛行距離（預估用），第一次落地就停，省計算
         }
         if (isHazard(code)) { result = code === SURF.WATER ? 'water' : 'chasm'; events.push({ t, type: 'splash' }); y = gh; break; }
         if (code === SURF.OB) { result = 'ob'; break; }
@@ -173,6 +174,8 @@ export function simulate(launch, env, terrain) {
         }
       }
       if (code === SURF.SAND && sp < 0.5) { vx = vz = 0; break; }
+      // 只需要前面一段路線（推桿預測線）時，滾超過 maxDist 就停
+      if (launch.maxDist && Math.hypot(x - launch.pos[0], z - launch.pos[2]) > launch.maxDist) break;
       lastSafe = [x, z];
     }
   }
@@ -277,21 +280,29 @@ export function makeLaunch(input, ctx) {
   };
 }
 
-// 無誤差、無風、平坦球道的距離表（HUD 顯示「平均 Carry」、自動選桿用）
+// 固定的一組亂數種子：用來算「平均」距離（包含一般揮桿的隨機誤差），每次算出來都一樣
+export const AVG_SEEDS = [11, 23, 37, 41, 59, 67, 73, 89, 97, 101, 113, 127, 131, 149, 157, 163];
+
+// 球桿平均距離表（HUD「平均 Carry」、預估落點、自動選桿用）：
+// 平坦、無風、發球台球位，用 AVG_SEEDS 的 16 次揮桿（含打偏、力道浮動、桿面誤差）取平均 → 等於實際打很多球的平均
 export function distanceTable(stats, clubs, course, rho = 1.2) {
   const flat = {
     course: course || { firm: 1, stimp: 11 },
     height: () => 0, surface: () => SURF.FAIRWAY, normal: () => [0, 1, 0], inBounds: () => true,
     treeAt: () => null, distToPin: () => 999,
   };
-  const zero = Object.assign(() => 0.5, { normal: () => 0 });
-  const env = { rho, wind: [0, 0], rng: zero };
   const out = {};
   for (const c of clubs) {
     if (c.putter) continue;
-    const l = makeLaunch({ power: 1, curve: 0, aimYaw: 0 }, { club: c, lie: SURF.FAIRWAY, stats, rng: zero, distToPin: 999 });
-    const r = simulate({ ...l, pos: [0, R, 0] }, env, flat);
-    out[c.id] = { carry: r.carry, total: r.total };
+    let carry = 0, total = 0;
+    for (const seed of AVG_SEEDS) {
+      const rng = makeRng(seed);
+      // 用「發球台」球位：一號木在球道上直接打有 7% 懲罰，平均距離表應該是正常（球座上）的距離
+      const l = makeLaunch({ power: 1, curve: 0, aimYaw: 0 }, { club: c, lie: SURF.TEE, stats, rng, distToPin: 999 });
+      const r = simulate({ ...l, pos: [0, R, 0] }, { rho, wind: [0, 0], rng }, flat);
+      carry += r.carry; total += r.total;
+    }
+    out[c.id] = { carry: carry / AVG_SEEDS.length, total: total / AVG_SEEDS.length };
   }
   return out;
 }

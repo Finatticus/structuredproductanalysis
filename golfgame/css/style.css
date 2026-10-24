@@ -297,7 +297,7 @@ body:not([data-practice]) .practice-only { display: none; }
 .turn-banner { position: absolute; top: calc(var(--u) + var(--safe-t)); left: 50%; transform: translateX(-50%); background: var(--hud); border: 1px solid rgba(214,187,130,.3); padding: 5px 16px; border-radius: 16px; font-size: calc(var(--u) * .9); }
 .turn-banner b { color: var(--brass2); }
 
-.toast { position: absolute; left: 50%; top: 32%; transform: translate(-50%, -50%) scale(.96); background: rgba(10,20,15,.82); border: 1px solid rgba(214,187,130,.35); color: #fff; padding: 12px 24px; border-radius: 12px; text-align: center; font-size: calc(var(--u) * 1.2); opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; }
+.toast { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%) scale(.96); background: rgba(10,20,15,.82); border: 1px solid rgba(214,187,130,.35); color: #fff; padding: 12px 24px; border-radius: 12px; text-align: center; font-size: calc(var(--u) * 1.2); opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; }
 .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .toast.big { font: 600 calc(var(--u) * 1.8)/1.3 "Noto Serif TC"; padding: 16px 34px; }
 .toast small { display: block; font-size: .55em; color: var(--brass2); letter-spacing: .2em; }
@@ -479,3 +479,56 @@ body:not([data-practice]) .practice-only { display: none; }
 .pv-adj { font: 700 calc(var(--u) * .78)/1.1 "Noto Sans TC"; color: #ffd0c8; background: rgba(120,30,24,.82); padding: 2px 6px; border-radius: 5px; white-space: nowrap; }
 .pv-adj.more { color: #d8f5c8; background: rgba(30,90,40,.85); }
 .pv-adj:empty { display: none; }
+
+.pv-land small { display: block; font: 500 calc(var(--u) * .55)/1.1 "Noto Sans TC"; color: rgba(255,224,138,.75); text-align: center; margin-top: 1px; }
+
+/* 球場資訊卡與選單 */
+.course-info { background: #fff; border: 1.5px solid var(--brass); border-radius: 12px; padding: 12px 14px; }
+.ci-top { display: flex; align-items: flex-start; gap: 10px; }
+.ci-top small { display: block; font-size: 11px; color: var(--brass); letter-spacing: .1em; }
+.ci-top b { display: block; font: 700 18px "Noto Serif TC"; }
+.ci-top em { display: block; font: italic 500 15px "Cormorant Garamond"; color: var(--brass); }
+.ci-top .btn-chip { margin-left: auto; }
+.ci-stats { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 6px; }
+.ci-stats span { font-size: 12px; padding: 3px 9px; border-radius: 12px; background: #f1ebdc; color: #4c4a40; }
+.ci-stats b { font-family: "Barlow Condensed"; font-size: 14px; color: var(--forest); margin-left: 2px; }
+.course-info p { font-size: 13px; color: var(--muted); margin: 4px 0 10px; }
+.btn-chip { padding: 7px 12px; border-radius: 16px; border: 1px solid rgba(169,134,74,.5); color: #6e5427; background: #fbf6ea; font-size: 13px; white-space: nowrap; }
+.cp-list h4 { font: 700 14px "Noto Serif TC"; color: var(--brass); margin: 14px 0 6px; letter-spacing: .08em; }
+.cp-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; text-align: left; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 6px; }
+.cp-row.on { border-color: var(--brass); box-shadow: 0 0 0 3px rgba(169,134,74,.15); }
+.cp-row b { font: 700 15px "Noto Serif TC"; display: block; }
+.cp-row em { font: italic 500 13px "Cormorant Garamond"; color: var(--brass); }
+.cp-row span { font-size: 12px; color: var(--muted); text-align: right; }
+.cp-empty { padding: 4px 2px 8px; }
+
+/* 左下角精簡球桿按鈕 */
+.hud-club { display: flex; align-items: center; gap: calc(var(--u) * .5); padding: calc(var(--u) * .45) calc(var(--u) * .8) calc(var(--u) * .45) calc(var(--u) * .4); max-width: none !important; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.hud-club .clubimg { display: block !important; width: calc(var(--u) * 2.8) !important; height: calc(var(--u) * 2.8) !important; }
+.hud-club .name { font-size: calc(var(--u) * 1.35) !important; }
+.hud-club .sub { display: block !important; font-size: calc(var(--u) * .72); color: var(--brass2); }
+.hud-club .lbl { color: var(--brass2); }
+/* 選桿視窗 */
+.cl-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; max-height: 64vh; overflow-y: auto; }
+.cl-row { display: flex; align-items: center; gap: 10px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 10px; text-align: left; }
+.cl-row.on { border-color: var(--brass); background: #fbf6ea; box-shadow: 0 0 0 3px rgba(169,134,74,.15); }
+.cl-row svg { width: 44px; height: 44px; flex: none; }
+.cl-n { flex: 1; min-width: 0; }
+.cl-n b { display: block; font-size: 17px; color: var(--forest); }
+.cl-n small { font-size: 12px; color: var(--muted); }
+.cl-d { text-align: center; min-width: 46px; font-size: 12px; color: var(--muted); }
+.cl-d b { display: block; font-size: 20px; color: var(--forest); line-height: 1.1; }
+.cl-d small { font-size: 10px; }
+/* 拿掉瞄準箭頭後，球位資訊直接放在球下方 */
+.aim-row .lie-info { position: static; transform: none; }
+
+/* 素質詳細說明（點素質名稱展開） */
+.stat .sn { text-align: left; padding: 0; }
+.sn-i { font-style: normal; font-size: 12px; color: var(--brass); margin-left: 2px; }
+.sd { grid-column: 1 / -1; background: #fbf6ea; border: 1px solid rgba(169,134,74,.35); border-radius: 10px; padding: 10px 12px; margin-top: 4px; }
+.sd-text { font-size: 13px !important; color: var(--ink) !important; margin-bottom: 8px; line-height: 1.6; }
+.sd-f small { display: block; font-size: 11px; color: var(--brass); letter-spacing: .1em; margin-bottom: 2px; }
+.sd-f pre { white-space: pre-wrap; font-family: Consolas, "Courier New", monospace; font-size: 12px; background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; color: #2b2a25; }
+.sd-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 4px 0; border-top: 1px dashed rgba(28,29,25,.12); }
+.sd-row span { color: var(--muted); white-space: nowrap; }
+.sd-row b { text-align: right; color: var(--forest); font-weight: 600; }

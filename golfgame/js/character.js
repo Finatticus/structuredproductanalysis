@@ -117,6 +117,11 @@ export class ProceduralGolfer {
   }
 
   buildClub(type) {
+    // 只有換球桿（或站位角度改變）才重建；舊的模型要釋放，否則每次瞄準都會漏記憶體、越玩越卡
+    const key = type + ':' + (this.lie || 0.9).toFixed(3);
+    if (this._clubKey === key) return;
+    this._clubKey = key;
+    this.club.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
     this.club.clear();
     const g = CLUB_GEOM[type] || CLUB_GEOM.iron;
     const chrome = new THREE.MeshStandardMaterial({ color: 0xd8dde0, roughness: 0.18, metalness: 1 });
@@ -411,11 +416,17 @@ export class MixamoGolfer {
     this.object.add(model);
     this.mixer = new THREE.AnimationMixer(model);
     const clips = {};
+    // 動作檔各自載入；沒有放（例如 idle.fbx 是選用的）就略過，不會讓整個角色載入失敗
     for (const k of ['idle', 'drive', 'putt']) {
       if (!c[k]) continue;
-      const f = await get(c[k]);
-      clips[k] = this.mixer.clipAction(f.animations[0]);
+      try {
+        const f = await get(c[k]);
+        if (f.animations && f.animations[0]) clips[k] = this.mixer.clipAction(f.animations[0]);
+      } catch (err) {
+        console.info(`[Dixen] 沒有找到 ${c[k]}，略過`);
+      }
     }
+    if (!clips.drive) throw new Error('缺少 drive.fbx（揮桿動作）');
     this.clips = clips;
     // 球桿綁在右手骨頭上
     this.hand = model.getObjectByName(c.handBone || 'mixamorigRightHand');

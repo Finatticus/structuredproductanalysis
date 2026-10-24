@@ -11,9 +11,17 @@ export const TEE_SETS = [
   { id: 'red', name: '紅梯', color: '#a3302a', ratio: 0.78 },
 ];
 
+// 球場群組（之後新增球場時，在 COURSES 加一筆並指定 group 即可；沒有球場的群組顯示「即將加入」）
+export const COURSE_GROUPS = [
+  { id: 'coast', name: '海邊球場' },
+  { id: 'mountain', name: '山地 / 林間球場' },
+  { id: 'desert', name: '沙漠 / 高原球場' },
+  { id: 'taiwan', name: '台灣球場' },
+];
+
 export const COURSES = [
   {
-    id: 'heron', name: '鷺灣海岸', en: 'Heron Bay Links', style: 'links',
+    id: 'heron', name: '鷺灣海岸', en: 'Heron Bay Links', style: 'links', group: 'coast',
     desc: '臨海林克斯球場。幾乎沒有樹，海風大且常轉向；球道硬、落地後滾很遠；深壺型沙坑掉進去常常只能往旁邊救。',
     stimp: 8, firm: 1.25, altitude: 8, temp: 17, wind: [6, 15], fairwayW: 44, roughW: 22, corridor: 92, trees: 0.04,
     holes: [
@@ -24,7 +32,7 @@ export const COURSES = [
     ],
   },
   {
-    id: 'maple', name: '楓林谷', en: 'Maple Valley', style: 'parkland',
+    id: 'maple', name: '楓林谷', en: 'Maple Valley', style: 'parkland', group: 'mountain',
     desc: '林間公園型球場。球道兩側高大樹林，多處水池，果嶺起伏較多，考驗開球準度與推桿判讀。',
     stimp: 8.5, firm: 0.92, altitude: 220, temp: 22, wind: [2, 9], fairwayW: 32, roughW: 18, corridor: 70, trees: 1.0,
     holes: [
@@ -35,7 +43,7 @@ export const COURSES = [
     ],
   },
   {
-    id: 'canyon', name: '赤岩峽谷', en: 'Red Rock Canyon', style: 'canyon',
+    id: 'canyon', name: '赤岩峽谷', en: 'Red Rock Canyon', style: 'canyon', group: 'desert',
     desc: '高海拔沙漠球場，空氣稀薄，球多飛約 6%。多洞必須飛越峽谷，球道外是荒地與岩石，果嶺最硬最快。',
     stimp: 9, firm: 1.15, altitude: 1600, temp: 29, wind: [3, 12], fairwayW: 34, roughW: 10, corridor: 78, trees: 0.25,
     holes: [

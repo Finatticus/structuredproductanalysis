@@ -2,8 +2,8 @@
 import * as THREE from 'three';
 import { session, call, isLocalMode } from './api.js';
 import { gasUrl, getSetting, setSetting, ADMIN_USER } from './config.js';
-import { STATS, BASE, MAX, costFor, spentFor, normalizeStats, DEFAULT_LOOK, LOOK_OPTIONS, START_RESPECS } from './stats.js';
-import { COURSES, TEE_SETS, courseYards, teeYards, courseById } from './courses.js';
+import { STATS, STAT_DETAIL, BASE, MAX, costFor, spentFor, normalizeStats, DEFAULT_LOOK, LOOK_OPTIONS, START_RESPECS } from './stats.js';
+import { COURSES, COURSE_GROUPS, TEE_SETS, courseYards, teeYards, courseById } from './courses.js';
 import { World } from './render.js';
 import { Hud } from './hud.js';
 import { Game } from './game.js';
@@ -146,18 +146,22 @@ function openSetup(kind) {
 }
 
 function renderSetup() {
-  $('st-courses').innerHTML = COURSES.map(c => `
-    <button class="course-card ${c.id === setup.courseId ? 'on' : ''}" data-course="${c.id}">
-      <canvas class="cthumb" data-thumb="${c.id}"></canvas>
-      <div class="txt"><b>${c.name}</b><em>${c.en}</em><span>${courseYards(c, 'black').toLocaleString()} Y · Par 72 · Stimp ${c.stimp}</span></div>
-      <span class="pv-btn" data-pv="${c.id}">⛳ 18 洞預覽</span>
-    </button>`).join('');
-  document.querySelectorAll('.course-card').forEach(b => b.onclick = e => {
-    const pv = e.target.closest('[data-pv]');
-    if (pv) { e.stopPropagation(); openPreview(pv.dataset.pv); return; }
-    setup.courseId = b.dataset.course; setup.stimp = null; renderSetup();
-  });
-  drawThumbs();
+  // 目前選的球場：只顯示資訊卡（不畫縮圖，省流量也不會卡），按「更換球場」打開分群組的選單
+  const cur = courseById(setup.courseId);
+  const g = COURSE_GROUPS.find(x => x.id === cur.group);
+  $('st-courses').innerHTML = `
+    <div class="course-info">
+      <div class="ci-top"><div><small>${g ? g.name : ''}</small><b>${cur.name}</b><em>${cur.en}</em></div>
+        <button class="btn-chip" id="st-change">更換球場 ▾</button></div>
+      <div class="ci-stats">
+        <span>Par <b>72</b></span><span>黑梯 <b>${courseYards(cur, 'black').toLocaleString()} Y</b></span>
+        <span>Stimp(果嶺速度) <b>${cur.stimp}</b></span><span>風 <b>${cur.wind[0]}~${Math.min(15, cur.wind[1])} mph</b></span><span>海拔 <b>${cur.altitude} m</b></span>
+      </div>
+      <p>${cur.desc}</p>
+      <button class="btn-chip" id="st-preview-btn">⛳ 18 洞預覽</button>
+    </div>`;
+  $('st-change').onclick = openCoursePicker;
+  $('st-preview-btn').onclick = () => openPreview(cur.id);
   const seg = (id, key, opts) => {
     $(id).innerHTML = opts.map(([v, l]) => `<button class="${setup[key] === v ? 'on' : ''}" data-v="${v}">${l}</button>`).join('');
     $(id).querySelectorAll('button').forEach(b => b.onclick = () => { setup[key] = isNaN(b.dataset.v) ? b.dataset.v : Number(b.dataset.v); renderSetup(); });
@@ -182,33 +186,6 @@ function renderSetup() {
   seg('st-mull', 'mulligans', [[0, '0'], [1, '1'], [2, '2'], [4, '4']]);
 }
 
-function drawThumbs() {
-  // 球場縮圖：用第一洞的顏色圖
-  import('./terrain.js').then(({ buildHole, paintMaps }) => {
-    document.querySelectorAll('canvas[data-thumb]').forEach(cv => {
-      const id = cv.dataset.thumb;
-      if (thumbCache[id]) { draw(cv, thumbCache[id]); return; }
-      setTimeout(() => {
-        const course = courseById(id);
-        const h = buildHole(course, { maple: 6, heron: 15, canyon: 11 }[id] || 0, { pinSeed: 1 });
-        const m = paintMaps(h);
-        thumbCache[id] = m.color;
-        document.querySelectorAll(`canvas[data-thumb="${id}"]`).forEach(c2 => draw(c2, m.color));
-      }, 20);
-    });
-  });
-  function draw(cv, src) {
-    cv.width = 320; cv.height = 180;
-    const x = cv.getContext('2d');
-    x.save();
-    x.translate(160, 90);
-    x.rotate(-Math.PI / 2);
-    const s = Math.max(180 / src.width, 320 / src.height) * 1.05;
-    x.drawImage(src, -src.width * s / 2, -src.height * s / 2, src.width * s, src.height * s);
-    x.restore();
-  }
-}
-const thumbCache = {};
 
 // ---------- 18 洞預覽 ----------
 const holeThumbs = {};
@@ -231,6 +208,24 @@ function holeFeatures(course, spec) {
   if (F.has('ww')) out.push('兩側荒地');
   if (F.has('b4')) out.push('沙坑很多'); else if (F.has('b3')) out.push('沙坑多');
   return out.length ? out.join('、') : (par === 3 ? '直接攻果嶺' : '直線洞');
+}
+
+// 球場選單：依群組列出所有球場，之後新增球場會自動出現在對應群組
+function openCoursePicker() {
+  $('cp-list').innerHTML = COURSE_GROUPS.map(g => {
+    const list = COURSES.filter(c => c.group === g.id);
+    return `<h4>${g.name}</h4>` + (list.length ? list.map(c => `
+      <button class="cp-row ${c.id === setup.courseId ? 'on' : ''}" data-c="${c.id}">
+        <div><b>${c.name}</b><em>${c.en}</em></div>
+        <span>Par 72 · ${courseYards(c, 'black').toLocaleString()} Y · Stimp(果嶺速度) ${c.stimp}</span>
+      </button>`).join('') : '<p class="small cp-empty">即將加入</p>');
+  }).join('');
+  $('cp-list').querySelectorAll('[data-c]').forEach(b => b.onclick = () => {
+    setup.courseId = b.dataset.c; setup.stimp = null;
+    $('dlg-courses').classList.remove('open');
+    renderSetup();
+  });
+  $('dlg-courses').classList.add('open');
 }
 
 function openPreview(id) {
@@ -499,14 +494,16 @@ function renderChar() {
     const v = draft.stats[s.key];
     const cost = v < MAX ? costFor(v) : 0;
     html += `<div class="stat">
-      <div class="sn"><b>${s.name}</b><span>${s.en}</span></div>
+      <button class="sn" data-open="${s.key}"><b>${s.name} <i class="sn-i">${draft.open === s.key ? "▾" : "ⓘ"}</i></b><span>${s.en}</span></button>
       <div class="sbar"><i style="width:${(v - 0) / MAX * 100}%"></i><em style="left:${BASE / MAX * 100}%"></em></div>
       <b class="sv num">${v}</b>
       <button class="sb" data-k="${s.key}" data-d="-1" ${v <= draft.base[s.key] ? 'disabled' : ''}>−</button>
       <button class="sb" data-k="${s.key}" data-d="1" ${v >= MAX || cost > draft.points ? 'disabled' : ''}>＋<small>${cost || ''}</small></button>
-      <p>${s.desc}</p></div>`;
+      <p>${s.desc}</p>${draft.open === s.key ? statDetailHtml(s, v) : ''}</div>`;
   }
   $('ch-stats').innerHTML = html;
+  // 點素質名稱：展開 / 收起詳細說明與公式
+  $('ch-stats').querySelectorAll('[data-open]').forEach(b => b.onclick = () => { draft.open = draft.open === b.dataset.open ? null : b.dataset.open; renderChar(); });
   $('ch-stats').querySelectorAll('.sb').forEach(b => b.onclick = () => {
     const k = b.dataset.k, d = Number(b.dataset.d);
     const v = draft.stats[k];
@@ -519,6 +516,21 @@ function renderChar() {
   $('ch-look').innerHTML = `<div class="look-row"><span>體型</span>${LOOK_OPTIONS.body.map(([v, l]) => `<button class="chip ${look.body === v ? 'on' : ''}" data-lk="body" data-lv="${v}">${l}</button>`).join('')}</div>` +
     ['skin', 'hair', 'shirt', 'pants', 'cap'].map(k => sw(k, LOOK_OPTIONS[k])).join('');
   $('ch-look').querySelectorAll('[data-lk]').forEach(b => b.onclick = () => { draft.look[b.dataset.lk] = b.dataset.lv; renderChar(); if (preview) preview.golfer.setLook(draft.look); });
+}
+
+// 素質詳細說明：影響什麼、公式、你目前的數值實際等於多少
+function statDetailHtml(s, v) {
+  const d = STAT_DETAIL[s.key];
+  if (!d) return '';
+  const row = (label, val) => `<div class="sd-row"><span>${label}</span><b>${d.effect(val)}</b></div>`;
+  return `<div class="sd">
+    <p class="sd-text">${d.detail}</p>
+    <div class="sd-f"><small>公式</small><pre>${escapeHtml(d.formula)}</pre></div>
+    ${row(`目前 ${v}`, v)}
+    ${v < MAX ? row(`升 1 點 → ${v + 1}`, v + 1) : ''}
+    ${v !== BASE ? row(`基準 ${BASE}`, BASE) : ''}
+    ${v !== MAX ? row(`上限 ${MAX}`, MAX) : ''}
+  </div>`;
 }
 
 function initChar() {
@@ -647,6 +659,7 @@ initRooms();
 initGameMenu();
 initChar();
 $('pv-close').onclick = () => { previewToken++; $('dlg-preview').classList.remove('open'); };
+$('cp-close').onclick = () => $('dlg-courses').classList.remove('open');
 autoLogin();
 
 // 記住上次登入的帳號：打開就直接進大廳（帳號被停用或密碼被改才回到登入畫面）

@@ -147,12 +147,17 @@ export class World {
     if (!this.holeGroup) return;
     this.scene.remove(this.holeGroup);
     this.holeGroup.traverse(o => {
-      if (o.geometry) o.geometry.dispose();
+      // 樹的形狀是所有洞共用的，不釋放（否則每洞都要重新上傳到顯示卡）
+      if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose();
       if (o.material) {
         const mats = Array.isArray(o.material) ? o.material : [o.material];
         mats.forEach(mt => { if (mt.map && mt.map.isCanvasTexture) mt.map.dispose(); mt.dispose(); });
       }
     });
+    // 地形的顏色圖 / 材質遮罩（遮罩不在 material.map 上，要另外釋放，否則每換一洞就漏掉幾 MB 顯示記憶體）
+    (this.holeTextures || []).forEach(t => t.dispose());
+    this.holeTextures = [];
+    this.waterMats = [];
     this.holeGroup = null;
   }
 
@@ -171,6 +176,7 @@ export class World {
     colorTex.colorSpace = THREE.SRGBColorSpace;
     colorTex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
     const maskTex = new THREE.CanvasTexture(maps.mask);
+    this.holeTextures = [colorTex, maskTex];
     this.colorCanvas = maps.color;
 
     // 精細地形網格
@@ -371,6 +377,7 @@ export class World {
     const arm2 = cyl(0.1, 0.32).translate(-0.3, 0.55, 0), arm2b = cyl(0.09, 0.3).rotateZ(Math.PI / 2).translate(-0.18, 0.38, 0);
     const cactus = mergeGeometries([cyl(0.15, 0.8).translate(0, 0.5, 0), arm1, arm1b, arm2, arm2b].map(gg => { gg.deleteAttribute('uv'); return gg; }));
     this._treeGeos = { broad, pine, trunk, rock, cactus, shrub: broad };
+    for (const gg of [broad, pine, trunk, rock, cactus]) gg.userData.shared = true;
     return this._treeGeos;
   }
 
@@ -651,6 +658,28 @@ export class World {
     this.tracer.geometry.setDrawRange(0, (n - 1) * 6);
   }
 
+  // OK 推範圍：以洞為中心、半徑 = OK 推距離的淡白色圓圈（貼著果嶺起伏）。radius = 0 隱藏
+  setGimmeRing(radius) {
+    if (this.gimmeRing && (this.gimmeRing.userData.r !== radius || this.gimmeRing.userData.hole !== this.hole)) {
+      this.scene.remove(this.gimmeRing); this.gimmeRing.geometry.dispose(); this.gimmeRing.material.dispose(); this.gimmeRing = null;
+    }
+    if (!radius || !this.hole) { if (this.gimmeRing) this.gimmeRing.visible = false; return; }
+    if (!this.gimmeRing) {
+      const [px, pz] = this.hole.pin;
+      const pts = [];
+      for (let i = 0; i < 96; i++) {
+        const a = i / 96 * Math.PI * 2, x = px + Math.cos(a) * radius, z = pz + Math.sin(a) * radius;
+        pts.push(new THREE.Vector3(x, this.meshHeight(x, z) + 0.02, z));
+      }
+      const geo = new THREE.BufferGeometry().setFromPoints(pts);
+      this.gimmeRing = new THREE.LineLoop(geo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, depthWrite: false }));
+      this.gimmeRing.renderOrder = 6;
+      this.gimmeRing.userData = { r: radius, hole: this.hole };
+      this.scene.add(this.gimmeRing);
+    }
+    this.gimmeRing.visible = true;
+  }
+
   // 進洞小動畫：洞口噴出金色、白色小火花（受重力落下、慢慢淡出）
   cupBurst(x, y, z) {
     const n = 80;
@@ -733,8 +762,8 @@ export class World {
       const s = this.streakData[i];
       if (i >= count) { arr.fill(0, i * 6, i * 6 + 6); continue; }
       s.life -= dt;
-      const off = s.p.clone().sub(center);
-      if (s.life <= 0 || off.x * off.x + off.z * off.z > R * R) {
+      const ox = s.p.x - center.x, oz = s.p.z - center.z;   // 不建立新物件，避免每幀大量垃圾回收造成卡頓
+      if (s.life <= 0 || ox * ox + oz * oz > R * R) {
         // 從上風處重新出現
         const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * R;
         s.p.set(center.x + Math.cos(a) * r, 0, center.z + Math.sin(a) * r).addScaledVector(dir, -R * 0.5 * Math.random());
@@ -752,8 +781,28 @@ export class World {
   }
 
   // ---------- 每幀 ----------
+  // 自動畫質：連續約 2 秒每幀超過 1/32 秒（低於約 30fps），就把解析度降一級；最後一級再縮小陰影。只降不升，確保流暢
+  watchPerf(dt) {
+    const pf = this.perf || (this.perf = { ema: 1 / 60, slow: 0, level: 0 });
+    pf.ema += (dt - pf.ema) * 0.05;
+    if (pf.ema > 1 / 32) pf.slow += dt; else pf.slow = Math.max(0, pf.slow - dt * 0.5);
+    if (pf.slow < 2 || pf.level >= 4) return;
+    pf.slow = 0;
+    pf.level++;
+    const r = this.renderer;
+    if (pf.level <= 3) {
+      r.setPixelRatio(Math.max(0.75, r.getPixelRatio() * 0.8));
+      this._w = 0;                     // 讓下一幀重新設定畫布大小
+    } else {
+      this.sun.shadow.mapSize.set(1024, 1024);
+      if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
+    }
+    console.info('[Dixen] 畫面較慢，自動降低畫質一級', pf.level, r.getPixelRatio());
+  }
+
   frame(dt, windVec) {
     this.time += dt;
+    this.watchPerf(dt);
     // 手機轉向時 resize 事件可能比版面更新早，所以每幀檢查一次畫布大小
     if (this.canvas.clientWidth !== this._w || this.canvas.clientHeight !== this._h) this.resize();
     // 球在遠處放大，維持最小可見尺寸

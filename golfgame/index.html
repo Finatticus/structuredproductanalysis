@@ -358,7 +358,7 @@
   <header class="appbar"><small>ROUND SETUP</small><h4 id="st-title">單人回合</h4><button id="st-back" class="appbar-act">返回</button></header>
   <div class="body narrow scroll">
     <div class="only-round-or-host"><h5>球場</h5>
-    <div id="st-courses" class="course-list"></div>
+    <div id="st-courses"></div>
     </div>
     <div class="only-round"><h5>洞數</h5><div id="st-holes" class="seg"></div></div>
     <div class="only-practice hidden"><p class="small" style="margin-top:14px">練習場在楓林谷。可以隨時切換：<b>發球台</b>（木桿、鐵桿，每球都回到發球台）、<b>沙坑</b>（發球台換成沙地）、<b>果嶺</b>（推桿，點小地圖選站位）。</p></div>
@@ -487,12 +487,11 @@
       <div class="minimap-wrap"><canvas id="minimap" class="minimap"></canvas><button class="hud-btn map-zoom" id="btn-map" title="放大地圖">⤢</button></div>
     </div>
 
-    <div class="hud-panel hud-club" id="hud-club">
-      <button class="hud-btn arrow" id="btn-club-prev">‹</button>
+    <!-- 左下角只顯示目前球桿；點一下打開完整的選桿視窗 -->
+    <button class="hud-panel hud-club" id="hud-club">
       <svg class="clubimg" viewBox="0 0 120 120"><use id="c-icon" href="#i-driver"/></svg>
-      <div class="cinfo"><div class="lbl">球桿 CLUB</div><div class="name num" id="c-name">DRIVER</div><div class="sub" id="c-sub"></div><div class="clubrail" id="c-rail"></div></div>
-      <button class="hud-btn arrow" id="btn-club-next">›</button>
-    </div>
+      <div class="cinfo"><div class="lbl">球桿 ▸</div><div class="name num" id="c-name">DRIVER</div><div class="sub" id="c-sub"></div></div>
+    </button>
 
     <div class="hud-tools">
       <button class="hud-btn" id="btn-menu" title="選單">☰</button>
@@ -516,9 +515,6 @@
         </div>
       </div>
       <div class="aim-row">
-        <button class="hud-btn" id="btn-aim-l">◀</button>
-        <span>瞄準</span>
-        <button class="hud-btn" id="btn-aim-r">▶</button>
         <div class="lie-info">
           <svg viewBox="0 0 120 120"><use id="l-icon" href="#i-lie"/></svg>
           <div class="kv"><span>球位</span><b id="l-lie"></b><span>距旗</span><b class="num" id="l-pin"></b><span id="l-land-lbl">預估落點</span><b class="num" id="l-land"></b></div>
@@ -571,6 +567,18 @@
   <div class="map-stage"><canvas id="map-big"></canvas><div class="map-ctl"><button id="map-zin">＋</button><button id="map-zout">－</button><button id="map-reset">重設</button></div></div>
   <div class="heat-legend"><span>低</span><i></i><span>高</span><span class="small">果嶺顏色：比平均高 → 紅、低 → 藍、平 → 綠</span></div>
   <div class="dlg-btns"><button id="map-close" class="btn brass">關閉</button></div>
+</div></div>
+
+<div id="dlg-clubs" class="dlg"><div class="dlg-box wide">
+  <h3>選擇球桿 <span class="small" id="cl-note"></span></h3>
+  <div id="cl-list" class="cl-list"></div>
+  <div class="dlg-btns"><button id="cl-close" class="btn ghost-dark">關閉</button></div>
+</div></div>
+
+<div id="dlg-courses" class="dlg"><div class="dlg-box wide">
+  <h3>選擇球場</h3>
+  <div id="cp-list" class="cp-list"></div>
+  <div class="dlg-btns"><button id="cp-close" class="btn ghost-dark">取消</button></div>
 </div></div>
 
 <div id="dlg-preview" class="dlg"><div class="dlg-box wide">

@@ -2,7 +2,7 @@
 // 單人時本機就是「權威端」；雙人時主機是權威端，客人只送揮桿輸入、接收結果。
 import * as THREE from 'three';
 import { buildHole } from './terrain.js';
-import { simulate, makeLaunch, distanceTable, airDensity, SURF } from './physics.js';
+import { simulate, makeLaunch, distanceTable, airDensity, SURF, AVG_SEEDS } from './physics.js';
 import { CLUBS, clubById, clubIndex } from './clubs.js';
 import { courseById, teeYards } from './courses.js';
 import { makeRng, hashStr, toYd, YD, MPH, FT, clamp, lerp, rad, smooth, fmtToPar, escapeHtml } from './util.js';
@@ -12,7 +12,9 @@ import { SwingInput } from './input.js';
 import * as sfx from './audio.js';
 
 const WIND = { calm: [0, 0], light: [2, 6], normal: [6, 11], strong: [11, 15] };
-const WIND_MAX_MPH = 15;   // 任何情況（含每洞變化、陣風）風速都不超過 15 mph
+const WIND_MAX_MPH = 15;
+// 平坦球道（算「同樣揮桿在球道上會飛多遠」當比較基準）
+const FLAT = { course: { firm: 1, stimp: 8 }, height: () => 0, surface: () => SURF.FAIRWAY, normal: () => [0, 1, 0], inBounds: () => true, treeAt: () => null, distToPin: () => 999 };   // 任何情況（含每洞變化、陣風）風速都不超過 15 mph
 const UPV = new THREE.Vector3(0, 1, 0);
 const $ = id => document.getElementById(id);
 // 推桿刻度（碼）：拉到底 = 平地滾這麼遠。一般最長 15 碼，超過才用 20 / 25 碼
@@ -57,11 +59,14 @@ export class Game {
       b.addEventListener('pointerdown', start);
       ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
     };
-    hold('btn-aim-l', () => this.nudgeAim(-0.5));
-    hold('btn-aim-r', () => this.nudgeAim(0.5));
-    $('btn-club-prev').onclick = () => this.cycleClub(-1);
-    $('btn-club-next').onclick = () => this.cycleClub(1);
-    $('c-rail').onclick = e => { const id = e.target.dataset && e.target.dataset.club; if (id) this.selectClub(id); };
+    // 點左下角的球桿 → 完整選桿視窗（列出這個角色每支桿的平均距離）
+    $('hud-club').addEventListener('click', e => {
+      e.stopPropagation();
+      if (!this.canControl()) return;
+      const p = this.players[this.cur];
+      this.hud.openClubs(p.table, this.club.id, id => this.selectClub(id));
+    });
+    $('cl-close').onclick = () => $('dlg-clubs').classList.remove('open');
     $('btn-view').onclick = () => { if (this.canControl()) this.cam.mode = this.cam.mode === 'overview' ? 'address' : 'overview'; };
     $('btn-mulligan').onclick = () => this.mulligan();
     // 加速：只有擊球後、球在飛或滾的時候才會出現，按一下 3 倍速，再按一下恢復
@@ -267,6 +272,7 @@ export class Game {
     this.setupGolfer();
     this.cam.mode = 'address';
     this.world.greenGrid.visible = !!this.club.putter;
+    this.updateGimmeRing();
     // 特殊球位：頭頂黃底提醒 5 秒
     const warn = { [SURF.ROUGH]: '長草：球速會變慢、後旋變少，請評估球桿和揮桿力道', [SURF.DEEP]: '深草：距離可能少一半，請評估球桿和揮桿力道',
       [SURF.SAND]: '沙坑：球速會大幅降低，請評估球桿和揮桿力道', [SURF.WASTE]: '荒地：距離會變短，請評估球桿和揮桿力道' }[p.lie];
@@ -287,6 +293,12 @@ export class Game {
     let top = -Infinity;
     for (const k of [-0.28, 0, 0.28]) top = Math.max(top, this.world.meshHeight(o.x + d.x * k, o.z + d.z * k));
     if (top > o.y) o.y = top;
+  }
+
+  // 推桿時在果嶺上畫出 OK 推範圍（練習場不計 OK 推，所以不畫）
+  updateGimmeRing() {
+    const r = this.club && this.club.putter && !this.cfg.practice && this.cfg.gimme > 0 ? this.cfg.gimme * YD : 0;
+    this.world.setGimmeRing(r);
   }
 
   canControl() {
@@ -413,8 +425,8 @@ export class Game {
     const pw = this.power > 0.02 ? this.power : clamp(this.distPin(p) / this.puttScale, 0.1, 1);
     const zero = Object.assign(() => 0.5, { normal: () => 0 });
     const l = makeLaunch({ power: pw, curve: 0, aimYaw: this.aim }, { club: this.club, lie: p.lie, stats: { ...p.stats, touch: 99, line: 99, mental: 99 }, rng: zero, stimp: this.course.stimp, puttScale: this.puttScale, distToPin: 0 });
-    const r = simulate({ ...l, pos: p.ball }, { rho: this.rho, wind: [0, 0], rng: zero }, this.hole);
     const maxLen = 1 + (p.stats.reading || 50) * 0.08;
+    const r = simulate({ ...l, pos: p.ball, maxDist: maxLen + 0.5 }, { rho: this.rho, wind: [0, 0], rng: zero }, this.hole);
     const pts = [];
     let acc = 0;
     for (let i = 1; i < r.frames.length; i++) {
@@ -472,6 +484,7 @@ export class Game {
     this.club = clubById(id);
     if (this.club.putter !== prevPutt) this.aim = this.defaultAim(this.players[this.cur], this.club);
     this.world.greenGrid.visible = !!this.club.putter;
+    this.updateGimmeRing();
     this.input.putt = !!this.club.putter;
     this.afterAimChange();
   }
@@ -936,8 +949,8 @@ export class Game {
     const short = !portrait && window.innerHeight < 500;   // 手機橫向：球放高一點，留空間給下方按鈕
     const k = Math.tan(31 * Math.PI / 180) / Math.tan(cam.fov / 2 * Math.PI / 180);   // 視角越窄退越遠
     let back, up, f;
-    if (this.club.putter) { back = portrait ? 3.0 : 1.8 * k; up = portrait ? 1.45 : 1.05 + 0.05 * k; f = portrait ? 0.69 : short ? 0.64 : 0.7; }
-    else { back = portrait ? 6.2 : 3.2 * k; up = portrait ? 2.0 : 1.35 + 0.05 * k; f = portrait ? 0.69 : short ? 0.64 : 0.7; }
+    if (this.club.putter) { back = portrait ? 3.0 : 2.6 * k; up = portrait ? 1.45 : 1.15 + 0.08 * k; f = portrait ? 0.75 : short ? 0.72 : 0.76; }
+    else { back = portrait ? 6.2 : 3.2 * k; up = portrait ? 2.0 : 1.35 + 0.05 * k; f = portrait ? 0.75 : short ? 0.72 : 0.76; }
     const pos = b.clone().addScaledVector(d, -back).add(new THREE.Vector3(0, up, 0));
     const pitch = Math.atan2(up, back) - (f - 0.5) * cam.fov * Math.PI / 180;
     const look = pos.clone().addScaledVector(d, Math.cos(pitch) * 20).add(new THREE.Vector3(0, -Math.sin(pitch) * 20, 0));
@@ -980,30 +993,45 @@ export class Game {
   // 力道條：上面顯示力道（推桿顯示碼數），下面顯示這個力道的預估落點
   showPower(pw) {
     const p = this.players[this.cur];
-    if (this.club.putter) { this.hud.setPower(pw, toYd(pw * this.puttScale).toFixed(1) + ' Y', ''); return; }
+    if (this.club.putter) { this.hud.setPower(pw, toYd(pw * this.puttScale).toFixed(1) + ' Y', ''); this.hud.setAdjust(''); this.adjKey = null; return; }
     const land = this.estCarry(p, pw > 0.02 ? pw : 1);
     this.hud.setPower(pw, null, '落點 ' + Math.round(toYd(land)) + ' Y');
-    this.updateLieAdjust(pw);
+    this.updateLieAdjust();
   }
 
   // 特殊球位（長草、深草、沙坑、荒地）：用物理引擎跑一次「沒有失誤」的模擬（含目前的風、真實地形），
   // 和球桿平均距離比較，顯示「(預計少 xx%)」。落點碼數本身仍顯示球桿平均距離。
-  updateLieAdjust(pw) {
+  updateLieAdjust() {
     const p = this.players[this.cur];
     const special = [SURF.ROUGH, SURF.DEEP, SURF.SAND, SURF.WASTE].includes(p.lie);
-    if (!special || this.club.putter || !this.hole) { this.hud.setAdjust(''); return; }
-    const power = pw > 0.02 ? pw : 1;
-    const key = [p.lie, this.club.id, power.toFixed(2), this.aim.toFixed(3), p.ball[0].toFixed(1), p.ball[2].toFixed(1)].join('|');
+    if (!special || this.club.putter || !this.hole) { this.hud.setAdjust(''); this.adjKey = null; clearTimeout(this.adjTimer); return; }
+    // 增減比例幾乎不受力道影響，所以只在球位 / 球桿 / 瞄準改變時算一次（100% 力道），上桿時完全不算，避免畫面卡頓
+    const key = [p.lie, this.club.id, this.aim.toFixed(2), p.ball[0].toFixed(1), p.ball[2].toFixed(1), this.wind[0].toFixed(2)].join('|');
     if (key === this.adjKey) return;
-    const now = performance.now();
-    if (now - (this.adjTime || 0) < 120) { clearTimeout(this.adjTimer); this.adjTimer = setTimeout(() => this.updateLieAdjust(this.power), 130); return; }
-    this.adjKey = key; this.adjTime = now;
-    const zero = Object.assign(() => 0.5, { normal: () => 0 });
-    const n = this.hole.normal(p.ball[0], p.ball[2]);
-    const l = makeLaunch({ power, curve: 0, aimYaw: this.aim }, { club: this.club, lie: p.lie, stats: p.stats, rng: zero, distToPin: this.distPin(p), slope: Math.acos(clamp(n[1], 0, 1)), stimp: this.course.stimp, puttScale: this.puttScale });
-    const r = simulate({ ...l, pos: p.ball.slice() }, { rho: this.rho, wind: this.wind, rng: zero }, this.hole);
-    const base = this.estCarry(p, power);
-    const pct = Math.round((r.carry / base - 1) * 100);
-    this.hud.setAdjust(pct < 0 ? `(預計少 ${-pct}%)` : pct > 0 ? `(預計多 ${pct}%)` : '(與平均差不多)', pct);
+    this.adjKey = key;
+    this.hud.setAdjust('(計算中…)');
+    clearTimeout(this.adjTimer);
+    this.adjTimer = setTimeout(() => {
+      if (this.input.state || this.flight || this.swingAnim) { this.adjKey = null; return; }   // 正在操作就晚點再算
+      const n = this.hole.normal(p.ball[0], p.ball[2]);
+      const ctx = { club: this.club, lie: p.lie, stats: p.stats, distToPin: this.distPin(p), slope: Math.acos(clamp(n[1], 0, 1)), stimp: this.course.stimp, puttScale: this.puttScale };
+      // 分 8 小段計算（每段一次揮桿，約幾毫秒），段與段之間讓畫面先更新，不會一次卡住
+      let sum = 0, base = 0, i = 0;
+      const seeds = AVG_SEEDS.slice(0, 8);
+      const step = () => {
+        if (key !== this.adjKey) return;                      // 中途換了球桿 / 瞄準，放棄這次
+        const seed = seeds[i];
+        let rng = makeRng(seed);
+        let l = makeLaunch({ power: 1, curve: 0, aimYaw: this.aim }, { ...ctx, rng });
+        sum += simulate({ ...l, pos: p.ball.slice(), carryOnly: true }, { rho: this.rho, wind: this.wind, rng }, this.hole).carry;
+        rng = makeRng(seed);
+        l = makeLaunch({ power: 1, curve: 0, aimYaw: 0 }, { ...ctx, lie: SURF.TEE, slope: 0, distToPin: 999, rng });
+        base += simulate({ ...l, pos: [0, 0.0213, 0], carryOnly: true }, { rho: this.rho, wind: [0, 0], rng }, FLAT).carry;
+        if (++i < seeds.length) { this.adjTimer = setTimeout(step, 16); return; }
+        const pct = Math.round((sum / base - 1) * 100);
+        this.hud.setAdjust(pct < 0 ? `(預計少 ${-pct}%，含風)` : pct > 0 ? `(預計多 ${pct}%，含風)` : '(與平均差不多)', pct);
+      };
+      step();
+    }, 350);
   }
 }

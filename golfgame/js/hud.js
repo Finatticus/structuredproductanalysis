@@ -86,9 +86,21 @@ export class Hud {
     $('c-icon').setAttribute('href', '#' + ICON[club.icon]);
     $('c-name').textContent = club.name;
     const t = table[club.id];
-    $('c-sub').textContent = club.putter ? '推桿' : `平均 Carry ${Math.round(toYd(t.carry))} Y · Total ${Math.round(toYd(t.total))} Y`;
-    $('c-rail').innerHTML = CLUBS.map(c => `<i class="${c.id === club.id ? 'on' : ''}" data-club="${c.id}">${c.short}</i>`).join('');
+    $('c-sub').textContent = club.putter ? '推桿' : `平均 ${Math.round(toYd(t.carry))} Y`;
     $('hud-club').classList.toggle('disabled', !mine);
+  }
+
+  // 完整選桿視窗：每支桿的平均 Carry / Total、桿面角度，點一下選擇
+  openClubs(table, currentId, onPick) {
+    const icon = c => `<svg viewBox="0 0 120 120"><use href="#${ICON[c.icon]}"/></svg>`;
+    $('cl-note').textContent = '平均距離依你的素質計算（球道、無風）';
+    $('cl-list').innerHTML = CLUBS.map(c => {
+      const t = table[c.id];
+      const dist = c.putter ? '<span class="cl-d">推桿</span>' : `<span class="cl-d"><b class="num">${Math.round(toYd(t.carry))}</b><small>Carry</small></span><span class="cl-d"><b class="num">${Math.round(toYd(t.total))}</b><small>Total</small></span>`;
+      return `<button class="cl-row ${c.id === currentId ? 'on' : ''}" data-id="${c.id}">${icon(c)}<span class="cl-n"><b class="num">${c.name}</b><small>${c.zh}${c.putter ? '' : ' · ' + c.loft + '°'}</small></span>${dist}</button>`;
+    }).join('');
+    $('cl-list').querySelectorAll('[data-id]').forEach(b => b.onclick = () => { $('dlg-clubs').classList.remove('open'); onPick(b.dataset.id); });
+    $('dlg-clubs').classList.add('open');
   }
 
   // puttElev：推桿時球到洞的高低差（公尺，正 = 上坡）；不是推桿傳 null
@@ -109,7 +121,8 @@ export class Hud {
     $('p-fill').style.height = f * 100 + '%';
     $('p-fill').classList.toggle('over', p > 1);
     $('p-needle').style.top = f * 100 + '%';
-    $('p-land').textContent = land || '';
+    // 落點碼數 = 球桿平均距離，沒有算風，所以加小字提醒
+    $('p-land').innerHTML = land ? `${land}<small>未含風速</small>` : '';
   }
 
   placeSwingUI(pos) {
