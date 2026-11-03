@@ -1501,3 +1501,37 @@ mark.stop-todo { background: var(--mark); color: var(--ink); padding: 1px 3px; m
   .stops li.move .mv { color: #333; }
   .stops li.move .mv::before { color: #666; }
 }
+
+/* ============ 每日行程：每一天一張紙 ============
+ * 不用圓角、陰影、漸層：淡一階的紙色＋細框，最上面一條粗墨線代表「新的一天開始」 */
+.days .day {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--ink-2);
+  padding: 30px 34px 32px;
+  margin: 0 0 26px;
+  scroll-margin-top: 150px;
+}
+.days .day:last-child { margin-bottom: 0; }
+.days .day.today { border-top-color: var(--accent); }
+.days .day .stops li::before { background: var(--surface); }
+.days .day .day-side { top: 160px; }
+.days .day .day-no { color: var(--ink-2); font-weight: 600; }
+.days .intro { padding: 0 2px 26px; }
+
+@media (max-width: 720px) {
+  .days .day { padding: 0 16px 22px; margin: 0 -4px 18px; }
+  /* 手機：日期列在這一天的範圍內黏在分頁列下面，一直看得到現在是第幾天 */
+  .days .day .day-side {
+    position: sticky; top: 109px; z-index: 6;
+    margin: 0 -16px 14px; padding: 14px 16px 10px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  .days .day .day-date { font-size: 1.7rem; }
+}
+
+@media print {
+  .days .day { background: none; border: 0; border-top: 1.5px solid #333; padding: 20px 0; margin: 0; }
+  .days .day .day-side { position: static; border: 0; margin: 0; padding: 0; background: none; }
+}
