@@ -1502,28 +1502,28 @@ mark.stop-todo { background: var(--mark); color: var(--ink); padding: 1px 3px; m
   .stops li.move .mv::before { color: #666; }
 }
 
-/* ============ 每日行程：天與天之間像書的章節 ============
- * 不加框、不加底色：每天最上面一條墨線、留白拉大；日期捲動時固定顯示 */
-.days .day { border-bottom: 0; border-top: 1.5px solid var(--ink-2); padding: 0 0 52px; position: relative; scroll-margin-top: 150px; }
-.days .day + .day { margin-top: 4px; }
-.days .day .day-side, .days .day .day-main { padding-top: 34px; }
-.days .day .day-no { color: var(--ink-2); font-weight: 600; }
-.days .day.today { border-top-color: var(--accent); }
-.days .day.today .day-no { color: var(--accent); }
+/* ============ 每日行程：單雙日交替底色 ============
+ * 版面不變，只讓第 2、4、6… 天多一層很淡的底色，往下滑時自然分出一天一天；配色跟著網頁配色 */
+.days { --day-alt: color-mix(in srgb, var(--ink) 3.5%, transparent); }
+.days .day { scroll-margin-top: 150px; border-bottom: 0; }
+.days .day:nth-of-type(even) { background: var(--day-alt); margin: 0 -28px; padding-left: 28px; padding-right: 28px; }
+.days .day.today { box-shadow: inset 2px 0 0 var(--accent); }
 .days .day .day-side { top: 160px; }
 
 @media (max-width: 720px) {
-  .days .day { padding-bottom: 36px; }
-  .days .day .day-main { padding-top: 0; }
-  /* 手機：日期列在這一天的範圍內黏在分頁列下面 */
+  .days .day:nth-of-type(even) { margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+  /* 手機：日期列在這一天的範圍內黏在分頁列下面（底色、紙紋跟這一天一樣，不會像一塊色塊） */
   .days .day .day-side {
     position: sticky; top: 109px; z-index: 6;
-    padding: 22px 0 10px; margin-bottom: 8px;
+    padding: 12px 0 8px; margin: -12px 0 4px;
     background-color: var(--paper);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");   /* 跟頁面一樣的紙紋，黏住時不會像一塊色塊 */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
+  .days .day:nth-of-type(even) .day-side { background-image: linear-gradient(var(--day-alt), var(--day-alt)), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 }
 
 @media print {
+  .days .day:nth-of-type(even) { background: none; margin: 0; padding-left: 0; padding-right: 0; }
+  .days .day { border-bottom: 1px solid #bbb; }
   .days .day .day-side { position: static; background: none; }
 }
