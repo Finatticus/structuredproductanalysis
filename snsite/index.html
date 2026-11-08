@@ -933,7 +933,7 @@ body.srch-open { overflow: hidden; }
 }
 
 /* 內容健檢 */
-.hc-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.hc-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .hc-card { display: block; padding: 14px 16px; border: 1px solid var(--rule-2); border-top: 3px solid var(--rule); background: var(--tint-2); color: var(--ink); }
 .hc-card b { display: block; font-family: var(--mono); font-size: 28px; line-height: 1.2; }
 .hc-card span { display: block; font-weight: 700; margin-top: 2px; }
@@ -950,7 +950,14 @@ body.srch-open { overflow: hidden; }
 .hc-ref { display: block; margin-top: 3px; font-family: var(--mono); font-size: 12px; color: var(--muted); word-break: break-all; }
 .hc-ctx { color: var(--ink-2); font-size: 13.5px; }
 .hc-tbl td { vertical-align: top; }
-#hcLinks, #hcImgs, #hcStale { scroll-margin-top: 130px; }
+#hcLinks, #hcImgs, #hcStale, #hcQual { scroll-margin-top: 130px; }
+.hc-sub { padding: 12px 18px 6px; font-size: 14px; font-weight: 700; color: var(--ink-2); border-top: 1px solid var(--rule-2); }
+.hc-sub small { font-weight: 400; color: var(--muted); margin-left: 8px; }
+.hc-fold { border-top: 1px solid var(--rule-2); }
+.hc-fold > summary { cursor: pointer; padding: 12px 18px; font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.hc-fold > summary small { font-weight: 400; color: var(--muted); margin-left: 8px; }
+.hc-pair { display: block; margin-top: 4px; }
+.hc-pair a { font-weight: 600; }
 @media (max-width: 760px) { .hc-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* editor */
@@ -2700,6 +2707,16 @@ window.addEventListener('hashchange', closeSearch);
    內容健檢（管理員）
    ===================================================================== */
 const HEALTH_STALE_DAYS = 182;
+const HEALTH_SUMMARY_LINE = 28;    // 桌面版（1366 寬）首頁摘要一行約可放的中文字數
+const HEALTH_IMG_KB = 300;         // 單張圖片超過這個大小就提醒
+/* 字寬：中文、全形算 1，英數與半形符號約 0.55 */
+const textUnits = t => Array.from(String(t || '')).reduce((n, ch) => n + (/[\u2e80-\uffff]/.test(ch) ? 1 : 0.55), 0);
+const bigrams = t => {
+  const n = String(t || '').replace(/\[IMG:[^\]]*\]/gi, '').toLowerCase().replace(/<[^>]+>/g, '').replace(/[\s\p{P}\p{S}]/gu, '');
+  const set = new Set(); for (let i = 0; i < n.length - 1; i++) set.add(n.slice(i, i + 2)); return set;
+};
+const dice = (A, B) => { let x = 0; A.forEach(v => { if (B.has(v)) x++; }); return A.size + B.size ? 2 * x / (A.size + B.size) : 0; };
+const b64KB = src => Math.round(String(src).replace(/^data:[^,]*,/, '').length * 0.75 / 1024);
 function healthItems() {
   const d = S.data, en = encodeURIComponent;
   const list = [];
@@ -2721,7 +2738,7 @@ function healthWalk(obj, onStr, onImg, key) {
 }
 function healthRun() {
   const d = S.data, items = healthItems();
-  const links = [], imgs = [], stale = [], ext = [];
+  const links = [], imgs = [], stale = [], ext = [], qual = [], similar = [], heavy = [], orphan = [], imgUse = {};
   const findIn = (arr, id) => (arr || []).find(x => x.id === id);
   const now = Date.now();
   const target = href => {
@@ -2741,11 +2758,17 @@ function healthRun() {
       const re = /href\s*=\s*["']([^"']+)["']/gi; let m;
       while ((m = re.exec(s))) { if (m[1].charAt(0) === '#') { const r = target(m[1]); if (r) links.push({ it: it, lv: r[0], msg: r[1], ref: m[1] }); } }
       if (it.qa && key === 'answer') {
-        String(s).replace(/\[IMG:(.*?)\]/g, (x, src) => { const ok = qaImgSrc(src); if (!ok) imgs.push({ it: it, lv: 'bad', msg: '圖片標記格式錯誤', ref: src.slice(0, 60) }); else if (/^https?:/i.test(ok)) ext.push({ it: it, src: ok }); return x; });
+        String(s).replace(/\[IMG:(.*?)\]/g, (x, src) => {
+          const ok = qaImgSrc(src);
+          if (!ok) imgs.push({ it: it, lv: 'bad', msg: '圖片標記格式錯誤', ref: src.slice(0, 60) });
+          else if (/^https?:/i.test(ok)) ext.push({ it: it, src: ok });
+          else if (b64KB(ok) > HEALTH_IMG_KB) heavy.push({ it: it, kb: b64KB(ok), where: '解答裡的圖片' });
+          return x;
+        });
         texts.push(qaText(it.obj));
       } else texts.push(String(s).indexOf('<') >= 0 ? plain(s) : s);
     };
-    const onImg = id => { if (!findIn(d.images, id)) imgs.push({ it: it, lv: 'bad', msg: '圖片已不存在（可能被刪除）', ref: id }); };
+    const onImg = id => { if (!findIn(d.images, id)) imgs.push({ it: it, lv: 'bad', msg: '圖片已不存在（可能被刪除）', ref: id }); else (imgUse[id] = imgUse[id] || []).push(it); };
     healthWalk(it.obj, onStr, onImg);
     // 引用欄位
     if (it.type === '商品') (it.obj.qaIds || []).forEach(id => { if (!qaById(id)) links.push({ it: it, lv: 'bad', msg: '商品頁「常見 QA」引用的題目已刪除', ref: id }); });
@@ -2761,7 +2784,29 @@ function healthRun() {
     if (days === null || days >= HEALTH_STALE_DAYS) stale.push({ it: it, days: days });
   });
   stale.sort((a, b) => (b.days == null ? 1e9 : b.days) - (a.days == null ? 1e9 : a.days));
-  return { links: links, imgs: imgs, stale: stale, ext: ext, at: new Date() };
+  // 內容品質：商品首頁摘要
+  const byObj = new Map(items.map(it => [it.obj, it]));
+  d.products.forEach(p => {
+    const it = byObj.get(p), t = plain(p.summary || '');
+    if (!t) qual.push({ it: it, lv: 'warn', msg: '沒有首頁摘要（首頁會改顯示簡介，通常比較長）' });
+    else { const w = Math.ceil(textUnits(t)); if (w > HEALTH_SUMMARY_LINE) qual.push({ it: it, lv: 'info', msg: '首頁摘要約 ' + w + ' 字，超過一行（約 ' + HEALTH_SUMMARY_LINE + ' 字）', ref: t }); }
+  });
+  // 常見 QA：分類、是否連到商品
+  const linked = new Set(); d.products.forEach(p => (p.qaIds || []).forEach(id => linked.add(id)));
+  d.qaItems.forEach(q => {
+    const it = byObj.get(q);
+    if (!q.categoryId || !findIn(d.qaCats, q.categoryId)) qual.push({ it: it, lv: 'warn', msg: q.categoryId ? '所屬分類已被刪除' : '沒有分類' });
+    if (!linked.has(q.id)) orphan.push({ it: it });
+  });
+  // 常見 QA：可能重複（問題或解答高度相近）
+  const qs = d.qaItems.map(q => ({ q: q, it: byObj.get(q), b: bigrams(q.question), a: bigrams(q.answer) }));
+  for (let i = 0; i < qs.length; i++) for (let j = i + 1; j < qs.length; j++) {
+    const sq = dice(qs[i].b, qs[j].b), sa = qs[i].a.size > 15 && qs[j].a.size > 15 ? dice(qs[i].a, qs[j].a) : 0;
+    if (sa >= 0.7 || (sq >= 0.55 && sa >= 0.3) || sq >= 0.85)
+      similar.push({ a: qs[i], b: qs[j], why: sa >= 0.7 ? '解答內容幾乎相同（相似度 ' + Math.round(sa * 100) + '%）' : '問題與解答都很相近（問題 ' + Math.round(sq * 100) + '%、解答 ' + Math.round(sa * 100) + '%）', score: Math.max(sa, sq) });
+  }
+  similar.sort((x, y) => y.score - x.score);
+  return { links: links, imgs: imgs, stale: stale, ext: ext, qual: qual, similar: similar, heavy: heavy, orphan: orphan, imgUse: imgUse, at: new Date() };
 }
 function adminHealth() {
   let R = healthRun();
@@ -2778,6 +2823,7 @@ function adminHealth() {
         card(badLinks, '失效連結', R.links.length - badLinks ? '另有 ' + (R.links.length - badLinks) + ' 筆注意／提醒' : '連到已刪除的 QA、商品等', 'bad', 'hcLinks') +
         card(imgBad, '圖片問題', '圖片已刪除或格式錯誤', 'bad', 'hcImgs') +
         card(R.stale.length, '超過半年未更新', '最後更新超過 ' + HEALTH_STALE_DAYS + ' 天', 'warn', 'hcStale') +
+        card(R.qual.length + R.similar.length + R.heavy.length, '內容品質', '摘要、分類、可能重複、圖片大小', 'warn', 'hcQual') +
       '</div><p class="muted" style="font-size:13px;margin:12px 0 0">只檢查網站內的資料，不會修改任何內容；點「編輯」可直接前往修正。</p></div></div>' +
       '<div class="panel" id="hcLinks"><div class="panel-head"><h2>失效連結 <small>文字裡的連結、商品頁常見 QA、延伸閱讀、報價表適用商品</small></h2>' +
         (R.links.some(x => x.oneWay) ? '<button class="btn sm" id="hcFixRel">一鍵補齊單向延伸閱讀（' + R.links.filter(x => x.oneWay).length + ' 組）</button>' : '') + '</div>' +
@@ -2785,10 +2831,21 @@ function adminHealth() {
       '<div class="panel" id="hcImgs"><div class="panel-head"><h2>圖片問題</h2></div>' +
         table(R.imgs.map(x => row(x.it, lvTag(x.lv) + esc(x.msg), x.ref ? '<code class="hc-ref">' + esc(x.ref) + '</code>' : '')), '沒有發現圖片問題' + (R.ext.length ? '（外部網址的圖片可按右上角按鈕實際檢查）' : '')) + '</div>' +
       '<div class="panel" id="hcStale"><div class="panel-head"><h2>超過半年未更新 <small>內容可能已過時，建議確認後重新儲存</small></h2></div>' +
-        table(R.stale.map(x => row(x.it, x.days == null ? '沒有更新紀錄' : '<b>' + x.days + '</b> 天前更新（' + fmtTime(x.it.at) + '）')), '所有內容在半年內都有更新') + '</div>'
+        table(R.stale.map(x => row(x.it, x.days == null ? '沒有更新紀錄' : '<b>' + x.days + '</b> 天前更新（' + fmtTime(x.it.at) + '）')), '所有內容在半年內都有更新') + '</div>' +
+      '<div class="panel" id="hcQual"><div class="panel-head"><h2>內容品質 <small>不影響網站運作，但會影響閱讀與載入速度</small></h2></div>' +
+        '<div class="hc-sub">首頁摘要與 QA 分類</div>' +
+        table(R.qual.sort((a, b) => ['bad', 'warn', 'info'].indexOf(a.lv) - ['bad', 'warn', 'info'].indexOf(b.lv)).map(x => row(x.it, lvTag(x.lv) + esc(x.msg), x.ref ? '<span class="hc-ref" style="font-family:inherit">' + esc(x.ref) + '</span>' : '')), '首頁摘要都在一行內，QA 都有分類') +
+        '<div class="hc-sub">可能重複的 QA<small>問題或解答高度相近，建議合併或在延伸閱讀互相連結</small></div>' +
+        table(R.similar.map(x => row(x.a.it, lvTag('info') + esc(x.why) + '<span class="hc-pair">相近題目：<a href="' + x.b.it.view + '">' + esc(x.b.q.question) + '</a>　<a class="link-btn" href="' + x.b.it.edit + '">編輯這題</a></span>')), '沒有發現可能重複的題目') +
+        '<div class="hc-sub">太大的圖片<small>超過 ' + HEALTH_IMG_KB + ' KB，會拖慢同事打開頁面的速度</small></div>' +
+        (R.imgSizing ? '<div class="hc-ok" style="color:var(--muted)">正在讀取圖片大小…</div>' :
+          table(R.heavy.map(x => row(x.it, lvTag('warn') + esc(x.where) + ' <b>' + x.kb + ' KB</b>' + (x.name ? '<code class="hc-ref">' + esc(x.name) + '</code>' : ''))), '所有圖片都在 ' + HEALTH_IMG_KB + ' KB 以下' + (R.ext.length ? '（外部網址的圖片無法計算大小）' : ''))) +
+        (R.orphan.length ? '<details class="hc-fold"><summary>沒有連到任何商品的 QA（' + R.orphan.length + ' 題）<small>一般性問題（例如下單流程）不需要連到商品；與特定商品有關的題目，可在商品編輯頁的「常見 QA」加入</small></summary>' +
+          table(R.orphan.map(x => row(x.it, lvTag('info') + '沒有出現在任何商品頁的「常見 QA」')), '') + '</details>' : '') +
+      '</div>'
 
     ), 'admin');
-    $('#hcRun').addEventListener('click', () => { R = healthRun(); draw(); toast('已重新檢查', 'ok'); });
+    $('#hcRun').addEventListener('click', () => { R = healthRun(); draw(); sizeLibrary(); toast('已重新檢查', 'ok'); });
     $('#hcExt').addEventListener('click', checkExt);
     const fx = $('#hcFixRel'); if (fx) fx.addEventListener('click', fixOneWay);
     $$('[data-hc-go]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); const el = $('#' + a.dataset.hcGo); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); }));
@@ -2812,7 +2869,21 @@ function adminHealth() {
       }
       busy(false); toast('已補齊 ' + done + ' 題的延伸閱讀', 'ok');
     } catch (e) { busy(false); errToast(e); toast('已完成 ' + done + ' 題，其餘可再按一次補齊', 'err'); }
-    R = healthRun(); draw();
+    R = healthRun(); draw(); sizeLibrary();
+  }
+  async function sizeLibrary() {
+    const ids = Object.keys(R.imgUse); if (!ids.length) return;
+    R.imgSizing = true; draw();
+    const mine = R;
+    for (const id of ids) {
+      try {
+        const src = await imageSrc(id), kb = b64KB(src);
+        if (kb > HEALTH_IMG_KB) { const meta = S.data.images.find(i => i.id === id) || {}; mine.imgUse[id].forEach(it => mine.heavy.push({ it: it, kb: kb, where: '使用的圖片', name: meta.name || id })); }
+      } catch (e) { /* 讀不到的圖片在「圖片問題」處理 */ }
+    }
+    if (R !== mine) return;
+    R.imgSizing = false;
+    if ($('#hcQual')) draw();
   }
   async function checkExt() {
     if (!R.ext.length) { toast('沒有外部網址的圖片'); return; }
@@ -2827,6 +2898,7 @@ function adminHealth() {
     toast(bad ? bad + ' 張外部圖片無法開啟' : '外部圖片都能正常開啟', bad ? 'err' : 'ok');
   }
   draw();
+  sizeLibrary();
 }
 
 /* =====================================================================
@@ -4348,12 +4420,19 @@ function bindForm(root, getObj, opts) {
 /* 圖片選擇 / 上傳 */
 async function fileToBase64(file) {
   let blob = file;
-  if (file.size > 1.5 * 1024 * 1024 && /^image\/(png|jpe?g|webp)$/.test(file.type) && window.createImageBitmap) {
+  // 超過 300KB 或邊長超過 1800px 才處理；縮圖後 PNG、JPG 兩種都試，取較小的（截圖文字用 PNG 通常比較清楚也比較小）
+  if (/^image\/(png|jpe?g|webp)$/.test(file.type) && window.createImageBitmap) {
     const bmp = await createImageBitmap(file);
-    const scale = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
-    const cv = document.createElement('canvas'); cv.width = Math.round(bmp.width * scale); cv.height = Math.round(bmp.height * scale);
-    const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(bmp, 0, 0, cv.width, cv.height);
-    blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.88));
+    const big = Math.max(bmp.width, bmp.height) > 1800;
+    if (big || file.size > HEALTH_IMG_KB * 1024) {
+      const scale = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
+      const cv = document.createElement('canvas'); cv.width = Math.round(bmp.width * scale); cv.height = Math.round(bmp.height * scale);
+      const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(bmp, 0, 0, cv.width, cv.height);
+      const tries = [await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.86))];
+      if (file.type === 'image/png') tries.push(await new Promise(r => cv.toBlob(r, 'image/png')));
+      const best = tries.filter(Boolean).sort((a, b) => a.size - b.size)[0];
+      if (best && (big || best.size < file.size)) blob = best;
+    }
   }
   const bytes = new Uint8Array(await blob.arrayBuffer());
   let bin = '';
@@ -4365,7 +4444,7 @@ function pickImage() {
   let chosen = null;
   return dialog({
     title: '選擇圖片', size: 'wide',
-    body: '<div class="drop" style="margin:0 0 16px"><b>上傳新圖片：</b><input type="file" id="imgUp" accept="image/png,image/jpeg,image/gif,image/webp"><span class="muted">大於 1.5MB 會自動壓縮</span></div>' +
+    body: '<div class="drop" style="margin:0 0 16px"><b>上傳新圖片：</b><input type="file" id="imgUp" accept="image/png,image/jpeg,image/gif,image/webp"><span class="muted">超過 300KB 或尺寸過大會自動壓縮</span></div>' +
       (imgs.length ? '<div class="img-grid">' + imgs.map(i => '<button type="button" data-pick="' + esc(i.id) + '"><div class="ph"><img data-img="' + esc(i.id) + '" alt=""></div>' + esc(i.name) + '</button>').join('') + '</div>' : '<p class="muted">目前沒有圖片，請上傳。</p>') + '<p class="form-err"></p>',
     actions: [{ label: '取消', value: null }],
     onOpen: el => {
