@@ -101,9 +101,21 @@ button { font: inherit; }
 .sync-note.busy::before { background: var(--muted); animation: syncpulse 1s ease-in-out infinite; }
 @keyframes syncpulse { 50% { opacity: .25; } }
 .sync-note button { background: none; border: 0; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; padding: 0 0 0 4px; }
-.banner { background: var(--mid-bg); border-bottom: 1px solid var(--mid-line); color: var(--mid); font-size: 13.5px; }
-.banner .wrap { padding-top: 8px; padding-bottom: 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.banner button { background: none; border: 1px solid var(--mid-line); color: var(--mid); padding: 2px 10px; cursor: pointer; }
+/* 公告橫幅與備份提醒 */
+.ann { border-bottom: 1px solid var(--rule); font-size: 14.5px; }
+.ann .wrap { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; padding-top: 9px; padding-bottom: 9px; }
+.ann-tag { flex: none; font-size: 12px; font-weight: 700; letter-spacing: .06em; padding: 2px 9px; color: #fff; }
+.ann-text { flex: 1; min-width: 200px; line-height: 1.65; }
+.ann-link { flex: none; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.ann-x { flex: none; appearance: none; border: 0; background: none; color: inherit; opacity: .6; cursor: pointer; font: inherit; font-size: 13.5px; padding: 2px 4px; }
+.ann-x:hover { opacity: 1; }
+.ann-x.ic { font-size: 20px; line-height: 1; }
+.ann-info { background: var(--brand-tint); border-color: var(--brand-line); color: var(--brand-ink); }
+.ann-info .ann-tag { background: var(--brand); }
+.ann-warn { background: var(--mid-bg); border-color: var(--mid-line); color: #6b4708; }
+.ann-warn .ann-tag { background: var(--mid); }
+.ann-backup { background: #fff; color: var(--ink-2); }
+.ann-backup .ann-tag { background: var(--ink-2); }
 
 /* ---------- common type ---------- */
 .eyebrow { font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); font-weight: 600; }
@@ -1169,7 +1181,7 @@ body.srch-open { overflow: hidden; }
    ===================================================================== */
 // 發佈用 HTML 會把後端網址寫在這一行（管理後台 →「發佈 HTML」會自動產生）
 const DEFAULT_API = "https://script.google.com/macros/s/AKfycbwPgm62fpZy5pxS1V_V-Xux2esqpM7xdkfZ9fWTABsuU8LHu69Amr09M9V3w7HbG7Rh/exec";
-const SOURCE_HTML = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+const SOURCE_HTML = '<!DOCTYPE html>\n' + document.documentElement.outerHTML.replace(/^<html([^>]*?) class="wf-wait"/, '<html$1');
 
 const LS = { api: 'sn_api', cache: 'sn_cache_v1', session: 'sn_session_v1', img: 'sn_img_' };
 const BRAND = '#2f5d8c';
@@ -1449,7 +1461,8 @@ function syncModalLock() { document.body.classList.toggle('modal-open', $('#dlg'
  * Promise 的值為按下的按鈕 value（直接關閉為 null）。
  */
 function dialog(opt) {
-  const el = $('#dlg').open ? $('#dlg2') : $('#dlg');
+  let el = $('#dlg').open ? $('#dlg2') : $('#dlg');
+  if (!el.open) { const fresh = el.cloneNode(false); el.replaceWith(fresh); el = fresh; }
   el.className = 'modal' + (opt.size ? ' ' + opt.size : '');
   const actions = opt.actions || [{ label: '確定', value: true }];
   el.innerHTML = '<div class="modal-head"><h3>' + esc(opt.title || '') + '</h3>' +
@@ -1526,8 +1539,8 @@ function setChrome(active) {
       '<span class="sp"></span><button type="button" data-guest>以訪客檢視</button><button type="button" data-logout>登出</button></div>';
   } else { bar.hidden = true; bar.innerHTML = ''; }
   $('#guestPill').hidden = !(S.session && S.guest);
-  const ban = $('#banner');
-  ban.hidden = true;
+  renderBanner();
+  if (isAdmin()) checkBackupAge();
   updateSyncNote();
 }
 
@@ -2469,9 +2482,72 @@ function viewCalc() {
 }
 
 /* =====================================================================
+   公告橫幅（網站設定）與備份提醒（管理員）
+   ===================================================================== */
+const BACKUP_DAYS = 7;
+const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+const annKey = st => String(st.annText || '') + '|' + String(st.annUntil || '');
+function annActive(st) {
+  const t = String(st.annText || '').trim();
+  if (!t) return false;
+  if (st.annUntil && todayStr() > st.annUntil) return false;   // 過了「顯示到」的日期自動消失
+  return true;
+}
+const lsTry = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } return null; };
+function renderBanner() {
+  const ban = $('#banner'); if (!ban || !S.data) return;
+  const st = S.data.settings || {}, rows = [];
+  if (annActive(st) && lsTry('sn_ann_closed') !== annKey(st)) {
+    const warn = st.annLevel === 'warn';
+    const link = String(st.annLink || '').trim();
+    const href = /^#\/[\w\-\/?=&%.]*$/.test(link) ? link : (safeUrl(link) !== '#' ? safeUrl(link) : '');
+    rows.push('<div class="ann ann-' + (warn ? 'warn' : 'info') + '" role="status"><div class="wrap"><span class="ann-tag">' + (warn ? '重要公告' : '公告') + '</span>' +
+      '<span class="ann-text">' + esc(st.annText.trim()) + '</span>' +
+      (href ? '<a class="ann-link" href="' + esc(href) + '"' + (href.charAt(0) === '#' ? '' : ' target="_blank" rel="noopener"') + '>' + esc(st.annLinkText || '查看詳情') + ' →</a>' : '') +
+      '<button type="button" class="ann-x ic" data-ann-x title="關閉這則公告（有新公告時會再出現）" aria-label="關閉公告">×</button></div></div>');
+  }
+  const b = S.lastBackup;
+  if (isAdmin() && b && lsTry('sn_backup_snooze') !== todayStr()) {
+    const days = b.time ? Math.floor((Date.now() - new Date(b.time).getTime()) / 864e5) : null;
+    if (days === null || days >= BACKUP_DAYS) rows.push('<div class="ann ann-backup"><div class="wrap"><span class="ann-tag">備份提醒</span><span class="ann-text">' +
+      (days === null ? '找不到最近下載備份的紀錄' : '距離上次下載備份已經 <b>' + days + '</b> 天（' + esc(fmtTime(b.time)) + (b.user ? '・' + esc(b.user) : '') + '）') +
+      '，建議下載一份備份檔，存到公司的公用資料夾。</span><button type="button" class="btn sm" data-bk-now>立即下載備份</button><button type="button" class="ann-x" data-bk-snooze>明天再提醒</button></div></div>');
+  }
+  ban.innerHTML = rows.join('');
+  ban.hidden = !rows.length;
+}
+/* 上次下載備份的時間：讀後端的操作紀錄（所有管理員共用同一份紀錄） */
+async function checkBackupAge(force) {
+  if (!isAdmin() || (S.backupChecked && !force)) return;
+  S.backupChecked = true;
+  try {
+    const items = (await apiPost('log', { limit: 500 })).items || [];
+    const hit = items.find(x => x.action === '匯出備份');
+    S.lastBackup = hit ? { time: hit.time, user: hit.user } : { time: null };
+  } catch (e) { S.backupChecked = false; return; }
+  renderBanner();
+}
+async function downloadBackup() {
+  try {
+    busy(true, '匯出中（含圖片，可能需要數十秒）…');
+    const r = await apiPost('export');
+    const d = new Date();
+    download('結構型商品網站備份_' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '_' + pad2(d.getHours()) + pad2(d.getMinutes()) + '.json', JSON.stringify(r.data));
+    busy(false); toast('備份檔已下載，請存到公司的公用資料夾', 'ok');
+    S.lastBackup = { time: new Date().toISOString(), user: S.session && S.session.user ? S.session.user.name : '' };
+    renderBanner();
+  } catch (e) { busy(false); errToast(e); }
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-ann-x]')) { lsTry('sn_ann_closed', annKey(S.data.settings || {})); renderBanner(); return; }
+  if (e.target.closest('[data-bk-snooze]')) { lsTry('sn_backup_snooze', todayStr()); renderBanner(); return; }
+  if (e.target.closest('[data-bk-now]')) downloadBackup();
+});
+
+/* =====================================================================
    全站搜尋：商品架構、常見 QA、報價表欄位、基礎概念與內容頁
    ===================================================================== */
-const SRCH_GROUPS = ['商品架構', '常見 QA', '報價表', '基礎概念與內容頁'];
+const SRCH_GROUPS = ['商品架構', '常見 QA', '報價表', '基礎概念與內容頁', '工具'];
 const qaTextCache = new Map();
 function qaText(q) {
   const k = q.id + '|' + (q.updatedAt || '');
@@ -2503,6 +2579,12 @@ function searchIndex() {
   });
   S.data.pages.filter(pg => isAdmin() || pg.status !== 'draft').forEach(pg => (pg.sections || []).forEach((s, i) =>
     add('基礎概念與內容頁', s.title || pg.title, pg.navLabel || pg.title, blocksText(s.blocks), '#/page/' + en(pg.id) + '?s=s' + i, 1)));
+  ((S.data.settings && S.data.settings.tools) || []).filter(t => isAdmin() || !t.hidden).forEach(t => {
+    const internal = t.kind === 'vol' || t.kind === 'calc';
+    const href = internal ? '#/tool/' + t.kind : safeUrl(t.url);
+    if (href === '#') return;
+    add('工具', t.title, internal ? '網站工具' : '外部網站', t.desc || '', href, 2);
+  });
   return out;
 }
 const srchEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -2590,6 +2672,7 @@ function srchHot(noScroll) {
 function srchGo(href, remember) {
   if (remember) srchRemember(SRCH.q.value.trim());
   closeSearch();
+  if (/^(https?:|mailto:)/i.test(href)) { window.open(href, '_blank', 'noopener'); return; }
   if (location.hash === href) rerender(); else location.hash = href;
 }
 /* 跳到頁面中的某一段，並短暫標示 */
@@ -3215,6 +3298,11 @@ function openQaViewer(ids, idx, opener, query) {
   };
   $('#faqPrev').onclick = () => { if (idx > 0) show(idx - 1); };
   $('#faqNext').onclick = () => { if (idx < list.length - 1) show(idx + 1); };
+  dlg.onkeydown = e => {
+    if (e.target.closest && e.target.closest('input, textarea, [contenteditable="true"]')) return;
+    if (e.key === 'ArrowLeft' && idx > 0) { e.preventDefault(); show(idx - 1); }
+    else if (e.key === 'ArrowRight' && idx < list.length - 1) { e.preventDefault(); show(idx + 1); }
+  };
   dlg.onkeydown = e => { if (e.key === 'ArrowLeft' && idx > 0) show(idx - 1); if (e.key === 'ArrowRight' && idx < list.length - 1) show(idx + 1); };
   dlg.onclick = e => {
     const rel = e.target.closest('[data-qa-open]');
@@ -5048,6 +5136,12 @@ function adminSettings() {
       '<label class="f"><span>首頁說明</span><textarea class="txt" data-bind="heroLead">' + esc(st.heroLead || '') + '</textarea></label>' +
       '<label class="f"><span>內部使用提醒（固定顯示在畫面最下方）</span>' + inp('internalNote', st.internalNote, '本網站所有內容僅供內部使用，切勿外傳') + '</label>' +
       '<label class="f"><span>免責聲明（固定顯示在畫面最下方，小字）</span><textarea class="txt" data-bind="disclaimer">' + esc(st.disclaimer || '') + '</textarea></label>' +
+      '<div class="sub-h">公告橫幅<small>顯示在所有頁面最上方；清空公告內容就不顯示</small></div>' +
+      '<label class="f"><span>公告內容</span><textarea class="txt" data-bind="annText" rows="2" placeholder="例如：本週起詢價截止時間改為 15:00">' + esc(st.annText || '') + '</textarea></label>' +
+      '<div class="f-grid" style="--c:3"><label class="f"><span>樣式</span><select class="sel" data-bind="annLevel"><option value="info"' + (st.annLevel !== 'warn' ? ' selected' : '') + '>一般公告（藍）</option><option value="warn"' + (st.annLevel === 'warn' ? ' selected' : '') + '>重要公告（橘）</option></select></label>' +
+      '<label class="f"><span>顯示到（含當天）</span><input class="inp" type="date" data-bind="annUntil" value="' + esc(st.annUntil || '') + '"><small>留空表示一直顯示</small></label>' +
+      '<label class="f"><span>連結文字（選填）</span>' + inp('annLinkText', st.annLinkText, '查看詳情') + '</label></div>' +
+      '<label class="f"><span>連結網址（選填）</span>' + inp('annLink', st.annLink, '例如 #/qa/… 或 https://…') + '<small>可以貼網站內的頁面（例如從網址列複製 #/qa/… 這段）或外部網址。</small></label>' +
       '<div class="sub-h">工具與資源連結<small>顯示在首頁下方</small></div><div class="rows">' + st.tools.map((t, i) => '<div class="rowx"><div class="rowx-main"><div class="f-grid" style="--c:3">' +
         '<label class="f"><span>類型</span><select class="sel" data-bind="tools.' + i + '.kind">' + [['link', '外部連結'], ['vol', '歷史波動率工具'], ['calc', '到期接股試算']].map(o => '<option value="' + o[0] + '"' + ((t.kind || 'link') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' +
         '<label class="f"><span>一般使用者</span><select class="sel" data-bind="tools.' + i + '.hidden" data-bool="1"><option value="false"' + (t.hidden ? '' : ' selected') + '>顯示</option><option value="true"' + (t.hidden ? ' selected' : '') + '>隱藏（只有管理員看得到）</option></select></label>' +
@@ -5133,19 +5227,11 @@ function download(name, text, mime) {
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 function adminBackup() {
-  render(adminShell('backup', '<div class="panel"><div class="panel-head"><h2>匯出備份</h2></div><div class="panel-body"><p>下載整個網站的內容（類別、商品、常見 QA、待辦 QA、內容頁、設定與圖片）成一個 JSON 備份檔。建議定期備份。</p><button class="btn" id="expBtn">下載備份檔</button></div></div>' +
+  render(adminShell('backup', '<div class="panel"><div class="panel-head"><h2>匯出備份</h2></div><div class="panel-body"><p>下載整個網站的內容（類別、商品、常見 QA、待辦 QA、內容頁、報價表、設定與圖片）成一個 JSON 備份檔，請存到公司的公用資料夾。</p><p class="muted" style="font-size:13.5px">超過 ' + BACKUP_DAYS + ' 天沒有下載備份時，管理員打開網站會在上方看到提醒。' + (S.lastBackup && S.lastBackup.time ? '上次下載：' + esc(fmtTime(S.lastBackup.time)) + (S.lastBackup.user ? '（' + esc(S.lastBackup.user) + '）' : '') : '') + '</p><button class="btn" id="expBtn">下載備份檔</button></div></div>' +
     '<div class="panel"><div class="panel-head"><h2>匯入備份 / 初始資料</h2></div><div class="panel-body"><p>第一次使用時，請在這裡匯入 <b>GAS後端/初始資料.json</b>，現有的所有商品就會上傳到後端。也可以用來還原先前下載的備份。</p>' +
     '<div class="drop" style="margin:0 0 14px"><input type="file" id="impFile" accept=".json,application/json"></div><div id="impInfo"></div></div></div>' + snqaPanelHTML()), 'admin');
   bindSnqaPanel();
-  $('#expBtn').addEventListener('click', async () => {
-    try {
-      busy(true, '匯出中（含圖片，可能需要數十秒）…');
-      const r = await apiPost('export');
-      const d = new Date();
-      download('結構型商品網站備份_' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '_' + pad2(d.getHours()) + pad2(d.getMinutes()) + '.json', JSON.stringify(r.data));
-      busy(false); toast('備份檔已下載', 'ok');
-    } catch (e) { busy(false); errToast(e); }
-  });
+  $('#expBtn').addEventListener('click', downloadBackup);
   $('#impFile').addEventListener('change', async e => {
     const f = e.target.files[0]; if (!f) return;
     const info = $('#impInfo');
@@ -5154,7 +5240,7 @@ function adminBackup() {
     catch (err) { info.innerHTML = '<p class="neg">無法讀取：' + esc(err.message) + '</p>'; return; }
     const cnt = k => (data[k] || []).length;
     info.innerHTML = '<table class="atable" style="max-width:560px;margin-bottom:14px"><tr><th>檔案</th><td>' + esc(f.name) + '</td></tr><tr><th>建立時間</th><td>' + esc(fmtTime(data.exportedAt)) + (data.exportedBy ? '（' + esc(data.exportedBy) + '）' : '') + '</td></tr>' +
-      '<tr><th>內容</th><td>類別 ' + cnt('categories') + '・商品 ' + cnt('products') + '・QA 分類 ' + cnt('qaCats') + '・QA ' + cnt('qaItems') + '・待辦 QA ' + cnt('qaSuggest') + '・內容頁 ' + cnt('pages') + '・圖片 ' + cnt('images') + '</td></tr></table>' +
+      '<tr><th>內容</th><td>類別 ' + cnt('categories') + '・商品 ' + cnt('products') + '・QA 分類 ' + cnt('qaCats') + '・QA ' + cnt('qaItems') + '・待辦 QA ' + cnt('qaSuggest') + '・內容頁 ' + cnt('pages') + '・報價表 ' + cnt('rfqs') + '・圖片 ' + cnt('images') + '</td></tr></table>' +
       (data.qaItems ? '' : '<p class="muted" style="font-size:13px">這個備份檔沒有常見 QA 資料，匯入時會保留目前的常見 QA 不變。</p>') +
       '<div class="add-row" style="flex-direction:column;gap:8px"><label class="chk"><input type="radio" name="impMode" value="replace" checked> <b>全部取代</b>：以備份檔內容取代目前所有資料（目前內容會先存入版本紀錄）</label>' +
       '<label class="chk"><input type="radio" name="impMode" value="merge"> <b>合併</b>：只新增或更新備份檔中有的項目，其餘保留</label></div><button class="btn warn" id="impGo">開始匯入</button>';
