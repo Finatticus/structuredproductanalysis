@@ -658,9 +658,13 @@ tr.row-hidden td { background: #fffbf2; }
 .rfq-peek span { font-family: var(--mono); font-size: 12.5px; font-weight: 600; color: var(--brand-ink); background: var(--brand-tint); border: 1px solid var(--brand-line); padding: 0 7px; line-height: 1.7; }
 .rfq-peek span.more { font-family: var(--sans); font-weight: 400; color: var(--muted); background: none; border: 0; padding: 0 2px; }
 .rfq-row .prod-desc:empty { display: none; }
-.rfq-plinks { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; }
-.rfq-plinks a { color: var(--gold-2); font-weight: 700; font-size: 15px; border-bottom: 1px solid rgba(240,205,138,.5); }
-.rfq-plinks a:hover { color: #fff; border-bottom-color: #fff; }
+.rfq-plinks { display: flex; flex-wrap: wrap; gap: 10px 12px; margin-top: 20px; }
+.rfq-plinks a { display: inline-flex; align-items: center; gap: 14px; padding: 11px 16px 11px 18px; background: rgba(255,255,255,.12); border: 1px solid rgba(240,205,138,.65); border-left: 4px solid var(--gold-2); color: #fff; transition: background .15s, border-color .15s; }
+.rfq-plinks a small { display: block; font-size: 12px; letter-spacing: .12em; color: var(--gold-2); font-weight: 600; line-height: 1.4; }
+.rfq-plinks a b { display: block; font-size: 17px; font-weight: 700; color: #fff; line-height: 1.45; }
+.rfq-plinks a .arr { font-size: 20px; color: var(--gold-2); transition: transform .15s; }
+.rfq-plinks a:hover { background: rgba(255,255,255,.2); border-color: var(--gold-2); }
+.rfq-plinks a:hover .arr { transform: translateX(4px); }
 @container app (max-width: 760px) {
   .rfq-mast-grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   .rfq-f { grid-template-columns: minmax(0, 1fr); padding: 14px 2px; }
@@ -1714,7 +1718,7 @@ function productHTML(p, opt) {
     '<h1 class="display">' + esc(p.title || p.name || '（未命名）') + '</h1>' +
     '<p class="lead">' + sanitize(p.intro) + '</p>' + (() => {
       const rq = rfqVisible().filter(x => (x.productIds || []).indexOf(p.id) >= 0);
-      return rq.length ? '<div class="rfq-plinks">' + rq.map(x => '<a href="#/rfq/' + encodeURIComponent(x.id) + '">報價表說明：' + esc(x.title) + ' →</a>').join('') + '</div>' : '';
+      return rq.length ? '<div class="rfq-plinks">' + rq.map(x => '<a href="#/rfq/' + encodeURIComponent(x.id) + '"><span><small>報價表說明</small><b>' + esc(x.title) + '</b></span><span class="arr">→</span></a>').join('') + '</div>' : '';
     })() + '</div>' +
     (p.features.filter(Boolean).length ? '<aside class="highlights"><h2>產品特色</h2><ol>' + p.features.filter(Boolean).map(f => '<li><span>' + sanitize(f) + '</span></li>').join('') + '</ol></aside>' : '<div></div>') +
     '</div></div></section>';
