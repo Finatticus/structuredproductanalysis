@@ -2041,10 +2041,7 @@ function rfqHTML(src, opt) {
     : '<tr><td class="rfq-empty" colspan="' + n + '">（尚未提供範例列）</td></tr>';
   const fields = groups.map((g, gi) => {
     const c = q.columns[g.i], vals = rfqVals(c.values);
-    const ex = q.rows.length ? g.cols.map(i => q.rows[0][i]).filter(v => String(v).trim()) : [];
-    const meta = (vals.length ? '<span class="lb">可填寫</span>' + vals.map(v => '<span class="v">' + esc(v) + '</span>').join('') : '') +
-      (vals.length && ex.length ? '<span class="gap"></span>' : '') +
-      (ex.length ? '<span class="lb">範例</span><span class="ex">' + esc(ex.join('、')) + '</span>' : '');
+    const meta = vals.length ? '<span class="lb">可填寫</span>' + vals.map(v => '<span class="v">' + esc(v) + '</span>').join('') : '';
     return '<li class="rfq-f" data-gi="' + gi + '" data-cols="' + g.cols.join(',') + '"><div class="rfq-key"><span class="no">' + pad2(gi + 1) + '</span><code>' + esc(rfqGroupKey(q, g)) + '</code>' +
       (c.name ? '<strong>' + esc(c.name) + '</strong>' : '') + '</div><div class="rfq-body">' +
       (String(c.desc || '').trim() ? '<div class="rt">' + sanitize(c.desc) + '</div>' : '<p class="muted rfq-nodesc">（尚未填寫說明）</p>') +
@@ -4891,6 +4888,34 @@ function adminRfqs() {
 
 /* ---------- 報價表：匯入 Excel ---------- */
 const rfqNormKey = s => String(s || '').toLowerCase().replace(/[\s()（）_\-.:：]/g, '');
+/* 欄位說明庫：所有報價表寫過的欄位說明，同名欄位（忽略大小寫、空白、括號）共用；最近更新的報價表優先，最後才用內建 FCN / DRA 範例 */
+function rfqDescLib(skipId) {
+  const lib = {};
+  const put = (c, from) => {
+    const k = rfqNormKey(c.label);
+    if (!k || lib[k] || c.merge) return;
+    if (!String(c.desc || '').trim() && !String(c.name || '').trim()) return;
+    lib[k] = { name: c.name || '', values: c.values || '', desc: c.desc || '', from: from };
+  };
+  (S.data.rfqs || []).filter(x => x.id !== skipId).slice()
+    .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
+    .forEach(x => (x.columns || []).forEach(c => put(c, x.title || '其他報價表')));
+  RFQ_SAMPLE.columns.forEach(c => put(c, '內建範例'));
+  return lib;
+}
+const rfqColBlank = c => !c.merge && !String(c.desc || '').trim() && !String(c.name || '').trim() && !String(c.values || '').trim();
+/* 把說明庫裡同名欄位的說明帶進還沒寫說明的欄位，回傳帶入的欄位 */
+function rfqFillDescs(q, lib, only) {
+  const done = [];
+  q.columns.forEach((c, i) => {
+    if (only != null && i !== only) return;
+    const m = rfqColBlank(c) && lib[rfqNormKey(c.label)];
+    if (!m) return;
+    c.name = m.name; c.values = m.values; c.desc = m.desc;
+    done.push({ label: c.label, from: m.from });
+  });
+  return done;
+}
 function rfqSheetGrid(ws) {
   const raw = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '', blankrows: true });
   return raw.slice(0, 300).map(r => Array.from(r.slice(0, 120), v => String(v == null ? '' : v).replace(/\s*[\r\n]+\s*/g, ' ').trim()));
@@ -4914,7 +4939,7 @@ function rfqImport(cur) {
       '<div id="rqOpt" hidden><div class="f-grid" style="--c:3"><label class="f"><span>工作表</span><select class="sel" id="rqSheet"></select></label>' +
       '<label class="f"><span>欄位名稱在第幾列</span><select class="sel" id="rqHead"></select></label><label class="f"><span>帶入幾列範例</span><select class="sel" id="rqN"></select></label></div>' +
       '<div class="rfq-imp-opts"><label class="chk"><input type="checkbox" id="rqKeep" checked> 欄位名稱相同時，保留目前已寫好的說明</label>' +
-      '<label class="chk"><input type="checkbox" id="rqStd" checked> 其他欄位若與內建 FCN / DRA 範例同名，帶入範例說明</label></div>' +
+      '<label class="chk"><input type="checkbox" id="rqStd" checked> 其他欄位若在別的報價表（或內建範例）寫過同名欄位的說明，自動帶入</label></div>' +
       '<div class="sub-h">預覽<small><span class="lg h"></span>欄位名稱　<span class="lg d"></span>會帶入的範例列</small></div><div class="rfq-imp-prev" id="rqPrev"></div>' +
       '<p class="muted" id="rqSum" style="font-size:13px;margin:8px 0 0"></p></div><p class="form-err"></p>',
     actions: [{ label: '取消', value: null }, { label: '帶入表格', value: true }],
@@ -4972,7 +4997,7 @@ function rfqImport(cur) {
         const keep = q('rqKeep').checked, std = q('rqStd').checked;
         const mine = {}, sample = {};
         if (keep) cur.columns.forEach(c => { const k = rfqNormKey(c.label); if (k && !mine[k]) mine[k] = c; });
-        if (std) RFQ_SAMPLE.columns.forEach(c => { sample[rfqNormKey(c.label)] = c; });
+        if (std) Object.assign(sample, rfqDescLib(cur.id));
         const columns = grid[h].slice(c0, c1 + 1).map(label => {
           const k = rfqNormKey(label), m = (k && mine[k]) || (k && sample[k]);
           return m ? { label: label, name: m.name || '', values: m.values || '', desc: m.desc || '', merge: !!m.merge } : { label: label, name: '', values: '', desc: '', merge: false };
@@ -5077,7 +5102,8 @@ function viewRfqEditor(id) {
       '</div></details>' +
       '<details class="box" open><summary>報價表格 <small>' + q.columns.length + ' 欄・' + q.rows.length + ' 列範例</small></summary><div class="box-body">' +
       '<div class="rfq-gtools"><button type="button" class="btn sm" data-rfq-act="import">匯入 Excel…</button><button type="button" class="btn sm ghost" data-rfq-act="addcol">＋ 欄位</button><button type="button" class="btn sm ghost" data-rfq-act="addrow">＋ 範例列</button>' +
-      '<button type="button" class="btn sm ghost" data-rfq-act="undo"' + (E.hist.length ? '' : ' disabled') + ' title="復原匯入、貼上、新增或刪除欄列等表格變更">↶ 復原表格' + (E.hist.length ? '（' + E.hist.length + '）' : '') + '</button></div>' +
+      '<button type="button" class="btn sm ghost" data-rfq-act="undo"' + (E.hist.length ? '' : ' disabled') + ' title="復原匯入、貼上、新增或刪除欄列等表格變更">↶ 復原表格' + (E.hist.length ? '（' + E.hist.length + '）' : '') + '</button>' +
+      (function () { const lib = rfqDescLib(q.id), n = q.columns.filter(c => rfqColBlank(c) && lib[rfqNormKey(c.label)]).length; return n ? '<button type="button" class="btn sm ghost" data-rfq-act="filldesc" title="別的報價表寫過同名欄位的說明，可以直接沿用">帶入同名欄位說明（' + n + ' 欄）</button>' : ''; })() + '</div>' +
       '<p class="rfq-ghint">第一列是欄位名稱（Excel 表頭），下面是範例列。可以在 Excel 選取多格後直接貼上；按 Enter 移到下一列。欄位上方：‹ › 調整順序、＋ 在右邊插入、✕ 刪除。</p>' +
       gridHTML(q) + '</div></details>' +
       '<details class="box" open><summary>欄位說明 <small>依表格欄位順序；共用說明的欄位會合併成一筆</small></summary><div class="box-body">' + fieldsHTML(q) + '</div></details>' +
@@ -5089,6 +5115,12 @@ function viewRfqEditor(id) {
   S.cleanup.push(() => clearTimeout(pt));
   function changed(structural) { markDirty(true); if (structural) renderForm(true); preview(); }
   function pushHist() { E.hist.push(JSON.stringify({ columns: P().columns, rows: P().rows })); if (E.hist.length > 30) E.hist.shift(); }
+  function autoDescs(only) {
+    const done = rfqFillDescs(P(), rfqDescLib(P().id), only);
+    if (done.length === 1) toast('「' + done[0].label + '」沿用了「' + done[0].from + '」寫過的說明，可以再修改', 'ok');
+    else if (done.length > 1) toast(done.length + ' 個欄位沿用了之前寫過的說明，可以再修改', 'ok');
+    return done.length;
+  }
   const blankCol = () => ({ label: '', name: '', values: '', desc: '', merge: false });
   bindForm(form, P, { templates: {}, rerender: () => renderForm(true), onChange: (path, structural) => {
     const m = path.match(/^columns\.(\d+)\.label$/);
@@ -5098,6 +5130,8 @@ function viewRfqEditor(id) {
   } });
   form.addEventListener('change', e => {
     const t = e.target;
+    const lm = t.dataset.bind && t.dataset.bind.match(/^columns\.(\d+)\.label$/);
+    if (lm && autoDescs(+lm[1])) { changed(true); return; }
     if (t.dataset.rfqProd) {
       const ids = P().productIds, i = ids.indexOf(t.dataset.rfqProd);
       if (t.checked && i < 0) ids.push(t.dataset.rfqProd); else if (!t.checked && i >= 0) ids.splice(i, 1);
@@ -5135,8 +5169,10 @@ function viewRfqEditor(id) {
         else { while (q.rows.length <= rr) q.rows.push(Array(q.columns.length).fill('')); q.rows[rr][cc] = v.replace(/\s*\n\s*/g, ' ').trim(); }
       });
     });
-    E.item = rfqNorm(q); changed(true);
-    toast('已貼上 ' + grid.length + ' 列 × ' + Math.max(...grid.map(r => r.length)) + ' 欄', 'ok');
+    E.item = rfqNorm(q);
+    const filled = isHead ? rfqFillDescs(E.item, rfqDescLib(E.item.id)).length : 0;
+    changed(true);
+    toast('已貼上 ' + grid.length + ' 列 × ' + Math.max(...grid.map(r => r.length)) + ' 欄' + (filled ? '，其中 ' + filled + ' 個欄位沿用了之前寫過的說明' : ''), 'ok');
   });
   form.addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b || !form.contains(b) || b.closest('.rte-bar')) return;
@@ -5149,6 +5185,7 @@ function viewRfqEditor(id) {
       pushHist(); q.columns = r.columns; q.rows = r.rows; E.item = rfqNorm(q); changed(true);
       return toast('已帶入 ' + r.columns.length + ' 個欄位、' + r.rows.length + ' 列範例；不對可按「↶ 復原表格」', 'ok');
     }
+    if (act === 'filldesc') { pushHist(); if (!autoDescs()) toast('沒有可以沿用的說明'); return changed(true); }
     if (act === 'undo') { const h = E.hist.pop(); if (!h) return; const s = JSON.parse(h); q.columns = s.columns; q.rows = s.rows; E.item = rfqNorm(q); return changed(true); }
     if (act === 'addcol') { pushHist(); q.columns.push(blankCol()); q.rows.forEach(r => r.push('')); E.item = rfqNorm(q); changed(true); const ins = $$('.rfq-grid tr.hdr input', form); if (ins.length) ins[ins.length - 1].focus(); return; }
     if (act === 'addrow') { pushHist(); q.rows.push(Array(q.columns.length).fill('')); changed(true); return; }
