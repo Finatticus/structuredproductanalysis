@@ -667,9 +667,6 @@ tr.row-hidden td { background: #fffbf2; }
 .rfq-meta .ex { font-family: var(--mono); font-weight: 700; color: var(--ink); }
 .rfq-meta .gap { width: 14px; }
 .rfq-dir { padding-bottom: 80px; }
-.rfq-peek { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 8px; }
-.rfq-peek span { font-family: var(--mono); font-size: 12.5px; font-weight: 600; color: var(--brand-ink); background: var(--brand-tint); border: 1px solid var(--brand-line); padding: 0 7px; line-height: 1.7; }
-.rfq-peek span.more { font-family: var(--sans); font-weight: 400; color: var(--muted); background: none; border: 0; padding: 0 2px; }
 .rfq-row .prod-desc:empty { display: none; }
 .rfq-plinks { display: flex; flex-wrap: wrap; gap: 10px 12px; margin-top: 20px; }
 .rfq-plinks a { display: inline-flex; align-items: center; gap: 14px; padding: 11px 16px 11px 18px; background: rgba(255,255,255,.12); border: 1px solid rgba(240,205,138,.65); border-left: 4px solid var(--gold-2); color: #fff; transition: background .15s, border-color .15s; }
@@ -2122,12 +2119,11 @@ function viewRfqIndex() {
     k++;
     const n = rfqNorm(q), cols = n.columns.map((c, i) => rfqLabel(c, i));
     const prods = n.productIds.map(id => S.data.products.find(p => p.id === id)).filter(p => p && (isAdmin() || p.status !== 'draft'));
-    const peek = cols.slice(0, 8).map(c => '<span>' + esc(c) + '</span>').join('') + (cols.length > 8 ? '<span class="more">… 共 ' + cols.length + ' 欄</span>' : '');
     return '<a class="prod rfq-row' + (q.status === 'draft' ? ' is-hidden' : '') + '" href="#/rfq/' + encodeURIComponent(q.id) + '" data-search="' + esc([q.title, q.eyebrow, q.lead, cols.join(' '), prods.map(p => p.name + ' ' + (p.code || '')).join(' ')].join(' ').toLowerCase()) + '">' +
       '<span class="prod-no">' + pad2(k) + '</span>' +
       '<span class="prod-name">' + esc(q.title) + (q.status === 'draft' ? '<span class="hide-pill" title="一般使用者看不到這份報價表">隱藏中</span>' : '') +
         (prods.length ? '<small>' + esc(prods.map(p => p.code || p.name).join(' · ')) + '</small>' : '') + '</span>' +
-      '<span class="prod-desc">' + (q.lead ? esc(q.lead) : '') + '<span class="rfq-peek">' + peek + '</span></span>' +
+      '<span class="prod-desc">' + (q.lead ? esc(q.lead) : '') + '</span>' +
       '<span class="prod-tags"><span class="badge npp">' + cols.length + ' 個欄位</span><span>' + (n.download.mode === 'path' ? '使用公司指定檔案' : '可下載 Excel') + '</span></span>' +
       '<span class="arrow">→</span></a>';
   };
