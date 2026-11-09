@@ -199,6 +199,11 @@ a:hover .arrow { transform: translateX(4px); }
 /* term sheet */
 .sheet-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 14.5px; font-weight: 600; color: var(--ink-2); letter-spacing: .04em; margin-bottom: 10px; }
 .sheet-head span + span { font-weight: 400; color: var(--muted); }
+/* 範例條件：提醒條件可客製化 */
+.terms-note { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; padding: 11px 14px; background: #f3f6fb; border: 1px solid #dbe3ef; border-left: 3px solid #2f5d9a; border-radius: 8px; font-size: 14.5px; line-height: 1.7; color: var(--ink-2); }
+.terms-note b { flex: none; color: #2f5d9a; font-weight: 700; }
+.terms-note a { color: #2f5d9a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 640px) { .terms-note { flex-direction: column; gap: 2px; font-size: 14px; } }
 .termsheet { width: 100%; border-collapse: collapse; font-size: 16.5px; border-top: 2px solid var(--brand); }
 .termsheet th, .termsheet td { padding: 12px 16px; border-bottom: 1px solid var(--rule-2); vertical-align: top; text-align: left; }
 .termsheet th { width: 34%; font-weight: 600; color: var(--ink-2); background: var(--tint-2); font-size: 15.5px; }
@@ -1745,7 +1750,12 @@ function productHTML(p, opt) {
   html += '<div class="doc"><nav class="toc" aria-label="本頁章節"><p>Contents</p><ol>' +
     secs.map((s, i) => '<li><a role="button" tabindex="0" data-goto="' + s[0] + '"><span>' + pad2(i + 1) + '</span>' + esc(s[1]) + '</a></li>').join('') + '</ol></nav><div class="sheet">';
   if (has('terms')) html += '<section class="sec" data-sec="terms">' + head('terms') +
-    '<div class="sheet-head"><span>假設性範例條件</span><span>Illustrative only</span></div>' +
+    '<div class="sheet-head"><span>假設性範例條件</span><span>Illustrative only</span></div>' + (() => {
+      const rq = rfqVisible().filter(x => (x.productIds || []).indexOf(p.id) >= 0);
+      const where = rq.length ? '可詢價的欄位與填法請見' + rq.map(x => '「<a href="#/rfq/' + encodeURIComponent(x.id) + '">' + esc(x.title) + '</a>」').join('、') + '。'
+        : '實際條件以詢價結果及產品說明書為準。';
+      return '<div class="terms-note"><b>條件可客製化</b><span>下表只是其中一組範例。履約價、KI／KO 價格與觀察頻率（每日或每期）、配息頻率、天期與連結標的等，都可以依需求調整，不一定和範例相同；' + where + '</span></div>';
+    })() +
     '<table class="termsheet">' + p.terms.map(t => '<tr><th>' + sanitize(t.k) + '</th><td>' + sanitize(t.v) + '</td></tr>').join('') + '</table></section>';
   if (has('mech')) html += '<section class="sec" data-sec="mech">' + head('mech') +
     (p.mechanics.length ? '<dl class="mech">' + p.mechanics.map(m => '<div class="mech-row"><dt>' + sanitize(m.k) + '</dt><dd>' + sanitize(m.v) + '</dd></div>').join('') + '</dl>' : '') +
@@ -1952,37 +1962,6 @@ function viewNotFound(msg) {
    8b. 報價表說明
    每一種架構的詢價表格：表頭＋範例列，下方逐欄說明；可下載 Excel，或改為指定公司檔案位置。
    ===================================================================== */
-const RFQ_SAMPLE = {
-  title: 'FCN / DRA 報價表', eyebrow: 'Quote Sheet · FCN / DRA',
-  lead: 'FCN 與 DRA 詢價時使用同一份表格，Type 欄填寫架構名稱，其餘欄位依下方說明填寫。',
-  columns: [
-    { label: 'Type', name: '商品架構', values: 'FCN, DRA', desc: '報價商品的架構，可以填寫 <b>FCN</b> 或 <b>DRA</b>。' },
-    { label: 'Currency', name: '計價幣別', values: '', desc: '商品的計價幣別，例如 AUD（澳幣）。<br>依境外結構型商品管理規則第十七條，不得以新台幣計價。' },
-    { label: 'Tenor (M)', name: '天期', values: '', desc: '商品天期，以「月」為單位，例如 12 代表 12 個月。<br>一般專業投資人做保本商品只能報 12 個月以內。' },
-    { label: 'Coupon', name: '配息率', values: '', desc: '配息率（年化），例如 19.86%。' },
-    { label: 'Coupon Period', name: '配息頻率', values: '', desc: '配息頻率，以「月」為單位，例如 1 代表每個月配息一次。' },
-    { label: 'Strike', name: '履約價', values: '', desc: '履約價，以期初價格的百分比表示，例如 75.00%。' },
-    { label: 'KI', name: '下限價', values: '', desc: '下限價，以期初價格的百分比表示，例如 50.00%。' },
-    { label: 'KI Freq', name: '下限價觀察頻率', values: 'AKI, EKI, NA', desc: '下限價的觀察方式：<br><b>AKI</b>：每日觀察<br><b>EKI</b>：只在到期日觀察<br><b>NA</b>：沒有下限價' },
-    { label: 'KO', name: '提前出場價', values: '', desc: '提前出場價，以期初價格的百分比表示，例如 110.00%。' },
-    { label: 'KO Freq', name: '提前出場觀察頻率', values: 'Daily, Period End', desc: '<b>Daily</b>：每日觀察<br><b>Period End</b>：每個配息期間的最後一天觀察一次' },
-    { label: 'KO Start', name: '提前出場起始觀察期間', values: '', desc: '從第幾期開始觀察提前出場，例如 1 代表從第 1 期開始。' },
-    { label: 'Memory KO', name: '記憶式提前出場', values: 'Yes, No', desc: '是否為記憶式提前出場，填寫 <b>Yes</b> 或 <b>No</b>。' },
-    { label: 'U1', name: '連結標的', values: '', desc: '連結標的的股票代號，例如 NVDA。最多 5 檔，從 U1 依序填寫，用不到的欄位留空。' },
-    { label: 'U2', merge: true }, { label: 'U3', merge: true }, { label: 'U4', merge: true }, { label: 'U5', merge: true },
-    { label: 'UF', name: '手續費', values: '', desc: '手續費，以百分比表示，例如 3.00%。' },
-    { label: 'T+', name: '發行日距', values: '', desc: '發行日距：交易日後第幾個營業日發行，例如 7 代表 T+7。' }
-  ],
-  rows: [['FCN', 'AUD', '12', '19.86%', '1', '75.00%', '50.00%', 'AKI', '110.00%', 'Daily', '1', 'Yes', 'NVDA', 'DELL', 'LLY', 'ARM', '', '3.00%', '7']],
-  notes: '',
-  download: { mode: 'file', fileName: 'FCN_DRA報價表', note: '', path: '', sample: true, guide: true, dropdown: true }
-};
-function rfqSampleItem() {
-  const q = clone(RFQ_SAMPLE);
-  q.id = ''; q.status = 'draft';
-  q.productIds = S.data.products.filter(p => /^(FCN|DRAN?)$/i.test(String(p.code || '').trim())).map(p => p.id);
-  return q;
-}
 function rfqNorm(q) {
   const o = Object.assign({ id: '', status: 'draft', title: '', eyebrow: '', lead: '', notes: '' }, q || {});
   o.columns = (Array.isArray(o.columns) ? o.columns : []).map(c => Object.assign({ label: '', name: '', values: '', desc: '', merge: false }, c));
@@ -4850,7 +4829,6 @@ const RFQ_BACKEND_NOTE = '報價表是新功能：請把新版 Code.gs 貼到 Ap
 function adminRfqs() {
   const list = S.data.rfqs;
   const warn = S.data.rfqOk ? '' : '<div class="onboard"><h3>後端需要更新</h3><p>' + esc(RFQ_BACKEND_NOTE) + '</p></div>';
-  const hasSample = list.some(x => /FCN/i.test(x.title || '') && /DRA/i.test(x.title || ''));
   const table = list.length ? '<div class="table-scroll"><table class="atable"><thead><tr><th style="width:76px">排序</th><th>報價表</th><th>欄位</th><th>下載方式</th><th>一般使用者</th><th>最後更新</th><th style="text-align:right">操作</th></tr></thead><tbody>' + list.map((q, i) =>
     '<tr' + (q.status === 'draft' ? ' class="row-hidden"' : '') + '><td><div class="ctl"><button class="icon-btn" title="上移" data-rq-move="-1" data-id="' + esc(q.id) + '"' + (i === 0 ? ' disabled' : '') + '>↑</button><button class="icon-btn" title="下移" data-rq-move="1" data-id="' + esc(q.id) + '"' + (i === list.length - 1 ? ' disabled' : '') + '>↓</button></div></td>' +
     '<td class="nm"><a href="#/admin/rfq/' + encodeURIComponent(q.id) + '">' + esc(q.title) + '</a><small>' + esc(q.eyebrow || '') + '</small></td>' +
@@ -4858,13 +4836,12 @@ function adminRfqs() {
     '<td class="when">' + fmtTime(q.updatedAt) + (q.updatedBy ? '<br>' + esc(q.updatedBy) : '') + '</td>' +
     '<td><div class="ctl" style="justify-content:flex-end"><a class="btn sm ghost" href="#/rfq/' + encodeURIComponent(q.id) + '">檢視</a><a class="btn sm" href="#/admin/rfq/' + encodeURIComponent(q.id) + '">編輯</a>' +
     '<button class="btn sm ghost" data-rq-dup="' + esc(q.id) + '">複製</button><button class="icon-btn del" title="刪除" data-rq-del="' + esc(q.id) + '">✕</button></div></td></tr>').join('') + '</tbody></table></div>'
-    : '<div class="empty-note">尚無報價表。可以「新增報價表」從空白開始（也能匯入 Excel），或先加入 FCN / DRA 範例參考。</div>';
+    : '<div class="empty-note">尚無報價表。可以「新增報價表」從空白開始，也能匯入 Excel。</div>';
   render(adminShell('rfqs', warn + '<div class="panel"><div class="panel-head"><h2>報價表 <small>各架構詢價用的表格與逐欄說明，顯示在「報價表說明」頁</small></h2><div class="ctl">' +
-    (hasSample ? '' : '<button class="btn sm ghost" data-rq-sample>＋ 加入 FCN / DRA 範例</button>') + '<a class="btn sm" href="#/admin/rfq/new">＋ 新增報價表</a></div></div>' + table + '</div>'), 'admin');
+    '<a class="btn sm" href="#/admin/rfq/new">＋ 新增報價表</a></div></div>' + table + '</div>'), 'admin');
   $('#app').querySelector('.adm').addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b) return;
     try {
-      if (b.dataset.rqSample !== undefined) { S.rfqSample = true; return go('#/admin/rfq/new'); }
       if (b.dataset.rqDup) { S.dupRfq = b.dataset.rqDup; return go('#/admin/rfq/new'); }
       if (b.dataset.rqMove) { const ids = list.map(x => x.id), i = ids.indexOf(b.dataset.id), j = i + +b.dataset.rqMove; [ids[i], ids[j]] = [ids[j], ids[i]]; busy(true, '調整排序…'); await reorder('rfqs', ids); busy(false); return adminRfqs(); }
       if (b.dataset.rvis) {
@@ -4884,7 +4861,7 @@ function adminRfqs() {
 
 /* ---------- 報價表：匯入 Excel ---------- */
 const rfqNormKey = s => String(s || '').toLowerCase().replace(/[\s()（）_\-.:：]/g, '');
-/* 欄位說明庫：所有報價表寫過的欄位說明，同名欄位（忽略大小寫、空白、括號）共用；最近更新的報價表優先，最後才用內建 FCN / DRA 範例 */
+/* 欄位說明庫：所有報價表寫過的欄位說明，同名欄位（忽略大小寫、空白、括號）共用；最近更新的報價表優先 */
 function rfqDescLib(skipId) {
   const lib = {};
   const put = (c, from) => {
@@ -4896,7 +4873,6 @@ function rfqDescLib(skipId) {
   (S.data.rfqs || []).filter(x => x.id !== skipId).slice()
     .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
     .forEach(x => (x.columns || []).forEach(c => put(c, x.title || '其他報價表')));
-  RFQ_SAMPLE.columns.forEach(c => put(c, '內建範例'));
   return lib;
 }
 const rfqColBlank = c => !c.merge && !String(c.desc || '').trim() && !String(c.name || '').trim() && !String(c.values || '').trim();
@@ -4935,7 +4911,7 @@ function rfqImport(cur) {
       '<div id="rqOpt" hidden><div class="f-grid" style="--c:3"><label class="f"><span>工作表</span><select class="sel" id="rqSheet"></select></label>' +
       '<label class="f"><span>欄位名稱在第幾列</span><select class="sel" id="rqHead"></select></label><label class="f"><span>帶入幾列範例</span><select class="sel" id="rqN"></select></label></div>' +
       '<div class="rfq-imp-opts"><label class="chk"><input type="checkbox" id="rqKeep" checked> 欄位名稱相同時，保留目前已寫好的說明</label>' +
-      '<label class="chk"><input type="checkbox" id="rqStd" checked> 其他欄位若在別的報價表（或內建範例）寫過同名欄位的說明，自動帶入</label></div>' +
+      '<label class="chk"><input type="checkbox" id="rqStd" checked> 其他欄位若在別的報價表寫過同名欄位的說明，自動帶入</label></div>' +
       '<div class="sub-h">預覽<small><span class="lg h"></span>欄位名稱　<span class="lg d"></span>會帶入的範例列</small></div><div class="rfq-imp-prev" id="rqPrev"></div>' +
       '<p class="muted" id="rqSum" style="font-size:13px;margin:8px 0 0"></p></div><p class="form-err"></p>',
     actions: [{ label: '取消', value: null }, { label: '帶入表格', value: true }],
@@ -5034,8 +5010,7 @@ function viewRfqEditor(id) {
     let src = { title: '', eyebrow: 'Quote Sheet', lead: '', columns: [{ label: '' }, { label: '' }, { label: '' }], rows: [['', '', '']] };
     const dup = S.dupRfq && S.data.rfqs.find(x => x.id === S.dupRfq);
     if (dup) { src = clone(dup); src.title = (src.title || '') + '（複本）'; ['id', 'updatedAt', 'updatedBy', 'order'].forEach(k => delete src[k]); }
-    else if (S.rfqSample) src = rfqSampleItem();
-    S.dupRfq = null; S.rfqSample = false;
+    S.dupRfq = null;
     src.status = 'draft';
     E = { item: rfqNorm(src), isNew: true };
   } else {
