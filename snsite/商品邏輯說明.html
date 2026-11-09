@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>商品邏輯說明</title>
+<style>
+  :root { --ink:#1f2a3a; --muted:#5b6778; --line:#e3e7ee; --bg:#f6f7f9; --card:#fff; --accent:#2f5d9a; --good:#1d7a4a; --bad:#b4372f; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif; font-size:16px; line-height:1.75; }
+  .wrap { max-width:880px; margin:0 auto; padding:32px 16px 64px; }
+  h1 { font-size:28px; margin:0 0 6px; }
+  .sub { color:var(--muted); margin:0 0 28px; }
+  h2 { font-size:20px; margin:40px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--accent); color:var(--accent); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin:0 0 14px; }
+  .card h3 { margin:0 0 4px; font-size:18px; }
+  .card h3 small { font-weight:400; color:var(--muted); font-size:14px; margin-left:6px; }
+  .one { margin:0 0 10px; color:var(--muted); }
+  .tag { display:inline-block; font-size:12.5px; padding:1px 8px; border-radius:99px; margin-left:6px; vertical-align:2px; border:1px solid; }
+  .pp { color:var(--good); border-color:#b9dcc8; background:#eef8f2; }
+  .np { color:var(--bad); border-color:#ecc3bf; background:#fbf0ef; }
+  .hid { color:var(--muted); border-color:var(--line); }
+  dl { margin:0; display:grid; grid-template-columns:110px 1fr; gap:6px 14px; }
+  dt { font-weight:700; color:var(--accent); }
+  dd { margin:0; }
+  ul { margin:0; padding-left:20px; }
+  li { margin:2px 0; }
+  .good { color:var(--good); font-weight:700; }
+  .bad { color:var(--bad); font-weight:700; }
+  .note { background:#fff8e6; border:1px solid #f1dfb0; border-radius:8px; padding:10px 14px; font-size:15px; }
+  code { font-family:inherit; background:#eef1f6; padding:0 5px; border-radius:4px; }
+  @media (max-width:600px) { dl { grid-template-columns:1fr; gap:2px; } dt { margin-top:8px; } h1 { font-size:24px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>商品邏輯說明</h1>
+  <p class="sub">依網站上每個架構的範例條件整理，用來確認我對各商品條款的理解。數字都是網站範例，實際條件可客製化。</p>
+
+  <h2>共通概念</h2>
+  <div class="card">
+    <dl>
+      <dt>期初價格</dt><dd>交易日收盤價（也可指定開盤價或 VWAP），所有「期初價格 × %」都以它為準。</dd>
+      <dt>最差表現</dt><dd>連結多檔時，看漲跌幅最差的那一檔；是否觸及 KI、是否低於履約價、接哪一檔股票，都看它。</dd>
+      <dt>下限價 KI</dt><dd><b>AKI</b>：每天收盤都觀察；<b>EKI</b>：只看最後評價日；<b>沒有 KI</b>：到期低於履約價就接股票。</dd>
+      <dt>接股票</dt><dd>有 KI 的商品：<span class="bad">曾觸及 KI，且到期最差標的低於履約價</span>，才以履約價承接最差標的。股數＝每單位面額 ÷ 履約價，不足一股以最後評價日收盤價換成現金。只跌破履約價、但沒碰過 KI，拿回 100% 本金。</dd>
+      <dt>提前出場 KO</dt><dd>觀察日所有標的都 ≥ KO 價，商品提前結束，拿回本金＋應計利息。<b>記憶式</b>：每檔只要在任一觀察日「曾經」達到就記住，全部都記住後出場；<b>非記憶式</b>：要同一天全部達到。保證領息期間內不觀察 KO。</dd>
+      <dt>情境範例假設</dt><dd>網站的情境圖假設最後評價日不觀察 KO，方便說明；實際上有些商品最後一天也看 KO，以產品說明書為準。</dd>
+    </dl>
+  </div>
+
+  <h2>Coupon 類商品</h2>
+
+  <div class="card">
+    <h3>FCN <small>Fixed Coupon Note</small><span class="tag np">不保本</span></h3>
+    <p class="one">用承擔股票下跌風險，換取固定配息。</p>
+    <dl>
+      <dt>配息</dt><dd>固定配息（例：年化 15%，每月配），不論漲跌，直到提前出場或到期。</dd>
+      <dt>提前出場</dt><dd>保證領息期（例：1 個月）過後，每日觀察；所有標的都曾 ≥ KO 價（例：100%，記憶式），拿回本金＋應計利息。</dd>
+      <dt>到期</dt><dd><ul>
+        <li>最差標的 ≥ 履約價（例：75%）→ <span class="good">100% 本金</span></li>
+        <li>最差標的 &lt; 履約價，但從沒觸及 KI（例：60%）→ <span class="good">100% 本金</span></li>
+        <li>曾觸及 KI，且到期 &lt; 履約價 → <span class="bad">以履約價承接最差標的</span></li>
+        <li>不論哪一種，期間配息都照領。</li></ul></dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>Stepdown FCN<span class="tag np">不保本</span></h3>
+    <p class="one">和 FCN 一樣，只差在 KO 的型態。</p>
+    <dl>
+      <dt>差異</dt><dd>KO 價逐期遞減（例：100% → 95% → 90% → 85% → 80% → 75%），而且只在每個配息期間的最後一天觀察一次（記憶式）。越到後期越容易出場。</dd>
+      <dt>其餘</dt><dd>固定配息、KI、履約價、到期判斷都和 FCN 相同。</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>Bullet FCN<span class="tag np">不保本</span></h3>
+    <p class="one">和 FCN 一樣，只差在配息方式。</p>
+    <dl>
+      <dt>差異</dt><dd>利息只在第一個配息日一次給（實質報酬，例：5% flat），之後不再配息。越早提前出場，換算的年化報酬越高；提前出場時只拿回本金。</dd>
+      <dt>其餘</dt><dd>KO、KI、履約價、到期判斷都和 FCN 相同。</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>DRA <small>Daily Range Accrual</small><span class="tag np">不保本</span></h3>
+    <p class="one">和 FCN 一樣，只差在配息改成浮動。</p>
+    <dl>
+      <dt>配息</dt><dd>保證領息期內足額配息；之後每天看最差標的是否 ≥ 履約價，有才計當天利息。每期配息＝年化配息率（例：20%）× 符合天數 ÷ 總天數。</dd>
+      <dt>其餘</dt><dd>KO、KI、履約價、到期判斷都和 FCN 相同；提前出場時拿回本金＋該期應計配息。</dd>
+    </dl>
+  </div>
+
+  <h2>紅利增強類商品</h2>
+
+  <div class="card">
+    <h3>BEN <small>Regular BEN</small><span class="tag np">不保本</span></h3>
+    <p class="one">期間不配息，到期看最差標的的漲幅，至少連結 2 檔。</p>
+    <dl>
+      <dt>到期</dt><dd><ul>
+        <li>漲幅 ≥ 紅利率（例：6%）→ <span class="good">本金＋全部漲幅</span>（100% 參與）</li>
+        <li>介於履約價（例：100%）與紅利率之間 → <span class="good">本金＋紅利率</span></li>
+        <li>&lt; 履約價，從沒觸及 KI（例：90%）→ <span class="good">100% 本金</span>，沒有紅利</li>
+        <li>&lt; 履約價，且曾觸及 KI → <span class="bad">以履約價承接最差標的</span></li></ul></dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>BEN with Lookback<span class="tag np">不保本</span></h3>
+    <p class="one">和 BEN 一樣，只差在期初價格怎麼定。</p>
+    <dl>
+      <dt>差異</dt><dd>發行後有一段回顧期間（例：4 週），每檔標的各自取這段期間的最低收盤價當期初價格；履約價、KI、紅利率都以這個價格計算。</dd>
+      <dt>其餘</dt><dd>到期判斷和 BEN 相同。</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>DCN <small>Digital Note</small><span class="tag np">不保本</span></h3>
+    <p class="one">類似 BEN，但不參與漲幅；可以只連結 1 檔。</p>
+    <dl>
+      <dt>到期</dt><dd><ul>
+        <li>最差標的 ≥ 履約價（例：100%）→ <span class="good">本金＋紅利率</span>（例：6%），漲再多也一樣</li>
+        <li>&lt; 履約價，從沒觸及 KI → <span class="good">100% 本金</span></li>
+        <li>&lt; 履約價，且曾觸及 KI → <span class="bad">以履約價承接最差標的</span></li></ul></dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>Booster<span class="tag np">不保本</span></h3>
+    <p class="one">到期上漲時用參與率放大收益，至少連結 2 檔。</p>
+    <dl>
+      <dt>到期</dt><dd><ul>
+        <li>最差標的 ≥ 下檔觸發價（例：100%）→ <span class="good">本金＋漲幅 × 參與率</span>（例：漲 30% × 180% ＝ 54%）</li>
+        <li>介於履約價（例：90%）與下檔觸發價之間 → <span class="good">100% 本金</span>，沒有收益</li>
+        <li>&lt; 履約價，從沒觸及 KI（例：80%）→ <span class="good">100% 本金</span></li>
+        <li>&lt; 履約價，且曾觸及 KI → <span class="bad">以履約價承接最差標的</span></li></ul></dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>保本 Super BEN <small>Infinity Note</small><span class="tag pp">保本</span></h3>
+    <p class="one">可提前出場領年化紅利；到期保本，並參與漲跌。</p>
+    <dl>
+      <dt>提前出場</dt><dd>保證領息期（例：3 個月）過後每月觀察；所有標的都曾 ≥ KO 價（例：105%，記憶式）→ 本金＋年化出場紅利（例：7%）× 持有時間。例：第 6 個月出場拿 3.5%。</dd>
+      <dt>到期</dt><dd>100% ＋ 年化紅利 × 年數 ± 最差標的漲跌幅，最低 100%。例（2 年）：漲 20% → 134%；跌 20% → 100＋14−20＝94%，低於 100% 所以拿回 100%。</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>保本 Callable BEN<span class="tag pp">保本</span></h3>
+    <p class="one">發行機構可提前買回；到期保本，上漲超過紅利率的部分用參與率放大。</p>
+    <dl>
+      <dt>提前買回</dt><dd>發行機構每月最後一天可決定買回 → 本金＋整包紅利率（例：12% flat，不論何時買回）。</dd>
+      <dt>到期</dt><dd><ul>
+        <li>最差標的 ≥ 期初價 → 本金＋紅利率＋超過紅利率的漲幅 × 參與率。例：漲 18% → 100＋12＋6 × 150% ＝ 121%；漲 10% → 112%</li>
+        <li>最差標的 &lt; 期初價 → <span class="good">100% 本金</span></li></ul></dd>
+    </dl>
+  </div>
+
+  <h2>其他股權結構型商品</h2>
+
+  <div class="card">
+    <h3>保本 KO Sharkfin<span class="tag pp">保本</span></h3>
+    <p class="one">保本型看空架構。</p>
+    <dl>
+      <dt>提前出場</dt><dd>每日觀察，標的跌破 KO 價（例：70%）就立即出場 → 本金＋出場紅利（例：8% flat）。</dd>
+      <dt>到期</dt><dd><ul>
+        <li>沒出場、到期下跌 → <span class="good">本金＋跌幅</span>（例：跌 28% → 128%；跌幅上限就是到 KO 價前）</li>
+        <li>到期上漲 → <span class="good">100% 本金</span></li></ul></dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>保本 Twinwin<span class="tag pp">保本</span></h3>
+    <p class="one">盤整策略：沒突破上下限界線，漲跌都賺。</p>
+    <dl>
+      <dt>觀察</dt><dd>上限界線（例：120%）與下限界線（例：80%），每日觀察。</dd>
+      <dt>到期</dt><dd><ul>
+        <li>從沒突破 → 本金＋漲跌幅的絕對值，最低為最小收益（例：3%）。例：漲 18% → 118%；跌 15% → 115%；持平 → 103%</li>
+        <li>曾經突破 → 到期一律 本金＋KO 收益（例：3%）</li></ul></dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>不保本 Twinwin<span class="tag np">不保本</span></h3>
+    <p class="one">可提前出場領年化配息；沒觸及 KI 時到期漲跌都賺。</p>
+    <dl>
+      <dt>提前出場</dt><dd>每月觀察，標的 ≥ KO 價（例：100%）→ 本金＋年化配息（例：15%）的應計利息。</dd>
+      <dt>到期</dt><dd><ul>
+        <li>從沒觸及 KI（例：80%）→ <span class="good">本金＋漲跌幅的絕對值</span>（例：跌 15% → 115%）</li>
+        <li>曾觸及 KI，到期 ≥ 履約價（例：100%）→ <span class="good">本金＋漲幅</span></li>
+        <li>曾觸及 KI，到期 &lt; 履約價 → <span class="bad">以履約價承接股票</span></li></ul></dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>DQ <small>Decumulator Note</small><span class="tag np">不保本</span></h3>
+    <p class="one">用高於期初的價格分批賣出手上股票。</p>
+    <dl>
+      <dt>期初</dt><dd>交付整個存續期間可能賣出的股票總價金（例：127 天 × 40 股 × USD 100 ＝ USD 508,000）。</dd>
+      <dt>每天</dt><dd>以履約價（例：期初 × 112%）賣出固定股數（例：40 股），每兩週結算一次款項。</dd>
+      <dt>提前出場</dt><dd>股價跌破 KO 價（例：90%）就出場，返還還沒賣出的股票。保證賣滿 4 週（20 個交易日）的量：4 週內出場，仍以 112% 一次賣完 4 週的股數。</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>AQ <small>Accumulator Note</small><span class="tag np">不保本</span></h3>
+    <p class="one">用低於期初的價格分批買進股票。</p>
+    <dl>
+      <dt>期初</dt><dd>交付最大可能的買進金額（例：252 天 × 20 股 × 2 倍 × USD 80 ＝ USD 806,400）。</dd>
+      <dt>每天</dt><dd>以履約價（例：期初 × 80%）買 20 股；當天股價低於履約價就買 2 倍（40 股）。每個月交割一次。</dd>
+      <dt>提前出場</dt><dd>股價漲過 KO 價（例：110%）就出場，返還還沒用到的款項。保證買滿 1 個月（21 天 × 20 股 ＝ 420 股）：例第 15 天出場，仍買進 420 股，退回 806,400 − 420 × 80 ＝ 772,800。</dd>
+    </dl>
+  </div>
+
+  <h2>利率結構型商品（皆保本）</h2>
+
+  <div class="card">
+    <h3>利差保本商品 <small>Steepener</small><span class="tag pp">保本</span></h3>
+    <p class="one">利差越大，配息越高。</p>
+    <dl>
+      <dt>第 1 年</dt><dd>固定配息（例：年化 10%），每季配。</dd>
+      <dt>第 2 年起</dt><dd>每季配息率 ＝（CMS 30Y − CMS 5Y）× 6，最低 2%（Floor）、最高 6%（Cap）；利差倒掛也至少 2%。每季只看一天（In-Advance 或 In-Arrears）。</dd>
+      <dt>買回</dt><dd>第 1 年後，發行機構每季配息日可買回 → 本金＋應計利息。</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>逆浮動利率 <small>Inverse Floater</small><span class="tag pp">保本</span></h3>
+    <p class="one">利率越低，配息越高，適合預期降息。</p>
+    <dl>
+      <dt>第 1 年</dt><dd>固定配息（例：年化 10%），每季配。</dd>
+      <dt>第 2 年起</dt><dd>每季配息率 ＝ 7.5% − CMS 10Y，最低 2%、最高 6%；CMS 10Y 高於 7.5%（算出負數）也至少 2%。</dd>
+      <dt>買回</dt><dd>同 Steepener。</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>利率DRA <small>DRAPGN</small><span class="tag pp">保本</span></h3>
+    <p class="one">利率落在區間內的天數才計息。</p>
+    <dl>
+      <dt>第 1 年</dt><dd>固定配息（例：年化 10%），每季配。</dd>
+      <dt>第 2 年起</dt><dd>每季配息 ＝ 5% × n ÷ N（n：CMS 10Y 介於 0%～4.2% 的天數，N：總天數）。沒有最低收益，全部在區間外就是 0。</dd>
+      <dt>買回</dt><dd>同 Steepener。</dd>
+    </dl>
+  </div>
+
+  <h2>隱藏中</h2>
+
+  <div class="card">
+    <h3>Bond Linked Note <small>BLN</small><span class="tag hid">隱藏中</span></h3>
+    <p class="one">連結美國公債，到期可能以含息價承接債券。</p>
+    <dl>
+      <dt>配息</dt><dd>固定配息（例：年化 5%），每月配。</dd>
+      <dt>到期</dt><dd><ul>
+        <li>債券價格（不含息）≥ 履約價 101.84 → <span class="good">本金＋配息</span></li>
+        <li>&lt; 履約價 → <span class="bad">以含息價 102.51 承接債券</span>：每單位 10,000 ÷ 102.51 ＝ 97.55，接 97 單位；剩下 0.55 單位以（最後價 95 ＋ 前手息 0.67）× 0.55 ＝ USD 52.62 現金返還</li></ul></dd>
+    </dl>
+  </div>
+
+  <p class="note">若有哪一段跟你的理解不同，告訴我是哪個商品、哪一句，我再一起確認網站上的內容。</p>
+</div>
+</body>
+</html>
