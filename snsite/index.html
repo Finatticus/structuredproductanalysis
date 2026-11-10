@@ -199,11 +199,9 @@ a:hover .arrow { transform: translateX(4px); }
 /* term sheet */
 .sheet-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 14.5px; font-weight: 600; color: var(--ink-2); letter-spacing: .04em; margin-bottom: 10px; }
 .sheet-head span + span { font-weight: 400; color: var(--muted); }
-/* 範例條件：提醒條件可客製化 */
-.terms-note { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; padding: 11px 14px; background: #f3f6fb; border: 1px solid #dbe3ef; border-left: 3px solid #2f5d9a; border-radius: 8px; font-size: 14.5px; line-height: 1.7; color: var(--ink-2); }
-.terms-note b { flex: none; color: #2f5d9a; font-weight: 700; }
-.terms-note a { color: #2f5d9a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
-@media (max-width: 640px) { .terms-note { flex-direction: column; gap: 2px; font-size: 14px; } }
+/* 章節標題後的括號補充（例：範例條件可客製化） */
+.sec-head .sec-aside { font-family: var(--sans); font-size: 15px; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 4px; white-space: nowrap; }
+@media (max-width: 640px) { .sec-head .sec-aside { font-size: 13.5px; white-space: normal; } }
 .termsheet { width: 100%; border-collapse: collapse; font-size: 16.5px; border-top: 2px solid var(--brand); }
 .termsheet th, .termsheet td { padding: 12px 16px; border-bottom: 1px solid var(--rule-2); vertical-align: top; text-align: left; }
 .termsheet th { width: 34%; font-weight: 600; color: var(--ink-2); background: var(--tint-2); font-size: 15.5px; }
@@ -396,20 +394,7 @@ body.ed-max-open #app { container-type: normal; }
 .foot strong { color: #fff; font-family: var(--serif); }
 
 /* ---------- home ---------- */
-.hero { padding: 40px 0 40px; }
-.hero-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 64px; align-items: end; }
-.hero .display { font-size: clamp(38px, 5.4vw, 64px); margin: 12px 0 16px; }
-.hero .display em { font-style: normal; color: var(--gold-2); }
-.hero-aside { border-top: 3px solid var(--gold-2); background: rgba(255,255,255,.1); padding: 0 22px; }
-.hero-aside dl { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid rgba(255,255,255,.18); }
-.hero-aside dl > div { padding: 10px 0 10px 12px; border-left: 1px solid rgba(255,255,255,.18); }
-.hero-aside dl > div:first-child { padding-left: 0; border-left: 0; }
-.hero-aside dt { font-size: 13px; letter-spacing: .02em; color: var(--on-brand-2); white-space: nowrap; }
-.hero-aside dd { margin: 0; font-family: var(--serif); font-size: 24px; font-weight: 700; color: #fff; line-height: 1.25; }
-.hero-aside .primer { display: flex; justify-content: space-between; align-items: center; padding: 13px 0; font-weight: 700; color: var(--gold-2); }
-.hero-aside .primer:hover { color: #fff; }
-.hero-aside .primer + .primer { border-top: 1px solid rgba(255,255,255,.18); }
-.hero-aside .primer small { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--on-brand-2); margin-left: 8px; }
+
 /* 首頁：隱藏中的架構（僅管理員看得到） */
 .prod.is-hidden { background: repeating-linear-gradient(135deg, #fbfaf6 0 12px, #f6f3ea 12px 24px); }
 .prod.is-hidden .prod-name, .prod.is-hidden .prod-desc { opacity: .62; }
@@ -1071,9 +1056,8 @@ body.srch-open { overflow: hidden; }
   .qa-mast-grid { grid-template-columns: minmax(0, 1fr); gap: 22px; }
   .sheet, .tools-sheet { --pad: 24px; }
   .vis-sum .sp { display: none; }
-  .masthead-grid, .hero-grid, .split { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .masthead-grid, .split { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .masthead { padding: 32px 0 36px; }
-  .hero { padding: 30px 0 32px; }
   .cards, .faq { grid-template-columns: minmax(0, 1fr); }
 }
 @container app (max-width: 560px) {
@@ -1112,9 +1096,6 @@ body.srch-open { overflow: hidden; }
   .form-grid .field:nth-child(odd) { border-left: 0; }
   .form-grid .field:nth-child(4) { border-left: 1px solid var(--rule-2); }
   .form-grid .field:nth-child(n+3) { border-top: 1px solid var(--rule-2); }
-  .hero-aside dd { font-size: 22px; }
-  .hero-aside dl > div { padding-left: 10px; }
-  .hero-aside dt { font-size: 12.5px; }
   .search { flex: 1 1 100%; }
   .search input { width: 100%; }
   .mast-edit { float: none; display: block; margin: 0 0 12px; }
@@ -1659,26 +1640,20 @@ function viewHome(focusCat, scrollTo) {
     if (t.hidden) return '<a class="is-hidden" href="' + esc(safeUrl(t.url)) + '" target="_blank" rel="noopener"><small>' + esc(t.label || 'EXTERNAL') + hid + '</small><strong>' + esc(t.title) + '</strong><span>' + esc(t.desc || '') + '</span><em>前往網站 ↗</em></a>';
     return '<a href="' + esc(safeUrl(t.url)) + '" target="_blank" rel="noopener"><small>' + esc(t.label || 'EXTERNAL') + '</small><strong>' + esc(t.title) + '</strong><span>' + esc(t.desc || '') + '</span><em>前往網站 ↗</em></a>';
   }).join('');
-  const primer = d.pages.find(p => (p.status !== 'draft' || isAdmin()) && p.showInNav !== false);
   render(onboarding +
-    '<section class="hero"><div class="wrap hero-grid"><div>' +
-      '<div class="eyebrow">' + esc(st.heroEyebrow || '') + '</div>' +
-      '<h1 class="display">' + esc(st.heroTitle || st.siteName || '') + (st.heroAccent ? '<br><em>' + esc(st.heroAccent) + '</em>' : '') + '</h1>' +
-      '<p class="lead">' + esc(st.heroLead || '') + '</p>' +
-      '<button type="button" class="hero-search" data-search-open><span>搜尋商品架構、常見 QA、報價表欄位…</span><kbd>/</kbd></button></div>' +
-      '<aside class="hero-aside"><dl><div><dt>商品架構</dt><dd>' + prods.length + '</dd></div><div><dt>商品類別</dt><dd>' + d.categories.length + '</dd></div>' +
-      '<div><dt>保本架構</dt><dd>' + ppCount + '</dd></div><div><dt>不保本架構</dt><dd>' + (prods.length - ppCount) + '</dd></div></dl>' +
-      (primer ? '<a class="primer" href="#/page/' + encodeURIComponent(primer.id) + '">' + esc(primer.title) + '<span class="arrow">→</span></a>' : '') +
-      (d.qaItems.length ? '<a class="primer" href="#/qa"><span>常見 QA<small>詢價・申購・到期等 ' + d.qaItems.length + ' 題</small></span><span class="arrow">→</span></a>' : '') +
-      (rfqVisible().length ? '<a class="primer" href="#/rfq"><span>報價表說明<small>' + rfqVisible().length + ' 份報價表・逐欄說明</small></span><span class="arrow">→</span></a>' : '') + '</aside>' +
-    '</div></section>' +
+    '<section class="masthead qa-mast home-mast"><div class="wrap"><div class="qa-mast-grid"><div>' +
+      '<div class="eyebrow">' + esc(st.heroEyebrow || 'Product Library') + '</div>' +
+      '<h1 class="display">商品架構</h1>' +
+      '<p class="lead">依商品類別整理各架構的範例條件、機制說明與到期情境，共 <b>' + prods.length + '</b> 個架構。</p></div>' +
+      '<div class="qa-mast-tools"><div class="search qa-search"><input id="q" type="search" placeholder="搜尋商品名稱、代碼、標的…" autocomplete="off" aria-label="搜尋商品架構"></div>' +
+      (isAdmin() ? '<div class="qa-mast-btns"><a class="btn sm warn" href="#/admin/product/new">＋ 新增商品</a><a class="btn sm light-ghost" href="#/admin/products">管理商品架構</a></div>' : '') + '</div>' +
+    '</div></div></section>' +
     '<div class="catalogue" id="catalogue"><div class="cat-tools"><div class="filter">' +
       '<button type="button" class="on" data-f="all">全部<sup>' + prods.length + '</sup></button>' +
       d.categories.map(c => '<button type="button" data-f="' + esc(c.id) + '">' + esc(c.name) + '<sup>' + catProducts(c.id).length + '</sup></button>').join('') +
       '<button type="button" data-f="pp">僅保本<sup>' + ppCount + '</sup></button>' +
-      (isAdmin() && hiddenCount ? '<button type="button" class="f-hidden" data-f="hidden" title="只有管理員看得到這個篩選">隱藏中<sup>' + hiddenCount + '</sup></button>' : '') + '</div>' +
-      '<label class="search"><input type="search" id="q" placeholder="搜尋商品名稱、代碼、標的…" aria-label="搜尋商品"></label></div>' +
-      cats + (isAdmin() ? '<button type="button" class="add-btn" data-new-cat>＋ 新增商品類別</button>' : '') +
+      (isAdmin() && hiddenCount ? '<button type="button" class="f-hidden" data-f="hidden" title="只有管理員看得到這個篩選">隱藏中<sup>' + hiddenCount + '</sup></button>' : '') + '</div></div>' +
+      cats + '<div class="cat home-none-wrap" hidden><div class="empty-note">找不到符合的商品架構。</div></div>' + (isAdmin() ? '<button type="button" class="add-btn" data-new-cat>＋ 新增商品類別</button>' : '') +
       (!d.categories.length && !isAdmin() ? '<div class="sheet" style="padding:30px">網站尚未建立內容。</div>' : '') +
     '</div>' +
     (tools ? '<section class="tools" id="tools"><div class="tools-sheet"><div class="sec"><div class="sec-head"><span class="sec-no">—</span><h2>工具與資源</h2><span class="en">Tools &amp; Resources</span></div><div class="tool-list">' + tools + '</div></div></div></section>' : ''),
@@ -1697,6 +1672,8 @@ function viewHome(focusCat, scrollTo) {
       });
       c.hidden = !(shown || (!rows.length && (filter === c.dataset.cat || (filter === 'all' && !q))));
     });
+    const none = $('.home-none-wrap', app);
+    if (none) none.hidden = $$('.cat[data-cat]', app).some(c => !c.hidden);
   };
   $$('.filter button', app).forEach(b => b.addEventListener('click', () => {
     filter = b.dataset.f;
@@ -1727,7 +1704,7 @@ function productHTML(p, opt) {
   const faqs = (p.qaIds || []).map(qaById).filter(Boolean);
   if (faqs.length) secs.push(['faq', '常見 QA', 'Q&A']);
   const has = key => secs.some(s => s[0] === key);
-  const head = key => { const i = secs.findIndex(s => s[0] === key); const s = secs[i]; return '<div class="sec-head"><span class="sec-no">' + pad2(i + 1) + '</span><h2>' + esc(s[1]) + '</h2><span class="en">' + esc(s[2]) + '</span></div>'; };
+  const head = (key, aside) => { const i = secs.findIndex(s => s[0] === key); const s = secs[i]; return '<div class="sec-head"><span class="sec-no">' + pad2(i + 1) + '</span><h2>' + esc(s[1]) + (aside ? '<span class="sec-aside">' + esc(aside) + '</span>' : '') + '</h2><span class="en">' + esc(s[2]) + '</span></div>'; };
   const list = visibleProducts().slice().sort((a, b) => catOrder(a) - catOrder(b) || (a.order || 0) - (b.order || 0));
   const idx = list.findIndex(x => x.id === p.id);
   const prev = idx > 0 ? list[idx - 1] : null, next = idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null;
@@ -1749,13 +1726,8 @@ function productHTML(p, opt) {
 
   html += '<div class="doc"><nav class="toc" aria-label="本頁章節"><p>Contents</p><ol>' +
     secs.map((s, i) => '<li><a role="button" tabindex="0" data-goto="' + s[0] + '"><span>' + pad2(i + 1) + '</span>' + esc(s[1]) + '</a></li>').join('') + '</ol></nav><div class="sheet">';
-  if (has('terms')) html += '<section class="sec" data-sec="terms">' + head('terms') +
-    '<div class="sheet-head"><span>假設性範例條件</span><span>Illustrative only</span></div>' + (() => {
-      const rq = rfqVisible().filter(x => (x.productIds || []).indexOf(p.id) >= 0);
-      const where = rq.length ? '可詢價的欄位與填法請見' + rq.map(x => '「<a href="#/rfq/' + encodeURIComponent(x.id) + '">' + esc(x.title) + '</a>」').join('、') + '。'
-        : '實際條件以詢價結果及產品說明書為準。';
-      return '<div class="terms-note"><b>條件可客製化</b><span>下表只是其中一組範例。履約價、KI／KO 價格與觀察頻率（每日或每期）、配息頻率、天期與連結標的等，都可以依需求調整，不一定和範例相同；' + where + '</span></div>';
-    })() +
+  if (has('terms')) html += '<section class="sec" data-sec="terms">' + head('terms', '（各項條件與頻率皆可客製化）') +
+    '<div class="sheet-head"><span>假設性範例條件</span><span>Illustrative only</span></div>' +
     '<table class="termsheet">' + p.terms.map(t => '<tr><th>' + sanitize(t.k) + '</th><td>' + sanitize(t.v) + '</td></tr>').join('') + '</table></section>';
   if (has('mech')) html += '<section class="sec" data-sec="mech">' + head('mech') +
     (p.mechanics.length ? '<dl class="mech">' + p.mechanics.map(m => '<div class="mech-row"><dt>' + sanitize(m.k) + '</dt><dd>' + sanitize(m.v) + '</dd></div>').join('') + '</dl>' : '') +
@@ -5220,9 +5192,7 @@ function adminSettings() {
   function body() {
     return '<div class="panel"><div class="panel-head"><h2>網站設定</h2><div class="ctl"><span class="dirty-dot" id="dirtyDot"></span><button class="btn sm ghost" id="histBtn">版本紀錄</button><button class="btn sm" id="saveSet" data-save-default>儲存設定</button></div></div><div class="panel-body" id="setForm">' +
       '<div class="f-grid"><label class="f"><span>網站名稱</span>' + inp('siteName', st.siteName) + '</label><label class="f"><span>英文副標</span>' + inp('siteSub', st.siteSub) + '</label>' +
-      '<label class="f"><span>首頁小標</span>' + inp('heroEyebrow', st.heroEyebrow) + '</label><label class="f"><span>首頁大標（第一行）</span>' + inp('heroTitle', st.heroTitle) + '</label>' +
-      '<label class="f"><span>首頁大標（第二行，金色）</span>' + inp('heroAccent', st.heroAccent) + '</label></div>' +
-      '<label class="f"><span>首頁說明</span><textarea class="txt" data-bind="heroLead">' + esc(st.heroLead || '') + '</textarea></label>' +
+      '<label class="f"><span>首頁小標</span>' + inp('heroEyebrow', st.heroEyebrow) + '</label></div>' +
       '<label class="f"><span>內部使用提醒（固定顯示在畫面最下方）</span>' + inp('internalNote', st.internalNote, '本網站所有內容僅供內部使用，切勿外傳') + '</label>' +
       '<label class="f"><span>免責聲明（固定顯示在畫面最下方，小字）</span><textarea class="txt" data-bind="disclaimer">' + esc(st.disclaimer || '') + '</textarea></label>' +
       '<div class="sub-h">公告橫幅<small>顯示在所有頁面最上方；清空公告內容就不顯示</small></div>' +
