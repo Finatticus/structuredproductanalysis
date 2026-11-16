@@ -14,6 +14,7 @@
     if (document.querySelector('nav.maintabs')) initTabs();
     initNews();
     initTips();
+    initMobileTables();
     initPrevNext(reports);
     if (document.getElementById('home')) buildHome(reports);
   });
@@ -62,6 +63,26 @@
     });
     document.addEventListener('click', function () { if (cur) hide(); });
     window.addEventListener('scroll', function () { if (cur) hide(); }, { passive: true });
+  }
+
+
+  // ---- 手機表格：為 3 欄以上的表格加上欄位標籤，手機版 CSS 會把每列改成直式卡片（電腦版不受影響）----
+  function initMobileTables() {
+    $all('.tbl table, .doc table').forEach(function (t) {
+      var heads = $all('thead th', t).map(function (th) { return th.textContent.trim(); });
+      if (heads.length < 3) return;
+      t.classList.add('mt');
+      $all('tbody tr', t).forEach(function (tr) {
+        var i = 0;
+        Array.prototype.forEach.call(tr.children, function (td) {
+          var span = parseInt(td.getAttribute('colspan') || '1', 10);
+          if (span === 1 && heads[i]) td.setAttribute('data-label', heads[i]);
+          if (td.textContent.trim().length > 16) td.classList.add('long');
+          if (!td.textContent.trim() && !td.children.length) td.classList.add('blank');
+          i += span;
+        });
+      });
+    });
   }
 
   // ---- 分頁（三層巢狀：主分頁 → 子分頁 → 子分頁）----

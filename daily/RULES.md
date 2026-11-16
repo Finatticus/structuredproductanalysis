@@ -404,6 +404,12 @@ git push origin main
 
 檔案：`daily/reports/YYYY-MM-DD.html`，`<body data-report="YYYY-MM-DD">`。共用 `../assets/report.css`、`../assets/report.js`、`../reports.js`。最可靠的範本是最近一份報告。
 
+- **`<head>` 必須包含 APP 圖示與 manifest**（從最近一份報告整段複製）：`favicon-32.png`、`favicon-64.png`、`apple-touch-icon`（`icon-180.png`）、`manifest.webmanifest`、`theme-color`、`apple-mobile-web-app-title`。圖示放在 `daily/assets/icons/`，不要改圖。
+- **手機版（直式）**：`report.css` 在 600px 以下有專用規則，電腦版不受影響，不要為了手機去改電腦版樣式。
+  - 3 欄以上的表格（必須有 `thead`）在手機上會自動變成直式卡片：第一欄當標題，其他欄依表頭顯示成「標籤＋內容」。所以**每張表都要有 `thead`，第一欄要放最能代表這一列的內容**（日期、名稱、項目）。
+  - 不要在表格或段落放很長、不能斷行的字串（網址、長代碼）；必要時放在連結文字裡。
+  - 交稿前用 375px 寬度檢查一次：頁面不能左右捲動。
+
 分頁（三層都用同一套規則）：
 
 ```html
@@ -541,6 +547,7 @@ git push origin main
 ---
 
 ## 修訂紀錄
+- 2026-11-16：第十一版。手機直式版面（600px 以下專用規則，表格自動轉卡片）；新增 APP 圖示與 manifest，所有頁面 head 都要放。
 - 2026-11-16：第十版。註解標籤加上滑鼠移過顯示說明（report.js TIPS）。
 - 2026-11-16：第九版。專題新增視覺輔助規範（時間線、因果流程、比較卡、長條圖），每個專題至少 2 個，敘述保留。
 - 2026-11-16：第八版。新增 4.7 分析方法細則（估值、技術、籌碼、傳導、機率、選題、選新聞、可信度、時區）與 4.8 交稿前自我檢核；報告用語改為「AI」；首頁清單主題單行、立場小字；首頁新增「分析 Prompt 說明」頁（method.html，自動讀取本檔與 RULES-PM.md）。
