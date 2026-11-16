@@ -13,9 +13,56 @@
     var reports = (window.REPORTS || []).slice().sort(function (a, b) { return a.id < b.id ? 1 : a.id > b.id ? -1 : 0; });
     if (document.querySelector('nav.maintabs')) initTabs();
     initNews();
+    initTips();
     initPrevNext(reports);
     if (document.getElementById('home')) buildHome(reports);
   });
+
+
+  // ---- 註解提示：.tbd 標籤滑鼠移過（或點一下）顯示說明。可用 data-tip 自訂內容 ----
+  var TIPS = {
+    '單一來源': '這個數字或說法目前只找到一個來源，沒有第二個獨立來源可以交叉確認，可信度較低，請保留一點懷疑。',
+    '非官方來源': '數字來自市場評論、彙整網站或部落格，不是交易所、政府或主要通訊社的原始資料，可能和官方數字略有出入。',
+    '二手資訊': '這是其他媒體轉述的內容，沒有找到原始報告或原文可以核對。',
+    '待確認': '目前還沒有可靠資料可以確認，之後的報告會再補查更新。',
+    '待確認日期': '確切的公布或發生日期還沒確認，括號內是依往例推估的時間。',
+    '日期待確認': '確切的公布或發生日期還沒確認，括號內是依往例推估的時間。',
+    '日期各行事曆不一': '不同的財經行事曆列出的日期不一致，實際時間以官方公告為準。',
+    '推定': '原文沒有標明時區或時間，這是依頁面資訊推算的結果。'
+  };
+  function initTips() {
+    $all('.tbd').forEach(function (el) {
+      if (!el.getAttribute('data-tip')) {
+        var k = el.textContent.trim();
+        var tip = TIPS[k];
+        if (!tip) { for (var key in TIPS) { if (k.indexOf(key) >= 0) { tip = TIPS[key]; break; } } }
+        if (!tip) return;
+        el.setAttribute('data-tip', tip);
+      }
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'note');
+      el.setAttribute('aria-label', el.textContent.trim() + '：' + el.getAttribute('data-tip'));
+    });
+    var box = document.createElement('div'); box.className = 'tipbox'; box.hidden = true; document.body.appendChild(box);
+    var cur = null;
+    function place(el) {
+      box.textContent = el.getAttribute('data-tip'); box.hidden = false;
+      var r = el.getBoundingClientRect(), bw = box.offsetWidth, bh = box.offsetHeight;
+      var left = Math.min(Math.max(8, r.left + r.width / 2 - bw / 2), window.innerWidth - bw - 8);
+      var top = r.top - bh - 8; if (top < 8) top = r.bottom + 8;
+      box.style.left = left + 'px'; box.style.top = top + 'px'; cur = el;
+    }
+    function hide() { box.hidden = true; cur = null; }
+    $all('.tbd[data-tip]').forEach(function (el) {
+      el.addEventListener('mouseenter', function () { place(el); });
+      el.addEventListener('mouseleave', hide);
+      el.addEventListener('focus', function () { place(el); });
+      el.addEventListener('blur', hide);
+      el.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); if (cur === el) hide(); else place(el); });
+    });
+    document.addEventListener('click', function () { if (cur) hide(); });
+    window.addEventListener('scroll', function () { if (cur) hide(); }, { passive: true });
+  }
 
   // ---- 分頁（三層巢狀：主分頁 → 子分頁 → 子分頁）----
   function kids(el, cls) { return Array.prototype.filter.call(el.children, function (c) { return c.classList.contains(cls); }); }

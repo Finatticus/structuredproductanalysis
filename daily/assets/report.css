@@ -432,3 +432,8 @@ li.next .tl-b { color: var(--ink-3); }
   .bar-row { grid-template-columns: 7em minmax(0, 1fr) 4.8em; }
   ol.timeline::before { left: 70px; } ol.timeline li { grid-template-columns: 60px minmax(0, 1fr); gap: 24px; } ol.timeline li::before { left: 65px; }
 }
+
+/* ---- 註解提示（浮動提示框，由 report.js 定位） ---- */
+.tbd[data-tip] { cursor: help; border-style: dashed; }
+.tbd[data-tip]:hover, .tbd[data-tip]:focus { background: var(--amber-soft); outline: none; }
+.tipbox { position: fixed; z-index: 60; max-width: 260px; background: var(--ink); color: #fff; font-size: .8rem; line-height: 1.65; padding: 8px 11px; box-shadow: 0 6px 18px rgba(17,24,39,.2); pointer-events: none; }
