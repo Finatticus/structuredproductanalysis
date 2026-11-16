@@ -73,21 +73,24 @@
     route(false);
   }
 
-  // ---- 新聞篩選 ----
+  // ---- 篩選（新聞、行事曆共用）：.fbar / .newsbar > button[data-filter]，對同一分頁內的 [data-mkt] 元素 ----
   function initNews() {
-    var bar = document.querySelector('.newsbar'); if (!bar) return;
-    var items = $all('.news[data-mkt]');
-    function apply(f) {
-      $all('button', bar).forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-filter') === f ? 'true' : 'false'); });
-      items.forEach(function (n) { n.hidden = !(f === 'all' || n.getAttribute('data-mkt') === f); });
-    }
-    $all('button', bar).forEach(function (b) {
-      var f = b.getAttribute('data-filter');
-      var c = f === 'all' ? items.length : items.filter(function (n) { return n.getAttribute('data-mkt') === f; }).length;
-      b.textContent = b.textContent + '（' + c + '）';
+    $all('.fbar, .newsbar').forEach(function (bar) {
+      var scope = bar.closest('section.panel') || document;
+      var items = $all('[data-mkt]', scope);
+      function has(n, f) { return (' ' + n.getAttribute('data-mkt') + ' ').indexOf(' ' + f + ' ') >= 0; }
+      function apply(f) {
+        $all('button', bar).forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-filter') === f ? 'true' : 'false'); });
+        items.forEach(function (n) { n.hidden = !(f === 'all' || has(n, f)); });
+      }
+      $all('button', bar).forEach(function (b) {
+        var f = b.getAttribute('data-filter');
+        var c = f === 'all' ? items.length : items.filter(function (n) { return has(n, f); }).length;
+        b.textContent = b.textContent + '（' + c + '）';
+      });
+      bar.addEventListener('click', function (e) { var b = e.target.closest('button[data-filter]'); if (b) apply(b.getAttribute('data-filter')); });
+      apply('all');
     });
-    bar.addEventListener('click', function (e) { var b = e.target.closest('button[data-filter]'); if (b) apply(b.getAttribute('data-filter')); });
-    apply('all');
   }
 
   // ---- 上一篇／下一篇 ----
@@ -95,6 +98,9 @@
     var prev = document.getElementById('prevBtn'), next = document.getElementById('nextBtn');
     if (!prev && !next) return;
     var id = document.body.getAttribute('data-report'), i = -1;
+    var me = reports.filter(function (r) { return r.id === id; })[0];
+    var kind = me ? (me.kind || 'am') : (/-pm$/.test(id) ? 'pm' : 'am');
+    reports = reports.filter(function (r) { return (r.kind || 'am') === kind; });
     reports.forEach(function (r, k) { if (r.id === id) i = k; });
     function wire(el, r) {
       if (!el) return;
@@ -105,34 +111,41 @@
   }
 
   // ---- 首頁 ----
-  function matrix(v) {
+  function line(v) {
     v = v || {};
-    var h = '<div class="tbl"><table class="matrix"><thead><tr><th>市場</th><th>短期</th><th>中期</th><th>長期</th></tr></thead><tbody>';
-    MKTS.forEach(function (m) { var x = v[m[0]] || {}; h += '<tr><td>' + m[1] + '</td><td>' + chip(x.s) + '</td><td>' + chip(x.m) + '</td><td>' + chip(x.l) + '</td></tr>'; });
-    return h + '</tbody></table></div>';
+    var h = '';
+    MKTS.forEach(function (m) {
+      var x = v[m[0]]; if (!x) return;
+      h += '<div class="vline"><b>' + m[1] + '</b>' +
+        (x.s ? '<span>短期 ' + chip(x.s) + '</span>' : '') +
+        (x.m ? '<span>中期 ' + chip(x.m) + '</span>' : '') +
+        (x.l ? '<span>長期 ' + chip(x.l) + '</span>' : '') + '</div>';
+    });
+    return h;
+  }
+  function card(r, label) {
+    if (!r) return '<div class="hcard empty"><div class="lbl">' + label + '</div><p class="muted">尚無報告。</p></div>';
+    var href = 'reports/' + r.id + '.html';
+    var pts = (r.points || []).map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('');
+    return '<div class="hcard"><div class="lbl">' + label + ' · ' + esc(r.date) + '（' + esc(r.weekday) + '）</div>' +
+      '<h2><a href="' + href + '">' + esc(r.headline) + '</a></h2>' +
+      (pts ? '<ul class="pts">' + pts + '</ul>' : '<p class="sum">' + esc(r.summary) + '</p>') +
+      '<div class="vlines">' + line(r.views) + '</div>' +
+      '<a class="cta" href="' + href + '">閱讀完整' + (r.kind === 'pm' ? '午報' : '早報') + '</a></div>';
+  }
+  function list(arr) {
+    if (!arr.length) return '<p class="muted small">尚無報告。</p>';
+    return arr.map(function (x) {
+      var t = (x.views || {}).tw || {};
+      return '<a class="row-link" href="reports/' + x.id + '.html"><span class="d">' + esc(x.date) + '<small>' + esc(x.weekday) + '</small></span>' +
+        '<span class="h">' + esc(x.headline) + '</span><span class="s">台股短期 ' + chip(t.s) + '</span></a>';
+    }).join('');
   }
   function buildHome(reports) {
-    var el = document.getElementById('latest'), ar = document.getElementById('archive');
-    if (!reports.length) { el.innerHTML = '<p class="muted">還沒有報告。</p>'; return; }
-    var r = reports[0], href = 'reports/' + r.id + '.html';
-    el.innerHTML =
-      '<div class="lbl">最新 · ' + esc(r.date) + '（' + esc(r.weekday) + '）' + (r.edition ? ' · ' + esc(r.edition) : '') + '</div>' +
-      '<h2><a href="' + href + '">' + esc(r.headline) + '</a></h2>' +
-      '<p class="sum">' + esc(r.summary) + '</p>' + matrix(r.views) +
-      (r.stats ? '<p class="small muted">' + esc(r.stats) + '</p>' : '') +
-      '<a class="cta" href="' + href + '">閱讀完整晨報</a>';
-    var by = {}, order = [];
-    reports.forEach(function (x) { var m = x.date.slice(0, 7); if (!by[m]) { by[m] = []; order.push(m); } by[m].push(x); });
-    var h = '';
-    order.forEach(function (m) {
-      h += '<div class="month"><h3>' + m.replace('-', ' 年 ') + ' 月</h3>';
-      by[m].forEach(function (x) {
-        var t = (x.views || {}).tw || {}, u = (x.views || {}).us || {};
-        h += '<a class="row-link" href="reports/' + x.id + '.html"><span class="d">' + esc(x.date) + '<small>' + esc(x.weekday) + '</small></span>' +
-          '<span class="h">' + esc(x.headline) + '</span><span class="s">台 ' + chip(t.s) + ' 美 ' + chip(u.s) + '</span></a>';
-      });
-      h += '</div>';
-    });
-    ar.innerHTML = h;
+    var am = reports.filter(function (r) { return (r.kind || 'am') === 'am'; });
+    var pm = reports.filter(function (r) { return r.kind === 'pm'; });
+    document.getElementById('latest').innerHTML = card(am[0], '最新早報') + card(pm[0], '最新盤後午報');
+    document.getElementById('list-am').innerHTML = list(am);
+    document.getElementById('list-pm').innerHTML = list(pm);
   }
 })();

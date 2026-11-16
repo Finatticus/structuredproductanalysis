@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>市場晨報</title>
-<meta name="description" content="平日 08:00：台灣、美國市場的短中長期看法、總經、全球重大事件與新聞。">
+<title>台美市場日報</title>
+<meta name="description" content="平日 07:00 早報、15:30 盤後午報：台灣與美國市場的短中長期看法、總經、全球重大事件與新聞分析。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700&display=swap">
@@ -14,20 +14,20 @@
 <header class="mast">
   <div class="wrap">
     <div class="mast-l">
-      <div class="kicker">Morning Note · Taiwan / US / Global</div>
-      <h1>市場晨報</h1>
-      <div class="meta"><span>週一至週五 台北時間 08:00 更新</span><span>短中長期觀點、總經、新聞</span></div>
+      <div class="kicker">Taiwan &amp; US Market Brief</div>
+      <h1>台美市場日報</h1>
+      <div class="meta"><span>以台灣、美國為主的市場分析，兼顧全球重大事件</span></div>
+      <div class="sched"><span><b>早報</b>　週一至週五 07:00 開始產出，約 07:30 前上線（資料截至 07:00）</span><span><b>盤後午報</b>　週一至週五 15:30 開始產出，約 16:00 前上線（資料截至 15:30）</span></div>
     </div>
-    <div class="mast-r"><a class="mbtn" href="../main.html">Analytics Hub</a></div>
   </div>
 </header>
 <div class="wrap body" id="home">
-  <section class="home-latest" id="latest"><p class="muted">載入中…</p></section>
-  <section class="archive">
-    <h2>所有晨報</h2>
-    <div id="archive"></div>
-  </section>
-  <p class="foot">清單上的標籤是短期（1–2 週）立場。內容由 Claude 依公開資訊整理，僅供參考，不構成投資建議。</p>
+  <section class="home-grid" id="latest"><p class="muted">載入中…</p></section>
+  <div class="archives">
+    <section class="archive"><h2>所有早報</h2><div id="list-am"></div></section>
+    <section class="archive"><h2>所有盤後午報</h2><div id="list-pm"></div></section>
+  </div>
+  <p class="foot">清單上的標籤是台股短期（1–2 週）立場。內容由 Claude 依公開資訊整理分析，僅供參考，不構成投資建議。</p>
 </div>
 <script src="reports.js"></script>
 <script src="assets/report.js"></script>

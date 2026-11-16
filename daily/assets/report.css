@@ -256,3 +256,29 @@ details.news .n-m { font-size: .76rem; color: var(--ink-3); margin: 0; }
   .subtabs.mk button { padding: 8px 14px; font-size: .9rem; }
 }
 @media print { details.news > .n-body { display: block; } }
+
+/* ---- 第五版：首頁早午報、篩選列、行事曆 ---- */
+.fbar { display: flex; flex-wrap: wrap; gap: 6px; }
+.fbar button { font: inherit; font-size: .84rem; padding: 4px 12px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink-2); cursor: pointer; }
+.fbar button[aria-pressed="true"] { background: var(--navy); color: #fff; border-color: var(--navy); }
+tr[hidden] { display: none; }
+#calendar td:nth-child(2), #calendar th:nth-child(2) { white-space: nowrap; }
+#calendar td:first-child { white-space: nowrap; }
+.home-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.hcard { background: var(--paper); border: 1px solid var(--rule); border-top: 3px solid var(--navy); padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.hcard h2 { font-family: var(--serif); font-size: 1.22rem; line-height: 1.45; }
+.hcard h2 a { color: var(--ink); text-decoration: none; }
+.hcard h2 a:hover { color: var(--navy-2); }
+.hcard .pts { color: var(--ink-2); font-size: .92rem; }
+.hcard .cta { align-self: flex-start; margin-top: auto; }
+.vlines { display: flex; flex-direction: column; gap: 6px; font-size: .84rem; color: var(--ink-2); border-top: 1px solid var(--rule-2); padding-top: 10px; }
+.vline { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.vline b { min-width: 2.5em; color: var(--ink); }
+.sched { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: .86rem; color: #dbe4ef; margin-top: 8px; }
+.sched b { color: #fff; }
+.archives { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 22px; }
+.archives .archive { margin-top: 0; }
+@media (max-width: 860px) { .home-grid, .archives { grid-template-columns: minmax(0, 1fr); } }
+.vline { gap: 4px 10px; }
+.vline .st { font-size: .74rem; padding: 0 6px; }
+.vline span { white-space: nowrap; }
