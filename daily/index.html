@@ -2,40 +2,33 @@
 <html lang="zh-Hant-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>每日市場日報</title>
-<meta name="description" content="每天早上 8 點更新：全球與台灣市場的短中長期看法，以及各國重點新聞。">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>市場晨報</title>
+<meta name="description" content="每天 08:00：台灣、美國、日本、南韓市場的短中長期看法、總經與新聞。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=Noto+Sans+TC:wght@400;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700&display=swap">
 <link rel="stylesheet" href="assets/report.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="topbar-in">
-    <a class="brand" href="./">每日<span>市場日報</span></a>
-    <span class="spacer"></span>
-    <a class="btn" href="../main.html">Analytics Hub</a>
-    <button class="btn" id="themeBtn" type="button">深／淺色</button>
+<header class="mast">
+  <div class="wrap">
+    <div class="mast-l">
+      <div class="kicker">Morning Note · Taiwan / US / Japan / Korea</div>
+      <h1>市場晨報</h1>
+      <div class="meta"><span>每天台北時間 08:00 更新</span><span>短中長期觀點、總經、新聞</span></div>
+    </div>
+    <div class="mast-r"><a class="mbtn" href="../main.html">Analytics Hub</a></div>
   </div>
 </header>
-
-<div class="home" id="home">
-  <div class="home-head">
-    <h1>每日市場日報</h1>
-    <p>每天早上 8 點更新。全球市場與台灣市場的短、中、長期看法，行情總覽，以及各國重點新聞的中文整理與原文連結。</p>
-  </div>
-
-  <section class="latest" id="latest"><p class="empty">載入中…</p></section>
-
+<div class="wrap body" id="home">
+  <section class="home-latest" id="latest"><p class="muted">載入中…</p></section>
   <section class="archive">
-    <h2>所有報告 <small class="muted small" id="count"></small></h2>
+    <h2>所有晨報</h2>
     <div id="archive"></div>
   </section>
-
-  <p class="foot">立場標籤顯示的是短期（1–2 週）看法；完整的中長期看法請點進報告。本站內容由 Claude 依公開資訊整理，僅供參考，不構成投資建議。</p>
+  <p class="foot">清單上的標籤是短期（1–2 週）立場。內容由 Claude 依公開資訊整理，僅供參考，不構成投資建議。</p>
 </div>
-
 <script src="reports.js"></script>
 <script src="assets/report.js"></script>
 </body>
