@@ -376,3 +376,59 @@ tr[hidden] { display: none; }
 .doc blockquote { border-left: 3px solid var(--teal); background: var(--teal-soft); margin-left: 0; padding: 8px 14px; }
 .doc-intro { background: var(--navy-soft); border-top: 3px solid var(--navy); padding: 14px 18px; margin-bottom: 18px; max-width: 920px; }
 @media (max-width: 520px) { .doc { padding: 16px; } }
+
+/* ---- 第九版：專題視覺輔助元件 ---- */
+.viz { border: 1px solid var(--rule); background: #fcfcfd; padding: 16px 18px 18px; }
+.viz-h { font-size: .8rem; font-weight: 700; letter-spacing: .08em; color: var(--ink-3); margin-bottom: 12px; }
+.viz-note { font-size: .76rem; color: var(--ink-3); margin-top: 10px; }
+.viz-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+/* 時間線 */
+ol.timeline { list-style: none; padding: 0; margin: 0; position: relative; }
+ol.timeline::before { content: ""; position: absolute; left: 92px; top: 6px; bottom: 6px; width: 2px; background: var(--rule); }
+ol.timeline li { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 26px; position: relative; padding: 6px 0; margin: 0; }
+ol.timeline li::before { content: ""; position: absolute; left: 87px; top: 13px; width: 12px; height: 12px; border-radius: 50%; background: var(--paper); border: 2px solid var(--navy-2); }
+ol.timeline li.key::before { background: var(--navy); border-color: var(--navy); }
+ol.timeline li.bad::before { background: var(--dn); border-color: var(--dn); }
+ol.timeline li.next::before { border-style: dashed; border-color: var(--gold); }
+.tl-d { font-family: var(--num); font-size: .84rem; font-weight: 600; color: var(--ink-2); text-align: right; padding-top: 3px; font-variant-numeric: tabular-nums; }
+li.next .tl-d { color: var(--gold); }
+.tl-b { font-size: .92rem; color: var(--ink-2); }
+.tl-b b { color: var(--ink); }
+li.next .tl-b { color: var(--ink-3); }
+
+/* 因果流程 */
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+.flow .step { flex: 1 1 120px; min-width: 0; border: 1px solid var(--rule); border-top: 3px solid var(--teal); background: var(--paper); padding: 8px 10px; font-size: .86rem; position: relative; }
+.flow .step b { display: block; font-size: .9rem; color: var(--ink); margin-bottom: 2px; }
+.flow .step small { color: var(--ink-3); font-size: .78rem; line-height: 1.5; display: block; }
+.flow .arrow { flex: 0 0 auto; align-self: center; color: var(--gold); font-weight: 700; font-size: 1.1rem; }
+.flow .step.hot { border-top-color: var(--up); }
+.flow-back { margin-top: 8px; font-size: .82rem; color: var(--teal); text-align: center; border-top: 1px dashed var(--teal); padding-top: 6px; }
+
+/* 比較卡 */
+.cards3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.cards2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ccard { border: 1px solid var(--rule); background: var(--paper); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.ccard h5 { font-size: .95rem; color: var(--navy); border-bottom: 1px solid var(--rule-2); padding-bottom: 6px; margin: 0; }
+.ccard dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; font-size: .84rem; }
+.ccard dt { color: var(--ink-3); white-space: nowrap; }
+.ccard dd { margin: 0; color: var(--ink-2); }
+.ccard ul { font-size: .86rem; color: var(--ink-2); }
+
+/* 長條圖 */
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: grid; grid-template-columns: 9em minmax(0, 1fr) 5.5em; gap: 10px; align-items: center; font-size: .86rem; }
+.bar-row .bl { color: var(--ink-2); text-align: right; }
+.bar-row .bt { height: 14px; background: var(--rule-2); position: relative; }
+.bar-row .bf { position: absolute; left: 0; top: 0; bottom: 0; background: var(--navy-2); }
+.bar-row .bf.teal { background: var(--teal); } .bar-row .bf.gold { background: var(--gold); }
+.bar-row .bf.up { background: var(--up); } .bar-row .bf.dn { background: var(--dn); } .bar-row .bf.gray { background: #a3abb6; }
+.bar-row .bv { font-family: var(--num); font-variant-numeric: tabular-nums; color: var(--ink); }
+.bars.center .bt::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--ink-3); }
+@media (max-width: 860px) {
+  .cards3, .cards2, .viz-grid { grid-template-columns: minmax(0, 1fr); }
+  .flow { flex-direction: column; } .flow .arrow { transform: rotate(90deg); }
+  .bar-row { grid-template-columns: 7em minmax(0, 1fr) 4.8em; }
+  ol.timeline::before { left: 70px; } ol.timeline li { grid-template-columns: 60px minmax(0, 1fr); gap: 24px; } ol.timeline li::before { left: 65px; }
+}
