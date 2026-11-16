@@ -102,9 +102,9 @@
 
 ```bash
 cd /c/Users/User/Desktop/news
-git pull --rebase origin main
 git add daily
 git commit -m "daily: YYYY-MM-DD 市場晨報"
+git pull --rebase origin main
 git push origin main
 ```
 
