@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>市場日報 分析 Prompt 說明</title>
+<meta name="description" content="市場日報早報與盤後午報的資料來源、分析方法與報告標準。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700&display=swap">
+<link rel="stylesheet" href="assets/report.css">
+</head>
+<body>
+<header class="mast">
+  <div class="wrap">
+    <div class="mast-l">
+      <div class="kicker">Market Daily · Method</div>
+      <h1>分析 Prompt 說明</h1>
+      <div class="meta"><span>AI 每次產出早報與盤後午報時遵循的規則全文</span></div>
+    </div>
+    <div class="mast-r"><a class="mbtn" href="./">回首頁</a></div>
+  </div>
+</header>
+<main class="wrap body">
+  <div class="doc-intro">
+    <p>以下內容直接讀取網站上的規則檔（<code>RULES.md</code>、<code>RULES-PM.md</code>），規則更新時這一頁會同步更新。重點章節：早報規則的「一、最高原則」「三、每日作業流程」「四、分析框架」（含 4.7 分析方法細則、4.8 自我檢核）；盤後午報規則的「二、時間界線與資料範圍」「四、分析方向」。</p>
+  </div>
+  <nav class="subtabs" id="docTabs">
+    <button data-doc="RULES.md" aria-selected="true">早報規則（含網站共用規格）</button>
+    <button data-doc="RULES-PM.md" aria-selected="false">盤後午報規則</button>
+  </nav>
+  <article class="doc" id="doc"><p class="muted">載入中…</p></article>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script>
+(function () {
+  var doc = document.getElementById('doc');
+  var cache = {};
+  function show(name) {
+    document.querySelectorAll('#docTabs button').forEach(function (b) {
+      b.setAttribute('aria-selected', b.getAttribute('data-doc') === name ? 'true' : 'false');
+    });
+    if (cache[name]) { doc.innerHTML = cache[name]; return; }
+    doc.innerHTML = '<p class="muted">載入中…</p>';
+    fetch(name + '?v=' + Date.now()).then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.text();
+    }).then(function (md) {
+      cache[name] = window.marked ? window.marked.parse(md) : '<pre>' + md.replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }) + '</pre>';
+      doc.innerHTML = cache[name];
+    }).catch(function () {
+      doc.innerHTML = '<p>無法載入規則檔，請稍後重新整理。也可以直接開啟 <a href="' + name + '">' + name + '</a>。</p>';
+    });
+  }
+  document.getElementById('docTabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-doc]'); if (b) show(b.getAttribute('data-doc'));
+  });
+  show('RULES.md');
+})();
+</script>
+</body>
+</html>

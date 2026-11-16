@@ -348,3 +348,31 @@ tr[hidden] { display: none; }
 /* 摘要內粗體重點用深墨色，條列間距稍大 */
 .summary li b { color: var(--navy); }
 .summary ul li + li { margin-top: 8px; }
+
+/* ---- 第八版：清單簡約、說明連結 ---- */
+.archive .row-link { grid-template-columns: 112px minmax(0, 1fr); align-items: start; padding: 11px 4px; }
+.archive .row-link .d { padding-top: 1px; }
+.row-link .h { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.row-link .ht { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .94rem; }
+.row-link .hs { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: .74rem; color: var(--ink-3); }
+.row-link .hs b { font-weight: 600; }
+.mast .wrap { position: relative; }
+.mlink { position: absolute; right: max(20px, env(safe-area-inset-right, 0px)); bottom: 14px; font-size: .78rem; color: #c9d6e6; text-decoration: none; border-bottom: 1px dotted rgba(201,214,230,.6); padding-bottom: 1px; }
+.mlink:hover { color: #fff; border-bottom-color: #fff; }
+@media (max-width: 860px) { .mlink { position: static; display: inline-block; margin-top: 10px; } .archive .row-link { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+/* 說明頁 */
+.doc { background: var(--paper); border: 1px solid var(--rule); padding: 24px 30px 34px; max-width: 920px; }
+.doc h1 { font-family: var(--serif); font-size: 1.5rem; color: var(--navy); border-bottom: 2px solid var(--navy); padding-bottom: 8px; }
+.doc h2 { font-family: var(--serif); font-size: 1.2rem; color: var(--navy); margin-top: 30px; padding-left: 10px; border-left: 3px solid var(--gold); }
+.doc h3 { font-size: 1.02rem; color: var(--teal); margin-top: 22px; }
+.doc h4 { font-size: .95rem; margin-top: 16px; }
+.doc p, .doc li { line-height: 1.85; }
+.doc p, .doc ul, .doc ol, .doc table, .doc pre, .doc blockquote { margin-top: 10px; }
+.doc table { font-size: .86rem; display: block; overflow-x: auto; }
+.doc th { background: #f6f7f9; }
+.doc code { font-family: ui-monospace, Consolas, monospace; font-size: .85em; background: #f3f4f6; padding: 1px 4px; }
+.doc pre { background: #f6f7f9; border: 1px solid var(--rule); padding: 10px 12px; overflow-x: auto; font-size: .82rem; }
+.doc pre code { background: none; padding: 0; }
+.doc blockquote { border-left: 3px solid var(--teal); background: var(--teal-soft); margin-left: 0; padding: 8px 14px; }
+.doc-intro { background: var(--navy-soft); border-top: 3px solid var(--navy); padding: 14px 18px; margin-bottom: 18px; max-width: 920px; }
+@media (max-width: 520px) { .doc { padding: 16px; } }

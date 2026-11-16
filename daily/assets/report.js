@@ -138,10 +138,13 @@
     if (!arr.length) return '<p class="muted small">尚無報告。</p>';
     return arr.map(function (x) {
       var v = x.views || {}, tags = '';
-      if (v.tw) tags += '<span>台 ' + chip(v.tw.s) + '</span>';
-      if (v.us) tags += '<span>美 ' + chip(v.us.s) + '</span>';
-      return '<a class="row-link" href="reports/' + x.id + '.html"><span class="d">' + esc(x.date) + '<small>' + esc(x.weekday) + '</small></span>' +
-        '<span class="h">' + esc(x.headline) + '</span><span class="s">' + tags + '</span></a>';
+      var S = { bull: '偏多', lbull: '中性偏多', neutral: '中性', lbear: '中性偏空', bear: '偏空' };
+      var cls = { bull: 'up', lbull: 'up', neutral: 'flat', lbear: 'dn', bear: 'dn' };
+      function t(lbl, k) { return k ? '<span class="hs-i">' + lbl + '短期 <b class="' + cls[k] + '">' + S[k] + '</b></span>' : ''; }
+      if (v.tw) tags += t('台股', v.tw.s);
+      if (v.us) tags += t('美股', v.us.s);
+      return '<a class="row-link" href="reports/' + x.id + '.html" title="' + esc(x.headline) + '"><span class="d">' + esc(x.date) + '<small>' + esc(x.weekday) + '</small></span>' +
+        '<span class="h"><span class="ht">' + esc(x.headline) + '</span><span class="hs">' + tags + '</span></span></a>';
     }).join('');
   }
   function buildHome(reports) {
