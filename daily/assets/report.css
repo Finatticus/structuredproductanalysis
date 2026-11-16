@@ -220,7 +220,7 @@ ul.checks li.half::before { content: "△"; color: var(--amber); border-color: v
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media print {
-  .tabbar, .mast-r, .newsbar, .subtabs { display: none; }
+  .tabbar, .mast-r, .newsbar, .fbar, .subtabs { display: none; }
   .panel, .subpanel, .news[hidden] { display: block !important; }
   body { background: #fff; }
 }
