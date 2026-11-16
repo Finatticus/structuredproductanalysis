@@ -282,3 +282,41 @@ tr[hidden] { display: none; }
 .vline { gap: 4px 10px; }
 .vline .st { font-size: .74rem; padding: 0 6px; }
 .vline span { white-space: nowrap; }
+
+/* ---- 第六版：首頁早午報區分、摘要三層 ---- */
+:root { --pm: #8a4b0f; --pm-soft: #fbf1e6; }
+.hcard.am { border-top: 5px solid var(--navy); }
+.hcard.pm { border-top: 5px solid var(--pm); }
+.hc-tag { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.hc-badge { font-size: 1rem; font-weight: 700; color: #fff; padding: 3px 12px; letter-spacing: .06em; }
+.hcard.am .hc-badge { background: var(--navy); }
+.hcard.pm .hc-badge { background: var(--pm); }
+.hc-date { font-family: var(--num); font-size: 1.35rem; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.hc-year { font-family: var(--num); font-size: .8rem; color: var(--ink-3); }
+.hcard.pm .cta { background: var(--pm); }
+.archive h2 { display: flex; align-items: center; gap: 8px; }
+.archive.am h2 { color: var(--navy); border-bottom-color: var(--navy); }
+.archive.pm h2 { color: var(--pm); border-bottom-color: var(--pm); }
+
+/* 摘要層級：第一層（分頁）最醒目；第二層（子分頁）次之；第三層（子分頁內的子分頁）最輕 */
+.panel > .summary { background: var(--navy-soft); border-top: 4px solid var(--navy); padding: 18px 22px 20px; }
+.panel > .summary .summary-h { font-size: .8rem; }
+.panel > .summary .summary-h::before { content: "■ "; }
+.subpanel > .summary { background: var(--paper); border: 1px solid var(--rule); border-left: 4px solid var(--navy-2); border-top: 1px solid var(--rule); padding: 12px 16px 14px; }
+.subpanel > .summary .summary-h { color: var(--navy-2); font-size: .72rem; }
+.subpanel > .summary .lead { font-size: 1.04rem; }
+.subpanel .subpanel > .summary { background: #f8f9fb; border: 0; border-left: 3px solid #9aa6b5; padding: 10px 14px 12px; font-size: .95rem; }
+.subpanel .subpanel > .summary .summary-h { color: var(--ink-3); font-size: .7rem; }
+.subpanel .subpanel > .summary .lead { font-size: 1rem; }
+/* 專題內文 */
+.essay { max-width: 52em; }
+.essay > * + * { margin-top: 10px; }
+.essay h4 { font-size: 1rem; color: var(--navy); margin-top: 16px; }
+.essay p { color: var(--ink); line-height: 1.85; }
+.view-box { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.view-box > div { border: 1px solid var(--rule); padding: 12px 14px; }
+.view-box h4 { font-size: .86rem; margin-bottom: 6px; }
+.view-box .mkt h4 { color: var(--ink-3); }
+.view-box .mine { border-color: var(--navy-2); background: var(--navy-soft); }
+.view-box .mine h4 { color: var(--navy); }
+@media (max-width: 860px) { .view-box { grid-template-columns: minmax(0, 1fr); } }

@@ -123,15 +123,16 @@
     });
     return h;
   }
-  function card(r, label) {
-    if (!r) return '<div class="hcard empty"><div class="lbl">' + label + '</div><p class="muted">尚無報告。</p></div>';
+  function card(r, label, kind) {
+    var tag = '<div class="hc-tag"><span class="hc-badge">' + label + '</span>' + (r ? '<span class="hc-date">' + esc(r.date.slice(5).replace('-', '/')) + '（' + esc(r.weekday) + '）</span><span class="hc-year">' + esc(r.date.slice(0, 4)) + '</span>' : '') + '</div>';
+    if (!r) return '<div class="hcard ' + kind + '">' + tag + '<p class="muted">尚無報告。</p></div>';
     var href = 'reports/' + r.id + '.html';
     var pts = (r.points || []).map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('');
-    return '<div class="hcard"><div class="lbl">' + label + ' · ' + esc(r.date) + '（' + esc(r.weekday) + '）</div>' +
+    return '<div class="hcard ' + kind + '">' + tag +
       '<h2><a href="' + href + '">' + esc(r.headline) + '</a></h2>' +
       (pts ? '<ul class="pts">' + pts + '</ul>' : '<p class="sum">' + esc(r.summary) + '</p>') +
       '<div class="vlines">' + line(r.views) + '</div>' +
-      '<a class="cta" href="' + href + '">閱讀完整' + (r.kind === 'pm' ? '午報' : '早報') + '</a></div>';
+      '<a class="cta" href="' + href + '">閱讀完整' + label + '</a></div>';
   }
   function list(arr) {
     if (!arr.length) return '<p class="muted small">尚無報告。</p>';
@@ -144,7 +145,7 @@
   function buildHome(reports) {
     var am = reports.filter(function (r) { return (r.kind || 'am') === 'am'; });
     var pm = reports.filter(function (r) { return r.kind === 'pm'; });
-    document.getElementById('latest').innerHTML = card(am[0], '最新早報') + card(pm[0], '最新盤後午報');
+    document.getElementById('latest').innerHTML = card(am[0], '早報', 'am') + card(pm[0], '盤後午報', 'pm');
     document.getElementById('list-am').innerHTML = list(am);
     document.getElementById('list-pm').innerHTML = list(pm);
   }
