@@ -320,3 +320,31 @@ tr[hidden] { display: none; }
 .view-box .mine { border-color: var(--navy-2); background: var(--navy-soft); }
 .view-box .mine h4 { color: var(--navy); }
 @media (max-width: 860px) { .view-box { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- 第七版：摘要辨識度、小標題間距、低調配色 ---- */
+:root { --teal: #1d5f5b; --teal-soft: #eef5f4; --gold-soft: #f7f1e3; }
+/* 摘要標題：放大、加細線，一眼看出是摘要 */
+.summary-h { display: flex; align-items: center; gap: 10px; font-family: var(--sans); letter-spacing: .08em; margin-bottom: 10px; }
+.summary-h::after { content: ""; flex: 1; height: 1px; background: currentColor; opacity: .25; }
+.panel > .summary .summary-h { font-size: 1.05rem; color: var(--navy); }
+.panel > .summary .summary-h::before { content: none; }
+.subpanel > .summary { background: var(--teal-soft); border: 0; border-left: 4px solid var(--teal); padding: 14px 18px 16px; }
+.subpanel > .summary .summary-h { font-size: .95rem; color: var(--teal); }
+.subpanel .subpanel > .summary { background: var(--gold-soft); border: 0; border-left: 3px solid var(--gold); padding: 12px 16px 14px; font-size: .95rem; }
+.subpanel .subpanel > .summary .summary-h { font-size: .88rem; color: #7a5c1e; }
+/* 小標題：和上一段拉開距離，左側細色條 */
+.panel h3 { margin-top: 30px !important; padding-left: 10px; border-left: 3px solid var(--gold); line-height: 1.3; }
+.panel .vhead h3 { margin-top: 0 !important; padding-left: 0; border-left: 0; }
+.panel > .summary + h3, .subpanel > .summary + h3, .subpanel > .kpis + h3 { margin-top: 22px !important; }
+.panel h3 + * { margin-top: 10px !important; }
+.essay h4 { color: var(--teal); margin-top: 24px !important; padding-bottom: 4px; border-bottom: 1px solid var(--rule-2); }
+.essay h4:first-child { margin-top: 4px !important; }
+.block > h3:first-child { margin-top: 6px !important; }
+/* 提示框：翻轉條件、觀察清單、歸納 用青綠；警示用琥珀 */
+.callout { border-left-color: var(--teal); background: #f7faf9; }
+.callout b:first-child { color: var(--teal); }
+.view-box .mine { border-color: var(--teal); background: var(--teal-soft); }
+.view-box .mine h4 { color: var(--teal); }
+/* 摘要內粗體重點用深墨色，條列間距稍大 */
+.summary li b { color: var(--navy); }
+.summary ul li + li { margin-top: 8px; }

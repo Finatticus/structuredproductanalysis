@@ -137,9 +137,11 @@
   function list(arr) {
     if (!arr.length) return '<p class="muted small">尚無報告。</p>';
     return arr.map(function (x) {
-      var t = (x.views || {}).tw || {};
+      var v = x.views || {}, tags = '';
+      if (v.tw) tags += '<span>台 ' + chip(v.tw.s) + '</span>';
+      if (v.us) tags += '<span>美 ' + chip(v.us.s) + '</span>';
       return '<a class="row-link" href="reports/' + x.id + '.html"><span class="d">' + esc(x.date) + '<small>' + esc(x.weekday) + '</small></span>' +
-        '<span class="h">' + esc(x.headline) + '</span><span class="s">台股短期 ' + chip(t.s) + '</span></a>';
+        '<span class="h">' + esc(x.headline) + '</span><span class="s">' + tags + '</span></a>';
     }).join('');
   }
   function buildHome(reports) {
