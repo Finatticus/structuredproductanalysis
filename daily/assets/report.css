@@ -224,3 +224,35 @@ ul.checks li.half::before { content: "△"; color: var(--amber); border-color: v
   .panel, .subpanel, .news[hidden] { display: block !important; }
   body { background: #fff; }
 }
+
+/* ---- 第三版追加：市場選單、可展開新聞 ---- */
+.subtabs.mk { border-bottom: 2px solid var(--navy); gap: 0; }
+.subtabs.mk button { font-size: .98rem; font-weight: 700; padding: 9px 22px; background: #f6f7f9; }
+.subtabs.mk button[aria-selected="true"] { background: var(--navy); color: #fff; }
+.subpanel .subpanel { padding-top: 14px; }
+.subpanel > .summary + .kpis, .subpanel > .kpis + .subtabs { margin-top: 16px; }
+.summary ul li + li { margin-top: 6px; }
+.newslist { border-top: 2px solid var(--navy); }
+details.news { border-bottom: 1px solid var(--rule); }
+details.news[hidden] { display: none; }
+details.news > summary { list-style: none; cursor: pointer; padding: 12px 34px 12px 0; position: relative; display: grid; grid-template-columns: 52px minmax(0, 1fr); column-gap: 12px; row-gap: 2px; }
+details.news > summary::-webkit-details-marker { display: none; }
+details.news > summary::after { content: "展開"; position: absolute; right: 0; top: 14px; font-size: .74rem; color: var(--navy-2); border: 1px solid var(--rule); padding: 0 5px; }
+details.news[open] > summary::after { content: "收合"; }
+details.news > summary:hover .n-t { color: var(--navy-2); }
+.n-mk { grid-row: span 3; font-size: .74rem; font-weight: 700; color: var(--gold); letter-spacing: .08em; padding-top: 3px; }
+details.news .n-t { font-size: 1rem; font-weight: 700; color: var(--ink); line-height: 1.5; }
+details.news .n-m { font-size: .76rem; color: var(--ink-3); margin: 0; }
+.n-one { font-size: .9rem; color: var(--ink-2); }
+.n-body { padding: 4px 0 16px 64px; max-width: 58em; }
+.n-body h5 { font-size: .78rem; letter-spacing: .1em; color: var(--navy); margin: 10px 0 4px; }
+.n-body ul { color: var(--ink-2); font-size: .92rem; }
+.n-body p { color: var(--ink-2); font-size: .92rem; }
+.n-link { margin-top: 10px !important; font-size: .86rem !important; }
+@media (max-width: 860px) {
+  details.news > summary { grid-template-columns: minmax(0, 1fr); }
+  .n-mk { grid-row: auto; }
+  .n-body { padding-left: 0; }
+  .subtabs.mk button { padding: 8px 14px; font-size: .9rem; }
+}
+@media print { details.news > .n-body { display: block; } }

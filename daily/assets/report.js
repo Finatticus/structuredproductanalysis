@@ -4,7 +4,7 @@
     bull: ['偏多', 'st-bull'], lbull: ['中性偏多', 'st-lbull'], neutral: ['中性', 'st-neutral'],
     lbear: ['中性偏空', 'st-lbear'], bear: ['偏空', 'st-bear']
   };
-  var MKTS = [['tw', '台灣'], ['us', '美國'], ['jp', '日本'], ['kr', '南韓']];
+  var MKTS = [['tw', '台灣'], ['us', '美國']];
   function chip(k) { var s = STANCE[k] || STANCE.neutral; return '<span class="st ' + s[1] + '">' + s[0] + '</span>'; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function $all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
@@ -17,52 +17,53 @@
     if (document.getElementById('home')) buildHome(reports);
   });
 
-  // ---- 分頁 ----
-  function selectIn(nav, id, scope, cls) {
+  // ---- 分頁（三層巢狀：主分頁 → 子分頁 → 子分頁）----
+  function kids(el, cls) { return Array.prototype.filter.call(el.children, function (c) { return c.classList.contains(cls); }); }
+  function navOf(scope) { var n = kids(scope, 'subtabs'); return n.length ? n[0] : null; }
+  function openSub(scope, id) {
+    var nav = navOf(scope); if (!nav) return;
+    var panes = kids(scope, 'subpanel');
+    if (!panes.some(function (p) { return p.id === id; })) {
+      var cur = panes.filter(function (p) { return p.classList.contains('on'); })[0];
+      id = cur ? cur.id : nav.querySelector('button[data-tab]').getAttribute('data-tab');
+    }
     $all('button[data-tab]', nav).forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === id ? 'true' : 'false'); });
-    $all(cls, scope).forEach(function (p) { p.classList.toggle('on', p.id === id); });
+    panes.forEach(function (p) { p.classList.toggle('on', p.id === id); });
+    var on = document.getElementById(id); if (on) openSub(on, null);
   }
-  function openMain(id, scroll) {
+  function openMain(id) {
     var nav = document.querySelector('nav.maintabs');
     if (!document.getElementById(id) || !nav.querySelector('[data-tab="' + id + '"]')) id = nav.querySelector('button[data-tab]').getAttribute('data-tab');
-    selectIn(nav, id, document, 'section.panel');
+    $all('button[data-tab]', nav).forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === id ? 'true' : 'false'); });
+    $all('section.panel').forEach(function (p) { p.classList.toggle('on', p.id === id); });
     var btn = nav.querySelector('[data-tab="' + id + '"]');
     if (btn && btn.scrollIntoView) { try { btn.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) {} }
-    if (scroll) { var bar = document.querySelector('.tabbar'); window.scrollTo(0, bar ? bar.offsetTop : 0); }
-    return document.getElementById(id);
-  }
-  function openSub(panel, id) {
-    var nav = panel.querySelector('nav.subtabs');
-    if (!nav) return;
-    if (!id || !panel.querySelector('#' + CSS.escape(id))) id = nav.querySelector('button[data-tab]').getAttribute('data-tab');
-    selectIn(nav, id, panel, 'div.subpanel');
+    var panel = document.getElementById(id); openSub(panel, null); return panel;
   }
   function route(scroll) {
-    var h = (location.hash || '').slice(1);
-    var target = h ? document.getElementById(h) : null;
-    if (target && target.classList.contains('subpanel')) {
-      var panel = target.closest('section.panel');
-      openMain(panel.id, scroll); openSub(panel, h);
-    } else {
-      var p = openMain(h || 'overview', scroll && !!h);
-      if (p) $all('nav.subtabs', p).forEach(function (n) { if (!n.querySelector('[aria-selected="true"]')) openSub(p, null); });
+    var h = decodeURIComponent((location.hash || '').slice(1));
+    var t = h ? document.getElementById(h) : null;
+    var chain = [];
+    for (var el = t; el; el = el.parentElement) { if (el.classList && (el.classList.contains('subpanel') || el.classList.contains('panel'))) chain.unshift(el); }
+    if (!chain.length || !chain[0].classList.contains('panel')) { openMain(h || 'overview'); }
+    else {
+      openMain(chain[0].id);
+      for (var i = 1; i < chain.length; i++) openSub(chain[i].parentElement, chain[i].id);
     }
+    if (scroll) { var bar = document.querySelector('.tabbar'); window.scrollTo(0, bar ? bar.offsetTop : 0); }
   }
   function initTabs() {
-    $all('section.panel').forEach(function (p) { openSub(p, null); });
     document.querySelector('nav.maintabs').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-tab]'); if (!b) return;
-      history.replaceState(null, '', '#' + b.getAttribute('data-tab'));
-      route(true);
+      history.replaceState(null, '', '#' + b.getAttribute('data-tab')); route(true);
     });
     $all('nav.subtabs').forEach(function (nav) {
       nav.addEventListener('click', function (e) {
         var b = e.target.closest('button[data-tab]'); if (!b) return;
         history.replaceState(null, '', '#' + b.getAttribute('data-tab'));
-        openSub(nav.closest('section.panel'), b.getAttribute('data-tab'));
+        openSub(nav.parentElement, b.getAttribute('data-tab'));
       });
     });
-    // 內文中的 #連結 也走分頁
     document.addEventListener('click', function (e) {
       var a = e.target.closest('a[href^="#"]'); if (!a || a.closest('nav')) return;
       var id = a.getAttribute('href').slice(1); if (!document.getElementById(id)) return;
@@ -75,7 +76,7 @@
   // ---- 新聞篩選 ----
   function initNews() {
     var bar = document.querySelector('.newsbar'); if (!bar) return;
-    var items = $all('article.news');
+    var items = $all('.news[data-mkt]');
     function apply(f) {
       $all('button', bar).forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-filter') === f ? 'true' : 'false'); });
       items.forEach(function (n) { n.hidden = !(f === 'all' || n.getAttribute('data-mkt') === f); });
