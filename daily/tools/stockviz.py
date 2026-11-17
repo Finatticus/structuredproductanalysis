@@ -21,6 +21,7 @@ CSV 欄位固定：date,open,high,low,close,volume（date 為 YYYY-MM-DD，由�
 import argparse
 import csv
 import html
+import re
 import sys
 from datetime import date
 
@@ -293,7 +294,7 @@ def cmd_bars(a):
             w = abs(v) / m * 100
             col = f" {a.color}" if a.color else ""
             bar = f'<span class="bf{col}" style="width:{w:.1f}%"></span>'
-        val = format(v, a.fmt)
+        val = rhu(v, a.fmt)
         if a.signed and v > 0:
             val = "+" + val
         val = val.replace("-", "−")
@@ -311,8 +312,17 @@ def _nums(txt):
     return out
 
 
+def rhu(v, f):
+    """依格式字串四捨五入（一律五入，不用銀行家進位），例如 ",.0f"、".2f"。"""
+    from decimal import Decimal, ROUND_HALF_UP
+    m = re.search(r"\.(\d+)f", f)
+    nd = int(m.group(1)) if m else 0
+    q = Decimal(str(v)).quantize(Decimal(1).scaleb(-nd), rounding=ROUND_HALF_UP)
+    return format(q, f)
+
+
 def _fmtv(v, f):
-    return format(v, f).replace("-", "−")
+    return rhu(v, f).replace("-", "−")
 
 
 def cmd_trend(a):

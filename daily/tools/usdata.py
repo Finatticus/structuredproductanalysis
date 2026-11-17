@@ -7,6 +7,9 @@
       - 有固定收盤時間的市場（股票、指數）：只列「截止前已經收盤」的最後一個交易日；截止時還在盤中或截止後才收盤的那一天會排除。
       - 24 小時交易的商品（期貨、匯率、比特幣、美元指數）：列「截止時的價格」（15 分鐘線，取截止前最後一根），
         日漲跌是和 24 小時前比，週漲跌是和約 7 天前比。
+  python daily/tools/usdata.py fund 代號 --cutoff "YYYY-MM-DD HH:MM" [--out 資料夾]
+      SEC 官方資料：近 8 季 GAAP 財報（營收、毛利率、營益率、淨利、稀釋 EPS；第四季＝全年減前三季推算），
+      以及近 90 天、截止前已收件的 Form 4（申報人、交易代碼、股數、自算加權平均價、是否 10b5-1）。存成 fund-us-代號.md。
   python daily/tools/usdata.py stock 代號 --cutoff "YYYY-MM-DD HH:MM" [--out 資料夾]
       美股個股近 14 個月日資料，存成 px-us-代號.csv，只到截止前已經收盤的最後一個交易日；最近 10 天收盤和 Nasdaq 交叉比對。
 
@@ -16,6 +19,7 @@ import argparse
 import csv
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -32,12 +36,13 @@ GROUPS = [
     ("美股指數", [("^GSPC", "S&P 500"), ("^IXIC", "Nasdaq 綜合"), ("^DJI", "道瓊"), ("^RUT", "羅素 2000"), ("^SOX", "費城半導體"), ("^VIX", "VIX")]),
     ("美股期貨（電子盤，截止時價格）", [("ES=F", "S&P 500 期貨"), ("NQ=F", "Nasdaq 100 期貨"), ("YM=F", "道瓊期貨")]),
     ("AI 與大型科技股", [("NVDA", "輝達"), ("TSM", "台積電 ADR"), ("AAPL", "蘋果"), ("MSFT", "微軟"), ("GOOGL", "Alphabet"), ("AMZN", "亞馬遜"),
-                        ("META", "Meta"), ("AVGO", "博通"), ("AMD", "AMD"), ("TSLA", "特斯拉"), ("MU", "美光"), ("ORCL", "甲骨文")]),
+                        ("META", "Meta"), ("AVGO", "博通"), ("AMD", "AMD"), ("TSLA", "特斯拉"), ("MU", "美光"), ("ORCL", "甲骨文"), ("CRWV", "CoreWeave")]),
     ("美債殖利率（%，CBOE 指數，參考用）", [("^IRX", "3 個月"), ("^FVX", "5 年"), ("^TNX", "10 年"), ("^TYX", "30 年")]),
+    ("美債 2 年期貨（參考，非殖利率）", [("ZT=F", "2 年期美債期貨")]),
     ("美元與匯率（截止時價格）", [("DX-Y.NYB", "美元指數"), ("TWD=X", "美元兌新台幣（國際報價）"), ("JPY=X", "美元兌日圓"), ("KRW=X", "美元兌韓元"),
                           ("CNY=X", "美元兌人民幣"), ("EURUSD=X", "歐元兌美元")]),
-    ("商品與加密資產（截止時價格）", [("CL=F", "WTI 原油"), ("BZ=F", "布蘭特原油"), ("NG=F", "天然氣"), ("GC=F", "黃金"), ("HG=F", "銅"), ("BTC-USD", "比特幣")]),
-    ("歐股", [("^STOXX50E", "歐洲 STOXX 50"), ("^GDAXI", "德國 DAX"), ("^FTSE", "英國 FTSE 100"), ("^FCHI", "法國 CAC 40")]),
+    ("商品與加密資產（截止時價格）", [("CL=F", "WTI 原油"), ("BZ=F", "布蘭特原油"), ("NG=F", "天然氣"), ("GC=F", "黃金"), ("HG=F", "銅"), ("TTF=F", "歐洲天然氣 TTF"), ("BTC-USD", "比特幣")]),
+    ("歐股", [("^STOXX", "歐洲 STOXX 600"), ("^STOXX50E", "歐洲 STOXX 50"), ("^GDAXI", "德國 DAX"), ("^FTSE", "英國 FTSE 100"), ("^FCHI", "法國 CAC 40")]),
     ("亞股", [("^TWII", "台灣加權"), ("^N225", "日經 225"), ("^KS11", "KOSPI"), ("^KQ11", "KOSDAQ"), ("000001.SS", "上證"),
              ("^HSI", "恆生"), ("^NSEI", "印度 Nifty 50")]),  # 創業板、科創 50 在 Yahoo 資料不穩，交給子代理
     ("日韓重點個股", [("8035.T", "東京威力"), ("6857.T", "愛德萬"), ("9984.T", "軟銀集團"), ("000660.KS", "SK 海力士"), ("005930.KS", "三星電子")]),
@@ -90,7 +95,7 @@ def completed(meta, bars, cutoff):
     reg = (meta.get("currentTradingPeriod") or {}).get("regular") or {}
     if reg.get("start") and bars[-1]["date"] == datetime.fromtimestamp(reg["start"], xtz).date():
         if reg["end"] > cutoff.timestamp() or reg["end"] > time.time():
-            return bars[:-1], "最新交易日在截止時尚未收盤，改列前一個收盤"
+            return bars[:-1], "已排除截止時尚未收盤的當日資料"
         return bars, ""
     # 最後一根不是 Yahoo 目前標示的交易時段：用最後成交時間判斷
     rmt = meta.get("regularMarketTime")
@@ -228,11 +233,121 @@ def stock(sym, cutoff, outdir):
     emit("\n來源：Yahoo Finance chart API；Nasdaq historical API（https://api.nasdaq.com/api/quote/代號/historical）。價格已依股票分割調整。")
 
 
+SEC_UA = {"User-Agent": "MarketDailyResearch research@example.com", "Accept": "application/json"}
+
+
+def sec_json(url):
+    time.sleep(0.15)
+    return fetch(url, SEC_UA)
+
+
+def sec_text(url):
+    time.sleep(0.15)
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=SEC_UA), timeout=25) as r:
+            return r.read().decode("utf-8", "replace")
+    except Exception:  # noqa
+        return ""
+
+
+def fund(sym, cutoff, outdir):
+    """SEC 官方資料：近 8 季財報（XBRL companyfacts）與近 90 天 Form 4（只列截止前收件的）。"""
+    emit(f"# 美股財報與內部人交易 {sym}（usdata.py fund，{datetime.now(TPE):%Y-%m-%d %H:%M} 台北抓取；只列台北 {cutoff:%Y-%m-%d %H:%M} 前已在 SEC 公開的資料）\n")
+    tick = fetch("https://www.sec.gov/files/company_tickers.json", SEC_UA) or {}
+    cik = next((str(v["cik_str"]).zfill(10) for v in tick.values() if v["ticker"].upper() == sym.upper()), None)
+    if not cik:
+        emit("找不到 CIK，請手動查 SEC。")
+        return
+    cutd = cutoff.astimezone(timezone.utc).date().isoformat()
+    facts = sec_json(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json") or {}
+    g = facts.get("facts", {}).get("us-gaap", {})
+    concepts = [("營收", ["RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues"], "USD"),
+                ("毛利", ["GrossProfit"], "USD"), ("營業利益", ["OperatingIncomeLoss"], "USD"),
+                ("淨利", ["NetIncomeLoss"], "USD"), ("稀釋 EPS（GAAP）", ["EarningsPerShareDiluted"], "USD/shares")]
+    table = {}
+    for label, names, unit in concepts:
+        q, y = {}, {}
+        for nm in names:
+            for f in g.get(nm, {}).get("units", {}).get(unit, []):
+                if f.get("filed", "9999") > cutd or "start" not in f:
+                    continue
+                days = (datetime.fromisoformat(f["end"]) - datetime.fromisoformat(f["start"])).days
+                if 80 <= days <= 100:
+                    q.setdefault(f["end"], f["val"])
+                elif 350 <= days <= 380:
+                    y.setdefault(f["end"], (f["start"], f["val"]))
+            if q:
+                break
+        for end, (start, val) in y.items():  # 第四季＝全年減前三季（推算）
+            if end in q:
+                continue
+            qs = [v for e, v in q.items() if start < e < end]
+            if len(qs) == 3:
+                q[end] = ("推算", val - sum(qs))
+        for e, v in q.items():
+            table.setdefault(e, {})[label] = v
+    ends = sorted(table)[-8:]
+    if ends:
+        emit("## 1. 近 8 季財報（SEC XBRL，GAAP；金額單位百萬美元）\n")
+        emit("| 季度結束日 | 營收 | 毛利率 | 營業利益 | 營益率 | 淨利 | 稀釋 EPS |\n|---|---|---|---|---|---|---|")
+        for e in ends:
+            r = table[e]
+            def v(k):  # noqa
+                x = r.get(k)
+                return (x[1], True) if isinstance(x, tuple) else (x, False)
+            rev, a1 = v("營收")
+            gp, a2 = v("毛利")
+            op, a3 = v("營業利益")
+            ni, a4 = v("淨利")
+            eps, a5 = v("稀釋 EPS（GAAP）")
+            mark = "（第四季為全年減前三季推算）" if any((a1, a2, a3, a4, a5)) else ""
+            emit(f"| {e}{mark} | {f2(rev / 1e6, 0) if rev else '—'} | {f2(gp / rev * 100, 1) + '%' if gp and rev else '—'} | "
+                 f"{f2(op / 1e6, 0) if op else '—'} | {f2(op / rev * 100, 1) + '%' if op and rev else '—'} | {f2(ni / 1e6, 0) if ni else '—'} | {f2(eps) if eps else '—'} |")
+        emit("\nGAAP 數字；non-GAAP 要看公司財報新聞稿（8-K 附件 99.1）。來源：https://data.sec.gov/api/xbrl/companyfacts/CIK" + cik + ".json\n")
+    else:
+        emit("## 1. 財報：XBRL 查無季度資料，請手動查 SEC。\n")
+    flush()
+    sub = sec_json(f"https://data.sec.gov/submissions/CIK{cik}.json") or {}
+    rec = sub.get("filings", {}).get("recent", {})
+    rows = []
+    for form, acc, acct, doc in zip(rec.get("form", []), rec.get("accessionNumber", []), rec.get("acceptanceDateTime", []), rec.get("primaryDocument", [])):
+        if form != "4":
+            continue
+        at = datetime.fromisoformat(acct.replace("Z", "+00:00"))
+        if at > cutoff or at < cutoff - timedelta(days=90):
+            continue
+        rows.append((acc, at, doc))
+    emit(f"## 2. 內部人交易（Form 4，近 90 天、截止前收件，共 {len(rows)} 份；最多解析 15 份）\n")
+    emit("| 收件（台北） | 申報人 | 交易日 | 代碼 | 股數 | 加權平均價 | 10b5-1 |\n|---|---|---|---|---|---|---|")
+    for acc, at, doc in rows[:15]:
+        base = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{acc.replace('-', '')}/"
+        idx = sec_json(base + "index.json") or {}
+        xml = next((i["name"] for i in idx.get("directory", {}).get("item", []) if i["name"].endswith(".xml")), None)
+        x = sec_text(base + xml) if xml else ""
+        owner = (re.search(r"<rptOwnerName>(.*?)</rptOwnerName>", x) or [None, "查無"])[1]
+        plan = "是" if "10b5-1" in x else ""
+        agg = {}
+        for t in re.findall(r"<nonDerivativeTransaction>(.*?)</nonDerivativeTransaction>", x, re.S):
+            gv = lambda tag: (re.search("<" + tag + r">\s*(?:<value>)?\s*([^<\s]*)", t) or [None, None])[1]  # noqa
+            key = (gv("transactionDate"), gv("transactionCode"))
+            sh, pr = float(gv("transactionShares") or 0), float(gv("transactionPricePerShare") or 0)
+            a_ = agg.setdefault(key, [0.0, 0.0])
+            a_[0] += sh
+            a_[1] += sh * pr
+        if not agg:
+            emit(f"| {at.astimezone(TPE):%m/%d %H:%M} | {owner} | 查無非衍生交易 | | | | {plan} |")
+        for (dt, code), (sh, amt) in agg.items():
+            emit(f"| {at.astimezone(TPE):%m/%d %H:%M} | {owner} | {dt} | {code} | {sh:,.0f} | {f2(amt / sh) if sh and amt else '—'} | {plan} |")
+    emit("\n代碼：S＝公開市場賣出、P＝公開市場買進、G＝贈與、F＝扣股繳稅、M＝執行選擇權、A＝獲配。加權平均價由各筆成交自算。"
+         f"來源：SEC EDGAR（https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik}&type=4）。13F 機構持股請另查，並逐份確認收件時間。")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = p.add_subparsers(dest="cmd", required=True)
     s = sp.add_parser("quotes"); s.add_argument("--cutoff", required=True); s.add_argument("--out"); s.add_argument("--extra", default="")
     s = sp.add_parser("stock"); s.add_argument("sym"); s.add_argument("--cutoff", required=True); s.add_argument("--out")
+    s = sp.add_parser("fund"); s.add_argument("sym"); s.add_argument("--cutoff", required=True); s.add_argument("--out")
     a = p.parse_args()
     cut = datetime.strptime(a.cutoff, "%Y-%m-%d %H:%M").replace(tzinfo=TPE)
     out = a.out or os.path.join("_research", cut.date().isoformat())
@@ -240,6 +355,9 @@ def main():
     if a.cmd == "quotes":
         FN[0] = os.path.join(out, f"official-us-{cut:%Y%m%d}.md")
         quotes(cut, a.extra)
+    elif a.cmd == "fund":
+        FN[0] = os.path.join(out, f"fund-us-{a.sym}.md")
+        fund(a.sym, cut, out)
     else:
         FN[0] = os.path.join(out, f"stock-us-{a.sym}.md")
         stock(a.sym, cut, out)
