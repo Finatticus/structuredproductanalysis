@@ -19,6 +19,7 @@ class P(HTMLParser):
     def __init__(self):
         super().__init__()
         self.stack, self.ids, self.buf, self.out, self.cur = [], [], [], [], None
+        self.in_meta = False
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
@@ -26,14 +27,20 @@ class P(HTMLParser):
             self.ids.append((tag, a["id"]))
         if tag in ("p", "li", "tr", "h1", "h4", "td") and self.cur is None:
             self.cur, self.buf = tag, []
+        elif tag == "span" and self.cur is None and (a.get("class") == "asof" or self.in_meta):
+            self.cur, self.buf = tag, []  # 分頁標題列的資料時間、刊頭 meta：舊日期最容易漏改
+        if tag == "div" and a.get("class") == "meta":
+            self.in_meta = True
         self.stack.append((tag, a.get("id")))
 
     def handle_endtag(self, tag):
         if self.cur == tag:
             t = re.sub(r"\s+", " ", "".join(self.buf)).strip()
-            if len(t) >= 20 and not any(k in t for k in SKIP):
+            if (len(t) >= 20 or (tag == "span" and len(t) >= 6)) and not any(k in t for k in SKIP):
                 self.out.append((self.ids[-1][1] if self.ids else "-", t))
             self.cur = None
+        if tag == "div" and self.in_meta and self.stack and self.stack[-1][0] == "div":
+            self.in_meta = False
         while self.stack:
             tg, i = self.stack.pop()
             if i and self.ids and self.ids[-1][1] == i:

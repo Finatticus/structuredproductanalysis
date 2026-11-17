@@ -166,6 +166,8 @@ def rowday(sym, name, cutoff, yld):
 def quotes(cutoff, extra):
     now = datetime.now(TPE)
     emit(f"# 美股與跨資產行情（usdata.py 產生，{now:%Y-%m-%d %H:%M} 台北抓取；截止 {cutoff:%Y-%m-%d %H:%M} 台北）\n")
+    if now < cutoff + timedelta(minutes=5):
+        emit("**警告：現在還沒過截止時間 5 分鐘。24 小時交易的商品、匯率、期貨抓到的不是截止價（報價也有幾分鐘延遲），這份輸出不可用於報告；請在截止 5 分鐘後重跑。**\n")
     if now > cutoff + timedelta(minutes=30):
         emit(f"**注意：抓取時間晚於截止時間超過 30 分鐘。** 腳本已排除截止後的價格，但 Yahoo 的資料可能在截止後被修正，引用時以截止時間為準。\n")
     emit("來源：Yahoo Finance chart API（https://query1.finance.yahoo.com/v8/finance/chart/代號）。\n")
