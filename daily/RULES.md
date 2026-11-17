@@ -41,7 +41,7 @@
 
 ### 步驟 0：讀檔與前置檢查（必做）
 
-1. 讀本檔全文。
+1. 讀本檔全文，以及 **`daily/state/lessons.md`（查核教訓筆記）全文**：過去查核抓到的錯誤類型，寫作時主動避開。
 2. **確認日期：** 用系統時間確認今天日期與星期。報告日期 D ＝ 觸發排程的那個平日（補跑規則見第九節）。確認 D 與前一個美國交易日是否休市（4.7「休市判斷」）。
 3. **同步與防重複：** 先 `git status`，再 `git pull --rebase --autostash origin main`。
    - `daily/reports/D.html` 已存在、或 `reports.js` 已有 D 的早報：停止，回報「已產出」。
@@ -118,6 +118,7 @@
 - 時間界線：台北 {D} 07:00；新聞窗口：台北 {起} 至 {訖}
 所有數字都要重新搜尋或抓官方資料核對，不能只比對研究筆記。
 連結打不開（403、付費牆、被擋）時標「無法確認」，不要當成錯誤。
+先讀 C:\Users\User\Desktop\news\daily\state\lessons.md（查核教訓筆記），特別檢查裡面列過的錯誤類型有沒有再出現。
 逐項檢查：（列出下面 1–9 項）
 回報格式：錯誤（必改）／過時（必改）／無法確認（加註或刪除），每項寫位置、原文、正確值與來源。
 ```
@@ -138,18 +139,20 @@
 
 主筆依清單修正（報告、reports.js、view-log 都要改）後才能發布。修正的內容不需要在報告裡另外交代，除非是更正前一天的報告。
 
+**記錄教訓（每次都要做）：** 查核發現的每一類問題，都寫進 `daily/state/lessons.md`。寫法照該檔開頭的說明：規則＋這次的例子；同類型已有就補例子；同類錯誤出現 3 次以上，就把預防方法寫進本檔的正式流程。這次沒有發現問題，就不用改。
+
 ### 步驟 6：發布
 
 ```bash
 cd /c/Users/User/Desktop/news
 git status --short
-git add daily/reports/YYYY-MM-DD.html daily/reports.js daily/state/view-log.md
+git add daily/reports/YYYY-MM-DD.html daily/reports.js daily/state/view-log.md daily/state/lessons.md
 git commit -m "daily: YYYY-MM-DD 早報" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
 git pull --rebase --autostash origin main
 git push origin main
 ```
 
-- 只 add 自己這份報告的三個檔案（報告 HTML、`reports.js`、`view-log.md`）。`git status` 若出現其他未 commit 的改動（例如規則檔），不是這次產出的就不要帶進去。
+- 只 add 自己這份報告的檔案（報告 HTML、`reports.js`、`view-log.md`，以及這次有更新的 `lessons.md`）。`git status` 若出現其他未 commit 的改動（例如規則檔），不是這次產出的就不要帶進去。
 - 如果 `git add` 出現 sparse-checkout 錯誤，檢查 `.git/info/sparse-checkout` 內容是否為一行 `/daily/`。
 - **rebase 衝突：** 只可能出在 `reports.js` 或 `view-log.md`（另一份報告同時推送）。兩邊的新項目都保留，依日期與早報、午報順序排好（最新在最上面），再 `git add` 並 `git rebase --continue`。其他檔案衝突時停止並回報，不要強制推送。
 - 推送後等 1–2 分鐘，用 curl 確認 `https://finatticus.github.io/structuredproductanalysis/daily/reports/YYYY-MM-DD.html` 回應 200。不是 200 就每 2 分鐘再試一次，最多 5 次；還是不行就在回報裡寫明。
@@ -239,6 +242,8 @@ git push origin main
 - 一句話寫對台美的含意
 
 ### 4.6 常見錯誤
+
+查核實際抓到的錯誤類型與例子，記在 `daily/state/lessons.md`（每份報告開始前必讀）。以下是分析上的常見錯誤：
 
 - 把國安基金進場日當最低點
 - 把單日反彈當趨勢反轉（要看外資是否連續回補）
@@ -639,6 +644,7 @@ git push origin main
 ## 修訂紀錄（最新在上）
 
 - 2026-11-17：6.3 新增：報告不可叫讀者看研究筆記，圖上沒標全的數字要在圖下補表。
+- 2026-11-17：新增查核教訓筆記 `daily/state/lessons.md`：步驟 0 必讀、查核子代理要對照、每次查核後把發現的問題類型寫進去並和報告一起 commit；同類錯誤 3 次以上要升級寫進正式流程。
 - 2026-11-17：5.5 新增時間序列圖（stockviz.py `trend`，直條＋折線、每點標數字）；時間序列不再用橫條圖。
 - 2026-11-17：第十四版。午報專題改為台美各一檔的「個股專題」（細節在 RULES-PM.md 4.7）；5.5 新增股價走勢圖與目標價區間圖，所有個股圖表與長條圖可用 `daily/tools/stockviz.py` 由資料產生；第七節首頁在早報、午報的時間說明下方各加一行兩種報告不同之處的簡述。
 - 2026-11-17：第十三版。依獨立審查補齊：步驟 0 加日期確認、git 同步與防重複、讀最近一份午報與早報、去重清單；研究筆記固定檔名；官方網址帶日期參數並確認回傳日期；reports.js 與 view-log 改在查核前寫好；查核子代理固定指示範本（只回報、不改檔，連結打不開標無法確認，另核對 reports.js、view-log 與範本殘留）；發布只 add 自己的三個檔案、加共同作者、rebase 衝突與 curl 失敗的處理；時間不夠時的優先順序；4.3 比較基準；4.7 新增口徑固定與休市判斷；5.5 證據天平與專題 id；5.8 去重規則統一、篩選值固定；5.9 title、星期寫法、頁尾固定、分頁標題列、範本清理、手機檢查方法、程式範例補上 tabbar；第七節首頁卡片與清單規格；第八節 view-log 標題格式與內容；第九節補跑、不補做過去日期、與午報同時執行、11/16 過渡說明。
