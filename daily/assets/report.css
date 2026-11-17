@@ -276,6 +276,8 @@ tr[hidden] { display: none; }
 .vline b { min-width: 2.5em; color: var(--ink); }
 .sched { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: .86rem; color: #dbe4ef; margin-top: 8px; }
 .sched b { color: #fff; }
+.ttl { display: flex; flex-wrap: wrap; align-items: baseline; }
+.ttl .tsub { font-size: .82rem; color: #c9d6e6; margin-left: 2.2em; }
 .sched .sd { display: block; font-size: .78rem; color: #b9c8da; margin-top: 2px; }
 @media (min-width: 861px) { .sched { padding-right: 9em; } }
 .archives { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 22px; }
