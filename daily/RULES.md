@@ -417,6 +417,7 @@ git push origin main
     - `python daily/tools/stockviz.py price CSV --days 120 --ma 20,60,120 --title "標題"`：輸出走勢圖（收盤線＋三條均線＋成交量）的完整 `div.viz`。
     - `python daily/tools/stockviz.py target --cur 現價 --pts "券商A=價,券商B=價" [--avg 共識 --src "資料商 日期"] --unit 元 --title "標題"`：輸出目標價區間圖（各家目標價、平均、現價）。
     - `python daily/tools/stockviz.py bars --items "標籤=數值,…" [--signed] [--unit 億元] [--fmt ,.1f] [--color teal]`：輸出 `div.bars`，寬度依最大值自動計算；`--signed` 輸出正負長條（`div.bars.center`）。用在營收、EPS、營收結構、法人買賣超等。
+    - `python daily/tools/stockviz.py trend --labels "Q1'25,…" --bars "數值,…" --bar-name 營收 [--bar-scale 1000 --bar-fmt .1f] [--line "數值,…" --line-name 毛利率 --line-unit %] [--line2 …] [--est "Q4'26F"] --title "標題" --note "說明"`：輸出時間序列圖（直條在下、折線在上，每個點直接標數字；`--est` 標示的點畫成虛線框，代表預估或財測）。**時間序列（營收、利益率、EPS、月營收等）一律用這個，不用橫條圖**；橫條只用在比較不同項目。
     - 工具輸出的 HTML 直接貼進報告；要改數字就改資料重跑，不要手改。
 - 所有視覺都包在 `div.viz`（標題 `div.viz-h`），兩個並排用 `div.viz-grid`。圖上的數字要和內文、表格一致，也要經過查核。
 - 視覺的 HTML 寫法從最近一份有該種視覺的報告複製（或用上面的工具產生），不要自己發明新 class。
@@ -636,6 +637,7 @@ git push origin main
 
 ## 修訂紀錄（最新在上）
 
+- 2026-11-17：5.5 新增時間序列圖（stockviz.py `trend`，直條＋折線、每點標數字）；時間序列不再用橫條圖。
 - 2026-11-17：第十四版。午報專題改為台美各一檔的「個股專題」（細節在 RULES-PM.md 4.7）；5.5 新增股價走勢圖與目標價區間圖，所有個股圖表與長條圖可用 `daily/tools/stockviz.py` 由資料產生；第七節首頁在早報、午報的時間說明下方各加一行兩種報告不同之處的簡述。
 - 2026-11-17：第十三版。依獨立審查補齊：步驟 0 加日期確認、git 同步與防重複、讀最近一份午報與早報、去重清單；研究筆記固定檔名；官方網址帶日期參數並確認回傳日期；reports.js 與 view-log 改在查核前寫好；查核子代理固定指示範本（只回報、不改檔，連結打不開標無法確認，另核對 reports.js、view-log 與範本殘留）；發布只 add 自己的三個檔案、加共同作者、rebase 衝突與 curl 失敗的處理；時間不夠時的優先順序；4.3 比較基準；4.7 新增口徑固定與休市判斷；5.5 證據天平與專題 id；5.8 去重規則統一、篩選值固定；5.9 title、星期寫法、頁尾固定、分頁標題列、範本清理、手機檢查方法、程式範例補上 tabbar；第七節首頁卡片與清單規格；第八節 view-log 標題格式與內容；第九節補跑、不補做過去日期、與午報同時執行、11/16 過渡說明。
 

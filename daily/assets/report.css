@@ -531,6 +531,16 @@ svg.cv { display: block; width: 100%; max-width: 680px; height: auto; margin: 0 
 .cv-tp { fill: var(--gold); opacity: .85; }
 .cv-cur { stroke: var(--navy); stroke-width: 2; }
 .cv-avg { fill: var(--teal); }
+.cv-col { fill: var(--navy-2); opacity: .55; }
+.cv-col.last { opacity: 1; }
+.cv-col.est { fill: #fff; stroke: var(--navy-2); stroke-width: 1.5; stroke-dasharray: 4 3; opacity: 1; }
+.cv-vl { fill: var(--ink-2); font-size: 11.5px; }
+.cv-ln1 { fill: none; stroke: var(--gold); stroke-width: 2; }
+.cv-ln2 { fill: none; stroke: var(--teal); stroke-width: 2; }
+.cv-ln1p { fill: var(--gold); }
+.cv-ln2p { fill: var(--teal); }
+.cv-ll1 { fill: var(--gold); font-size: 11.5px; font-weight: 600; }
+.cv-ll2 { fill: var(--teal); font-size: 11.5px; font-weight: 600; }
 .cv-leg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .78rem; color: var(--ink-2); margin-bottom: 8px; }
 .cv-leg i { display: inline-block; width: 16px; height: 3px; vertical-align: middle; margin-right: 5px; background: var(--navy); }
 .cv-leg i.k-ma1 { background: var(--gold); }
@@ -539,9 +549,14 @@ svg.cv { display: block; width: 100%; max-width: 680px; height: auto; margin: 0 
 .cv-leg i.k-vol { height: 9px; width: 9px; background: #a3abb6; }
 .cv-leg i.k-cur { width: 2px; height: 12px; }
 .cv-leg i.k-tp { width: 9px; height: 9px; border-radius: 50%; background: var(--gold); }
+.cv-leg i.k-col { width: 9px; height: 9px; background: var(--navy-2); }
+.cv-leg i.k-est { width: 9px; height: 9px; background: #fff; border: 1px dashed var(--navy-2); }
+.cv-leg i.k-ln1 { background: var(--gold); }
+.cv-leg i.k-ln2 { background: var(--teal); }
 .cv-leg i.k-avg { width: 9px; height: 9px; background: var(--teal); }
 @media (max-width: 600px) {
   .cv-ax { font-size: 17px; }
   .cv-tag, .cv-tag2 { font-size: 18px; }
   .cv-ltxt { font-size: 14px; }
+  .cv-vl, .cv-ll1, .cv-ll2 { font-size: 15px; }
 }

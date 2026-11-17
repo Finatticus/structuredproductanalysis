@@ -9,6 +9,9 @@
       輸出股價走勢圖（收盤線＋均線＋成交量）的 HTML（div.viz > svg.cv）。
   python daily/tools/stockviz.py target --cur 現價 --pts "券商A=價,券商B=價" [--avg 共識平均] [--unit 元]
       輸出目標價區間圖的 HTML；沒給 --avg 時用 pts 平均並標「自算」。
+  python daily/tools/stockviz.py trend  --labels "Q1'25,Q2'25,…" [--bars "數值,…" --bar-name 營收 --bar-fmt ,.0f --bar-scale 1]
+                                       [--line "數值,…" --line-name 毛利率 --line-unit %] [--line2 … --line2-name …] [--est "Q4'26 財測"]
+      輸出時間序列圖：直條（下）＋折線（上），每個點直接標數字。基本面的營收、EPS、利益率、月營收一律用這個，不用橫條。
   python daily/tools/stockviz.py bars   --items "標籤=數值,標籤=數值" [--unit 億元] [--signed] [--fmt ,.0f]
       輸出長條圖 HTML（div.bars），寬度自動依最大值計算；--signed 用 div.bars.center（正負）。
 
@@ -288,6 +291,112 @@ def cmd_bars(a):
     print("</div>")
 
 
+def _nums(txt):
+    if not txt:
+        return []
+    out = []
+    for x in txt.split(","):
+        x = x.strip()
+        out.append(None if x in ("", "-", "na") else float(x))
+    return out
+
+
+def _fmtv(v, f):
+    return format(v, f).replace("-", "−")
+
+
+def cmd_trend(a):
+    """時間序列圖：直條（下半）＋折線（上半），每個點直接標數字。"""
+    labels = [x.strip() for x in a.labels.split(",")]
+    n = len(labels)
+    bars = _nums(a.bars)
+    lines = [(_nums(a.line), a.line_name, "cv-ln1", "cv-ll1"), (_nums(a.line2), a.line2_name, "cv-ln2", "cv-ll2")]
+    lines = [l for l in lines if l[0]]
+    for seq in [bars] + [l[0] for l in lines]:
+        if seq and len(seq) != n:
+            sys.exit("數值個數和 --labels 不一致")
+    est = set(x.strip() for x in a.est.split(",") if x.strip())
+    W, H = 560, 300
+    L, R = 14, 14
+    pw = W - L - R
+    step = pw / n
+
+    def cx(i):
+        return L + step * (i + 0.5)
+
+    # 版面：有直條又有折線時，折線在上、直條在下
+    if bars and lines:
+        LT, LB, BT, BB = 26, 96, 136, 262
+    elif bars:
+        LT = LB = None
+        BT, BB = 30, 262
+    else:
+        LT, LB, BT, BB = 30, 250, None, None
+    dense = n > 8
+    out = [f'<svg class="cv" viewBox="0 0 {W} {H}" role="img" aria-label="{html.escape(a.title)}">']
+    # x 軸標籤
+    for i, lab in enumerate(labels):
+        if dense and (n - 1 - i) % 2:
+            continue
+        out.append(f'<text class="cv-ax" x="{cx(i):.1f}" y="{H - 10}" text-anchor="middle">{html.escape(lab)}</text>')
+    if bars:
+        vals = [v for v in bars if v is not None]
+        bmax = max(vals) if vals else 1
+        bmin = min(0, min(vals)) if vals else 0
+        span = (bmax - bmin) or 1
+
+        def by(v):
+            return BB - (v - bmin) / span * (BB - BT - 18)
+
+        out.append(f'<line class="cv-grid" x1="{L}" y1="{by(0):.1f}" x2="{W - R}" y2="{by(0):.1f}"/>')
+        bw = step * (0.5 if dense else 0.58)
+        for i, v in enumerate(bars):
+            if v is None:
+                continue
+            y0, y1 = by(0), by(v)
+            top, h = min(y0, y1), abs(y0 - y1)
+            cls = "cv-col est" if labels[i] in est else ("cv-col last" if i == n - 1 else "cv-col")
+            out.append(f'<rect class="{cls}" x="{cx(i) - bw / 2:.1f}" y="{top:.1f}" width="{bw:.1f}" height="{max(h, 0.5):.1f}"/>')
+            if not dense or (n - 1 - i) % 2 == 0 or i == n - 1:
+                ty = top - 5 if v >= 0 else top + h + 13
+                out.append(f'<text class="cv-vl" x="{cx(i):.1f}" y="{ty:.1f}" text-anchor="middle">{_fmtv(v / a.bar_scale, a.bar_fmt)}</text>')
+    if lines:
+        allv = [v for l in lines for v in l[0] if v is not None]
+        lo, hi = min(allv), max(allv)
+        pad = (hi - lo) * 0.15 or abs(hi) * 0.1 or 1
+        lo, hi = lo - pad, hi + pad
+
+        def ly(v):
+            return LB - (v - lo) / (hi - lo) * (LB - LT)
+
+        for k, (seq, name, lcls, tcls) in enumerate(lines):
+            pts = [(cx(i), ly(v)) for i, v in enumerate(seq) if v is not None]
+            out.append(f'<polyline class="{lcls}" points="{" ".join(f"{x:.1f},{y:.1f}" for x, y in pts)}"/>')
+            for i, v in enumerate(seq):
+                if v is None:
+                    continue
+                out.append(f'<circle class="{lcls}p" cx="{cx(i):.1f}" cy="{ly(v):.1f}" r="3"/>')
+                if dense and (n - 1 - i) % 2 and i != n - 1:
+                    continue
+                other = lines[1 - k][0][i] if len(lines) == 2 else None
+                dy = -8 if (other is None or v > other or (v == other and k == 0)) else 15  # 兩條線時，較高的標在上方、較低的標在下方
+                out.append(f'<text class="{tcls}" x="{cx(i):.1f}" y="{ly(v) + dy:.1f}" text-anchor="middle">{_fmtv(v, a.line_fmt)}{a.line_unit}</text>')
+    out.append("</svg>")
+    leg = []
+    if bars:
+        leg.append(f'<span><i class="k-col"></i>{html.escape(a.bar_name)}</span>')
+        if est:
+            leg.append('<span><i class="k-est"></i>預估或財測</span>')
+    for k, (seq, name, lcls, tcls) in enumerate(lines):
+        leg.append(f'<span><i class="k-ln{k + 1}"></i>{html.escape(name)}</span>')
+    print(f'<div class="viz"><div class="viz-h">{html.escape(a.title)}</div>')
+    print(f'  <div class="cv-leg">{"".join(leg)}</div>')
+    print("  " + "".join(out))
+    if a.note:
+        print(f'  <p class="viz-note">{html.escape(a.note)}</p>')
+    print("</div>")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -299,8 +408,13 @@ def main():
     s.add_argument("--title", default="市場預期目標價")
     s = sp.add_parser("bars"); s.add_argument("--items", required=True); s.add_argument("--unit", default="")
     s.add_argument("--signed", action="store_true"); s.add_argument("--fmt", default=",.0f"); s.add_argument("--color", default="")
+    s = sp.add_parser("trend"); s.add_argument("--labels", required=True); s.add_argument("--bars", default="")
+    s.add_argument("--bar-name", default=""); s.add_argument("--bar-fmt", default=",.0f"); s.add_argument("--bar-scale", type=float, default=1)
+    s.add_argument("--line", default=""); s.add_argument("--line-name", default=""); s.add_argument("--line2", default="")
+    s.add_argument("--line2-name", default=""); s.add_argument("--line-fmt", default=".1f"); s.add_argument("--line-unit", default="")
+    s.add_argument("--est", default=""); s.add_argument("--title", default=""); s.add_argument("--note", default="")
     a = p.parse_args()
-    {"stats": cmd_stats, "price": cmd_price, "target": cmd_target, "bars": cmd_bars}[a.cmd](a)
+    {"stats": cmd_stats, "price": cmd_price, "target": cmd_target, "bars": cmd_bars, "trend": cmd_trend}[a.cmd](a)
 
 
 if __name__ == "__main__":
