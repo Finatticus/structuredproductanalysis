@@ -161,10 +161,12 @@ def cmd_price(a):
         return PB - (p - lo) / (hi - lo) * (PB - T)
 
     out = [f'<svg class="cv" viewBox="0 0 {W} {H}" role="img" aria-label="{html.escape(a.title)}">']
+    ly_last = y(view[-1]["close"])
     for t in nice_ticks(lo, hi):
         yy = y(t)
         out.append(f'<line class="cv-grid" x1="{L}" y1="{yy:.1f}" x2="{W - R}" y2="{yy:.1f}"/>')
-        out.append(f'<text class="cv-ax" x="{W - R + 6}" y="{yy + 4:.1f}">{fmt_num(t)}</text>')
+        if abs(yy - ly_last) > 16:  # 避免和最後價格標籤重疊
+            out.append(f'<text class="cv-ax" x="{W - R + 6}" y="{yy + 4:.1f}">{fmt_num(t)}</text>')
     # 月份標籤
     lastm = None
     for i, r in enumerate(view):
@@ -193,7 +195,10 @@ def cmd_price(a):
     out.append(f'<polyline class="cv-px" points="{" ".join(pts)}"/>')
     lx, ly = x(n - 1), y(view[-1]["close"])
     out.append(f'<circle class="cv-last" cx="{lx:.1f}" cy="{ly:.1f}" r="3.5"/>')
-    out.append(f'<text class="cv-tag" x="{lx - 4:.1f}" y="{ly - 8:.1f}" text-anchor="end">{view[-1]["close"]:,.2f}</text>')
+    lv = view[-1]["close"]
+    last_lbl = f"{lv:,.2f}" if lv < 1000 else f"{lv:,.0f}"
+    out.append(f'<rect class="cv-lbox" x="{W - R + 1}" y="{ly - 11:.1f}" width="{R - 1}" height="22"/>')
+    out.append(f'<text class="cv-ltxt" x="{W - R / 2 + 0.5:.1f}" y="{ly + 4.5:.1f}" text-anchor="middle">{last_lbl}</text>')
     out.append("</svg>")
     leg = ['<span><i class="k-px"></i>收盤</span>']
     for k, m in enumerate(mas):
@@ -230,18 +235,22 @@ def cmd_target(a):
         return L + (W - L - R) * (p - lo) / (hi - lo)
 
     u = a.unit
+
+    def anc(px):
+        return "start" if px < 70 else ("end" if px > W - 70 else "middle")
+
     out = [f'<svg class="cv" viewBox="0 0 {W} {H}" role="img" aria-label="目標價區間">']
     out.append(f'<line class="cv-tr" x1="{x(lo_t):.1f}" y1="{Y}" x2="{x(hi_t):.1f}" y2="{Y}"/>')
     for name, v in pts:
         out.append(f'<circle class="cv-tp" cx="{x(v):.1f}" cy="{Y}" r="5"><title>{html.escape(name)} {v:,.0f}</title></circle>')
-    out.append(f'<text class="cv-ax" x="{x(lo_t):.1f}" y="{Y + 26}" text-anchor="middle">最低 {lo_t:,.0f}</text>')
-    out.append(f'<text class="cv-ax" x="{x(hi_t):.1f}" y="{Y + 26}" text-anchor="middle">最高 {hi_t:,.0f}</text>')
+    out.append(f'<text class="cv-ax" x="{x(lo_t):.1f}" y="{Y + 26}" text-anchor="{anc(x(lo_t))}">最低 {lo_t:,.0f}</text>')
+    out.append(f'<text class="cv-ax" x="{x(hi_t):.1f}" y="{Y + 26}" text-anchor="{anc(x(hi_t))}">最高 {hi_t:,.0f}</text>')
     cx = x(a.cur)
     out.append(f'<line class="cv-cur" x1="{cx:.1f}" y1="{Y - 30}" x2="{cx:.1f}" y2="{Y + 12}"/>')
-    out.append(f'<text class="cv-tag" x="{cx:.1f}" y="{Y - 36}" text-anchor="middle">現價 {a.cur:,.2f}</text>')
+    out.append(f'<text class="cv-tag" x="{cx:.1f}" y="{Y - 36}" text-anchor="{anc(cx)}">現價 {a.cur:,.2f}</text>')
     ax = x(avg)
     out.append(f'<path class="cv-avg" d="M{ax:.1f},{Y + 8} l-7,12 h14 z"/>')
-    out.append(f'<text class="cv-tag2" x="{ax:.1f}" y="{Y + 50}" text-anchor="middle">平均 {avg:,.0f}</text>')
+    out.append(f'<text class="cv-tag2" x="{ax:.1f}" y="{Y + 50}" text-anchor="{anc(ax)}">平均 {avg:,.0f}</text>')
     out.append("</svg>")
     up = pct(avg, a.cur)
     src = "AI 依下表各家目標價自算" if a.avg is None else (a.src or "共識平均")

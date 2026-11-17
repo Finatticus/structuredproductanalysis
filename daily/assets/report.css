@@ -523,6 +523,8 @@ svg.cv { display: block; width: 100%; max-width: 680px; height: auto; margin: 0 
 .cv-vu { fill: var(--up); opacity: .45; }
 .cv-vd { fill: var(--dn); opacity: .45; }
 .cv-last { fill: var(--navy); }
+.cv-lbox { fill: var(--navy); }
+.cv-ltxt { fill: #fff; font-size: 12px; font-weight: 600; }
 .cv-tag { fill: var(--navy); font-size: 13px; font-weight: 600; }
 .cv-tag2 { fill: var(--teal); font-size: 13px; font-weight: 600; }
 .cv-tr { stroke: var(--rule); stroke-width: 6; stroke-linecap: round; }
@@ -541,4 +543,5 @@ svg.cv { display: block; width: 100%; max-width: 680px; height: auto; margin: 0 
 @media (max-width: 600px) {
   .cv-ax { font-size: 17px; }
   .cv-tag, .cv-tag2 { font-size: 18px; }
+  .cv-ltxt { font-size: 14px; }
 }
