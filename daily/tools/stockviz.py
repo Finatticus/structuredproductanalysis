@@ -94,7 +94,10 @@ def cmd_stats(a):
     w = rows[-252:]
     hi = max(w, key=lambda r: r["high"])
     lo = min(w, key=lambda r: r["low"])
-    print(f"52 週（最近 {len(w)} 個交易日）最高 {hi['high']:,.2f}（{hi['date']}），最低 {lo['low']:,.2f}（{lo['date']}）")
+    hc = max(w, key=lambda r: r["close"])
+    lc = min(w, key=lambda r: r["close"])
+    print(f"52 週（最近 {len(w)} 個交易日）盤中最高 {hi['high']:,.2f}（{hi['date']}），盤中最低 {lo['low']:,.2f}（{lo['date']}）；"
+          f"收盤最高 {hc['close']:,.2f}（{hc['date']}），收盤最低 {lc['close']:,.2f}（{lc['date']}）。報告要寫明用的是盤中還是收盤。")
     print(f"  收盤距 52 週高點 {pct(last['close'], hi['high']):+.2f}%，距低點 {pct(last['close'], lo['low']):+.2f}%")
     for label, n in (("1 個月（21 日）", 21), ("3 個月（63 日）", 63), ("6 個月（126 日）", 126)):
         if len(c) > n:
@@ -104,10 +107,17 @@ def cmd_stats(a):
     if prev_year:
         b = prev_year[-1]
         print(f"今年以來：{pct(c[-1], b['close']):+.2f}%（基期 {b['date']} 收 {b['close']:,.2f}）")
-    if len(v) >= 60:
+    if len(v) >= 61:
+        p20 = sum(v[-21:-1]) / 20
         v20 = sum(v[-20:]) / 20
         v60 = sum(v[-60:]) / 60
-        print(f"20 日均量 {v20:,.0f}；60 日均量 {v60:,.0f}；最後一天量 {v[-1]:,.0f}（為 20 日均量的 {v[-1] / v20:.2f} 倍）")
+        print(f"最後一天量 {v[-1]:,.0f}，為前 20 日均量（不含當天，{p20:,.0f}）的 {v[-1] / p20:.2f} 倍；"
+              f"含當天的 20 日均量 {v20:,.0f}、60 日均量 {v60:,.0f}。報告寫倍數時一律用「前 20 日均量（不含當天）」。")
+    gaps = [(rows[i]["date"], rows[i - 1]["close"], rows[i]["open"]) for i in range(max(1, len(rows) - 260), len(rows))
+            if rows[i - 1]["close"] and abs(rows[i]["open"] / rows[i - 1]["close"] - 1) > 0.02 and rows[i]["volume"]]
+    if gaps:
+        print("提醒：以下日期開盤和前一天收盤差超過 2%（可能是跳空，也可能是除權息；台股 CSV 未還原除權息，判斷缺口前要先查除權息日）："
+              + "、".join(f"{d}（前收 {pc_:,.2f} → 開 {op:,.2f}）" for d, pc_, op in gaps[-8:]))
     r = rsi(c)
     if r is not None:
         print(f"RSI(14，Wilder)：{r:.1f}")

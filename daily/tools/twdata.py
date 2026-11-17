@@ -5,10 +5,10 @@
   python daily/tools/twdata.py market YYYY-MM-DD [--out _research/YYYY-MM-DD]
       台股大盤：加權指數近 10 日、自算均線、52 週高低（收盤）、成交值、漲跌家數、類股、三大法人（近 5 日）、
       融資融券、外資買賣超前 10 名、櫃買指數、台指期（一般與盤後）、三大法人期貨未平倉、P/C 比。
-      日期＝要抓的交易日（早報用前一個交易日，午報用今天）。
+      日期＝要抓的交易日。午報用今天；早報寫成 prev-今天（例：prev-2026-11-18），腳本會自動找前一個台股交易日（週一、連假都會處理）。
   python daily/tools/twdata.py stock 代號 YYYY-MM-DD [--chips-until YYYY-MM-DD] [--out 資料夾]
       個股：近 14 個月日資料存成 px-tw-代號.csv；近 20 個交易日法人買賣超、融資融券；本益比、殖利率、淨值比；外資持股。
-      法人與融資只抓到 --chips-until（午報要設成前一個交易日，因為 15:30 時當天還沒公布）。
+      法人與融資只抓到 --chips-until（午報寫 --chips-until prev，自動用前一個交易日，因為 15:30 時當天還沒公布）。
 
 輸出：Markdown 印到螢幕，並存成 out 資料夾裡的 official-tw-YYYYMMDD.md（或 stock-tw-代號.md）；原始回應存在 out/raw-tools/。
 每一項都會檢查回傳日期；還沒公布或日期不符時寫「尚未公布」，絕不拿其他日期代替。
@@ -19,6 +19,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -28,42 +29,90 @@ UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 TWSE = "https://www.twse.com.tw/rwd/zh/"
 OUT = []
 RAW = None
-_last = [0.0]
+FN = [None]
+STATS = {"ok": 0, "none": 0, "fail": 0}
+PACE = os.path.join(tempfile.gettempdir(), "twse-pace.txt")  # 跨行程共用的請求間隔紀錄，避免同時跑兩支腳本被證交所擋
 
 
 def emit(s=""):
     OUT.append(s)
 
 
-def get(url, data=None, enc="utf-8", name=None, pause=1.6):
-    """抓網址，失敗重試 3 次；證交所有頻率限制，每次間隔 pause 秒。"""
-    wait = pause - (time.time() - _last[0])
+def flush():
+    if FN[0]:
+        with open(FN[0], "w", encoding="utf-8") as f:
+            f.write("\n".join(OUT) + "\n")
+
+
+def _pace(pause):
+    try:
+        last = float(open(PACE).read().strip() or 0)
+    except (OSError, ValueError):
+        last = 0.0
+    wait = pause - (time.time() - last)
     if wait > 0:
-        time.sleep(wait)
+        time.sleep(min(wait, pause))
+    try:
+        with open(PACE, "w") as f:
+            f.write(str(time.time()))
+    except OSError:
+        pass
+
+
+def get(url, data=None, enc="utf-8", name=None, pause=1.6):
+    """抓網址，失敗重試 3 次；證交所有頻率限制，所有行程合計每 pause 秒一次。失敗回傳 None。"""
     body = urllib.parse.urlencode(data).encode() if data else None
     for k in range(3):
+        _pace(pause)
         try:
             req = urllib.request.Request(url, data=body, headers=UA)
             with urllib.request.urlopen(req, timeout=30) as r:
                 txt = r.read().decode(enc, errors="replace")
-            _last[0] = time.time()
             if RAW and name:
                 with open(os.path.join(RAW, name), "w", encoding="utf-8") as f:
                     f.write(txt)
             return txt
-        except Exception as e:  # noqa
-            _last[0] = time.time()
+        except Exception:  # noqa
             if k == 2:
                 return None
             time.sleep(3 + 3 * k)
 
 
+_CACHE = {}
+
+
 def getj(url, name=None):
+    """回傳 dict；連線失敗回傳 None（和「官方沒有這一天的資料」分開）。"""
+    if url in _CACHE:
+        return _CACHE[url]
     t = get(url, name=name)
+    if t is None:
+        return None
     try:
-        return json.loads(t) if t else None
+        j = json.loads(t)
     except ValueError:
         return None
+    if j.get("stat") == "OK":
+        _CACHE[url] = j
+    return j
+
+
+def chk(j, dd):
+    """ok＝有這一天的資料；none＝官方回應沒有這一天（尚未公布或休市）；fail＝連線失敗或被擋。"""
+    if j is None:
+        return "fail"
+    if j.get("stat") != "OK" or (dd and j.get("date") != dd):
+        return "none"
+    return "ok"
+
+
+def miss(state, ds, extra=""):
+    if state == "fail":
+        STATS["fail"] += 1
+        emit(f"**抓取失敗（連線失敗或被證交所擋）**：這一項請手動到官方網站確認，不可寫成「尚未公布」。{extra}\n")
+    else:
+        STATS["none"] += 1
+        emit(f"**{ds} 尚未公布**（官方回應沒有這一天的資料）{extra}\n")
 
 
 def num(s):
@@ -132,17 +181,39 @@ def ma_table(closes, dates, label="加權指數"):
     emit(f"\n均線為簡單平均，含 {dates[-1]}（AI 用證交所資料自算）。")
 
 
-def market(d, mode):
-    ds = d.isoformat()
-    emit(f"# 台股官方資料 {ds}（twdata.py 產生，{datetime.now():%Y-%m-%d %H:%M} 抓取）\n")
-    emit("每一項都檢查過回傳日期；寫「尚未公布」的項目，代表抓取時官方還沒有這一天的資料。\n")
+def section(title, fn):
+    emit(f"## {title}\n")
+    try:
+        fn()
+    except Exception as e:  # noqa
+        STATS["fail"] += 1
+        emit(f"**腳本錯誤（{type(e).__name__}: {e}）**：這一項請手動到官方網站抓取並確認；可能是官方網站改版。這次改用手動抓取的值，並寫進 lessons.md 最下面「待使用者處理」（排程中不可修改腳本）。\n")
+    flush()
 
-    # 1. 加權指數
-    rows = fmtqik_series(d)
-    emit("## 1. 加權指數（證交所 FMTQIK）\n")
-    if not rows or rows[-1]["date"] != ds:
-        emit(f"**{ds} 尚未公布**（最新一筆：{rows[-1]['date'] if rows else '無'}）。以下數字到最新一筆為止。\n")
-    if rows:
+
+def market(d, cut):
+    ds = d.isoformat()
+    cutd = cut.date()
+    now = datetime.now()
+    emit(f"# 台股官方資料 {ds}（twdata.py 產生，{now:%Y-%m-%d %H:%M} 抓取；報告截止 {cut:%Y-%m-%d %H:%M}）\n")
+    emit("每一項都檢查過回傳日期。「尚未公布」＝官方回應沒有這一天的資料；「抓取失敗」＝連線失敗或被擋，要手動確認。\n")
+    if now > cut + timedelta(minutes=30):
+        emit("**注意：抓取時間晚於截止時間超過 30 分鐘。** 官方可能在截止後修正數字（例如成交金額、三大法人），也可能已經公布截止時還沒有的資料（外資個股、P/C、融資）。"
+             "報告以截止時已公布的版本為準：查核重跑時和主筆的數字不同，先比對主筆的 raw-tools 原始檔與抓取時間，截止後的修正不算錯誤。\n")
+    rows = []
+
+    def s1():
+        nonlocal rows
+        rows = fmtqik_series(d)
+        if not rows or rows[-1]["date"] != ds:
+            STATS["none"] += 1
+            emit(f"**{ds} 沒有資料**（最新一筆：{rows[-1]['date'] if rows else '無'}）。以下數字到最新一筆為止。\n")
+            if d < date.today() or (d == date.today() and now.hour >= 15):
+                emit(f"**注意：{ds} 應該已經收盤卻沒有資料，可能是休市日。** 請照 RULES.md 4.7「休市判斷」確認。\n")
+        else:
+            STATS["ok"] += 1
+        if not rows:
+            return
         emit("| 日期 | 收盤 | 漲跌 | 漲跌幅 | 成交金額（億元，證交所總計） |\n|---|---|---|---|---|")
         for r in rows[-10:]:
             prev = r["close"] - r["chg"]
@@ -156,15 +227,16 @@ def market(d, mode):
         emit(f"\n52 週（最近 {len(w)} 個交易日，收盤）：最高 {fmt(hi['close'])}（{hi['date']}），最低 {fmt(lo['close'])}（{lo['date']}）；"
              f"收盤距高點 {sgn((closes[-1] / hi['close'] - 1) * 100)}%。盤中高低請另查。")
         a = [r["amt"] for r in rows]
-        emit(f"成交金額：5 日均 {fmt(sum(a[-5:]) / 5)} 億、20 日均 {fmt(sum(a[-20:]) / 20)} 億。\n")
+        emit(f"成交金額：5 日均 {fmt(sum(a[-5:]) / 5)} 億、20 日均 {fmt(sum(a[-20:]) / 20)} 億。"
+             "午報抓到的當天成交金額是 15:30 前的數字，晚間可能因盤後交易併入而變大，隔天早報用最終值並註明。\n")
         emit(f"來源：https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?response=json&date={ymd(d)}\n")
 
-    # 2. 大盤統計與漲跌家數
-    emit("## 2. 成交統計與漲跌家數（證交所 MI_INDEX type=MS）\n")
-    j = getj(f"{TWSE}afterTrading/MI_INDEX?response=json&date={ymd(d)}&type=MS", f"MI_MS_{ymd(d)}.json")
-    if not j or j.get("stat") != "OK" or j.get("date") != ymd(d):
-        emit(f"**{ds} 尚未公布**\n")
-    else:
+    def s2():
+        j = getj(f"{TWSE}afterTrading/MI_INDEX?response=json&date={ymd(d)}&type=MS", f"MI_MS_{ymd(d)}.json")
+        st = chk(j, ymd(d))
+        if st != "ok":
+            return miss(st, ds)
+        STATS["ok"] += 1
         for t in j.get("tables", []):
             title = t.get("title") or ""
             if "大盤統計" in title:
@@ -177,16 +249,18 @@ def market(d, mode):
                     emit(f"| {r[0]} | {r[1]} | {r[2]} |")
         emit(f"\n來源：https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?response=json&date={ymd(d)}&type=MS\n")
 
-    # 3. 類股
-    emit("## 3. 類股指數（證交所 MI_INDEX type=IND，依漲跌幅排序）\n")
-    j = getj(f"{TWSE}afterTrading/MI_INDEX?response=json&date={ymd(d)}&type=IND", f"MI_IND_{ymd(d)}.json")
-    if not j or j.get("stat") != "OK" or j.get("date") != ymd(d):
-        emit(f"**{ds} 尚未公布**\n")
-    else:
+    def s3():
+        j = getj(f"{TWSE}afterTrading/MI_INDEX?response=json&date={ymd(d)}&type=IND", f"MI_IND_{ymd(d)}.json")
+        st = chk(j, ymd(d))
+        if st != "ok":
+            return miss(st, ds)
+        STATS["ok"] += 1
         items = []
         for t in j.get("tables", []):
             if (t.get("title") or "").endswith("價格指數(臺灣證券交易所)"):
                 for r in t["data"]:
+                    if num(r[3]) is None or num(r[4]) is None:
+                        continue
                     sign = -1 if "green" in r[2] or "-" in re.sub("<[^>]+>", "", r[2]) else 1
                     items.append((r[0], num(r[1]), sign * abs(num(r[3])), sign * abs(num(r[4]))))
         keep = ("發行量加權股價指數", "未含金融保險股指數", "未含電子股指數", "未含金融電子股指數")
@@ -197,135 +271,224 @@ def market(d, mode):
             emit(f"| {n_} | {fmt(c)} | {sgn(p)} | {sgn(pc)}% |")
         emit(f"\n來源：https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?response=json&date={ymd(d)}&type=IND\n")
 
-    # 4. 三大法人（近 5 個交易日）
-    emit("## 4. 三大法人買賣超（證交所 BFI82U，億元）\n")
-    emit("外資＝「外資及陸資（不含外資自營商）」那一列（RULES.md 4.7 口徑）。午報時是 15:30 前的初版，晚間可能修正。\n")
-    tdays = [r["date"] for r in rows][-5:] if rows else []
-    if ds not in tdays:
-        tdays = (tdays + [ds])[-5:]
-    emit("| 日期 | 外資 | 外資自營商 | 投信 | 自營商（自行） | 自營商（避險） | 合計 |\n|---|---|---|---|---|---|---|")
-    for td in tdays:
-        dd = td.replace("-", "")
-        j = getj(f"{TWSE}fund/BFI82U?response=json&type=day&dayDate={dd}", f"BFI82U_{dd}.json")
-        if not j or j.get("stat") != "OK" or j.get("date") != dd:
-            emit(f"| {td} | 尚未公布 | | | | | |")
-            continue
-        v = {re.sub(r"\s", "", r[0]): num(r[3]) / 1e8 for r in j["data"]}
-        g = lambda k: next((x for kk, x in v.items() if kk.startswith(k)), None)  # noqa
-        emit(f"| {td} | {sgn(g('外資及陸資'))} | {sgn(g('外資自營商'))} | {sgn(g('投信'))} | {sgn(g('自營商(自行'))} | {sgn(g('自營商(避險'))} | {sgn(g('合計'))} |")
-    emit(f"\n來源：https://www.twse.com.tw/rwd/zh/fund/BFI82U?response=json&type=day&dayDate={ymd(d)}\n")
+    def s3b():
+        j = getj(f"{TWSE}afterTrading/MI_INDEX?response=json&date={ymd(d)}&type=ALLBUT0999", f"MI_ALL_{ymd(d)}.json")
+        st = chk(j, ymd(d))
+        if st != "ok":
+            return miss(st, ds)
+        STATS["ok"] += 1
+        t = next(t for t in j["tables"] if "證券代號" in (t.get("fields") or []))
+        f_ = t["fields"]
+        ix = {k: f_.index(k) for k in ("證券代號", "證券名稱", "成交金額", "收盤價", "漲跌(+/-)", "漲跌價差")}
+        lst = []
+        for r in t["data"]:
+            code = r[ix["證券代號"]].strip()
+            if not re.fullmatch(r"[1-9]\d{3}", code):  # 只留一般股票，排除 ETF（00 開頭）、權證等
+                continue
+            c, dif, amt = num(r[ix["收盤價"]]), num(r[ix["漲跌價差"]]), num(r[ix["成交金額"]])
+            if c is None or dif is None or amt is None:
+                continue
+            sign = -1 if "green" in r[ix["漲跌(+/-)"]] or "-" in re.sub("<[^>]+>", "", r[ix["漲跌(+/-)"]]) else 1
+            dif = sign * abs(dif)
+            lst.append((code, r[ix["證券名稱"]].strip(), c, dif / (c - dif) * 100 if c != dif else 0, amt / 1e8))
+        lst.sort(key=lambda x: -x[4])
+        emit("| 排名 | 個股 | 收盤 | 漲跌幅 | 成交金額（億元） |\n|---|---|---|---|---|")
+        for i, x in enumerate(lst[:20], 1):
+            emit(f"| {i} | {x[1]}（{x[0]}） | {fmt(x[2])} | {sgn(x[3])}% | {fmt(x[4])} |")
+        top = lst[:100]
+        up = sorted(top, key=lambda x: -x[3])[:5]
+        dn = sorted(top, key=lambda x: x[3])[:5]
+        emit("\n成交金額前 100 名裡漲幅最大：" + "、".join(f"{x[1]} {sgn(x[3])}%" for x in up))
+        emit("成交金額前 100 名裡跌幅最大：" + "、".join(f"{x[1]} {sgn(x[3])}%" for x in dn))
+        emit(f"\n只列一般股票（不含 ETF、權證）。來源：https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?response=json&date={ymd(d)}&type=ALLBUT0999\n")
 
-    # 5. 融資融券
-    emit("## 5. 融資融券（證交所 MI_MARGN）\n")
-    j = getj(f"{TWSE}marginTrading/MI_MARGN?response=json&selectType=MS&date={ymd(d)}", f"MI_MARGN_MS_{ymd(d)}.json")
-    if not j or j.get("stat") != "OK" or j.get("date") != ymd(d):
-        emit(f"**{ds} 尚未公布**（通常晚間公布）\n")
-    else:
+    def s4():
+        emit("外資＝「外資及陸資（不含外資自營商）」那一列（RULES.md 4.7 口徑）。午報時是 15:30 前的初版，晚間可能修正。\n")
+        tdays = [r["date"] for r in rows if r["date"] <= ds][-20:] if rows else []
+        if ds not in tdays:
+            tdays = (tdays + [ds])[-20:]
+        vals = []
+        for td in tdays:
+            dd = td.replace("-", "")
+            j = getj(f"{TWSE}fund/BFI82U?response=json&type=day&dayDate={dd}", f"BFI82U_{dd}.json")
+            st = chk(j, dd)
+            if st != "ok":
+                vals.append((td, st, None))
+                continue
+            v = {re.sub(r"\s", "", r[0]): num(r[3]) / 1e8 for r in j["data"]}
+            g = lambda k: next((x for kk, x in v.items() if kk.startswith(k)), None)  # noqa
+            vals.append((td, "ok", {k: g(k) for k in ("外資及陸資", "外資自營商", "投信", "自營商(自行", "自營商(避險", "合計")}))
+        last = vals[-1]
+        if last[1] != "ok":
+            miss(last[1], ds)
+        else:
+            STATS["ok"] += 1
+        emit("| 日期 | 外資 | 外資自營商 | 投信 | 自營商（自行） | 自營商（避險） | 合計 |\n|---|---|---|---|---|---|---|")
+        for td, st, v in vals[-5:]:
+            if st != "ok":
+                emit(f"| {td} | {'抓取失敗' if st == 'fail' else '尚未公布'} | | | | | |")
+            else:
+                emit(f"| {td} | {sgn(v['外資及陸資'])} | {sgn(v['外資自營商'])} | {sgn(v['投信'])} | {sgn(v['自營商(自行'])} | {sgn(v['自營商(避險'])} | {sgn(v['合計'])} |")
+        ok = [(td, v) for td, st, v in vals if st == "ok"]
+        for k, label in (("外資及陸資", "外資"), ("投信", "投信")):
+            seq = [v[k] for _, v in ok]
+            if not seq:
+                continue
+            sign = 1 if seq[-1] > 0 else -1
+            n = 0
+            for x in reversed(seq):
+                if x * sign > 0:
+                    n += 1
+                else:
+                    break
+            mtd = sum(v[k] for td, v in ok if td[:7] == ds[:7])
+            more = "（20 天以上）" if n == len(seq) else ""
+            emit(f"\n{label}：連續{'買超' if sign > 0 else '賣超'} {n} 天{more}；{ds[:7]} 月累計 {sgn(mtd)} 億元。")
+        emit(f"\n連續天數與月累計用最近 {len(ok)} 個交易日算（AI 推算）。來源：https://www.twse.com.tw/rwd/zh/fund/BFI82U?response=json&type=day&dayDate={ymd(d)}\n")
+
+    def s5():
+        j = getj(f"{TWSE}marginTrading/MI_MARGN?response=json&selectType=MS&date={ymd(d)}", f"MI_MARGN_MS_{ymd(d)}.json")
+        st = chk(j, ymd(d))
+        if st != "ok":
+            return miss(st, ds, "（融資融券通常晚間才公布）")
+        STATS["ok"] += 1
         t = j["tables"][0] if j.get("tables") else {"fields": j.get("fields"), "data": j.get("data")}
         emit("| 項目 | " + " | ".join(t["fields"][1:]) + " |\n|" + "---|" * len(t["fields"]))
         for r in t["data"]:
             emit("| " + " | ".join(r) + " |")
-        emit(f"\n來源：https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?response=json&selectType=MS&date={ymd(d)}\n")
+        emit("\n單位：融資金額是「仟元」（換成億元要除以 100,000），交易單位是張。只有上市，上櫃融資要另外查。")
+        emit(f"來源：https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?response=json&selectType=MS&date={ymd(d)}\n")
 
-    # 6. 外資買賣超前 10 名
-    emit("## 6. 外資個股買賣超前 10 名（證交所 TWT38U，張）\n")
-    j = getj(f"{TWSE}fund/TWT38U?response=json&date={ymd(d)}", f"TWT38U_{ymd(d)}.json")
-    if not j or j.get("stat") != "OK" or j.get("date") != ymd(d):
-        emit(f"**{ds} 尚未公布**（通常收盤後一段時間才公布）\n")
-    else:
+    def s6():
+        j = getj(f"{TWSE}fund/TWT38U?response=json&date={ymd(d)}", f"TWT38U_{ymd(d)}.json")
+        st = chk(j, ymd(d))
+        if st != "ok":
+            return miss(st, ds, "（通常收盤後一段時間才公布）")
+        STATS["ok"] += 1
         f_ = j["fields"]
         ic = next(i for i, x in enumerate(f_) if "證券代號" in x)
-        iname = ic + 1
         inet = max(i for i, x in enumerate(f_) if "買賣超" in x)
-        lst = [(r[ic].strip(), r[iname].strip(), num(r[inet]) / 1000) for r in j["data"] if num(r[inet]) is not None]
+        lst = [(r[ic].strip(), r[ic + 1].strip(), num(r[inet]) / 1000) for r in j["data"]
+               if num(r[inet]) is not None and re.fullmatch(r"[1-9]\d{3}", r[ic].strip())]
         lst.sort(key=lambda x: -x[2])
         emit("| 買超 | 張 | 賣超 | 張 |\n|---|---|---|---|")
         for a_, b_ in zip(lst[:10], sorted(lst, key=lambda x: x[2])[:10]):
             emit(f"| {a_[1]}（{a_[0]}） | {sgn(a_[2], ',.0f')} | {b_[1]}（{b_[0]}） | {sgn(b_[2], ',.0f')} |")
-        emit(f"\n來源：https://www.twse.com.tw/rwd/zh/fund/TWT38U?response=json&date={ymd(d)}\n")
+        emit(f"\n只列一般股票（不含 ETF）。口徑：TWT38U 最後一個買賣超欄位（含外資自營商）。來源：https://www.twse.com.tw/rwd/zh/fund/TWT38U?response=json&date={ymd(d)}\n")
 
-    # 7. 櫃買指數
-    emit("## 7. 櫃買指數（櫃買中心）\n")
-    t = get(f"https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingIndex?date={d:%Y/%m/%d}&response=json", name=f"TPEX_{ymd(d)}.json", pause=0.5)
-    try:
-        jt = json.loads(t)
-        data = jt["tables"][0]["data"]
-        last5 = data[-5:]
-        if roc2iso(data[-1][0]) != ds:
-            emit(f"**{ds} 尚未公布**（最新 {roc2iso(data[-1][0])}）")
+    def s7():
+        t = get(f"https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingIndex?date={d:%Y/%m/%d}&response=json", name=f"TPEX_{ymd(d)}.json", pause=0.5)
+        if t is None:
+            return miss("fail", ds)
+        data = [r for r in json.loads(t)["tables"][0]["data"] if roc2iso(r[0]) <= ds]
+        if not data or roc2iso(data[-1][0]) != ds:
+            miss("none", ds)
+        else:
+            STATS["ok"] += 1
         emit("| 日期 | 櫃買指數 | 漲跌 | 成交金額（億元） |\n|---|---|---|---|")
-        for r in last5:
+        for r in data[-5:]:
             emit(f"| {roc2iso(r[0])} | {fmt(num(r[4]))} | {sgn(num(r[5]))} | {fmt(num(r[2]) / 1e5)} |")
         emit(f"\n來源：https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingIndex?date={d:%Y/%m/%d}&response=json\n")
-    except Exception:  # noqa
-        emit("抓取失敗，請改用中央社或鉅亨網的收盤報導並標「非官方來源」。\n")
 
-    # 8. 台指期行情
-    emit("## 8. 台指期（期交所，一般與盤後交易時段）\n")
-    emit("期交所把夜盤（盤後）標在**下一個交易日**：例如標 11/16 的盤後列，是 11/13 15:00 到 11/14 05:00 的夜盤。\n")
-    st = d - timedelta(days=10)
-    en = d + timedelta(days=4)
-    t = get("https://www.taifex.com.tw/cht/3/futDataDown",
-            {"down_type": "1", "commodity_id": "TX", "commodity_id2": "",
-             "queryStartDate": f"{st:%Y/%m/%d}", "queryEndDate": f"{en:%Y/%m/%d}"}, enc="big5", name=f"TX_{ymd(d)}.csv")
-    if t and "交易日期" in t:
-        rd = list(csv.reader(t.strip().splitlines()))
-        hdr = rd[0]
-        rr = [r for r in rd[1:] if len(r) > 17]
-        months = sorted({r[2].strip() for r in rr if "/" not in r[2]})[:2]
+    def s8():
+        emit("期交所把夜盤（盤後）標在**下一個交易日**：例如標 11/16 的盤後列，是 11/13 15:00 到 11/14 05:00 的夜盤。"
+             "早報要用標為報告日（今天）的盤後列。每個交易日列出最近的兩個未到期月份。\n")
+        st_, en = d - timedelta(days=12), cutd + timedelta(days=1)
+        t = get("https://www.taifex.com.tw/cht/3/futDataDown",
+                {"down_type": "1", "commodity_id": "TX", "commodity_id2": "",
+                 "queryStartDate": f"{st_:%Y/%m/%d}", "queryEndDate": f"{en:%Y/%m/%d}"}, enc="big5", name=f"TX_{ymd(d)}.csv")
+        if not t or "交易日期" not in t:
+            return miss("fail", ds)
+        rd = [r for r in csv.reader(t.strip().splitlines())][1:]
+        rr = []
+        for r in rd:
+            if len(r) <= 17 or "/" in r[2]:
+                continue
+            day = datetime.strptime(r[0], "%Y/%m/%d").date()
+            # 一般時段只到資料日 d；盤後（夜盤）可以到截止日（早報需要標為今天的夜盤）
+            if (r[17] == "一般" and day <= d) or (r[17] == "盤後" and day <= cutd):
+                rr.append(r)
         dates = sorted({r[0] for r in rr})[-4:]
         emit("| 交易日期 | 月份 | 時段 | 收盤 | 漲跌 | 結算價 | 未沖銷 | 成交量 |\n|---|---|---|---|---|---|---|---|")
-        for r in rr:
-            if r[0] in dates and r[2].strip() in months:
-                emit(f"| {r[0]} | {r[2].strip()} | {r[17]} | {r[6]} | {r[7]} | {r[10]} | {r[11]} | {r[9]} |")
-        if f"{d:%Y/%m/%d}" not in dates:
-            emit(f"\n**{ds} 一般時段尚未公布**")
+        for dt in dates:
+            months = sorted({r[2].strip() for r in rr if r[0] == dt})[:2]
+            for r in rr:
+                if r[0] == dt and r[2].strip() in months:
+                    emit(f"| {r[0]} | {r[2].strip()} | {r[17]} | {r[6]} | {r[7]} | {r[10]} | {r[11]} | {r[9]} |")
+        if not any(r[0] == f"{d:%Y/%m/%d}" and r[17] == "一般" for r in rr):
+            miss("none", ds, "（一般交易時段）")
+        else:
+            STATS["ok"] += 1
         emit("\n來源：https://www.taifex.com.tw/cht/3/futDataDown（期貨每日交易行情下載，商品 TX）\n")
-    else:
-        emit("抓取失敗。\n")
 
-    # 9. 三大法人期貨（臺股期貨）
-    emit("## 9. 三大法人台指期未平倉（期交所，臺股期貨＝大台，口）\n")
-    tdays2 = ([r["date"] for r in rows][-2:] if rows else [])
-    if ds not in tdays2:
-        tdays2 = (tdays2 + [ds])[-2:]
-    emit("| 日期 | 外資淨未平倉 | 投信淨未平倉 | 自營商淨未平倉 | 外資當日交易淨額 |\n|---|---|---|---|---|")
-    for td in tdays2:
-        q = td.replace("-", "/")
-        t = get("https://www.taifex.com.tw/cht/3/futContractsDate",
-                {"queryType": "1", "goDay": "", "doQuery": "1", "dateaddcnt": "", "queryDate": q, "commodityId": "TXF"},
-                name=f"futContracts_{td}.html")
+    def s9():
+        tdays2 = [r["date"] for r in rows if r["date"] <= ds][-2:] if rows else []
+        if ds not in tdays2:
+            tdays2 = (tdays2 + [ds])[-2:]
+        emit("| 日期 | 外資淨未平倉 | 投信淨未平倉 | 自營商淨未平倉 | 外資當日交易淨額 |\n|---|---|---|---|---|")
+        last_state = "ok"
+        for td in tdays2:
+            q = td.replace("-", "/")
+            t = get("https://www.taifex.com.tw/cht/3/futContractsDate",
+                    {"queryType": "1", "goDay": "", "doQuery": "1", "dateaddcnt": "", "queryDate": q, "commodityId": "TXF"},
+                    name=f"futContracts_{td}.html")
+            if not t:
+                emit(f"| {td} | 抓取失敗 | | | |")
+                last_state = "fail"
+                continue
+            s = re.sub(r"<script.*?</script>|<style.*?</style>", "", t, flags=re.S)
+            s = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", s))
+            if f"日期{q}" not in s.replace(" ", ""):
+                emit(f"| {td} | 尚未公布 | | | |")
+                last_state = "none"
+                continue
+            last_state = "ok"
+            seg = s[s.find("臺股期貨"):]
+            res = {}
+            for who in ("自營商", "投信", "外資"):
+                m = re.search(who + r" ((?:-?[\d,]+ ){12})", seg)
+                if m:
+                    v = [num(x) for x in m.group(1).split()]
+                    res[who] = (v[10], v[4])
+            if "外資" not in res:
+                raise ValueError("期交所表格格式改變，找不到外資列")
+            emit(f"| {td} | {sgn(res['外資'][0], ',.0f')} | {sgn(res.get('投信', (None,))[0], ',.0f')} | "
+                 f"{sgn(res.get('自營商', (None,))[0], ',.0f')} | {sgn(res['外資'][1], ',.0f')} |")
+        if last_state == "ok":
+            STATS["ok"] += 1
+        else:
+            STATS[last_state] += 1
+        emit("\n口徑：臺股期貨（大台）的未平倉多空淨額（RULES.md 4.7）。來源：https://www.taifex.com.tw/cht/3/futContractsDate（依日期查詢，臺股期貨）\n")
+
+    def s10():
+        t = get("https://www.taifex.com.tw/cht/3/pcRatio", name=f"pcRatio_{ymd(d)}.html")
         if not t:
-            emit(f"| {td} | 抓取失敗 | | | |")
-            continue
-        s = re.sub(r"<script.*?</script>|<style.*?</style>", "", t, flags=re.S)
-        s = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", s))
-        if f"日期{q}" not in s.replace(" ", ""):
-            emit(f"| {td} | 尚未公布 | | | |")
-            continue
-        seg = s[s.find("臺股期貨"):]
-        res = {}
-        for who in ("自營商", "投信", "外資"):
-            m = re.search(who + r" ((?:-?[\d,]+ ){12})", seg)
-            if m:
-                v = [num(x) for x in m.group(1).split()]
-                res[who] = (v[10], v[4])
-        emit(f"| {td} | {sgn(res.get('外資', (None,))[0], ',.0f')} | {sgn(res.get('投信', (None,))[0], ',.0f')} | "
-             f"{sgn(res.get('自營商', (None,))[0], ',.0f')} | {sgn(res.get('外資', (None, None))[1], ',.0f')} |")
-    emit("\n來源：https://www.taifex.com.tw/cht/3/futContractsDate（依日期查詢，臺股期貨）\n")
-
-    # 10. P/C 比
-    emit("## 10. 臺指選擇權 Put/Call 比（期交所）\n")
-    t = get("https://www.taifex.com.tw/cht/3/pcRatio", name=f"pcRatio_{ymd(d)}.html")
-    if t:
+            return miss("fail", ds)
         s = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", "", t, flags=re.S)))
-        rows_pc = re.findall(r"(\d{4}/\d{1,2}/\d{1,2}) ([\d,]+) ([\d,]+) ([\d.]+) ([\d,]+) ([\d,]+) ([\d.]+)", s)
+        rows_pc = [r for r in re.findall(r"(\d{4}/\d{1,2}/\d{1,2}) ([\d,]+) ([\d,]+) ([\d.]+) ([\d,]+) ([\d,]+) ([\d.]+)", s)
+                   if datetime.strptime(r[0], "%Y/%m/%d").date() <= d]
+        if not rows_pc or datetime.strptime(rows_pc[0][0], "%Y/%m/%d").date() != d:
+            miss("none", ds)
+        else:
+            STATS["ok"] += 1
         emit("| 日期 | 成交量比率 | 未平倉量比率 |\n|---|---|---|")
         for r in rows_pc[:5]:
             emit(f"| {r[0]} | {r[3]}% | {r[6]}% |")
-        if not rows_pc or datetime.strptime(rows_pc[0][0], "%Y/%m/%d").date() != d:
-            emit(f"\n**{ds} 尚未公布**")
         emit("\n來源：https://www.taifex.com.tw/cht/3/pcRatio\n")
+
+    for title, fn in (("1. 加權指數（證交所 FMTQIK）", s1), ("2. 成交統計與漲跌家數（證交所 MI_INDEX type=MS）", s2),
+                      ("3. 類股指數（證交所 MI_INDEX type=IND，依漲跌幅排序）", s3), ("3b. 成交金額前 20 名個股（證交所 MI_INDEX）", s3b),
+                      ("4. 三大法人買賣超（證交所 BFI82U，億元）", s4), ("5. 融資融券（證交所 MI_MARGN）", s5),
+                      ("6. 外資個股買賣超前 10 名（證交所 TWT38U，張）", s6), ("7. 櫃買指數（櫃買中心）", s7),
+                      ("8. 台指期（期交所，一般與盤後交易時段）", s8), ("9. 三大法人台指期未平倉（期交所，臺股期貨＝大台，口）", s9),
+                      ("10. 臺指選擇權 Put/Call 比（期交所）", s10)):
+        section(title, fn)
+    emit(f"## 總結\n\n成功 {STATS['ok']}／尚未公布 {STATS['none']}／抓取失敗或腳本錯誤 {STATS['fail']}。")
+    if d < cutd and (STATS["none"] or STATS["fail"]):
+        emit("**早報用的是前一個交易日的資料，照理全部都應該已公布：任何「尚未公布」「抓取失敗」都是異常，要先手動到官方網站確認，不可照寫。**")
+    if STATS["fail"]:
+        emit("**有抓取失敗或腳本錯誤的項目：手動抓取並確認，不可寫成「尚未公布」。**")
+    flush()
 
 
 # ---------------------------------------------------------------- 個股
@@ -363,15 +526,24 @@ def stock(code, d, until, outdir):
          f"前收 {rows[-2]['close']}，漲跌 {sgn(last['close'] - rows[-2]['close'])}（{sgn((last['close'] / rows[-2]['close'] - 1) * 100)}%）。")
     emit("均線、報酬、52 週高低、RSI 請跑 `python daily/tools/stockviz.py stats " + p.replace("\\", "/") + "`。\n")
 
+    flush()
     tdays = [r["date"] for r in rows if r["date"] <= until.isoformat()][-20:]
-    emit(f"## 2. 三大法人買賣超（證交所 T86，張；{tdays[0]} 至 {tdays[-1]}）\n")
+    section(f"2. 三大法人買賣超（證交所 T86，張；{tdays[0]} 至 {tdays[-1]}）", lambda: _t86(code, tdays))
+    section("3. 融資融券（證交所 MI_MARGN，張）", lambda: _margin(code, tdays))
+    section("4. 本益比、殖利率、股價淨值比（證交所 BWIBBU_d）", lambda: _bwibbu(code, d, ds, rows))
+    section("5. 外資持股比率（證交所 MI_QFIIS）", lambda: _qfiis(code, until))
+
+
+def _t86(code, tdays):
     emit("| 日期 | 外資 | 投信 | 自營商 | 合計 |\n|---|---|---|---|---|")
     tot = [0, 0, 0, 0]
     for td in tdays:
         dd = td.replace("-", "")
         j = getj(f"{TWSE}fund/T86?date={dd}&selectType=ALLBUT0999&response=json", f"T86_{dd}.json")
-        if not j or j.get("stat") != "OK":
-            emit(f"| {td} | 尚未公布 | | | |")
+        st = chk(j, None)
+        if st != "ok":
+            emit(f"| {td} | {'抓取失敗' if st == 'fail' else '尚未公布'} | | | |")
+            STATS[st] += 1
             continue
         f_ = j["fields"]
         r = next((x for x in j["data"] if x[0].strip() == code), None)
@@ -391,22 +563,31 @@ def stock(code, d, until, outdir):
     emit(f"| **{len(tdays)} 日累計** | **{sgn(tot[0] / 1000, ',.0f')}** | **{sgn(tot[1] / 1000, ',.0f')}** | **{sgn(tot[2] / 1000, ',.0f')}** | **{sgn(tot[3] / 1000, ',.0f')}** |")
     emit("\n累計以股數加總後換算為張。外資＝外陸資（不含外資自營商）＋外資自營商。來源：https://www.twse.com.tw/rwd/zh/fund/T86?date=YYYYMMDD&selectType=ALLBUT0999&response=json\n")
 
-    emit(f"## 3. 融資融券（證交所 MI_MARGN，張）\n")
+
+
+def _margin(code, tdays):
     emit("| 日期 | 融資餘額 | 融券餘額 |\n|---|---|---|")
     pick = [tdays[0], tdays[len(tdays) // 2], tdays[-1]] if len(tdays) >= 3 else tdays
     for td in sorted(set(pick)):
         dd = td.replace("-", "")
         j = getj(f"{TWSE}marginTrading/MI_MARGN?date={dd}&selectType=ALL&response=json", f"MI_MARGN_{dd}.json")
-        if not j or j.get("stat") != "OK":
-            emit(f"| {td} | 尚未公布 | |")
+        st = chk(j, None)
+        if st != "ok":
+            emit(f"| {td} | {'抓取失敗' if st == 'fail' else '尚未公布'} | |")
+            STATS[st] += 1
             continue
         tb = j["tables"][1] if len(j.get("tables", [])) > 1 else j["tables"][0]
+        fl = [x.strip() for x in tb["fields"]]
+        if not (fl[6] == "今日餘額" and fl[12] == "今日餘額"):
+            raise ValueError(f"MI_MARGN 欄位改變：{fl[:14]}")
         r = next((x for x in tb["data"] if x[0].strip() == code), None)
         if r:
             emit(f"| {td} | {r[6]} | {r[12]} |")
     emit("\n欄位：融資今日餘額、融券今日餘額。來源：https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=YYYYMMDD&selectType=ALL&response=json\n")
 
-    emit("## 4. 本益比、殖利率、股價淨值比（證交所 BWIBBU_d）\n")
+
+
+def _bwibbu(code, d, ds, rows):
     j = getj(f"{TWSE}afterTrading/BWIBBU_d?date={ymd(d)}&selectType=ALL&response=json", f"BWIBBU_{ymd(d)}.json")
     used = ymd(d)
     if not j or j.get("stat") != "OK" or j.get("date") != ymd(d):
@@ -420,11 +601,14 @@ def stock(code, d, until, outdir):
             emit(" ／ ".join(f"{a}：{b}" for a, b in zip(j["fields"], r)))
         emit(f"\n來源：https://www.twse.com.tw/rwd/zh/afterTrading/BWIBBU_d?date={used}&selectType=ALL&response=json\n")
 
-    emit("## 5. 外資持股比率（證交所 MI_QFIIS）\n")
+
+
+def _qfiis(code, until):
     dd = until.strftime("%Y%m%d")
     j = getj(f"{TWSE}fund/MI_QFIIS?date={dd}&selectType=ALLBUT0999&response=json", f"MI_QFIIS_{dd}.json")
-    if not j or j.get("stat") != "OK":
-        emit(f"**{until.isoformat()} 尚未公布**\n")
+    st = chk(j, None)
+    if st != "ok":
+        miss(st, until.isoformat())
     else:
         r = next((x for x in j["data"] if x[0].strip() == code), None)
         if r:
@@ -436,21 +620,37 @@ def main():
     global RAW
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = p.add_subparsers(dest="cmd", required=True)
-    s = sp.add_parser("market"); s.add_argument("date"); s.add_argument("--out"); s.add_argument("--mode", default="")
+    s = sp.add_parser("market"); s.add_argument("date"); s.add_argument("--out"); s.add_argument("--cutoff")
     s = sp.add_parser("stock"); s.add_argument("code"); s.add_argument("date"); s.add_argument("--chips-until"); s.add_argument("--out")
     a = p.parse_args()
-    d = datetime.strptime(a.date, "%Y-%m-%d").date()
+    if a.date.startswith("prev-"):
+        # 「prev-YYYY-MM-DD」：該日之前最近一個台股交易日（早報用，自動處理週一、連假）
+        base = datetime.strptime(a.date[5:], "%Y-%m-%d").date()
+        prev = [r["date"] for r in fmtqik_series(base) if r["date"] < base.isoformat()]
+        d = datetime.strptime(prev[-1], "%Y-%m-%d").date()
+        print(f"前一個台股交易日：{d}")
+        a.out = a.out or os.path.join("_research", base.isoformat())
+    else:
+        d = datetime.strptime(a.date, "%Y-%m-%d").date()
     out = a.out or os.path.join("_research", d.isoformat())
     os.makedirs(out, exist_ok=True)
     RAW = os.path.join(out, "raw-tools")
     os.makedirs(RAW, exist_ok=True)
     if a.cmd == "market":
-        market(d, a.mode)
-        fn = os.path.join(out, f"official-tw-{ymd(d)}.md")
+        cut = datetime.strptime(a.cutoff, "%Y-%m-%d %H:%M") if a.cutoff else datetime.now()
+        FN[0] = os.path.join(out, f"official-tw-{ymd(d)}.md")
+        market(d, cut)
+        fn = FN[0]
     else:
-        until = datetime.strptime(a.chips_until, "%Y-%m-%d").date() if a.chips_until else d
+        if a.chips_until == "prev":
+            # 前一個台股交易日（午報用：當天的法人與融資 15:30 時還沒公布）
+            prev = [r["date"] for r in fmtqik_series(d) if r["date"] < d.isoformat()]
+            until = datetime.strptime(prev[-1], "%Y-%m-%d").date()
+        else:
+            until = datetime.strptime(a.chips_until, "%Y-%m-%d").date() if a.chips_until else d
+        FN[0] = os.path.join(out, f"stock-tw-{a.code}.md")
         stock(a.code, d, until, out)
-        fn = os.path.join(out, f"stock-tw-{a.code}.md")
+        fn = FN[0]
     txt = "\n".join(OUT) + "\n"
     with open(fn, "w", encoding="utf-8") as f:
         f.write(txt)
