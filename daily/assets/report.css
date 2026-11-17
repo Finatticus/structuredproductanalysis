@@ -1,4 +1,4 @@
-/* 每日市場晨報 共用樣式
+/* 市場日報 共用樣式
    版面：研究報告式。白底、深藍主色、細線表格、方角。主分頁＋子分頁，一次顯示一個區塊。
    慣例：漲=紅、跌=綠（台灣） */
 :root {
@@ -276,6 +276,8 @@ tr[hidden] { display: none; }
 .vline b { min-width: 2.5em; color: var(--ink); }
 .sched { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: .86rem; color: #dbe4ef; margin-top: 8px; }
 .sched b { color: #fff; }
+.sched .sd { display: block; font-size: .78rem; color: #b9c8da; margin-top: 2px; }
+@media (min-width: 861px) { .sched { padding-right: 9em; } }
 .archives { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 22px; }
 .archives .archive { margin-top: 0; }
 @media (max-width: 860px) { .home-grid, .archives { grid-template-columns: minmax(0, 1fr); } }
@@ -508,4 +510,35 @@ li.next .tl-b { color: var(--ink-3); }
   .doc h1 { font-size: 1.25rem; }
   .doc h2 { font-size: 1.08rem; }
   .doc pre { white-space: pre-wrap; }
+}
+
+/* 個股專題圖表（由 daily/tools/stockviz.py 產生；svg 內的字級是 viewBox 單位，手機加大以抵銷縮放） */
+svg.cv { display: block; width: 100%; max-width: 680px; height: auto; margin: 0 auto; font-family: var(--num); overflow: visible; }
+.cv-grid { stroke: var(--rule-2); stroke-width: 1; }
+.cv-ax { fill: var(--ink-3); font-size: 12px; }
+.cv-px { fill: none; stroke: var(--navy); stroke-width: 2; stroke-linejoin: round; }
+.cv-ma1 { fill: none; stroke: var(--gold); stroke-width: 1.5; }
+.cv-ma2 { fill: none; stroke: var(--teal); stroke-width: 1.5; }
+.cv-ma3 { fill: none; stroke: #a3abb6; stroke-width: 1.4; stroke-dasharray: 4 3; }
+.cv-vu { fill: var(--up); opacity: .45; }
+.cv-vd { fill: var(--dn); opacity: .45; }
+.cv-last { fill: var(--navy); }
+.cv-tag { fill: var(--navy); font-size: 13px; font-weight: 600; }
+.cv-tag2 { fill: var(--teal); font-size: 13px; font-weight: 600; }
+.cv-tr { stroke: var(--rule); stroke-width: 6; stroke-linecap: round; }
+.cv-tp { fill: var(--gold); opacity: .85; }
+.cv-cur { stroke: var(--navy); stroke-width: 2; }
+.cv-avg { fill: var(--teal); }
+.cv-leg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .78rem; color: var(--ink-2); margin-bottom: 8px; }
+.cv-leg i { display: inline-block; width: 16px; height: 3px; vertical-align: middle; margin-right: 5px; background: var(--navy); }
+.cv-leg i.k-ma1 { background: var(--gold); }
+.cv-leg i.k-ma2 { background: var(--teal); }
+.cv-leg i.k-ma3 { background: #a3abb6; }
+.cv-leg i.k-vol { height: 9px; width: 9px; background: #a3abb6; }
+.cv-leg i.k-cur { width: 2px; height: 12px; }
+.cv-leg i.k-tp { width: 9px; height: 9px; border-radius: 50%; background: var(--gold); }
+.cv-leg i.k-avg { width: 9px; height: 9px; background: var(--teal); }
+@media (max-width: 600px) {
+  .cv-ax { font-size: 17px; }
+  .cv-tag, .cv-tag2 { font-size: 18px; }
 }
