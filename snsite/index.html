@@ -147,12 +147,13 @@ a:hover .arrow { transform: translateX(4px); }
 .tag:first-of-type { border-left: 0; padding-left: 0; }
 .status-pill { display: inline-block; font-size: 13px; font-weight: 700; padding: 1px 8px; background: var(--mid-bg); color: var(--mid); border: 1px solid var(--mid-line); letter-spacing: .04em; vertical-align: middle; font-family: var(--sans); }
 .masthead .status-pill { margin-left: 10px; }
-.adv-btn { display: inline-flex; align-items: center; gap: 18px; margin-top: 22px; padding: 10px 16px 10px 18px; border: 1px solid rgba(255,255,255,.55); background: rgba(255,255,255,.1); color: #fff; font-weight: 700; font-size: 16px; text-decoration: none; transition: background .15s, border-color .15s; }
-.adv-btn small { display: block; font-size: 11.5px; font-weight: 600; letter-spacing: .16em; color: var(--gold-2); }
-.adv-btn .arrow { font-size: 18px; }
-.adv-btn:hover { background: rgba(255,255,255,.2); border-color: #fff; }
-.adv-btn.is-off { border-style: dashed; opacity: .75; }
-.adv-off-note { display: block; margin-top: 6px; font-size: 13px; color: var(--on-brand-2); }
+/* 基礎概念頁右下角的低調連結 */
+.mast-adv { position: relative; }
+.adv-btn { position: absolute; right: 0; bottom: -28px; display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 500; color: var(--on-brand-2); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,.3); padding-bottom: 1px; transition: color .15s, border-color .15s; }
+.adv-btn:hover { color: #fff; border-bottom-color: #fff; }
+.adv-btn.is-off { border-bottom-style: dashed; opacity: .7; }
+.adv-btn.is-off::after { content: '（隱藏中）'; font-size: 12px; }
+@container app (max-width: 860px) { .adv-btn { position: static; margin-top: 16px; } .mast-adv { display: flex; justify-content: flex-end; } }
 .highlights { border-top: 3px solid var(--gold-2); background: rgba(255,255,255,.1); padding: 0 22px; }
 .highlights h2 { font-size: 13.5px; letter-spacing: .16em; color: var(--gold-2); font-weight: 600; padding: 14px 0 2px; }
 .highlights ol { list-style: none; margin: 0; padding: 0 0 6px; counter-reset: hl; }
@@ -2160,8 +2161,7 @@ function advancedBtn(pg) {
   if (pg.id !== 'intro') return '';
   const hidden = S.data.settings.advancedHidden === true;
   if (hidden && !isAdmin()) return '';
-  return '<a class="adv-btn' + (hidden ? ' is-off' : '') + '" href="advanced.html"' + (hidden ? ' title="一般使用者看不到這個按鈕（網站設定可開啟）"' : '') + '><span><small>ADVANCED</small>進階模型及避險概念</span><span class="arrow" aria-hidden="true">→</span></a>' +
-    (hidden ? '<span class="adv-off-note">按鈕目前隱藏中，只有管理員看得到</span>' : '');
+  return '<div class="mast-adv"><a class="adv-btn' + (hidden ? ' is-off' : '') + '" href="advanced.html"' + (hidden ? ' title="一般使用者看不到這個連結（網站設定可開啟）"' : '') + '>進階模型及避險概念 →</a></div>';
 }
 function pageHTML(pg, opt) {
   opt = opt || {};
