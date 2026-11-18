@@ -147,6 +147,12 @@ a:hover .arrow { transform: translateX(4px); }
 .tag:first-of-type { border-left: 0; padding-left: 0; }
 .status-pill { display: inline-block; font-size: 13px; font-weight: 700; padding: 1px 8px; background: var(--mid-bg); color: var(--mid); border: 1px solid var(--mid-line); letter-spacing: .04em; vertical-align: middle; font-family: var(--sans); }
 .masthead .status-pill { margin-left: 10px; }
+.adv-btn { display: inline-flex; align-items: center; gap: 18px; margin-top: 22px; padding: 10px 16px 10px 18px; border: 1px solid rgba(255,255,255,.55); background: rgba(255,255,255,.1); color: #fff; font-weight: 700; font-size: 16px; text-decoration: none; transition: background .15s, border-color .15s; }
+.adv-btn small { display: block; font-size: 11.5px; font-weight: 600; letter-spacing: .16em; color: var(--gold-2); }
+.adv-btn .arrow { font-size: 18px; }
+.adv-btn:hover { background: rgba(255,255,255,.2); border-color: #fff; }
+.adv-btn.is-off { border-style: dashed; opacity: .75; }
+.adv-off-note { display: block; margin-top: 6px; font-size: 13px; color: var(--on-brand-2); }
 .highlights { border-top: 3px solid var(--gold-2); background: rgba(255,255,255,.1); padding: 0 22px; }
 .highlights h2 { font-size: 13.5px; letter-spacing: .16em; color: var(--gold-2); font-weight: 600; padding: 14px 0 2px; }
 .highlights ol { list-style: none; margin: 0; padding: 0 0 6px; counter-reset: hl; }
@@ -2149,6 +2155,14 @@ function mountBlocks(root) {
   });
   hydrateImages(root);
 }
+/* 基礎概念頁的「進階模型及避險概念」按鈕：網站設定可隱藏；隱藏時頁面仍可用網址 advanced.html 開啟，管理員會看到虛線版本 */
+function advancedBtn(pg) {
+  if (pg.id !== 'intro') return '';
+  const hidden = S.data.settings.advancedHidden === true;
+  if (hidden && !isAdmin()) return '';
+  return '<a class="adv-btn' + (hidden ? ' is-off' : '') + '" href="advanced.html"' + (hidden ? ' title="一般使用者看不到這個按鈕（網站設定可開啟）"' : '') + '><span><small>ADVANCED</small>進階模型及避險概念</span><span class="arrow" aria-hidden="true">→</span></a>' +
+    (hidden ? '<span class="adv-off-note">按鈕目前隱藏中，只有管理員看得到</span>' : '');
+}
 function pageHTML(pg, opt) {
   opt = opt || {};
   const secs = pg.sections || [];
@@ -2158,7 +2172,7 @@ function pageHTML(pg, opt) {
     '<div class="crumbs"><a href="#/">首頁</a><span>/</span>' + esc(pg.navLabel || pg.title) + '</div>' +
     (pg.eyebrow ? '<div class="eyebrow">' + esc(pg.eyebrow) + '</div>' : '') +
     '<h1 class="display">' + esc(pg.title || '（未命名頁面）') + (pg.status === 'draft' ? ' <span class="status-pill">隱藏中</span>' : '') + '</h1>' +
-    (pg.lead ? '<p class="lead">' + esc(pg.lead) + '</p>' : '') + '</div></section>' +
+    (pg.lead ? '<p class="lead">' + esc(pg.lead) + '</p>' : '') + advancedBtn(pg) + '</div></section>' +
     '<div class="doc"><nav class="toc"><p>Contents</p><ol>' + secs.map((s, i) => '<li><a role="button" tabindex="0" data-goto="s' + i + '"><span>' + pad2(i + 1) + '</span>' + esc(s.title) + '</a></li>').join('') + '</ol></nav>' +
     '<div class="sheet">' + secs.map((s, i) => '<section class="sec" data-sec="s' + i + '"><div class="sec-head"><span class="sec-no">' + pad2(i + 1) + '</span><h2>' + esc(s.title) + '</h2><span class="en">' + esc(s.en || '') + '</span></div>' + blocksHTML(s.blocks || []) + '</section>').join('') +
     (opt.preview ? '' : '<nav class="pager"><a href="#/"><small>返回</small><strong>商品總覽</strong></a>' + (first ? '<a href="#/p/' + encodeURIComponent(first.id) + '"><small>從這裡開始</small><strong>' + esc(first.name) + '</strong></a>' : '<span></span>') + '</nav>') +
@@ -5483,7 +5497,9 @@ function adminSettings() {
   function body() {
     return '<div class="panel"><div class="panel-head"><h2>網站設定</h2><div class="ctl"><span class="dirty-dot" id="dirtyDot"></span><button class="btn sm ghost" id="histBtn">版本紀錄</button><button class="btn sm" id="saveSet" data-save-default>儲存設定</button></div></div><div class="panel-body" id="setForm">' +
       '<div class="f-grid"><label class="f"><span>網站名稱</span>' + inp('siteName', st.siteName) + '</label><label class="f"><span>英文副標</span>' + inp('siteSub', st.siteSub) + '</label>' +
-      '<label class="f"><span>首頁小標</span>' + inp('heroEyebrow', st.heroEyebrow) + '</label></div>' +
+      '<label class="f"><span>首頁小標</span>' + inp('heroEyebrow', st.heroEyebrow) + '</label>' +
+      '<label class="f"><span>基礎概念頁的「進階模型及避險概念」按鈕</span><select class="sel" data-bind="advancedHidden" data-bool="1"><option value="false"' + (st.advancedHidden === true ? '' : ' selected') + '>顯示</option><option value="true"' + (st.advancedHidden === true ? ' selected' : '') + '>隱藏（只能用網址開啟）</option></select>' +
+      '<small>隱藏後一般使用者看不到按鈕，但頁面仍可用網址開啟：' + esc(location.origin + location.pathname.replace(/[^/]*$/, '') + 'advanced.html') + '</small></label></div>' +
       '<label class="f"><span>內部使用提醒（固定顯示在畫面最下方）</span>' + inp('internalNote', st.internalNote, '本網站所有內容僅供內部使用，切勿外傳') + '</label>' +
       '<label class="f"><span>免責聲明（固定顯示在畫面最下方，小字）</span><textarea class="txt" data-bind="disclaimer">' + esc(st.disclaimer || '') + '</textarea></label>' +
       '<div class="sub-h">公告橫幅<small>顯示在所有頁面最上方；清空公告內容就不顯示</small></div>' +
