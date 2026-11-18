@@ -1721,7 +1721,7 @@ function productHTML(p, opt) {
   const secs = [];
   if (p.terms.length) secs.push(['terms', '範例條件', 'Indicative Terms']);
   if (p.mechanics.length || p.risks.length) secs.push(['mech', '機制說明', 'Mechanics']);
-  if ((p.scenarioMode === 'chart' && p.scenarios.length) || (p.scenarioMode === 'images' && p.figures.length)) secs.push(['scenarios', '情境分析', 'Scenarios']);
+  if (scenItems(p) || (p.scenarioMode === 'images' && p.figures.length)) secs.push(['scenarios', '情境分析', 'Scenarios']);
   (p.sections || []).forEach((s, i) => secs.push(['x' + i, s.title || '補充說明', s.en || '']));
   const faqs = (p.qaIds || []).map(qaById).filter(Boolean);
   if (faqs.length) secs.push(['faq', '常見 QA', 'Q&A']);
@@ -1760,7 +1760,7 @@ function productHTML(p, opt) {
     if (items) {
       html += '<div class="scen-box"><div class="scen-tabs" role="tablist" aria-label="情境" style="--cols:' + (items.length <= 4 ? items.length : items.length <= 6 ? 3 : 4) + '">' + items.map((s, i) => {
         const tone = toneOf(s);
-        return '<button type="button" role="tab" class="scen-tab tone-' + tone + (i === 0 ? ' on' : '') + '" data-scen="' + i + '" aria-selected="' + (i === 0) + '" tabindex="' + (i === 0 ? 0 : -1) + '" title="' + esc((s.title || '情境 ' + s.letter) + '（' + TONES[tone] + '）') + '">' +
+        return '<button type="button" role="tab" class="scen-tab tone-' + tone + (i === 0 ? ' on' : '') + '" data-scen="' + i + '" aria-selected="' + (i === 0) + '" tabindex="' + (i === 0 ? 0 : -1) + '" title="' + esc((s.title || '情境 ' + s.letter) + (s.noTag ? '' : '（' + TONES[tone] + '）')) + '">' +
           '<b>' + esc(s.letter) + '</b><span>' + esc(s.title || '情境 ' + s.letter) + '</span></button>';
       }).join('') + '</div><div class="scen-info" role="tabpanel" aria-live="polite"></div>' +
       (viz ? '<div class="chart-panel"><div class="chart-head"><span class="eyebrow">股價走勢與交割示意</span></div>' +
@@ -1819,7 +1819,8 @@ function mountProduct(root, p) {
       if (focus) tabs[i].focus({ preventScroll: true });
       const bar = tabs[i].parentNode;
       if (bar.scrollWidth > bar.clientWidth) bar.scrollTo({ left: Math.max(0, tabs[i].offsetLeft - 24), behavior: 'smooth' });
-      if (p.scenarioMode === 'chart') drawChart(panel, p, i); else drawFigViz(panel, p.figures[i], s.letter);
+      if (p.scenarioMode === 'chart') drawChart(panel, p, i);
+      else drawFigViz(panel, p.scenarioMode === 'settle' ? settleViz(p, p.scenarios[i]) : vizOf(p.figures[i]), s.letter);
     };
     tabs.forEach(b => {
       b.addEventListener('click', () => show(+b.dataset.scen));
@@ -1844,11 +1845,44 @@ const vizOf = f => (f && f.viz && Array.isArray(f.viz.path) ? f.viz : f && FIG_V
 function figVizOn(p) { return p.scenarioMode === 'images' && p.figures.length > 0 && p.figures.every(f => { const v = vizOf(f); return v && Array.isArray(v.path) && v.path.length > 1; }); }
 function scenItems(p) {
   if (p.scenarioMode === 'chart') return p.scenarios.length ? p.scenarios : null;
+  if (p.scenarioMode === 'settle') return p.scenarios.length ? p.scenarios.map(x => Object.assign({}, x, { tone: TONES[x.tone] ? x.tone : 'neutral', noTag: !TONES[x.tone] })) : null;
   if (!figVizOn(p)) return null;
   return p.figures.map((f, i) => { const v = vizOf(f); return { letter: String.fromCharCode(65 + i), title: f.title || '情境 ' + (i + 1), tone: v.tone || 'neutral', noTag: !v.tone, condition: f.text, outcome: v.outcome || '' }; });
 }
-function drawFigViz(panel, f, letter) {
-  const v = vizOf(f) || {}, labels = (v.labels || []).map(String), last = Math.max(1, labels.length - 1);
+/* 分批交割時程圖：走勢點文字「期數 價格, 期數 價格…」→ [[x, y], …] */
+function parseCurve(t) {
+  if (Array.isArray(t)) return t;
+  const out = [];
+  String(t || '').split(/[,，、;；\n]+/).forEach(tok => {
+    const m = tok.trim().match(/^(-?\d*\.?\d+)\s*[:：\s]\s*(-?\d*\.?\d+)$/);
+    if (m) out.push([+m[1], +m[2]]);
+  });
+  return out.sort((a, b) => a[0] - b[0]);
+}
+function settleViz(p, sc) {
+  const c = p.chart || {};
+  return {
+    labels: c.labels || [], yMin: c.yMin, yMax: c.yMax, yTitle: c.yTitle, yFormat: c.yPct ? '%' : '', seriesLabel: c.seriesLabel, lines: c.lines || [],
+    path: parseCurve(sc.curve), ko: num(sc.koAt) != null ? { at: num(sc.koAt) } : null, shadeBelow: sc.shadeBelow, note: sc.note || '',
+    events: (sc.events || []).map(e => ({ at: num(e.at), title: e.title || '', ko: !!e.ko, lines: String(e.text || '').split(/\n+/).map(x => x.trim()).filter(Boolean) }))
+  };
+}
+/* 舊的程式內建設定（圖片情境）→ 可在後台編輯的分批交割時程圖 */
+function figuresToSettle(p) {
+  const v0 = vizOf(p.figures[0]) || {};
+  p.chart = { labels: (v0.labels || []).slice(), yMin: v0.yMin, yMax: v0.yMax, yTitle: v0.yTitle || '', yPct: v0.yFormat === '%', seriesLabel: '股價', lines: clone(v0.lines || []) };
+  p.scenarios = p.figures.map((f, i) => {
+    const v = vizOf(f) || {};
+    return { letter: String.fromCharCode(65 + i), title: f.title || '', tone: v.tone || '', condition: f.text || '', outcome: v.outcome || '', path: [], cashflows: [],
+      curve: (v.path || []).map(a => a[0] + ' ' + a[1]).join(', '), koAt: v.ko ? v.ko.at : null, shadeBelow: v.shadeBelow == null ? null : v.shadeBelow, note: v.note || '',
+      events: (v.events || []).map(e => ({ at: e.at, title: e.title || '', text: (e.lines || []).join('\n'), ko: !!e.ko })) };
+  });
+  p.figures = [];
+  p.scenarioMode = 'settle';
+}
+function drawFigViz(panel, v, letter) {
+  v = v || {};
+  const labels = (v.labels || []).map(x => x == null ? '' : String(x)), last = Math.max(1, labels.length - 1);
   const cv = $('.cv', panel), list = $('.ev-list', panel), note = $('.fig-note', panel);
   if (panel._chart) { panel._chart.destroy(); panel._chart = null; }
   const evs = (v.events || []).filter(e => e && e.at != null);
@@ -1858,13 +1892,14 @@ function drawFigViz(panel, f, letter) {
   if (!window.Chart) { cv.innerHTML = '<p class="muted" style="padding:20px">圖表元件載入失敗（請確認網路連線）。</p>'; return; }
   if (!$('canvas', cv)) cv.innerHTML = '<canvas></canvas>';
   const pct = v.yFormat === '%', fmt = y => pct ? y + '%' : y;
-  const pts = v.path.map(a => ({ x: num(a[0]), y: num(a[1]) })).filter(a => a.x != null && a.y != null);
+  const pts = parseCurve(v.path).map(a => ({ x: num(a[0]), y: num(a[1]) })).filter(a => a.x != null && a.y != null);
   const shade = num(v.shadeBelow);
   const ds = [{ label: v.seriesLabel || '股價', data: pts, borderColor: BRAND, backgroundColor: BRAND, borderWidth: 2.4, tension: 0.35, pointRadius: 0, pointHoverRadius: 0,
     fill: shade == null ? false : { target: { value: shade }, above: 'rgba(0,0,0,0)', below: 'rgba(208,130,31,.24)' } }];
   (v.lines || []).forEach(l => {
     const col = LINE_COLORS[l.color] || LINE_COLORS.gray, y = num(l.value);
-    ds.push({ label: l.label || '', data: [{ x: 0, y: y }, { x: last, y: y }], borderColor: col, backgroundColor: col, borderWidth: 1.6, borderDash: l.color === 'gray' ? [3, 4] : [6, 4], pointRadius: 0, pointHoverRadius: 0, fill: false });
+    const data = Array.isArray(l.values) ? l.values.map((z, k) => ({ x: k, y: num(z) })).filter(a => a.y != null) : (y == null ? [] : [{ x: 0, y: y }, { x: last, y: y }]);
+    ds.push({ label: l.label || '', data: data, borderColor: col, backgroundColor: col, borderWidth: 1.6, borderDash: l.color === 'gray' ? [3, 4] : [6, 4], pointRadius: 0, pointHoverRadius: 0, fill: false, stepped: Array.isArray(l.values) && l.stepped ? 'before' : false });
   });
   const ko = v.ko && num(v.ko.at) != null ? num(v.ko.at) : null;
   panel._chart = new Chart($('canvas', cv), {
@@ -4691,6 +4726,7 @@ function viewProductEditor(id, catId) {
       '<div class="table-scroll"><table class="grid-tbl"><tr>' + c.labels.map((x, k) => '<td>' + inp('chart.labels.' + k, x, '', ' style="min-width:66px;text-align:center"') + '</td>').join('') + '</tr></table></div>' +
       '<div class="f-grid" style="--c:4;margin-top:12px"><label class="f"><span>Y 軸最小值</span>' + numInp('chart.yMin', c.yMin) + '</label><label class="f"><span>Y 軸最大值</span>' + numInp('chart.yMax', c.yMax) + '</label>' +
       '<label class="f"><span>Y 軸標題</span>' + inp('chart.yTitle', c.yTitle, '股價') + '</label><label class="f"><span>走勢線名稱</span>' + inp('chart.seriesLabel', c.seriesLabel, '股價') + '</label></div>' +
+      (P().scenarioMode === 'settle' ? '<label class="chk" style="margin-top:8px"><input type="checkbox" data-bind="chart.yPct"' + (c.yPct ? ' checked' : '') + '> Y 軸數字後面加 %（例如股價以期初 = 100% 表示）</label>' : '') +
       '<div class="sub-h">參考線<small>履約價、KI、KO 等水平線</small></div><div class="rows">' + (c.lines || []).map(lineRow).join('') + '</div><button type="button" class="add-btn" data-add="chart.lines" data-tpl="line">＋ 新增參考線</button>';
   }
   function scenariosEditor() {
@@ -4708,9 +4744,37 @@ function viewProductEditor(id, catId) {
         '<tr><td>現金流</td>' + labels.map((x, k) => '<td>' + inp(q + '.cashflows.' + k, (s.cashflows || [])[k] || '', '', ' style="min-width:76px;font-size:12.5px"') + '</td>').join('') + '</tr></table></div></div>';
     }).join('') + '<button type="button" class="add-btn" data-add="scenarios" data-tpl="scenario">＋ 新增情境</button>';
   }
+  function settleEditor() {
+    const p = P();
+    const tones = [['', '不標示'], ['good', '有利（綠）'], ['neutral', '中性（琥珀）'], ['bad', '不利（紅）']];
+    return p.scenarios.map((s, i) => {
+      const q = 'scenarios.' + i, evs = s.events || [], npts = parseCurve(s.curve).length;
+      return '<div class="scen-ed tone-' + (TONES[s.tone] ? s.tone : 'neutral') + '"><div class="scen-ed-head"><b>' + esc(s.letter) + ' 情境</b>' + ctlBtns('scenarios', i, p.scenarios.length) + '</div>' +
+        '<div class="f-grid" style="--c:3"><label class="f" style="grid-column:span 2"><span>情境標題（分頁按鈕上的文字）</span>' + inp(q + '.title', s.title, '例如：第 1 週即觸及 KO 出場') + '</label>' +
+        '<label class="f"><span>好壞標籤</span><select class="sel" data-bind="' + q + '.tone">' + tones.map(t => '<option value="' + t[0] + '"' + ((s.tone || '') === t[0] || (!TONES[s.tone] && !t[0]) ? ' selected' : '') + '>' + t[1] + '</option>').join('') + '</select></label></div>' +
+        '<div class="f"><span>情境說明</span>' + rte(q + '.condition', s.condition, 'mini', '描述這個情境發生什麼事') + '</div>' +
+        '<div class="f"><span>投資人取得</span>' + rte(q + '.outcome', s.outcome, 'mini', '例如：領回 $89,600 + 4,280股') + '</div>' +
+        '<div class="sub-h">走勢圖<small>右側預覽會即時更新</small></div>' +
+        '<label class="f"><span>股價走勢點（目前 ' + npts + ' 個點）</span><textarea class="txt" rows="3" data-bind="' + q + '.curve" placeholder="0 100, 0.5 98, 1 107, 1.5 110, 2 113">' + esc(s.curve || '') + '</textarea>' +
+          '<small>每個點寫「第幾期 股價」，點與點用逗號隔開。期數對應上面「X 軸期間」的第幾格（期初 = 0），可以用小數，例如 0.5 = 半期。</small></label>' +
+        '<div class="f-grid" style="--c:3"><label class="f"><span>提前出場在第幾期</span>' + numInp(q + '.koAt', s.koAt) + '<small>沒有提前出場就留空。例如第 15 天 ≈ 15 ÷ 21 = 0.71 個月</small></label>' +
+        '<label class="f"><span>股價低於多少時塗橘色</span>' + numInp(q + '.shadeBelow', s.shadeBelow) + '<small>例如 AQ 跌破履約價買兩倍填 80；不需要就留空</small></label>' +
+        '<label class="f"><span>圖下方小字</span>' + inp(q + '.note', s.note, '例如：灰色區域：提前出場後商品已結束') + '</label></div>' +
+        '<div class="sub-h">交割時點<small>圖上會出現編號圓圈，圖下方依序列出計算卡片</small></div><div class="rows">' + evs.map((e, k) => {
+          const qe = q + '.events.' + k;
+          return '<div class="rowx"><div class="rowx-main"><div class="f-grid" style="--c:4"><label class="f"><span>第幾期</span>' + numInp(qe + '.at', e.at) + '</label>' +
+            '<label class="f" style="grid-column:span 2"><span>標題</span>' + inp(qe + '.title', e.title, '例如：第一次交割（第1~2週）') + '</label>' +
+            '<label class="f"><span>類型</span><label class="chk" style="margin-top:6px"><input type="checkbox" data-bind="' + qe + '.ko"' + (e.ko ? ' checked' : '') + '>提前出場（紅色）</label></label></div>' +
+            '<label class="f"><span>計算內容（一行一項）</span><textarea class="txt" rows="2" data-bind="' + qe + '.text" placeholder="$112 × 40股 × 10個交易日 = $44,800">' + esc(e.text || '') + '</textarea></label></div>' +
+            ctlBtns(q + '.events', k, evs.length) + '</div>';
+        }).join('') + '</div><button type="button" class="add-btn" data-add="' + q + '.events" data-tpl="event">＋ 新增交割時點</button></div>';
+    }).join('') + '<button type="button" class="add-btn" data-add="scenarios" data-tpl="scenario">＋ 新增情境</button>';
+  }
   function figuresEditor() {
     const f = P().figures;
-    return '<div class="rows">' + f.map((x, i) => '<div class="rowx"><div class="rowx-main"><label class="f"><span>情境 ' + (i + 1) + ' 標題</span>' + inp('figures.' + i + '.title', x.title, '例如：第 1 週即觸及 KO 出場') + '</label>' +
+    return (figVizOn(P()) && !f.some(x => x.viz) ? '<div class="onboard" style="margin-bottom:14px"><p style="margin:0 0 8px">這個商品前台目前用程式內建的設定畫成「分批交割時程圖」。轉換後就能在這裡直接修改走勢、交割時點與計算內容。</p>' +
+      '<button type="button" class="btn sm" data-to-settle>轉成可編輯的分批交割時程圖</button> <small class="muted">轉換後請按儲存；原本的圖片不會刪除，可到圖庫自行刪除。</small></div>' : '') +
+      '<div class="rows">' + f.map((x, i) => '<div class="rowx"><div class="rowx-main"><label class="f"><span>情境 ' + (i + 1) + ' 標題</span>' + inp('figures.' + i + '.title', x.title, '例如：第 1 週即觸及 KO 出場') + '</label>' +
       '<div class="f"><span>說明</span>' + rte('figures.' + i + '.text', x.text, 'mini') + '</div>' + imgField('figures.' + i + '.imageId', x.imageId) + '</div>' + ctlBtns('figures', i, f.length) + '</div>').join('') +
       '</div><button type="button" class="add-btn" data-add="figures" data-tpl="figure">＋ 新增圖片情境</button>';
   }
@@ -4739,8 +4803,10 @@ function viewProductEditor(id, catId) {
       '<div class="sub-h">注意事項（紅框）</div>' + listRows('risks', P().risks, '注意事項', true) + '<button type="button" class="add-btn" data-add="risks" data-tpl="text">＋ 新增注意事項</button>'],
     ['scen', '情境分析', '走勢圖情境或圖片情境', () => {
       const m = P().scenarioMode || 'chart';
-      return '<div class="add-row"><label class="chk"><input type="radio" name="smode" value="chart"' + (m === 'chart' ? ' checked' : '') + '> 走勢圖＋情境卡片</label><label class="chk"><input type="radio" name="smode" value="images"' + (m === 'images' ? ' checked' : '') + '> 圖片說明</label><label class="chk"><input type="radio" name="smode" value="none"' + (m === 'none' ? ' checked' : '') + '> 不顯示</label></div>' +
+      return '<div class="add-row"><label class="chk"><input type="radio" name="smode" value="chart"' + (m === 'chart' ? ' checked' : '') + '> 走勢圖＋情境卡片</label><label class="chk"><input type="radio" name="smode" value="settle"' + (m === 'settle' ? ' checked' : '') + '> 分批交割時程圖（DQ／AQ 這類）</label><label class="chk"><input type="radio" name="smode" value="images"' + (m === 'images' ? ' checked' : '') + '> 圖片說明</label><label class="chk"><input type="radio" name="smode" value="none"' + (m === 'none' ? ' checked' : '') + '> 不顯示</label></div>' +
         (m === 'chart' ? '<details class="box" open><summary>圖表設定 <small>X 軸、Y 軸、參考線</small></summary><div class="box-body">' + chartEditor() + '</div></details><div class="sub-h">情境</div>' + scenariosEditor() : '') +
+        (m === 'settle' ? '<p class="muted" style="font-size:13.5px;margin:0 0 10px">先在「圖表設定」設好 X 軸期間（例如 期初、第1週、第2週…）與參考線（履約價、提前出場價），所有情境共用；再到每個情境填股價走勢點與交割時點。</p>' +
+          '<details class="box" open><summary>圖表設定 <small>X 軸、Y 軸、參考線（所有情境共用）</small></summary><div class="box-body">' + chartEditor() + '</div></details><div class="sub-h">情境</div>' + settleEditor() : '') +
         (m === 'images' ? figuresEditor() : '');
     }],
     ['extra', '補充段落', '自由新增的段落（顯示在常見 QA 之前）', () => sectionsEditor('sections', P().sections)],
@@ -4771,17 +4837,20 @@ function viewProductEditor(id, catId) {
   S.cleanup.push(() => { clearTimeout(pt); const pb = $('#edPrevBody'); const old = pb && $('.chart-panel', pb); if (old && old._chart) old._chart.destroy(); });
   const reletter = () => P().scenarios.forEach((s, i) => { s.letter = String.fromCharCode(65 + i); });
   bindForm(form, P, {
-    templates: Object.assign({ kv: { k: '', v: '' }, text: '', line: { label: '', value: 0, color: 'orange' }, figure: { title: '', text: '', imageId: '' }, scenario: () => scenarioTemplate(P()) }, COMMON_TPL),
+    templates: Object.assign({ kv: { k: '', v: '' }, text: '', line: { label: '', value: 0, color: 'orange' }, figure: { title: '', text: '', imageId: '' },
+      event: { at: null, title: '', text: '', ko: false },
+      scenario: () => P().scenarioMode === 'settle' ? Object.assign(scenarioTemplate(P()), { tone: '', path: [], cashflows: [], curve: '', koAt: null, shadeBelow: null, note: '', events: [] }) : scenarioTemplate(P()) }, COMMON_TPL),
     rerender: () => { reletter(); renderForm(true); },
     onChange: path => {
       markDirty(true); preview();
       if (/\.tone$/.test(path) || /^chart\.lines\.\d+\.stepped$/.test(path)) renderForm(true);
+      if (/\.curve$/.test(path)) { const m = path.match(/^scenarios\.(\d+)\.curve$/), el = m && form.querySelector('[data-bind="' + path + '"]'); const lab = el && el.closest('.f') && el.closest('.f').querySelector('span'); if (lab) lab.textContent = '股價走勢點（目前 ' + parseCurve(P().scenarios[+m[1]].curve).length + ' 個點）'; }
       if (path === 'name') $('#edTitle').textContent = (E.isNew ? '新增商品：' : '編輯商品：') + P().name;
     }
   });
   form.addEventListener('change', e => {
     const t = e.target;
-    if (t.name === 'smode') { P().scenarioMode = t.value; if (t.value === 'chart' && !P().chart) P().chart = defaultChart(); markDirty(true); renderForm(true); preview(); }
+    if (t.name === 'smode') { P().scenarioMode = t.value; if ((t.value === 'chart' || t.value === 'settle') && !P().chart) P().chart = defaultChart(); markDirty(true); renderForm(true); preview(); }
     if (t.dataset.lineMode != null) {
       const l = P().chart.lines[+t.dataset.lineMode], n = P().chart.labels.length;
       if (t.value === 'multi') { l.values = Array(n).fill(num(l.value)); delete l.value; }
@@ -4794,10 +4863,11 @@ function viewProductEditor(id, catId) {
     const p = P();
     if (b.dataset.col) {
       const c = p.chart;
-      if (b.dataset.col === 'add') { c.labels.push(''); p.scenarios.forEach(s => { s.path.push(null); s.cashflows.push(''); }); c.lines.forEach(l => { if (Array.isArray(l.values)) l.values.push(null); }); }
-      else if (c.labels.length > 2) { c.labels.pop(); const n = c.labels.length; p.scenarios.forEach(s => { s.path = s.path.slice(0, n); s.cashflows = s.cashflows.slice(0, n); }); c.lines.forEach(l => { if (Array.isArray(l.values)) l.values = l.values.slice(0, n); }); }
+      if (b.dataset.col === 'add') { c.labels.push(''); p.scenarios.forEach(s => { (s.path = s.path || []).push(null); (s.cashflows = s.cashflows || []).push(''); }); c.lines.forEach(l => { if (Array.isArray(l.values)) l.values.push(null); }); }
+      else if (c.labels.length > 2) { c.labels.pop(); const n = c.labels.length; p.scenarios.forEach(s => { s.path = (s.path || []).slice(0, n); s.cashflows = (s.cashflows || []).slice(0, n); }); c.lines.forEach(l => { if (Array.isArray(l.values)) l.values = l.values.slice(0, n); }); }
       markDirty(true); renderForm(true); preview(); return;
     }
+    if (b.dataset.toSettle !== undefined) { figuresToSettle(p); markDirty(true); renderForm(true); preview(); toast('已轉換，確認右側預覽沒問題後請按儲存', 'ok'); return; }
     if (b.dataset.imgPick) { const iid = await pickImage(); if (iid) { setPath(p, b.dataset.imgPick, iid); markDirty(true); renderForm(true); preview(); } return; }
     if (b.dataset.imgClear) { setPath(p, b.dataset.imgClear, ''); markDirty(true); renderForm(true); preview(); return; }
     if (b.dataset.qaPick !== undefined) {
@@ -4819,6 +4889,11 @@ function viewProductEditor(id, catId) {
     out.mechanics = out.mechanics.filter(t => String(t.k || '').trim() || plain(t.v)).map(t => ({ k: String(t.k || '').trim(), v: sanitize(t.v) }));
     out.risks = out.risks.map(sanitize).filter(x => plain(x));
     out.scenarios.forEach(s => { s.condition = sanitize(s.condition); s.outcome = sanitize(s.outcome); s.path = (s.path || []).map(num); s.cashflows = (s.cashflows || []).map(x => String(x || '').trim()); });
+    if (out.scenarioMode === 'settle') out.scenarios.forEach(s => {
+      s.curve = String(s.curve || '').trim(); s.koAt = num(s.koAt); s.shadeBelow = num(s.shadeBelow); s.note = String(s.note || '').trim();
+      s.events = (s.events || []).filter(e => e && (num(e.at) != null || String(e.title || '').trim() || String(e.text || '').trim()))
+        .map(e => ({ at: num(e.at), title: String(e.title || '').trim(), text: String(e.text || '').trim(), ko: !!e.ko }));
+    });
     out.figures.forEach(f => { f.text = sanitize(f.text); });
     sanitizeBlocks(out.sections);
     out.qaIds = (out.qaIds || []).filter(x => qaById(x));
