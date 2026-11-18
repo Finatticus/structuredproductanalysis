@@ -263,6 +263,15 @@ a:hover .arrow { transform: translateX(4px); }
 .cf { position: absolute; bottom: 0; width: 76px; height: 36px; background: var(--tint); border-top: 2px solid var(--brand); color: var(--ink-2); font-size: 12.5px; line-height: 1.2; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 600; padding: 0 2px; }
 .cf.hot { color: var(--bad); border-top-color: var(--bad); background: var(--bad-bg); }
 
+.fig-wrap { padding-bottom: 0; }
+.fig-note { font-size: 13.5px; color: var(--muted); margin: 4px 0 0; }
+.ev-list { list-style: none; margin: 8px 0 4px; padding: 12px 0 6px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; border-top: 1px solid var(--rule-2); }
+.ev { display: flex; gap: 10px; padding: 10px 12px; border: 1px solid var(--rule); background: var(--tint-2); font-size: 14px; line-height: 1.6; }
+.ev i { flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%; background: var(--brand); color: #fff; font-style: normal; font-weight: 700; font-size: 12.5px; }
+.ev b { display: block; font-size: 14.5px; color: var(--ink); }
+.ev span { display: block; color: var(--ink-2); }
+.ev.ko { border-color: var(--bad-line); background: var(--bad-bg); }
+.ev.ko i { background: var(--bad); }
 .fig-scen { padding: 6px 0 26px; }
 .fig-scen + .fig-scen { border-top: 1px solid var(--rule-2); padding-top: 26px; }
 .fig-scen h3 { font-size: 18px; font-weight: 700; color: var(--ink); margin: 6px 0 8px; display: flex; gap: 10px; align-items: baseline; }
@@ -1747,15 +1756,18 @@ function productHTML(p, opt) {
     (p.risks.length ? '<div class="risk"><div class="risk-label">注意事項</div><ul>' + p.risks.map(r => '<li>' + sanitize(r) + '</li>').join('') + '</ul></div>' : '') + '</section>';
   if (has('scenarios')) {
     html += '<section class="sec" data-sec="scenarios">' + head('scenarios');
-    if (p.scenarioMode === 'chart') {
-      html += '<div class="scen-box"><div class="scen-tabs" role="tablist" aria-label="情境" style="--cols:' + (p.scenarios.length <= 4 ? p.scenarios.length : p.scenarios.length <= 6 ? 3 : 4) + '">' + p.scenarios.map((s, i) => {
+    const items = scenItems(p), viz = p.scenarioMode !== 'chart';
+    if (items) {
+      html += '<div class="scen-box"><div class="scen-tabs" role="tablist" aria-label="情境" style="--cols:' + (items.length <= 4 ? items.length : items.length <= 6 ? 3 : 4) + '">' + items.map((s, i) => {
         const tone = toneOf(s);
         return '<button type="button" role="tab" class="scen-tab tone-' + tone + (i === 0 ? ' on' : '') + '" data-scen="' + i + '" aria-selected="' + (i === 0) + '" tabindex="' + (i === 0 ? 0 : -1) + '" title="' + esc((s.title || '情境 ' + s.letter) + '（' + TONES[tone] + '）') + '">' +
           '<b>' + esc(s.letter) + '</b><span>' + esc(s.title || '情境 ' + s.letter) + '</span></button>';
       }).join('') + '</div><div class="scen-info" role="tabpanel" aria-live="polite"></div>' +
-      '<div class="chart-panel"><div class="chart-head"><span class="eyebrow">標的走勢模擬</span></div>' +
-      '<div class="chart-scroll"><div class="chart-wrap"><div class="cv"><canvas></canvas></div><span class="cf-label">現金流</span><div class="cf-row"></div></div></div></div>' +
-      (p.scenarios.length > 1 ? '<div class="scen-nav"><button type="button" data-step="-1">‹ 上一個情境</button><span class="scen-pos"></span><button type="button" data-step="1">下一個情境 ›</button></div>' : '') + '</div>';
+      (viz ? '<div class="chart-panel"><div class="chart-head"><span class="eyebrow">股價走勢與交割示意</span></div>' +
+        '<div class="chart-scroll"><div class="chart-wrap fig-wrap"><div class="cv"><canvas></canvas></div></div></div><p class="fig-note" hidden></p><ol class="ev-list"></ol></div>'
+      : '<div class="chart-panel"><div class="chart-head"><span class="eyebrow">標的走勢模擬</span></div>' +
+        '<div class="chart-scroll"><div class="chart-wrap"><div class="cv"><canvas></canvas></div><span class="cf-label">現金流</span><div class="cf-row"></div></div></div></div>') +
+      (items.length > 1 ? '<div class="scen-nav"><button type="button" data-step="-1">‹ 上一個情境</button><span class="scen-pos"></span><button type="button" data-step="1">下一個情境 ›</button></div>' : '') + '</div>';
     } else {
       html += p.figures.map((f, i) => '<div class="fig-scen"><h3><b>' + (i + 1) + '</b>' + esc(f.title || '情境 ' + (i + 1)) + '</h3><div class="rt">' + sanitize(f.text) + '</div>' +
         (f.imageId ? '<figure class="fig"><img data-img="' + esc(f.imageId) + '" alt="' + esc(f.title || '情境示意圖') + '"></figure>' : '') + '</div>').join('');
@@ -1790,15 +1802,16 @@ function bindToc(root) {
 }
 function mountProduct(root, p) {
   bindToc(root);
-  if (p.scenarioMode === 'chart' && p.scenarios.length) {
-    const panel = $('.chart-panel', root), info = $('.scen-info', root), tabs = $$('.scen-tab', root), n = p.scenarios.length;
+  const items = scenItems(p);
+  if (items && items.length) {
+    const panel = $('.chart-panel', root), info = $('.scen-info', root), tabs = $$('.scen-tab', root), n = items.length;
     let cur = 0;
     const show = (i, focus) => {
       cur = i;
       tabs.forEach(b => { const on = +b.dataset.scen === i; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); b.tabIndex = on ? 0 : -1; });
-      const s = p.scenarios[i], tone = toneOf(s);
+      const s = items[i], tone = toneOf(s);
       info.className = 'scen-info tone-' + tone;
-      info.innerHTML = '<div class="scen-main"><div class="scen-main-head"><span class="scen-no">情境 ' + esc(s.letter) + '</span>' + (s.title ? '<h3>' + esc(s.title) + '</h3>' : '') + '<span class="scen-tag">' + TONES[tone] + '</span></div>' +
+      info.innerHTML = '<div class="scen-main"><div class="scen-main-head"><span class="scen-no">情境 ' + esc(s.letter) + '</span>' + (s.title ? '<h3>' + esc(s.title) + '</h3>' : '') + (s.noTag ? '' : '<span class="scen-tag">' + TONES[tone] + '</span>') + '</div>' +
         '<div class="scen-cond">' + sanitize(s.condition) + '</div></div><div class="scen-out"><small>投資人取得</small><div>' + sanitize(s.outcome) + '</div></div>';
       void info.offsetWidth; info.classList.add('flash');
       const pos = $('.scen-pos', root); if (pos) pos.textContent = (i + 1) + ' / ' + n;
@@ -1806,7 +1819,7 @@ function mountProduct(root, p) {
       if (focus) tabs[i].focus({ preventScroll: true });
       const bar = tabs[i].parentNode;
       if (bar.scrollWidth > bar.clientWidth) bar.scrollTo({ left: Math.max(0, tabs[i].offsetLeft - 24), behavior: 'smooth' });
-      drawChart(panel, p, i);
+      if (p.scenarioMode === 'chart') drawChart(panel, p, i); else drawFigViz(panel, p.figures[i], s.letter);
     };
     tabs.forEach(b => {
       b.addEventListener('click', () => show(+b.dataset.scen));
@@ -1824,6 +1837,78 @@ function mountProduct(root, p) {
   mountBlocks(root);
 }
 
+/* 情境分頁的資料來源：一般架構用 scenarios；DQ/AQ 這類「圖片情境」若每張都有程式繪圖設定，就改用程式畫。
+   設定來源：figure.viz（資料）優先，否則用 FIG_VIZ 以圖片 id 對應。圖片仍保留；要換回圖片，拿掉對應的設定即可。 */
+const FIG_VIZ = {"img-98229c30":{"labels":["期初","第1週","第2週","第3週","第4週","第5週","第6週","第7週","第8週"],"yMin":80,"yMax":125,"yTitle":"股價（USD）","lines":[{"label":"履約價 112","value":112,"color":"green"},{"label":"期初價 100","value":100,"color":"gray"},{"label":"提前出場價 90","value":90,"color":"red"}],"path":[[0,100],[0.25,98],[0.5,99],[1,107],[1.5,110],[1.8,111],[2.2,116],[2.6,118.5],[3,115],[3.5,107],[4,103.5],[4.5,97.5],[5,90],[5.5,86],[6,84.5],[6.5,84.5],[7,85.5],[7.5,89.5],[7.8,91],[8,89.5]],"ko":{"at":5},"events":[{"at":2,"title":"第一次交割（第1~2週）","lines":["$112 × 40股 × 10個交易日 = $44,800"]},{"at":4,"title":"第二次交割（第3~4週）","lines":["$112 × 40股 × 10個交易日 = $44,800"]},{"at":5,"ko":true,"title":"第5週跌破提前出場價（USD 90）","lines":["① $112 × 40股 × 5個交易日 = $22,400","② 剩餘股數 5,080股 − 25個交易日 × 40股 = 4,080股"]}],"note":"灰色區域：提前出場後商品已結束，之後的股價與投資人無關。","outcome":"每兩週領回 $44,800；第5週提前出場時領回 $22,400 + 4,080股"},"img-dq2":{"labels":["期初","第1週","第2週","第3週","第4週","第5週","第6週","第7週","第8週"],"yMin":80,"yMax":125,"yTitle":"股價（USD）","lines":[{"label":"履約價 112","value":112,"color":"green"},{"label":"期初價 100","value":100,"color":"gray"},{"label":"提前出場價 90","value":90,"color":"red"}],"path":[[0,100],[0.25,96],[0.5,94],[0.7,95.5],[0.85,93],[1,90],[1.3,87],[1.6,86],[2,85],[2.5,86.5],[3,92],[3.3,91],[3.6,89],[4,90.5],[4.5,95],[5,96],[5.5,95],[6,101],[6.5,104.5],[7,102],[7.5,98],[7.8,97],[8,99.5]],"ko":{"at":1},"events":[{"at":1,"ko":true,"title":"第1週提前出場（保證期 4 週內）","lines":["① 保證賣滿 4 週：$112 × 40股 × 20個交易日 = $89,600","② 剩餘股數 5,080股 − 20個交易日 × 40股 = 4,280股"]}],"note":"灰色區域：提前出場後商品已結束，之後的股價與投資人無關。","outcome":"領回 $89,600 + 4,280股（仍以履約價賣滿 4 週的股數）"},"img-aq1":{"labels":["期初","1月","2月","3月","4月","5月","6月"],"yMin":50,"yMax":140,"yFormat":"%","yTitle":"股價（期初 = 100%）","lines":[{"label":"提前出場價 110%","value":110,"color":"red"},{"label":"履約價 80%","value":80,"color":"green"}],"path":[[0,101],[0.25,106],[0.5,105],[0.75,100],[0.9,92],[1,87],[1.25,83],[1.5,88],[1.75,92],[2,88],[2.25,83],[2.5,87],[2.75,93],[3,97],[3.1,93],[3.25,99],[3.4,101],[3.6,87],[3.8,91],[4,105],[4.2,99],[4.5,102],[4.8,105],[5,99],[5.3,92],[5.7,93],[6,85]],"events":[{"at":1,"title":"第1個月交割","lines":["21天 × 20股 = 420股"]},{"at":2,"title":"第2個月交割","lines":["21天 × 20股 = 420股"]},{"at":3,"title":"第3個月交割","lines":["21天 × 20股 = 420股"]},{"at":4,"title":"第4個月交割","lines":["21天 × 20股 = 420股"]},{"at":5,"title":"第5個月交割","lines":["21天 × 20股 = 420股"]},{"at":6,"title":"以此類推","lines":["每個月交割一次，一路領到到期"]}],"outcome":"每個月領回 420股（21天 × 20股），一路領到到期"},"img-aq2":{"labels":["期初","1月","2月","3月","4月","5月","6月"],"yMin":50,"yMax":140,"yFormat":"%","yTitle":"股價（期初 = 100%）","lines":[{"label":"提前出場價 110%","value":110,"color":"red"},{"label":"履約價 80%","value":80,"color":"green"}],"shadeBelow":80,"path":[[0,101],[0.25,106],[0.5,94],[0.75,99],[1,99],[1.25,85],[1.5,93],[1.75,100],[2,85],[2.2,88],[2.48,80],[2.7,71],[3,72],[3.3,61],[3.6,71],[3.8,66],[4,66],[4.3,73],[4.55,80],[4.7,85],[4.85,80],[5,73],[5.3,74],[5.6,79],[6,88]],"events":[{"at":1,"title":"第1個月交割","lines":["21天 × 20股 = 420股"]},{"at":2,"title":"第2個月交割","lines":["21天 × 20股 = 420股"]},{"at":3,"title":"第3個月交割","lines":["10天 × 20股 + 11天 × 40股","共 640股"]},{"at":4,"title":"第4個月交割","lines":["21天 × 40股 = 840股"]},{"at":5,"title":"第5個月交割","lines":["6天 × 20股 + 15天 × 40股","共 720股"]},{"at":6,"title":"以此類推","lines":["每個月交割一次，一路領到到期"]}],"note":"橘色區域：股價低於履約價的日子，當天買進 2 倍（40股）。","outcome":"低於履約價的日子當天買 40股（2 倍）；前 5 個月共領回 3,040股"},"img-e58889f4":{"labels":["期初","1月","2月","3月","4月","5月","6月"],"yMin":50,"yMax":140,"yFormat":"%","yTitle":"股價（期初 = 100%）","lines":[{"label":"提前出場價 110%","value":110,"color":"red"},{"label":"履約價 80%","value":80,"color":"green"}],"path":[[0,101],[0.12,104],[0.22,103.5],[0.3,97],[0.38,98],[0.5,101],[0.62,106],[0.714,110]],"ko":{"at":0.714},"events":[{"at":0.714,"ko":true,"title":"第15天漲過提前出場價","lines":["① 保證買滿 1 個月：21天 × 20股 = 420股 NVDA","② 剩餘款項 806,400 − 420股 × 80元 = 772,800 返還"]}],"note":"灰色區域：提前出場後商品已結束。","outcome":"領回 420股 NVDA + 剩餘款項 USD 772,800"}};
+const vizOf = f => (f && f.viz && Array.isArray(f.viz.path) ? f.viz : f && FIG_VIZ[f.imageId]) || null;
+function figVizOn(p) { return p.scenarioMode === 'images' && p.figures.length > 0 && p.figures.every(f => { const v = vizOf(f); return v && Array.isArray(v.path) && v.path.length > 1; }); }
+function scenItems(p) {
+  if (p.scenarioMode === 'chart') return p.scenarios.length ? p.scenarios : null;
+  if (!figVizOn(p)) return null;
+  return p.figures.map((f, i) => { const v = vizOf(f); return { letter: String.fromCharCode(65 + i), title: f.title || '情境 ' + (i + 1), tone: v.tone || 'neutral', noTag: !v.tone, condition: f.text, outcome: v.outcome || '' }; });
+}
+function drawFigViz(panel, f, letter) {
+  const v = vizOf(f) || {}, labels = (v.labels || []).map(String), last = Math.max(1, labels.length - 1);
+  const cv = $('.cv', panel), list = $('.ev-list', panel), note = $('.fig-note', panel);
+  if (panel._chart) { panel._chart.destroy(); panel._chart = null; }
+  const evs = (v.events || []).filter(e => e && e.at != null);
+  list.innerHTML = evs.map((e, k) => '<li class="ev' + (e.ko ? ' ko' : '') + '"><i>' + (k + 1) + '</i><div><b>' + esc(e.title || '') + '</b>' + (e.lines || []).map(t => '<span>' + esc(t) + '</span>').join('') + '</div></li>').join('');
+  list.hidden = !evs.length;
+  note.textContent = v.note || ''; note.hidden = !v.note;
+  if (!window.Chart) { cv.innerHTML = '<p class="muted" style="padding:20px">圖表元件載入失敗（請確認網路連線）。</p>'; return; }
+  if (!$('canvas', cv)) cv.innerHTML = '<canvas></canvas>';
+  const pct = v.yFormat === '%', fmt = y => pct ? y + '%' : y;
+  const pts = v.path.map(a => ({ x: num(a[0]), y: num(a[1]) })).filter(a => a.x != null && a.y != null);
+  const shade = num(v.shadeBelow);
+  const ds = [{ label: v.seriesLabel || '股價', data: pts, borderColor: BRAND, backgroundColor: BRAND, borderWidth: 2.4, tension: 0.35, pointRadius: 0, pointHoverRadius: 0,
+    fill: shade == null ? false : { target: { value: shade }, above: 'rgba(0,0,0,0)', below: 'rgba(208,130,31,.24)' } }];
+  (v.lines || []).forEach(l => {
+    const col = LINE_COLORS[l.color] || LINE_COLORS.gray, y = num(l.value);
+    ds.push({ label: l.label || '', data: [{ x: 0, y: y }, { x: last, y: y }], borderColor: col, backgroundColor: col, borderWidth: 1.6, borderDash: l.color === 'gray' ? [3, 4] : [6, 4], pointRadius: 0, pointHoverRadius: 0, fill: false });
+  });
+  const ko = v.ko && num(v.ko.at) != null ? num(v.ko.at) : null;
+  panel._chart = new Chart($('canvas', cv), {
+    type: 'line',
+    data: { datasets: ds },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+      layout: { padding: { left: 4, right: 18, top: 4 } },
+      scales: {
+        x: { type: 'linear', min: 0, max: last, ticks: { stepSize: 1, autoSkip: false, maxRotation: 0, color: '#323a46', font: { size: 13.5 }, callback: x => Number.isInteger(x) ? (labels[x] || '') : '' }, grid: { color: '#eceff3' } },
+        y: { min: num(v.yMin) == null ? undefined : num(v.yMin), max: num(v.yMax) == null ? undefined : num(v.yMax), title: { display: !!v.yTitle, text: v.yTitle || '', color: '#687180', font: { size: 13 } }, grid: { color: '#eceff3' }, ticks: { color: '#687180', font: { size: 13 }, callback: fmt } }
+      },
+      plugins: {
+        legend: { position: 'top', align: 'end', labels: { boxWidth: 22, boxHeight: 1, color: '#323a46', font: { size: 13.5, family: '"Inter","Noto Sans TC",sans-serif' } } },
+        tooltip: { enabled: false }
+      }
+    },
+    plugins: [{
+      id: 'figviz',
+      beforeDatasetsDraw: ch => {
+        if (ko == null) return;
+        const c = ch.ctx, a = ch.chartArea, x = ch.scales.x.getPixelForValue(ko);
+        c.save(); c.fillStyle = 'rgba(24,32,43,.06)'; c.fillRect(x, a.top, a.right - x, a.bottom - a.top); c.restore();
+      },
+      afterDraw: ch => {
+        const c = ch.ctx, a = ch.chartArea, xs = ch.scales.x;
+        c.save();
+        c.font = '700 64px "Noto Serif TC", Georgia, serif'; c.fillStyle = 'rgba(47, 93, 140, 0.07)'; c.textAlign = 'right'; c.textBaseline = 'middle';
+        c.fillText(letter + ' 情境', a.right - 12, (a.top + a.bottom) / 2);
+        if (ko != null) {
+          const x = xs.getPixelForValue(ko);
+          c.strokeStyle = '#323a46'; c.lineWidth = 2; c.setLineDash([]); c.beginPath(); c.moveTo(x, a.top); c.lineTo(x, a.bottom); c.stroke();
+        }
+        evs.forEach((e, k) => {
+          const x = xs.getPixelForValue(num(e.at));
+          if (!e.ko) { c.strokeStyle = 'rgba(47,93,140,.45)'; c.lineWidth = 1.2; c.setLineDash([4, 4]); c.beginPath(); c.moveTo(x, a.top + 24); c.lineTo(x, a.bottom); c.stroke(); }
+          c.setLineDash([]); c.fillStyle = e.ko ? '#b03a2e' : BRAND; c.beginPath(); c.arc(x, a.top + 12, 10, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#fff'; c.font = '700 12px "Inter", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(k + 1), x, a.top + 12.5);
+        });
+        c.restore();
+      }
+    }]
+  });
+}
 function num(v) { if (v === '' || v == null) return null; const n = Number(String(v).replace(/,/g, '')); return isFinite(n) ? n : null; }
 function drawChart(panel, p, i) {
   const c = p.chart || {}, s = p.scenarios[i];
