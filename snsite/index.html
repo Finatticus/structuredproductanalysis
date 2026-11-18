@@ -166,7 +166,6 @@ a:hover .arrow { transform: translateX(4px); }
 .toc a.on { color: var(--brand-ink); border-left-color: var(--brand); font-weight: 600; background: var(--brand-tint); }
 .sheet { background: var(--sheet); border: 1px solid var(--rule); padding: 6px var(--pad) var(--pad); min-width: 0; container: sheet / inline-size; }
 /* 內容區較窄時，四張情境卡改成 2×2，避免卡片太窄、字擠成一長條 */
-@container sheet (max-width: 860px) { .scen-grid[style*="--n:4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .sec { padding-top: 38px; scroll-margin-top: 120px; }
 .sec-head { display: flex; align-items: center; gap: 14px; margin: 0 calc(-1 * var(--pad)) 26px; padding: 13px var(--pad); background: var(--brand-tint); border-top: 1px solid var(--brand-line); border-bottom: 1px solid var(--brand-line); position: relative; }
 .sec-head::before { content: ""; position: absolute; left: 0; top: -1px; bottom: -1px; width: 4px; background: var(--brand); }
@@ -224,28 +223,38 @@ a:hover .arrow { transform: translateX(4px); }
 .tone-good { --tone: var(--good); --tone-bg: var(--good-bg); --tone-line: var(--good-line); }
 .tone-neutral { --tone: var(--mid); --tone-bg: var(--mid-bg); --tone-line: var(--mid-line); }
 .tone-bad { --tone: var(--bad); --tone-bg: var(--bad-bg); --tone-line: var(--bad-line); }
-.scen-grid { display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: 12px; }
-.scen { appearance: none; text-align: left; cursor: pointer; color: inherit; background: var(--sheet); border: 1px solid var(--rule); border-top: 4px solid var(--tone, var(--rule)); padding: 0; display: flex; flex-direction: column; transition: box-shadow .15s; }
-.scen:hover { box-shadow: 0 4px 14px rgba(24,32,43,.09); }
-.scen.on { box-shadow: 0 0 0 2px var(--tone) inset, 0 6px 18px rgba(24,32,43,.1); }
-.scen-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px 0; }
-.scen-letter { font-family: var(--serif); font-size: 15.5px; font-weight: 700; color: var(--brand-ink); display: flex; align-items: baseline; gap: 6px; }
-.scen-letter b { font-size: 30px; line-height: 1; color: var(--brand-ink); }
+/* 情境：分頁＋說明＋走勢圖合在同一個框 */
+.scen-box { border: 1px solid var(--rule); background: var(--sheet); }
+.scen-tabs { position: relative; display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); border-bottom: 1px solid var(--rule); background: var(--tint-2); }
+.scen-tab { appearance: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -1px; background: transparent; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink-2); cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 12px 14px 10px; text-align: left; line-height: 1.35; box-shadow: inset -1px 0 0 var(--rule-2); }
+.scen-tab span { flex: 1; min-width: 0; }
+.scen-tab b { font-family: var(--serif); font-size: 20px; line-height: 1; color: var(--brand-ink); }
+.scen-tab .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--tone); }
+.scen-tab:hover { color: var(--ink); background: rgba(255,255,255,.65); }
+.scen-tab.on { background: var(--sheet); color: var(--ink); border-bottom-color: var(--tone); }
+.scen-tab:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.scen-info { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); border-bottom: 1px solid var(--rule); }
+.scen-info.flash { animation: scenFlash .35s ease; }
+@keyframes scenFlash { from { opacity: .3; } to { opacity: 1; } }
+.scen-main { padding: 16px 20px; }
+.scen-main-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.scen-main-head h3 { font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.45; }
+.scen-main-head .scen-no { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--brand-ink); }
 .scen-tag { font-size: 13px; font-weight: 700; color: var(--tone); background: var(--tone-bg); border: 1px solid var(--tone-line); padding: 1px 8px; white-space: nowrap; }
-.scen-top > * { white-space: nowrap; }
-.scen-title { font-size: 17.5px; font-weight: 700; color: var(--ink); line-height: 1.45; padding: 8px 16px 0; }
-.scen-cond { font-size: 15px; color: var(--ink-2); line-height: 1.7; padding: 8px 16px 12px; flex: 1; }
+.scen-cond { font-size: 15px; color: var(--ink-2); line-height: 1.75; }
 .scen-cond p { margin: 0 0 4px; }
-.scen-out { background: var(--tone-bg); border-top: 1px solid var(--tone-line); padding: 10px 16px 12px; }
-.scen-out small { display: block; font-size: 12.5px; letter-spacing: .1em; color: var(--tone); font-weight: 700; margin-bottom: 2px; }
-.scen-out div { font-size: 16.5px; font-weight: 700; color: var(--ink); line-height: 1.55; }
-.scen-hint { font-size: 14px; color: var(--muted); margin: 10px 0 0; }
+.scen-out { background: var(--tone-bg); border-left: 1px solid var(--tone-line); padding: 16px 20px; display: flex; flex-direction: column; justify-content: center; }
+.scen-out small { display: block; font-size: 12.5px; letter-spacing: .1em; color: var(--tone); font-weight: 700; margin-bottom: 4px; }
+.scen-out div { font-size: 16.5px; font-weight: 700; color: var(--ink); line-height: 1.6; }
+.scen-box .chart-panel { margin: 0; border: 0; }
+.scen-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 20px; border-top: 1px solid var(--rule-2); font-size: 14px; color: var(--muted); }
+.scen-nav button { appearance: none; border: 1px solid var(--rule); background: var(--sheet); font: inherit; font-size: 14px; color: var(--ink-2); padding: 6px 12px; cursor: pointer; }
+.scen-nav button:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+.scen-nav button:disabled { opacity: .4; cursor: default; }
 
 .chart-panel { margin-top: 18px; border: 1px solid var(--rule); padding: 14px 18px 6px; background: var(--sheet); }
 .chart-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
 .chart-head .eyebrow { color: var(--muted); }
-.chart-now { font-size: 15.5px; font-weight: 700; color: var(--brand-ink); }
-.chart-now i { font-style: normal; font-weight: 700; padding: 1px 8px; margin-left: 8px; color: var(--tone); background: var(--tone-bg); border: 1px solid var(--tone-line); font-size: 13px; }
 .chart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .chart-wrap { position: relative; min-width: 600px; padding-bottom: 60px; }
 .chart-wrap .cv { position: relative; height: 340px; }
@@ -1046,7 +1055,6 @@ body.srch-open { overflow: hidden; }
   .prod-tags { grid-column: 2 / 3; flex-direction: row; gap: 10px; margin-top: 10px; }
   .prod .arrow { grid-row: 1; grid-column: 3; }
   .tool-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .scen-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .form-grid .field:nth-child(4) { border-left: 0; }
   .form-grid .field:nth-child(n+4) { border-top: 1px solid var(--rule-2); }
@@ -1081,8 +1089,13 @@ body.srch-open { overflow: hidden; }
   .termsheet th, .termsheet td { padding: 10px 10px; }
   .termsheet th { width: 40%; }
   .mech-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-  .scen-grid { grid-template-columns: minmax(0, 1fr); }
   .chart-panel { padding: 10px 8px 4px; }
+  .scen-tabs { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .scen-tab { white-space: nowrap; font-size: 14px; padding: 10px 12px 8px; }
+  .scen-info { grid-template-columns: minmax(0, 1fr); }
+  .scen-out { border-left: 0; border-top: 1px solid var(--tone-line); }
+  .scen-main, .scen-out { padding: 12px 14px; }
+  .scen-nav { padding: 8px 12px; }
   .prod { grid-template-columns: 30px minmax(0, 1fr) 16px; gap: 0 12px; padding: 16px 14px; }
   .prod:not(.rfq-row) .prod-desc { font-size: 16px; }
   .cat-head { grid-template-columns: 38px 1fr; padding: 12px 14px; }
@@ -1735,16 +1748,14 @@ function productHTML(p, opt) {
   if (has('scenarios')) {
     html += '<section class="sec" data-sec="scenarios">' + head('scenarios');
     if (p.scenarioMode === 'chart') {
-      html += '<div class="scen-grid" style="--n:' + Math.max(1, Math.min(p.scenarios.length, 4)) + '">' + p.scenarios.map((s, i) => {
+      html += '<div class="scen-box"><div class="scen-tabs" role="tablist" aria-label="情境" style="--cols:' + (p.scenarios.length <= 4 ? p.scenarios.length : p.scenarios.length <= 6 ? 3 : 4) + '">' + p.scenarios.map((s, i) => {
         const tone = toneOf(s);
-        return '<button type="button" class="scen tone-' + tone + (i === 0 ? ' on' : '') + '" data-scen="' + i + '" aria-pressed="' + (i === 0) + '">' +
-          '<span class="scen-top"><span class="scen-letter"><b>' + esc(s.letter) + '</b>情境</span><span class="scen-tag">' + TONES[tone] + '</span></span>' +
-          (s.title ? '<span class="scen-title">' + esc(s.title) + '</span>' : '') +
-          '<span class="scen-cond">' + sanitize(s.condition) + '</span>' +
-          '<span class="scen-out"><small>投資人取得</small><div>' + sanitize(s.outcome) + '</div></span></button>';
-      }).join('') + '</div><p class="scen-hint">點選情境卡片，下方走勢圖與現金流會切換到該情境。</p>' +
-      '<div class="chart-panel"><div class="chart-head"><span class="eyebrow">標的走勢模擬</span><span class="chart-now"></span></div>' +
-      '<div class="chart-scroll"><div class="chart-wrap"><div class="cv"><canvas></canvas></div><span class="cf-label">現金流</span><div class="cf-row"></div></div></div></div>';
+        return '<button type="button" role="tab" class="scen-tab tone-' + tone + (i === 0 ? ' on' : '') + '" data-scen="' + i + '" aria-selected="' + (i === 0) + '" tabindex="' + (i === 0 ? 0 : -1) + '" title="' + esc(TONES[tone]) + '">' +
+          '<b>' + esc(s.letter) + '</b><span>' + esc(s.title || '情境 ' + s.letter) + '</span><i class="dot" aria-hidden="true"></i></button>';
+      }).join('') + '</div><div class="scen-info" role="tabpanel" aria-live="polite"></div>' +
+      '<div class="chart-panel"><div class="chart-head"><span class="eyebrow">標的走勢模擬</span></div>' +
+      '<div class="chart-scroll"><div class="chart-wrap"><div class="cv"><canvas></canvas></div><span class="cf-label">現金流</span><div class="cf-row"></div></div></div></div>' +
+      (p.scenarios.length > 1 ? '<div class="scen-nav"><button type="button" data-step="-1">‹ 上一個情境</button><span class="scen-pos"></span><button type="button" data-step="1">下一個情境 ›</button></div>' : '') + '</div>';
     } else {
       html += p.figures.map((f, i) => '<div class="fig-scen"><h3><b>' + (i + 1) + '</b>' + esc(f.title || '情境 ' + (i + 1)) + '</h3><div class="rt">' + sanitize(f.text) + '</div>' +
         (f.imageId ? '<figure class="fig"><img data-img="' + esc(f.imageId) + '" alt="' + esc(f.title || '情境示意圖') + '"></figure>' : '') + '</div>').join('');
@@ -1780,16 +1791,31 @@ function bindToc(root) {
 function mountProduct(root, p) {
   bindToc(root);
   if (p.scenarioMode === 'chart' && p.scenarios.length) {
-    const panel = $('.chart-panel', root);
-    const show = i => {
-      $$('.scen', root).forEach(b => { const on = +b.dataset.scen === i; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    const panel = $('.chart-panel', root), info = $('.scen-info', root), tabs = $$('.scen-tab', root), n = p.scenarios.length;
+    let cur = 0;
+    const show = (i, focus) => {
+      cur = i;
+      tabs.forEach(b => { const on = +b.dataset.scen === i; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); b.tabIndex = on ? 0 : -1; });
       const s = p.scenarios[i], tone = toneOf(s);
-      const now = $('.chart-now', panel);
-      now.className = 'chart-now tone-' + tone;
-      now.innerHTML = '情境 ' + esc(s.letter) + (s.title ? '：' + esc(s.title) : '') + '<i>' + TONES[tone] + '</i>';
+      info.className = 'scen-info tone-' + tone;
+      info.innerHTML = '<div class="scen-main"><div class="scen-main-head"><span class="scen-no">情境 ' + esc(s.letter) + '</span>' + (s.title ? '<h3>' + esc(s.title) + '</h3>' : '') + '<span class="scen-tag">' + TONES[tone] + '</span></div>' +
+        '<div class="scen-cond">' + sanitize(s.condition) + '</div></div><div class="scen-out"><small>投資人取得</small><div>' + sanitize(s.outcome) + '</div></div>';
+      void info.offsetWidth; info.classList.add('flash');
+      const pos = $('.scen-pos', root); if (pos) pos.textContent = (i + 1) + ' / ' + n;
+      $$('.scen-nav [data-step]', root).forEach(b => { b.disabled = (i + +b.dataset.step) < 0 || (i + +b.dataset.step) >= n; });
+      if (focus) tabs[i].focus({ preventScroll: true });
+      const bar = tabs[i].parentNode;
+      if (bar.scrollWidth > bar.clientWidth) bar.scrollTo({ left: Math.max(0, tabs[i].offsetLeft - 24), behavior: 'smooth' });
       drawChart(panel, p, i);
     };
-    $$('.scen', root).forEach(b => b.addEventListener('click', () => show(+b.dataset.scen)));
+    tabs.forEach(b => {
+      b.addEventListener('click', () => show(+b.dataset.scen));
+      b.addEventListener('keydown', e => {
+        const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (d) { e.preventDefault(); show((cur + d + n) % n, true); }
+      });
+    });
+    $$('.scen-nav [data-step]', root).forEach(b => b.addEventListener('click', () => show(Math.min(n - 1, Math.max(0, cur + +b.dataset.step)))));
     show(0);
     S.cleanup.push(() => { if (panel._chart) panel._chart.destroy(); });
   }
