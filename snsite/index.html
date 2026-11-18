@@ -1820,7 +1820,7 @@ function mountProduct(root, p) {
       const bar = tabs[i].parentNode;
       if (bar.scrollWidth > bar.clientWidth) bar.scrollTo({ left: Math.max(0, tabs[i].offsetLeft - 24), behavior: 'smooth' });
       if (p.scenarioMode === 'chart') drawChart(panel, p, i);
-      else drawFigViz(panel, p.scenarioMode === 'settle' ? settleViz(p, p.scenarios[i]) : vizOf(p.figures[i]), s.letter);
+      else drawFigViz(panel, settleViz(p, p.scenarios[i]), s.letter);
     };
     tabs.forEach(b => {
       b.addEventListener('click', () => show(+b.dataset.scen));
@@ -1838,16 +1838,11 @@ function mountProduct(root, p) {
   mountBlocks(root);
 }
 
-/* 情境分頁的資料來源：一般架構用 scenarios；DQ/AQ 這類「圖片情境」若每張都有程式繪圖設定，就改用程式畫。
-   設定來源：figure.viz（資料）優先，否則用 FIG_VIZ 以圖片 id 對應。圖片仍保留；要換回圖片，拿掉對應的設定即可。 */
-const FIG_VIZ = {"img-98229c30":{"labels":["期初","第1週","第2週","第3週","第4週","第5週","第6週","第7週","第8週"],"yMin":80,"yMax":125,"yTitle":"股價（USD）","lines":[{"label":"履約價 112","value":112,"color":"green"},{"label":"期初價 100","value":100,"color":"gray"},{"label":"提前出場價 90","value":90,"color":"red"}],"path":[[0,100],[0.25,98],[0.5,99],[1,107],[1.5,110],[1.8,111],[2.2,116],[2.6,118.5],[3,115],[3.5,107],[4,103.5],[4.5,97.5],[5,90],[5.5,86],[6,84.5],[6.5,84.5],[7,85.5],[7.5,89.5],[7.8,91],[8,89.5]],"ko":{"at":5},"events":[{"at":2,"title":"第一次交割（第1~2週）","lines":["$112 × 40股 × 10個交易日 = $44,800"]},{"at":4,"title":"第二次交割（第3~4週）","lines":["$112 × 40股 × 10個交易日 = $44,800"]},{"at":5,"ko":true,"title":"第5週跌破提前出場價（USD 90）","lines":["① $112 × 40股 × 5個交易日 = $22,400","② 剩餘股數 5,080股 − 25個交易日 × 40股 = 4,080股"]}],"note":"灰色區域：提前出場後商品已結束，之後的股價與投資人無關。","outcome":"每兩週領回 $44,800；第5週提前出場時領回 $22,400 + 4,080股"},"img-dq2":{"labels":["期初","第1週","第2週","第3週","第4週","第5週","第6週","第7週","第8週"],"yMin":80,"yMax":125,"yTitle":"股價（USD）","lines":[{"label":"履約價 112","value":112,"color":"green"},{"label":"期初價 100","value":100,"color":"gray"},{"label":"提前出場價 90","value":90,"color":"red"}],"path":[[0,100],[0.25,96],[0.5,94],[0.7,95.5],[0.85,93],[1,90],[1.3,87],[1.6,86],[2,85],[2.5,86.5],[3,92],[3.3,91],[3.6,89],[4,90.5],[4.5,95],[5,96],[5.5,95],[6,101],[6.5,104.5],[7,102],[7.5,98],[7.8,97],[8,99.5]],"ko":{"at":1},"events":[{"at":1,"ko":true,"title":"第1週提前出場（保證期 4 週內）","lines":["① 保證賣滿 4 週：$112 × 40股 × 20個交易日 = $89,600","② 剩餘股數 5,080股 − 20個交易日 × 40股 = 4,280股"]}],"note":"灰色區域：提前出場後商品已結束，之後的股價與投資人無關。","outcome":"領回 $89,600 + 4,280股（仍以履約價賣滿 4 週的股數）"},"img-aq1":{"labels":["期初","1月","2月","3月","4月","5月","6月"],"yMin":50,"yMax":140,"yFormat":"%","yTitle":"股價（期初 = 100%）","lines":[{"label":"提前出場價 110%","value":110,"color":"red"},{"label":"履約價 80%","value":80,"color":"green"}],"path":[[0,101],[0.25,106],[0.5,105],[0.75,100],[0.9,92],[1,87],[1.25,83],[1.5,88],[1.75,92],[2,88],[2.25,83],[2.5,87],[2.75,93],[3,97],[3.1,93],[3.25,99],[3.4,101],[3.6,87],[3.8,91],[4,105],[4.2,99],[4.5,102],[4.8,105],[5,99],[5.3,92],[5.7,93],[6,85]],"events":[{"at":1,"title":"第1個月交割","lines":["21天 × 20股 = 420股"]},{"at":2,"title":"第2個月交割","lines":["21天 × 20股 = 420股"]},{"at":3,"title":"第3個月交割","lines":["21天 × 20股 = 420股"]},{"at":4,"title":"第4個月交割","lines":["21天 × 20股 = 420股"]},{"at":5,"title":"第5個月交割","lines":["21天 × 20股 = 420股"]},{"at":6,"title":"以此類推","lines":["每個月交割一次，一路領到到期"]}],"outcome":"每個月領回 420股（21天 × 20股），一路領到到期"},"img-aq2":{"labels":["期初","1月","2月","3月","4月","5月","6月"],"yMin":50,"yMax":140,"yFormat":"%","yTitle":"股價（期初 = 100%）","lines":[{"label":"提前出場價 110%","value":110,"color":"red"},{"label":"履約價 80%","value":80,"color":"green"}],"shadeBelow":80,"path":[[0,101],[0.25,106],[0.5,94],[0.75,99],[1,99],[1.25,85],[1.5,93],[1.75,100],[2,85],[2.2,88],[2.48,80],[2.7,71],[3,72],[3.3,61],[3.6,71],[3.8,66],[4,66],[4.3,73],[4.55,80],[4.7,85],[4.85,80],[5,73],[5.3,74],[5.6,79],[6,88]],"events":[{"at":1,"title":"第1個月交割","lines":["21天 × 20股 = 420股"]},{"at":2,"title":"第2個月交割","lines":["21天 × 20股 = 420股"]},{"at":3,"title":"第3個月交割","lines":["10天 × 20股 + 11天 × 40股","共 640股"]},{"at":4,"title":"第4個月交割","lines":["21天 × 40股 = 840股"]},{"at":5,"title":"第5個月交割","lines":["6天 × 20股 + 15天 × 40股","共 720股"]},{"at":6,"title":"以此類推","lines":["每個月交割一次，一路領到到期"]}],"note":"橘色區域：股價低於履約價的日子，當天買進 2 倍（40股）。","outcome":"低於履約價的日子當天買 40股（2 倍）；前 5 個月共領回 3,040股"},"img-e58889f4":{"labels":["期初","1月","2月","3月","4月","5月","6月"],"yMin":50,"yMax":140,"yFormat":"%","yTitle":"股價（期初 = 100%）","lines":[{"label":"提前出場價 110%","value":110,"color":"red"},{"label":"履約價 80%","value":80,"color":"green"}],"path":[[0,101],[0.12,104],[0.22,103.5],[0.3,97],[0.38,98],[0.5,101],[0.62,106],[0.714,110]],"ko":{"at":0.714},"events":[{"at":0.714,"ko":true,"title":"第15天漲過提前出場價","lines":["① 保證買滿 1 個月：21天 × 20股 = 420股 NVDA","② 剩餘款項 806,400 − 420股 × 80元 = 772,800 返還"]}],"note":"灰色區域：提前出場後商品已結束。","outcome":"領回 420股 NVDA + 剩餘款項 USD 772,800"}};
-const vizOf = f => (f && f.viz && Array.isArray(f.viz.path) ? f.viz : f && FIG_VIZ[f.imageId]) || null;
-function figVizOn(p) { return p.scenarioMode === 'images' && p.figures.length > 0 && p.figures.every(f => { const v = vizOf(f); return v && Array.isArray(v.path) && v.path.length > 1; }); }
+/* 情境分頁的資料來源：走勢圖情境與分批交割時程圖都用 scenarios */
 function scenItems(p) {
   if (p.scenarioMode === 'chart') return p.scenarios.length ? p.scenarios : null;
   if (p.scenarioMode === 'settle') return p.scenarios.length ? p.scenarios.map(x => Object.assign({}, x, { tone: TONES[x.tone] ? x.tone : 'neutral', noTag: !TONES[x.tone] })) : null;
-  if (!figVizOn(p)) return null;
-  return p.figures.map((f, i) => { const v = vizOf(f); return { letter: String.fromCharCode(65 + i), title: f.title || '情境 ' + (i + 1), tone: v.tone || 'neutral', noTag: !v.tone, condition: f.text, outcome: v.outcome || '' }; });
+  return null;
 }
 /* 分批交割時程圖：走勢點文字「期數 價格, 期數 價格…」→ [[x, y], …] */
 function parseCurve(t) {
@@ -1866,19 +1861,6 @@ function settleViz(p, sc) {
     path: parseCurve(sc.curve), ko: num(sc.koAt) != null ? { at: num(sc.koAt) } : null, shadeBelow: sc.shadeBelow, note: sc.note || '',
     events: (sc.events || []).map(e => ({ at: num(e.at), title: e.title || '', ko: !!e.ko, lines: String(e.text || '').split(/\n+/).map(x => x.trim()).filter(Boolean) }))
   };
-}
-/* 舊的程式內建設定（圖片情境）→ 可在後台編輯的分批交割時程圖 */
-function figuresToSettle(p) {
-  const v0 = vizOf(p.figures[0]) || {};
-  p.chart = { labels: (v0.labels || []).slice(), yMin: v0.yMin, yMax: v0.yMax, yTitle: v0.yTitle || '', yPct: v0.yFormat === '%', seriesLabel: '股價', lines: clone(v0.lines || []) };
-  p.scenarios = p.figures.map((f, i) => {
-    const v = vizOf(f) || {};
-    return { letter: String.fromCharCode(65 + i), title: f.title || '', tone: v.tone || '', condition: f.text || '', outcome: v.outcome || '', path: [], cashflows: [],
-      curve: (v.path || []).map(a => a[0] + ' ' + a[1]).join(', '), koAt: v.ko ? v.ko.at : null, shadeBelow: v.shadeBelow == null ? null : v.shadeBelow, note: v.note || '',
-      events: (v.events || []).map(e => ({ at: e.at, title: e.title || '', text: (e.lines || []).join('\n'), ko: !!e.ko })) };
-  });
-  p.figures = [];
-  p.scenarioMode = 'settle';
 }
 function drawFigViz(panel, v, letter) {
   v = v || {};
@@ -4772,9 +4754,7 @@ function viewProductEditor(id, catId) {
   }
   function figuresEditor() {
     const f = P().figures;
-    return (figVizOn(P()) && !f.some(x => x.viz) ? '<div class="onboard" style="margin-bottom:14px"><p style="margin:0 0 8px">這個商品前台目前用程式內建的設定畫成「分批交割時程圖」。轉換後就能在這裡直接修改走勢、交割時點與計算內容。</p>' +
-      '<button type="button" class="btn sm" data-to-settle>轉成可編輯的分批交割時程圖</button> <small class="muted">轉換後請按儲存；原本的圖片不會刪除，可到圖庫自行刪除。</small></div>' : '') +
-      '<div class="rows">' + f.map((x, i) => '<div class="rowx"><div class="rowx-main"><label class="f"><span>情境 ' + (i + 1) + ' 標題</span>' + inp('figures.' + i + '.title', x.title, '例如：第 1 週即觸及 KO 出場') + '</label>' +
+    return '<div class="rows">' + f.map((x, i) => '<div class="rowx"><div class="rowx-main"><label class="f"><span>情境 ' + (i + 1) + ' 標題</span>' + inp('figures.' + i + '.title', x.title, '例如：第 1 週即觸及 KO 出場') + '</label>' +
       '<div class="f"><span>說明</span>' + rte('figures.' + i + '.text', x.text, 'mini') + '</div>' + imgField('figures.' + i + '.imageId', x.imageId) + '</div>' + ctlBtns('figures', i, f.length) + '</div>').join('') +
       '</div><button type="button" class="add-btn" data-add="figures" data-tpl="figure">＋ 新增圖片情境</button>';
   }
@@ -4867,7 +4847,6 @@ function viewProductEditor(id, catId) {
       else if (c.labels.length > 2) { c.labels.pop(); const n = c.labels.length; p.scenarios.forEach(s => { s.path = (s.path || []).slice(0, n); s.cashflows = (s.cashflows || []).slice(0, n); }); c.lines.forEach(l => { if (Array.isArray(l.values)) l.values = l.values.slice(0, n); }); }
       markDirty(true); renderForm(true); preview(); return;
     }
-    if (b.dataset.toSettle !== undefined) { figuresToSettle(p); markDirty(true); renderForm(true); preview(); toast('已轉換，確認右側預覽沒問題後請按儲存', 'ok'); return; }
     if (b.dataset.imgPick) { const iid = await pickImage(); if (iid) { setPath(p, b.dataset.imgPick, iid); markDirty(true); renderForm(true); preview(); } return; }
     if (b.dataset.imgClear) { setPath(p, b.dataset.imgClear, ''); markDirty(true); renderForm(true); preview(); return; }
     if (b.dataset.qaPick !== undefined) {
