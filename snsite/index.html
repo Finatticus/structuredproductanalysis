@@ -504,6 +504,23 @@ tr.row-hidden td { background: #fffbf2; }
 .cards h3 { font-family: var(--serif); font-size: 18px; color: var(--brand-ink); margin: 4px 0 8px; font-weight: 700; }
 .cards p, .cards .ct { margin: 0; font-size: 15.5px; color: var(--ink-2); }
 .cards .ct p { margin: 0 0 6px; }
+/* 編號卡片的另外兩種呈現：條列、時間軸 */
+.pts { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--brand); }
+.pts li { display: grid; grid-template-columns: 56px minmax(0, 210px) minmax(0, 1fr); gap: 6px 22px; padding: 20px 0; border-bottom: 1px solid var(--rule-2); align-items: baseline; }
+.pts-n { font-family: var(--serif); font-size: 30px; font-weight: 700; color: var(--gold); line-height: 1; }
+.pts h3 { font-family: var(--serif); font-size: 19px; font-weight: 700; color: var(--brand-ink); line-height: 1.45; }
+.pts .ct { font-size: 16px; color: var(--ink-2); line-height: 1.8; }
+.pts .ct p { margin: 0 0 6px; }
+.tl { list-style: none; margin: 4px 0 0; padding: 0; }
+.tl li { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 0 18px; padding-bottom: 22px; }
+.tl li::before { content: ""; position: absolute; left: 19px; top: 40px; bottom: 2px; width: 2px; background: #b8c7d9; }
+.tl li:last-child { padding-bottom: 0; }
+.tl li:last-child::before { display: none; }
+.tl-dot { position: relative; z-index: 1; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--sheet); border: 2px solid var(--brand); color: var(--brand-ink); font-family: var(--serif); font-size: 17px; font-weight: 700; }
+.tl li:first-child .tl-dot, .tl li:last-child .tl-dot { background: var(--brand); color: #fff; }
+.tl h3 { font-family: var(--serif); font-size: 19px; font-weight: 700; color: var(--brand-ink); margin: 7px 0 4px; }
+.tl .ct { font-size: 16px; color: var(--ink-2); line-height: 1.8; max-width: 46em; }
+.tl .ct p { margin: 0 0 6px; }
 .block + .block { margin-top: 22px; }
 .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
 .tabs button { cursor: pointer; text-align: left; padding: 9px 16px; color: var(--ink-2); background: var(--tint-2); border: 1px solid var(--rule-2); }
@@ -1119,6 +1136,14 @@ body.srch-open { overflow: hidden; }
   .scen-out { border-left: 0; border-top: 1px solid var(--tone-line); }
   .scen-main, .scen-out { padding: 12px 14px; }
   .scen-nav { padding: 8px 12px; }
+  .pts li { grid-template-columns: 40px minmax(0, 1fr); gap: 4px 12px; padding: 16px 0; }
+  .pts-n { font-size: 24px; }
+  .pts .ct { grid-column: 2; font-size: 15.5px; }
+  .tl li { grid-template-columns: 34px minmax(0, 1fr); gap: 0 12px; }
+  .tl li::before { left: 16px; top: 34px; }
+  .tl-dot { width: 34px; height: 34px; font-size: 15px; }
+  .tl h3 { font-size: 17.5px; margin-top: 5px; }
+  .tl .ct { font-size: 15.5px; }
   .prod { grid-template-columns: 30px minmax(0, 1fr) 16px; gap: 0 12px; padding: 16px 14px; }
   .prod:not(.rfq-row) .prod-desc { font-size: 16px; }
   .cat-head { grid-template-columns: 38px 1fr; padding: 12px 14px; }
@@ -2019,14 +2044,17 @@ const richOrPlain = t => isRich(t) ? sanitize(t) : esc(t || '').replace(/\n/g, '
 function blocksHTML(blocks) {
   const fig = (id, cap, dg) => DIAGRAMS[dg] ? '<figure class="fig dgm" data-dgm="' + esc(dg) + '">' + DIAGRAMS[dg].html() + (cap ? '<figcaption>' + esc(cap) + '</figcaption>' : '') + '</figure>'
     : id ? '<figure class="fig"><img data-img="' + esc(id) + '" alt="' + esc(cap || '圖片') + '">' + (cap ? '<figcaption>' + esc(cap) + '</figcaption>' : '') + '</figure>' : '';
-  const cards = items => (items || []).length ? '<div class="cards" style="--n:' + Math.min(3, items.length) + '">' + items.map((c, i) =>
-    '<div><span class="n">' + pad2(i + 1) + '</span><h3>' + esc(c.title) + '</h3><div class="ct">' + richOrPlain(c.text) + '</div></div>').join('') + '</div>' : '';
+  const cards = (items, style) => !(items || []).length ? ''
+    : style === 'list' ? '<ol class="pts">' + items.map((c, i) => '<li><span class="pts-n">' + pad2(i + 1) + '</span><h3>' + esc(c.title) + '</h3><div class="ct">' + richOrPlain(c.text) + '</div></li>').join('') + '</ol>'
+    : style === 'timeline' ? '<ol class="tl">' + items.map((c, i) => '<li><span class="tl-dot">' + (i + 1) + '</span><div><h3>' + esc(c.title) + '</h3><div class="ct">' + richOrPlain(c.text) + '</div></div></li>').join('') + '</ol>'
+    : '<div class="cards" style="--n:' + Math.min(3, items.length) + '">' + items.map((c, i) =>
+      '<div><span class="n">' + pad2(i + 1) + '</span><h3>' + esc(c.title) + '</h3><div class="ct">' + richOrPlain(c.text) + '</div></div>').join('') + '</div>';
   return (blocks || []).map(b => {
     switch (b.type) {
       case 'text': return '<div class="block rt">' + sanitize(b.html) + '</div>';
       case 'textImage': return '<div class="block split"><div class="rt">' + sanitize(b.html) + '</div>' + fig(b.imageId, b.caption, b.diagram) + '</div>';
       case 'image': return '<div class="block">' + fig(b.imageId, b.caption, b.diagram) + '</div>';
-      case 'cards': return '<div class="block">' + cards(b.items) + '</div>';
+      case 'cards': return '<div class="block">' + cards(b.items, b.style) + '</div>';
       case 'tabs': return '<div class="block tabs-block"><div class="tabs" role="tablist">' + (b.items || []).map((t, i) =>
         '<button type="button" role="tab" aria-selected="' + (i === 0) + '" data-tab="' + i + '">' + (t.sub ? '<small>' + esc(t.sub) + '</small>' : '') + '<b>' + esc(t.label) + '</b></button>').join('') + '</div>' +
         (b.items || []).map((t, i) => '<div class="tabpanel" role="tabpanel" data-panel="' + i + '"' + (i ? ' hidden' : '') + '>' +
@@ -2050,49 +2078,53 @@ const DIAGRAMS = {
     name: '不同履約價的到期損益（100% / 80% / 60%）',
     html: () => '<div class="dgm-cv"><canvas></canvas></div>',
     mount: el => {
-      const ks = [[100, LINE_COLORS.red], [80, LINE_COLORS.green], [60, LINE_COLORS.blue]], at = 70;
-      const ds = ks.map(k => ({ label: '履約價 ' + k[0] + '%', data: [{ x: 40, y: 40 / k[0] * 100 - 100 }, { x: k[0], y: 0 }, { x: 120, y: 0 }].map(a => ({ x: a.x, y: Math.max(a.y, -60) })),
-        borderColor: k[1], backgroundColor: k[1], borderWidth: 2.6, pointRadius: 0, tension: 0, fill: false }));
+      /* 示意圖：賣出賣權的到期損益，三條線斜率相同，只差在轉折點（履約價） */
+      const ks = [[100, LINE_COLORS.red], [80, LINE_COLORS.green], [60, LINE_COLORS.blue]], len = 42, at = 70;
+      const ds = ks.map(k => ({ label: '履約價 ' + k[0] + '%', data: [{ x: k[0] - len, y: -len }, { x: k[0], y: 0 }, { x: k[0] === 100 ? 116 : k[0] + 20, y: 0 }],
+        borderColor: k[1], backgroundColor: k[1], borderWidth: 3, pointRadius: 0, tension: 0, fill: false }));
       return new Chart($('canvas', el), {
         type: 'line', data: { datasets: ds },
-        options: { responsive: true, maintainAspectRatio: false, animation: false, layout: { padding: { top: 6, right: 8 } },
-          scales: { x: { type: 'linear', min: 40, max: 120, title: { display: true, text: '到期股價（期初 = 100%）', color: '#687180', font: DGM_FONT }, ticks: { stepSize: 20, maxRotation: 0, color: '#687180', font: DGM_FONT, callback: v => v + '%' }, grid: { color: '#eceff3' } },
-            y: { min: -60, max: 10, title: { display: true, text: '損益', color: '#687180', font: DGM_FONT }, ticks: { stepSize: 20, color: '#687180', font: DGM_FONT, callback: v => v + '%' }, grid: { color: c => c.tick && c.tick.value === 0 ? '#9aa4b2' : '#eceff3' } } },
-          plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, boxHeight: 2, padding: 10, color: '#323a46', font: DGM_FONT } }, tooltip: { enabled: false } } },
-        plugins: [{ id: 'mark', afterDraw: ch => {
-          const c = ch.ctx, a = ch.chartArea, x = ch.scales.x.getPixelForValue(at), ys = ch.scales.y;
-          c.save(); c.strokeStyle = '#323a46'; c.lineWidth = 1.2; c.setLineDash([4, 4]); c.beginPath(); c.moveTo(x, a.top); c.lineTo(x, a.bottom); c.stroke(); c.setLineDash([]);
-          c.font = '700 12.5px "Inter", sans-serif'; c.textBaseline = 'middle'; c.fillStyle = '#323a46'; c.textAlign = 'center'; c.fillText('跌到 70%', x, a.bottom - 10);
-          ks.forEach(k => { const v = Math.min(0, at / k[0] * 100 - 100), y = ys.getPixelForValue(v);
-            c.fillStyle = k[1]; c.beginPath(); c.arc(x, y, 4.5, 0, Math.PI * 2); c.fill();
-            c.textAlign = 'left'; c.fillText(v === 0 ? '0%' : (Math.round(v * 10) / 10) + '%', x + 8, y + (v === 0 ? -9 : 0)); });
+        options: { responsive: true, maintainAspectRatio: false, animation: false, layout: { padding: { top: 22, right: 10, left: 4 } },
+          scales: { x: { type: 'linear', min: 10, max: 125, ticks: { display: false }, grid: { display: false }, border: { display: false } },
+            y: { min: -48, max: 12, ticks: { display: false }, grid: { display: false }, border: { display: false } } },
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, boxHeight: 3, padding: 10, color: '#323a46', font: DGM_FONT } }, tooltip: { enabled: false } } },
+        plugins: [{ id: 'axes', beforeDatasetsDraw: ch => {
+          const c = ch.ctx, a = ch.chartArea, xs = ch.scales.x, ys = ch.scales.y, y0 = ys.getPixelForValue(0), xa = xs.getPixelForValue(105);
+          c.save(); c.strokeStyle = '#323a46'; c.fillStyle = '#323a46'; c.lineWidth = 1.6;
+          c.beginPath(); c.moveTo(a.left, y0); c.lineTo(a.right, y0); c.stroke();
+          c.beginPath(); c.moveTo(a.right, y0); c.lineTo(a.right - 8, y0 - 5); c.lineTo(a.right - 8, y0 + 5); c.fill();
+          c.beginPath(); c.moveTo(xa, a.bottom); c.lineTo(xa, a.top); c.stroke();
+          c.beginPath(); c.moveTo(xa, a.top); c.lineTo(xa - 5, a.top + 8); c.lineTo(xa + 5, a.top + 8); c.fill();
+          c.font = '700 13px "Inter","Noto Sans TC",sans-serif'; c.textBaseline = 'bottom';
+          c.textAlign = 'left'; c.fillText('股價', a.left, y0 - 6);
+          c.textAlign = 'center'; c.fillText('報酬', xa, a.top - 4);
+          const x7 = xs.getPixelForValue(at);
+          c.setLineDash([4, 4]); c.lineWidth = 1.2; c.beginPath(); c.moveTo(x7, a.top + 4); c.lineTo(x7, a.bottom); c.stroke(); c.setLineDash([]);
+          c.fillText(at + '%', x7, a.top + 2);
+          ks.forEach(k => { c.fillStyle = k[1]; c.fillText(k[0] + '%', xs.getPixelForValue(k[0]) + (k[0] === 100 ? 16 : 0), y0 - 6); });
           c.restore(); } }]
       });
     }
   },
   'ki-paths': {
-    name: '期間是否觸及下限價（三種走勢）',
+    name: '期間是否觸及下限價（兩種走勢）',
     html: () => '<div class="dgm-cv"><canvas></canvas></div>',
     mount: el => {
-      const n = 13, labels = Array.from({ length: n }, (_, i) => i === 0 ? '期初' : i === n - 1 ? '到期' : '');
-      const paths = [
-        ['到期高於履約價', LINE_COLORS.green, [100, 97, 94, 90, 88, 87, 88.5, 89.5, 88, 87, 88, 89.5, 89]],
-        ['跌破履約價，未觸及下限價', LINE_COLORS.orange, [100, 69, 75, 64, 72, 65, 74, 64, 73, 65, 74, 66, 74]],
-        ['觸及下限價，到期低於履約價', LINE_COLORS.red, [100, 92, 85, 78, 70, 62, 56, 63, 70, 66, 72, 69, 71]]
-      ];
-      const ds = paths.map(q => ({ label: q[0], data: q[2], borderColor: q[1], backgroundColor: q[1], borderWidth: 2.6, tension: 0.4, fill: false,
-        pointRadius: q[2].map((v, i) => q[1] === LINE_COLORS.red && i === 6 ? 5 : 0) }));
-      [['履約價 80%', 80, LINE_COLORS.blue], ['下限價 60%', 60, LINE_COLORS.red]].forEach(l => ds.push({ label: l[0], data: Array(n).fill(l[1]), borderColor: l[2], backgroundColor: l[2], borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, fill: false }));
+      const n = 61, labels = Array.from({ length: n }, () => ''), T = i => i / (n - 1), rd = v => Math.round(v * 10) / 10;
+      const green = labels.map((_, i) => { const t = T(i); return rd(t < 0.3 ? 100 - 13 * Math.sin(t / 0.3 * Math.PI / 2) : 88.4 + 1.6 * Math.sin((t - 0.3) / 0.25 * 2 * Math.PI - Math.PI / 2 + 0.4)); });
+      const orange = labels.map((_, i) => { const t = T(i); return i === 0 ? 100 : rd(69.5 + 6.5 * Math.sin((t - 0.06) / 0.155 * 2 * Math.PI - Math.PI / 2) + (t < 0.1 ? 3 * (1 - t / 0.1) : 0)); });
+      const ds = [[green, LINE_COLORS.green], [orange, LINE_COLORS.orange]].map(q => ({ data: q[0], borderColor: q[1], borderWidth: 3, tension: 0.35, pointRadius: 0, fill: false }));
+      [[80, LINE_COLORS.blue], [60, LINE_COLORS.red]].forEach(l => ds.push({ data: Array(n).fill(l[0]), borderColor: l[1], borderWidth: 1.8, borderDash: [6, 5], pointRadius: 0, fill: false }));
       return new Chart($('canvas', el), {
         type: 'line', data: { labels: labels, datasets: ds },
-        options: { responsive: true, maintainAspectRatio: false, animation: false, layout: { padding: { top: 4, right: 8 } },
-          scales: { x: { ticks: { autoSkip: false, maxRotation: 0, color: '#323a46', font: DGM_FONT }, grid: { display: false } },
-            y: { min: 50, max: 102, ticks: { stepSize: 10, color: '#687180', font: DGM_FONT, callback: v => v + '%' }, grid: { color: '#eceff3' } } },
-          plugins: { legend: { position: 'bottom', align: 'start', labels: { boxWidth: 14, boxHeight: 2, padding: 10, color: '#323a46', font: DGM_FONT, filter: it => it.datasetIndex < 3 } }, tooltip: { enabled: false } } },
+        options: { responsive: true, maintainAspectRatio: false, animation: false, layout: { padding: { top: 6, right: 8 } },
+          scales: { x: { ticks: { display: false }, grid: { display: false }, border: { color: '#323a46', width: 1.6 }, title: { display: true, text: '到期日距', align: 'end', color: '#323a46', font: { size: 14, family: DGM_FONT.family } } },
+            y: { min: 50, max: 100, ticks: { stepSize: 10, color: '#323a46', font: DGM_FONT, callback: v => v + '%' }, grid: { display: false }, border: { color: '#323a46', width: 1.6 } } },
+          plugins: { legend: { display: false }, tooltip: { enabled: false } } },
         plugins: [{ id: 'refs', afterDraw: ch => {
           const c = ch.ctx, a = ch.chartArea, ys = ch.scales.y;
-          c.save(); c.font = '600 12.5px "Inter","Noto Sans TC",sans-serif'; c.textAlign = 'right'; c.textBaseline = 'bottom';
-          [['履約價 80%', 80, LINE_COLORS.blue], ['下限價 60%', 60, LINE_COLORS.red]].forEach(l => { c.fillStyle = l[2]; c.fillText(l[0], a.right - 2, ys.getPixelForValue(l[1]) - 3); });
+          c.save(); c.font = '600 13px "Inter","Noto Sans TC",sans-serif'; c.textAlign = 'right'; c.textBaseline = 'bottom';
+          [['Strike 80%', 80, LINE_COLORS.blue], ['Knock-In 60%', 60, LINE_COLORS.red]].forEach(l => { c.fillStyle = l[2]; c.fillText(l[0], a.right - 2, ys.getPixelForValue(l[1]) - 4); });
           c.restore(); } }]
       });
     }
@@ -4649,7 +4681,9 @@ function blockEditor(path, b, i, len) {
   if (b.type === 'text') body = rte(p + '.html', b.html, 'full', '輸入內容…');
   if (b.type === 'textImage') body = rte(p + '.html', b.html, 'full', '輸入內容…') + '<div class="f-grid" style="margin-top:10px"><div>' + imgOrDiagram(p + '.imageId', b.imageId, b.diagram) + '</div><label class="f"><span>圖說</span>' + inp(p + '.caption', b.caption, '圖片說明') + '</label></div>';
   if (b.type === 'image') body = '<div class="f-grid"><div>' + imgOrDiagram(p + '.imageId', b.imageId, b.diagram) + '</div><label class="f"><span>圖說</span>' + inp(p + '.caption', b.caption, '圖片說明') + '</label></div>';
-  if (b.type === 'cards') body = cardsEditor(p + '.items', b.items);
+  if (b.type === 'cards') body = '<label class="f" style="max-width:320px;margin-bottom:10px"><span>呈現方式</span><select class="sel" data-bind="' + p + '.style">' +
+    [['', '卡片（並排方塊）'], ['list', '條列（大號數字＋分隔線）'], ['timeline', '時間軸（適合流程、步驟）']].map(o => '<option value="' + o[0] + '"' + ((b.style || '') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' +
+    cardsEditor(p + '.items', b.items);
   if (b.type === 'tabs') body = (b.items || []).map((t, j) => {
     const q = p + '.items.' + j;
     return '<div class="sec-ed"><div class="block-ed-head"><span>分頁 ' + (j + 1) + '</span>' + ctlBtns(p + '.items', j, b.items.length) + '</div>' +
