@@ -1352,7 +1352,7 @@ mjx-container[jax="SVG"] path[data-c], mjx-container[jax="SVG"] use[data-c] {
     <li><b>期望值要用 <mjx-container data-tex="\mu" class="MathJax" jax="SVG"><svg style="vertical-align: -0.489ex;" xmlns="http://www.w3.org/2000/svg" width="1.364ex" height="1.489ex" role="img" focusable="false" viewBox="0 -442 603 658" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D707" xlink:href="#MJX-TEX-I-1D707"></use></g></g></g></svg></mjx-container>。</b>第 10 章的股價公式裡有 <mjx-container data-tex="\mu" class="MathJax" jax="SVG"><svg style="vertical-align: -0.489ex;" xmlns="http://www.w3.org/2000/svg" width="1.364ex" height="1.489ex" role="img" focusable="false" viewBox="0 -442 603 658" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D707" xlink:href="#MJX-TEX-I-1D707"></use></g></g></g></svg></mjx-container>（預期報酬率），但沒有人知道一檔股票未來真正的預期報酬是多少。有人覺得 20%、有人覺得 −10%，算出來的價值就會不一樣。</li>
     <li><b>折現率要多少？</b>未來收入有風險，風險越大的東西，投資人會要求越高的報酬，所以理論上要用比 <mjx-container data-tex="r" class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.02ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 451 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45F" xlink:href="#MJX-TEX-I-1D45F"></use></g></g></g></svg></mjx-container> 更高的折現率。但到底要高多少，也沒有客觀答案。</li>
   </ul>
-  <p>1973 年，Fischer Black 和 Myron Scholes（以及同時期的 Robert Merton）證明了：<b>在某些假設下，這兩個麻煩可以同時消失。</b>這套理論就是 <b>Black-Scholes 模型</b>（簡稱 BS 模型），後來獲得諾貝爾經濟學獎。它是現代衍生性商品評價的基礎框架。</p>
+  <p>1973 年，Fischer Black 和 Myron Scholes（以及同時期的 Robert Merton）證明了：<b>在某些假設下，這兩個麻煩可以同時消失。</b>這套理論就是 <b>Black-Scholes 模型</b>（簡稱 BS 模型），Scholes 與 Merton 後來在 1997 年獲得諾貝爾經濟學獎（Black 已於 1995 年過世）。它是現代衍生性商品評價的基礎框架。</p>
 
   <h3>BS 模型的假設</h3>
   <div class="tbl"><table>
@@ -1589,7 +1589,7 @@ mjx-container[jax="SVG"] path[data-c], mjx-container[jax="SVG"] use[data-c] {
   <div class="tbl"><table>
     <thead><tr><th>條款類型</th><th>例子</th><th>為什麼難算</th></tr></thead>
     <tbody>
-      <tr><td>障礙條款（敲入、敲出）</td><td>期間內任何一天跌破某個價格，條款就生效</td><td>要知道期間內的最低價或最高價，不只是終點</td></tr>
+      <tr><td>障礙條款（敲入、敲出）</td><td>期間內任何一天跌破（敲入）或漲到（敲出）某個價格，條款就生效</td><td>要知道期間內的最低價或最高價，不只是終點</td></tr>
       <tr><td>提前到期</td><td>某天達到條件就提前結束、提前付款</td><td>結束時間是隨機的，折現期間也跟著不同</td></tr>
       <tr><td>多個標的</td><td>連結三檔股票，只看表現最差的那一檔</td><td>要同時處理多個彼此相關的隨機過程</td></tr>
       <tr><td>依存續期間付息</td><td>存在越久，拿越多利息</td><td>收入跟結束時間綁在一起</td></tr>
@@ -1794,7 +1794,7 @@ mjx-container[jax="SVG"] path[data-c], mjx-container[jax="SVG"] use[data-c] {
       <tr><td>履約價 K</td><td>期初價 × 75%</td></tr>
       <tr><td>敲入價 KI</td><td>期初價 × 65%，每日觀察</td></tr>
       <tr><td>發行機構</td><td>J.P. Morgan（信用評等 A+ / AA / Aa2）</td></tr>
-      <tr><td>通路費</td><td>1.00%</td></tr>
+      <tr><td>通路服務費</td><td>1.00%</td></tr>
     </tbody>
   </table></div>
   <div class="tbl"><table>
@@ -1980,7 +1980,7 @@ mjx-container[jax="SVG"] path[data-c], mjx-container[jax="SVG"] use[data-c] {
   <h3>一、理論價值</h3>
   <p>用範例參數模擬 10 萬次的參考結果：</p>
   <div class="tbl"><table>
-    <thead><tr><th class="num">理論價值</th><th class="num">通路費</th><th class="num">發行機構估計利潤</th><th class="num">標準誤</th></tr></thead>
+    <thead><tr><th class="num">理論價值</th><th class="num">通路服務費</th><th class="num">發行機構估計利潤</th><th class="num">標準誤</th></tr></thead>
     <tbody><tr><td class="num"><b>USD 99.11</b></td><td class="num">USD 1.00</td><td class="num">USD −0.11</td><td class="num">0.0243</td></tr></tbody>
   </table></div>
   <ul>
@@ -2391,7 +2391,7 @@ mjx-container[jax="SVG"] path[data-c], mjx-container[jax="SVG"] use[data-c] {
     <dt>歐式／美式觀察</dt><dd>歐式只看到期那天是否跌破；美式是期間任何一天碰到就算。</dd>
     <dt>自動提前出場（Autocall / KO）</dt><dd>觀察日股價到達設定價格，商品提前結束、還本。</dd>
     <dt>賣權（Put）</dt><dd>可以用約定價格把股票賣出的權利，功能像股價的大跌保險。</dd>
-    <dt>Delta</dt><dd>股價方向的風險：股價變動 1% 時，部位價值大約變多少。用金額表示時，可以想成「等同持有多少錢的股票」。</dd>
+    <dt>Delta</dt><dd>股價方向的風險。用金額表示時，可以想成「等同持有多少錢的股票」（本例約 −27 萬美元）；股價變動 1% 時，部位價值約變動這個金額的 1%（本例約 2,700 美元）。</dd>
     <dt>Vega</dt><dd>波動大小的風險：隱含波動率變動 1 個百分點時，部位價值大約變多少。</dd>
     <dt>隱含波動率（Implied Volatility）</dt><dd>從選擇權價格反推出的、市場對未來波動幅度的預期，也是選擇權報價的單位。</dd>
     <dt>VWAP</dt><dd>成交量加權平均價，當天成交量大的時段權重較高。</dd>
@@ -2792,7 +2792,7 @@ function renderFCN(res, p) {
   $('fStats').innerHTML =
     stat('理論價值', 'USD ' + fmt(res.mean), def ? '範例參考值：USD 99.11' : '已改參數（範例基準 99.11）') +
     stat('標準誤', res.se.toFixed(4), '95% 區間 ' + fmt(res.mean - 1.96 * res.se) + '～' + fmt(res.mean + 1.96 * res.se)) +
-    stat('理論價值 + 通路費 1.00', fmt(res.mean + 1), '發行機構估計利潤 ' + (res.mean + 1 - 100 >= 0 ? '+' : '') + fmt(res.mean + 1 - 100)) +
+    stat('理論價值 + 通路服務費 1.00', fmt(res.mean + 1), '發行機構估計利潤 ' + (res.mean + 1 - 100 >= 0 ? '+' : '') + fmt(res.mean + 1 - 100)) +
     stat('提前敲出機率', pct(res.scen.slice(0, 6).reduce((a, b) => a + b, 0)), def ? '參考值：67.0%' : '') +
     stat('最差 < 履約價但沒敲入', pct(res.belowNoKI), '仍拿回現金，算在情境 7');
   $('fBars').innerHTML = res.scen.map((s, i) => {
