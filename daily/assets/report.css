@@ -568,6 +568,7 @@ svg.cv { display: block; width: 100%; max-width: 680px; height: auto; margin: 0 
 html:not(.vault-on) .vault { display: none !important; }
 .maintabs button.vault { font-style: italic; }
 section.panel.vault { border: 1px dashed var(--ink-3); }
-.vault-badge { font-size: .8rem; color: #c9d6e6; display: flex; align-items: center; gap: 8px; }
+.vault-badge { position: absolute; right: max(20px, env(safe-area-inset-right, 0px)); top: 14px; font-size: .78rem; color: #c9d6e6; display: flex; align-items: center; gap: 8px; }
+@media (max-width: 860px) { .vault-badge { position: static; margin-top: 10px; flex-basis: 100%; } }
 .vault-badge button { font: inherit; font-size: .76rem; color: #fff; background: transparent; border: 1px solid #c9d6e6; padding: 2px 8px; cursor: pointer; }
 .vault-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--navy); color: #fff; font-size: .88rem; padding: 8px 16px; z-index: 50; }
