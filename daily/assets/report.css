@@ -562,3 +562,12 @@ svg.cv { display: block; width: 100%; max-width: 680px; height: auto; margin: 0 
   .cv-ltxt { font-size: 14px; }
   .cv-vl, .cv-ll1, .cv-ll2 { font-size: 15px; }
 }
+
+
+/* ---- 隱藏區塊（理性檢查）：未開啟時完全不顯示（含列印）；開啟後以虛線框區分 ---- */
+html:not(.vault-on) .vault { display: none !important; }
+.maintabs button.vault { font-style: italic; }
+section.panel.vault { border: 1px dashed var(--ink-3); }
+.vault-badge { font-size: .8rem; color: #c9d6e6; display: flex; align-items: center; gap: 8px; }
+.vault-badge button { font: inherit; font-size: .76rem; color: #fff; background: transparent; border: 1px solid #c9d6e6; padding: 2px 8px; cursor: pointer; }
+.vault-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--navy); color: #fff; font-size: .88rem; padding: 8px 16px; z-index: 50; }

@@ -1,4 +1,4 @@
-/* 市場日報 共用腳本：主分頁／子分頁（可用網址 #id 直接開啟）、新聞篩選、上一篇／下一篇、首頁清單 */
+/* 市場日報 共用腳本：主分頁／子分頁（可用網址 #id 直接開啟）、新聞篩選、上一篇／下一篇、首頁清單、隱藏區塊 */
 (function () {
   var STANCE = {
     bull: ['偏多', 'st-bull'], lbull: ['中性偏多', 'st-lbull'], neutral: ['中性', 'st-neutral'],
@@ -9,7 +9,50 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function $all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
 
+  // ---- 隱藏區塊（理性檢查）：依序輸入密碼開啟，瀏覽器記住；手機可連點刊頭小字 5 下輸入 ----
+  var VAULT_KEY = 'md-vault', VAULT_CODE = 'xu06rmp4';
+  function vaultOn() { try { return localStorage.getItem(VAULT_KEY) === '1'; } catch (e) { return false; } }
+  function setVault(on) {
+    try { if (on) localStorage.setItem(VAULT_KEY, '1'); else localStorage.removeItem(VAULT_KEY); } catch (e) {}
+    document.documentElement.classList.toggle('vault-on', !!on);
+  }
+  if (vaultOn()) document.documentElement.classList.add('vault-on');
+  function toast(msg) {
+    var t = document.createElement('div'); t.className = 'vault-toast'; t.textContent = msg;
+    document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2600);
+  }
+  function unlock() {
+    if (vaultOn()) return;
+    setVault(true); toast('隱藏權限已開啟');
+    if (document.getElementById('home')) vaultBadge();
+  }
+  function initVault() {
+    var buf = '';
+    document.addEventListener('keydown', function (e) {
+      var tg = e.target && e.target.tagName;
+      if (tg === 'INPUT' || tg === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!e.key || e.key.length !== 1) return;
+      buf = (buf + e.key.toLowerCase()).slice(-VAULT_CODE.length);
+      if (buf === VAULT_CODE) { buf = ''; unlock(); }
+    });
+    var k = document.querySelector('.mast .kicker'), n = 0, timer = null;
+    if (k) k.addEventListener('click', function () {
+      n++; clearTimeout(timer); timer = setTimeout(function () { n = 0; }, 1500);
+      if (n >= 5) { n = 0; var v = window.prompt(''); if (v && v.trim().toLowerCase() === VAULT_CODE) unlock(); }
+    });
+    if (document.getElementById('home')) vaultBadge();
+  }
+  function vaultBadge() {
+    var old = document.getElementById('vaultBadge'); if (old) old.remove();
+    if (!vaultOn()) return;
+    var b = document.createElement('div'); b.id = 'vaultBadge'; b.className = 'vault-badge';
+    b.innerHTML = '隱藏權限已開啟<button type="button">關閉</button>';
+    b.querySelector('button').addEventListener('click', function () { setVault(false); b.remove(); toast('隱藏權限已關閉'); });
+    var m = document.querySelector('.mast .wrap'); if (m) m.appendChild(b);
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    initVault();
     var reports = (window.REPORTS || []).slice().sort(function (a, b) { return a.id < b.id ? 1 : a.id > b.id ? -1 : 0; });
     if (document.querySelector('nav.maintabs')) initTabs();
     initNews();
@@ -101,7 +144,8 @@
   }
   function openMain(id) {
     var nav = document.querySelector('nav.maintabs');
-    if (!document.getElementById(id) || !nav.querySelector('[data-tab="' + id + '"]')) id = nav.querySelector('button[data-tab]').getAttribute('data-tab');
+    var tgt = document.getElementById(id);
+    if (!tgt || !nav.querySelector('[data-tab="' + id + '"]') || (tgt.classList.contains('vault') && !vaultOn())) id = nav.querySelector('button[data-tab]').getAttribute('data-tab');
     $all('button[data-tab]', nav).forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === id ? 'true' : 'false'); });
     $all('section.panel').forEach(function (p) { p.classList.toggle('on', p.id === id); });
     var btn = nav.querySelector('[data-tab="' + id + '"]');
