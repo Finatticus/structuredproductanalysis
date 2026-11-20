@@ -1794,7 +1794,7 @@ mjx-container[jax="SVG"] path[data-c], mjx-container[jax="SVG"] use[data-c] {
       <tr><td>履約價 K</td><td>期初價 × 75%</td></tr>
       <tr><td>敲入價 KI</td><td>期初價 × 65%，每日觀察</td></tr>
       <tr><td>發行機構</td><td>J.P. Morgan（信用評等 A+ / AA / Aa2）</td></tr>
-      <tr><td>通路服務費</td><td>1.00%</td></tr>
+      <tr><td>手續費(UF)</td><td>1.00%</td></tr>
     </tbody>
   </table></div>
   <div class="tbl"><table>
@@ -1980,7 +1980,7 @@ mjx-container[jax="SVG"] path[data-c], mjx-container[jax="SVG"] use[data-c] {
   <h3>一、理論價值</h3>
   <p>用範例參數模擬 10 萬次的參考結果：</p>
   <div class="tbl"><table>
-    <thead><tr><th class="num">理論價值</th><th class="num">通路服務費</th><th class="num">發行機構估計利潤</th><th class="num">標準誤</th></tr></thead>
+    <thead><tr><th class="num">理論價值</th><th class="num">手續費(UF)</th><th class="num">發行機構估計利潤</th><th class="num">標準誤</th></tr></thead>
     <tbody><tr><td class="num"><b>USD 99.11</b></td><td class="num">USD 1.00</td><td class="num">USD −0.11</td><td class="num">0.0243</td></tr></tbody>
   </table></div>
   <ul>
@@ -2157,7 +2157,7 @@ mjx-container[jax="SVG"] path[data-c], mjx-container[jax="SVG"] use[data-c] {
     <li><b>借錢給發行機構。</b>這張商品在法律上是發行機構發的債券，本金交給發行機構，兩年間會產生利息。</li>
     <li><b>賣一張大跌保險給發行機構。</b>這張保險在金融上叫「賣權」（Put），約定：到期跌破 50 美元，客戶要用 50 美元承接股票。</li>
   </ol>
-  <p>債券的利息加上保險的保費，扣掉發行機構的利潤、避險準備和通路服務費，剩下的就是客戶拿到的利息。所以：</p>
+  <p>債券的利息加上保險的保費，扣掉發行機構的利潤、避險準備和手續費(UF)，剩下的就是客戶拿到的利息。所以：</p>
   <ul>
     <li><b>股價波動越大</b>，大跌保險越值錢，客戶拿到的利息越高。</li>
     <li><b>履約價設得越低</b>，保險越不容易理賠，客戶拿到的利息越低。</li>
@@ -2232,12 +2232,12 @@ mjx-container[jax="SVG"] path[data-c], mjx-container[jax="SVG"] use[data-c] {
   </div>
 
   <h3>一、客戶的 100 萬被拆成四塊</h3>
-  <div class="calc" style="white-space:normal;background:var(--accent-soft)">客戶的 100 萬 ＝ 商品合理價值 ＋ 避險準備 ＋ 發行機構利潤 ＋ 通路服務費</div>
+  <div class="calc" style="white-space:normal;background:var(--accent-soft)">客戶的 100 萬 ＝ 商品合理價值 ＋ 避險準備 ＋ 發行機構利潤 ＋ 手續費(UF)</div>
   <div class="hg-parts">
     <div class="hg-part" style="--c:var(--accent)"><b>商品合理價值</b><span>真正回到客戶身上的部分，也就是利息與還本條件的價值。</span></div>
     <div class="hg-part" style="--c:var(--warm)"><b>避險準備</b><span>預留給買賣價差、避險完成前市場變動的緩衝。</span></div>
     <div class="hg-part" style="--c:var(--c3)"><b>發行機構利潤</b><span>避險做得好，這塊就是發行機構賺到的錢。</span></div>
-    <div class="hg-part" style="--c:var(--muted)"><b>通路服務費</b><span>給銷售機構的費用，載明於產品文件或交易確認書。</span></div>
+    <div class="hg-part" style="--c:var(--muted)"><b>手續費(UF)</b><span>給銷售機構的費用，載明於產品文件或交易確認書。</span></div>
   </div>
   <p class="lab-hint">四塊的實際比例依商品與市況而定，絕大部分是商品合理價值。</p>
 
@@ -2344,7 +2344,7 @@ mjx-container[jax="SVG"] path[data-c], mjx-container[jax="SVG"] use[data-c] {
 
   <h3>一、一筆交易的五個階段</h3>
   <ol class="hg-steps">
-    <li><b>報價</b><span>依當下的波動率、利率、股息和手上既有的部位，再加上利潤、避險準備和通路服務費，算出給客戶的利息。</span></li>
+    <li><b>報價</b><span>依當下的波動率、利率、股息和手上既有的部位，再加上利潤、避險準備和手續費(UF)，算出給客戶的利息。</span></li>
     <li><b>成交</b><span>客戶確認下單，發行機構從這一刻開始背著反方向的風險。</span></li>
     <li><b>當天避險</b><span>分批買股票處理股價方向的風險，賣選擇權處理波動大小的風險。</span></li>
     <li><b>每天調整</b><span>股價變動後，重新計算需要多少股票，持續買賣，直到商品結束。</span></li>
@@ -2379,7 +2379,7 @@ mjx-container[jax="SVG"] path[data-c], mjx-container[jax="SVG"] use[data-c] {
     </details>
     <details>
       <summary>報價很積極的發行機構，會不會有隱藏費用？</summary>
-      <div class="ans"><span>報價積極主要代表發行機構留的避險緩衝比較少、自己多扛風險。費用方面，通路服務費會載明在產品文件或交易確認書上，可以直接比較。</span></div>
+      <div class="ans"><span>報價積極主要代表發行機構留的避險緩衝比較少、自己多扛風險。費用方面，手續費(UF)會載明在產品文件或交易確認書上，可以直接比較。</span></div>
     </details>
   </div>
 
@@ -2792,7 +2792,7 @@ function renderFCN(res, p) {
   $('fStats').innerHTML =
     stat('理論價值', 'USD ' + fmt(res.mean), def ? '範例參考值：USD 99.11' : '已改參數（範例基準 99.11）') +
     stat('標準誤', res.se.toFixed(4), '95% 區間 ' + fmt(res.mean - 1.96 * res.se) + '～' + fmt(res.mean + 1.96 * res.se)) +
-    stat('理論價值 + 通路服務費 1.00', fmt(res.mean + 1), '發行機構估計利潤 ' + (res.mean + 1 - 100 >= 0 ? '+' : '') + fmt(res.mean + 1 - 100)) +
+    stat('理論價值 + 手續費(UF) 1.00', fmt(res.mean + 1), '發行機構估計利潤 ' + (res.mean + 1 - 100 >= 0 ? '+' : '') + fmt(res.mean + 1 - 100)) +
     stat('提前敲出機率', pct(res.scen.slice(0, 6).reduce((a, b) => a + b, 0)), def ? '參考值：67.0%' : '') +
     stat('最差 < 履約價但沒敲入', pct(res.belowNoKI), '仍拿回現金，算在情境 7');
   $('fBars').innerHTML = res.scen.map((s, i) => {
