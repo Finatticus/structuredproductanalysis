@@ -35,7 +35,7 @@ python daily/tools/usdata.py quotes --cutoff "D 10:00" --out _research/D-wk     
 
 - 腳本沒有的一週資料，主筆用官方端點補抓並存成 `_research/D-wk/*.md`（附來源網址）：每天的上市融資（證交所 MI_MARGN）與上櫃融資（櫃買中心 margin/balance）、上週五外資台指期淨未平倉（期交所 futContractsDate）、美股主要指數逐日收盤（Yahoo 日線）、台積電逐日（證交所 STOCK_DAY）。
 - **Yahoo 週末常見問題：** 週五日線的收盤欄可能是空值；usdata.py 會改用當天最後成交價（regularMarketPrice）並在備註寫明，這些數字至少挑幾個用第二來源（鉅亨網、CNBC、Reuters）確認。
-- 新台幣用台北外匯經紀 16:00 收盤（週五與上週五）；美債殖利率口徑照 RULES.md 4.7（CNBC 收盤）；只有 CBOE 指數時標「參考」。
+- 新台幣用台北外匯經紀 16:00 收盤（週五與上週五）；美債殖利率用 usdata.py 輸出的 CNBC 日線收盤（RULES.md 4.7）；腳本退回 CBOE 時照備註標明。
 
 ## 三、作業流程（目標約 60 分鐘，內容不減）
 

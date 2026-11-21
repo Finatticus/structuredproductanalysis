@@ -37,7 +37,7 @@ GROUPS = [
     ("美股期貨（電子盤，截止時價格）", [("ES=F", "S&P 500 期貨"), ("NQ=F", "Nasdaq 100 期貨"), ("YM=F", "道瓊期貨")]),
     ("AI 與大型科技股", [("NVDA", "輝達"), ("TSM", "台積電 ADR"), ("AAPL", "蘋果"), ("MSFT", "微軟"), ("GOOGL", "Alphabet"), ("AMZN", "亞馬遜"),
                         ("META", "Meta"), ("AVGO", "博通"), ("AMD", "AMD"), ("TSLA", "特斯拉"), ("MU", "美光"), ("ORCL", "甲骨文"), ("CRWV", "CoreWeave")]),
-    ("美債殖利率（%，CBOE 指數，參考用）", [("^IRX", "3 個月"), ("^FVX", "5 年"), ("^TNX", "10 年"), ("^TYX", "30 年")]),
+    ("美債殖利率（%，CNBC 收盤報價）", "CNBC_YIELDS"),
     ("美債 2 年期貨（參考，非殖利率）", [("ZT=F", "2 年期美債期貨")]),
     ("美元與匯率（截止時價格）", [("DX-Y.NYB", "美元指數"), ("TWD=X", "美元兌新台幣（國際報價）"), ("JPY=X", "美元兌日圓"), ("KRW=X", "美元兌韓元"),
                           ("CNY=X", "美元兌人民幣"), ("EURUSD=X", "歐元兌美元")]),
@@ -47,6 +47,72 @@ GROUPS = [
              ("^HSI", "恆生"), ("^NSEI", "印度 Nifty 50")]),  # 創業板、科創 50 在 Yahoo 資料不穩，交給子代理
     ("日韓重點個股", [("8035.T", "東京威力"), ("6857.T", "愛德萬"), ("9984.T", "軟銀集團"), ("000660.KS", "SK 海力士"), ("005930.KS", "三星電子")]),
 ]
+
+
+# Yahoo 代號 → CNBC 代號（Yahoo 日線過期時的備援、補值時的交叉確認）。美股個股代號兩邊相同。
+CNBC_MAP = {"^GSPC": ".SPX", "^IXIC": ".IXIC", "^DJI": ".DJI", "^RUT": ".RUT", "^SOX": ".SOX", "^VIX": ".VIX",
+            "^STOXX": ".STOXX", "^STOXX50E": ".STOXX50E", "^GDAXI": ".GDAXI", "^FTSE": ".FTSE", "^FCHI": ".FCHI",
+            "^TWII": ".TWII", "^N225": ".N225", "^KS11": ".KS11", "^KQ11": ".KQ11", "000001.SS": ".SSEC", "^HSI": ".HSI", "^NSEI": ".NSEI"}
+CNBC_YIELDS = [("US3M", "3 個月"), ("US2Y", "2 年"), ("US5Y", "5 年"), ("US10Y", "10 年"), ("US30Y", "30 年")]
+CNBC = {}
+
+
+def to_et(dt):
+    """換成美東時間（自己算夏令：3 月第二個週日 02:00 到 11 月第一個週日 02:00，這台電腦沒有 tzdata）。"""
+    u = dt.astimezone(timezone.utc)
+    m = datetime(u.year, 3, 8, 7, tzinfo=timezone.utc)
+    m += timedelta(days=(6 - m.weekday()) % 7)
+    n = datetime(u.year, 11, 1, 6, tzinfo=timezone.utc)
+    n += timedelta(days=(6 - n.weekday()) % 7)
+    return u.astimezone(timezone(timedelta(hours=-4 if m <= u < n else -5)))
+
+
+def cnbc_sym(sym):
+    return CNBC_MAP.get(sym) or (sym if re.fullmatch(r"[A-Z]{1,5}", sym) else None)
+
+
+def cnbc_num(v):
+    return float(str(v).replace("%", "").replace(",", ""))
+
+
+def cnbc_load(syms):
+    """一次抓多個 CNBC 報價，存進 CNBC：{代號: {last, prev, time}}。抓不到的就不放。"""
+    syms = [x for x in dict.fromkeys(syms) if x and x not in CNBC]
+    for i in range(0, len(syms), 20):
+        part = "|".join(syms[i:i + 20])
+        j = fetch("https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols="
+                  + urllib.parse.quote(part) + "&requestMethod=itv&noform=1&partnerId=2&fund=1&exthrs=1&output=json&events=1")
+        try:
+            for q in j["FormattedQuoteResult"]["FormattedQuote"]:
+                try:
+                    CNBC[q["symbol"]] = {"last": cnbc_num(q["last"]), "prev": cnbc_num(q["previous_day_closing"]),
+                                         "time": datetime.strptime(q["last_time"], "%Y-%m-%dT%H:%M:%S.%f%z")}
+                except Exception:  # noqa
+                    pass
+        except Exception:  # noqa
+            pass
+
+
+def cnbc_hist(sym, end):
+    """CNBC 日線收盤 [(美東日期, 收盤)]，到 end 為止約 13 個月。"""
+    start = end - timedelta(days=400)
+    j = fetch(f"https://ts-api.cnbc.com/harmony/app/bars/{urllib.parse.quote(sym)}/1D/{start:%Y%m%d}000000/{end:%Y%m%d}235959/adjusted/EST5EDT.json")
+    try:
+        return [(datetime.strptime(b["tradeTime"][:8], "%Y%m%d").date(), float(b["close"])) for b in j["barData"]["priceBars"]]
+    except Exception:  # noqa
+        return []
+
+
+def expected_date(meta, cutoff):
+    """截止時該市場「應該已經收盤」的最後一個平日。不知道各國假日，休市日會被當成過期（備註會寫「或休市」）。"""
+    xtz = timezone(timedelta(seconds=meta.get("gmtoffset", 0)))
+    reg = (meta.get("currentTradingPeriod") or {}).get("regular") or {}
+    close_t = datetime.fromtimestamp(reg["end"], xtz).time() if reg.get("end") else datetime.strptime("16:00", "%H:%M").time()
+    c = cutoff.astimezone(xtz)
+    d = c.date() if c.time() >= close_t else c.date() - timedelta(days=1)
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    return d, close_t
 
 
 def emit(s=""):
@@ -144,8 +210,23 @@ def row24(sym, name, cutoff):
     yb = next((b for b in reversed(daily) if b["date"].year < cutoff.year), None)
     tstr = datetime.fromtimestamp(last["ts"] + 900, TPE).strftime("%m/%d %H:%M")
     d = 4 if last["close"] < 10 else 2
+    note = "截止時價格；日漲跌＝和 24 小時前比"
+    gap = (ct - (last["ts"] + 900)) / 3600
+    u = cutoff.astimezone(timezone.utc)
+    l_u = datetime.fromtimestamp(last["ts"] + 900, timezone.utc)
+    # 期貨、匯率週五美東 17:00 收（21:00／22:00 UTC），週日晚上才陸續開（匯率第一根約週一 00:00 UTC）：
+    # 週五 21:00 UTC 到週一 01:00 UTC 視為週末，只檢查有沒有週五白天（15:00 UTC 以後）的資料
+    weekend = (u.weekday() == 4 and u.hour >= 21) or u.weekday() in (5, 6) or (u.weekday() == 0 and u.hour < 1)
+    if weekend:
+        fri = (u - timedelta(days=(u.weekday() - 4) % 7)).date()
+        stale = l_u < datetime(fri.year, fri.month, fri.day, 15, 0, tzinfo=timezone.utc) and sym != "BTC-USD"
+    else:
+        # 收盤時間比較早的商品放寬門檻：人民幣境內 03:00 收、韓元、歐洲天然氣 TTF 18:00 CET 收
+        stale = gap > {"CNY=X": 8, "KRW=X": 8, "TTF=F": 24}.get(sym, 1.5)
+    if stale or (sym == "BTC-USD" and gap > 1):
+        note += f"；**可能過期**：最後一筆離截止 {gap:.1f} 小時（假日休市時是正常的，否則要用 CNBC 確認）"
     return (f"| {name} | {sym} | {tstr} 台北 | {f2(last['close'], d)} | {sg(pc(last['close'], ago['close'])) if ago else '—'} | "
-            f"{sg(pc(last['close'], wk['close'])) if wk else '—'} | {sg(pc(last['close'], yb['close'])) if yb else '—'} | 截止時價格；日漲跌＝和 24 小時前比 |")
+            f"{sg(pc(last['close'], wk['close'])) if wk else '—'} | {sg(pc(last['close'], yb['close'])) if yb else '—'} | {note} |")
 
 
 def rowday(sym, name, cutoff, yld):
@@ -160,6 +241,19 @@ def rowday(sym, name, cutoff, yld):
     last, prev = bars[-1], bars[-2]
     wk = bars[-6] if len(bars) >= 6 else None
     yb = next((b for b in reversed(bars) if b["date"].year < last["date"].year), None)
+    xtz = timezone(timedelta(seconds=meta.get("gmtoffset", 0)))
+    exp, close_t = expected_date(meta, cutoff)
+    q = CNBC.get(cnbc_sym(sym) or "")
+    qd = q["time"].astimezone(xtz).date() if q else None
+    if not yld and last["date"] < exp:
+        # Yahoo 日線過期：CNBC 有截止前、日期就是預期交易日、而且是收盤後的報價才改用，否則標示可能過期（避免把盤中價當收盤）
+        if q and q["time"] <= cutoff and qd == exp and q["time"].astimezone(xtz) >= datetime.combine(qd, close_t, xtz) - timedelta(minutes=5) and q["last"]:
+            base = next((b for b in reversed(bars) if b["date"] <= qd - timedelta(days=7)), None)
+            yb2 = next((b for b in reversed(bars) if b["date"].year < qd.year), None)
+            src = f"Yahoo 日線停在 {last['date']}，改用 CNBC 報價（{q['time'].astimezone(TPE):%m/%d %H:%M} 台北）"
+            return (f"| {name} | {sym} | {qd} 收盤 | {f2(q['last'], 2)} | {sg(pc(q['last'], q['prev']))} | "
+                    f"{sg(pc(q['last'], base['close'])) if base else '—'} | {sg(pc(q['last'], yb2['close'])) if yb2 else '—'} | {src} |")
+        note = (note + "；" if note else "") + f"**可能過期**：Yahoo 最新一筆是 {last['date']}，預期 {exp}（或該市場休市），要用 CNBC 等第二來源確認"
     if yld:
         dchg = sg((last["close"] - prev["close"]) * 100, 1, " bp")
         wchg = sg((last["close"] - wk["close"]) * 100, 1, " bp") if wk else "—"
@@ -171,8 +265,44 @@ def rowday(sym, name, cutoff, yld):
         ytd = sg(pc(last["close"], yb["close"])) if yb else "—"
         cl = f2(last["close"], 2)
     if last.get("filled"):
-        note = (note + "；" if note else "") + "Yahoo 日線收盤缺值，改用當天最後成交價（regularMarketPrice），要用第二來源確認"
+        if q and qd == last["date"] and abs(q["last"] - last["close"]) <= max(0.01, abs(last["close"]) * 0.0002):
+            note = (note + "；" if note else "") + "Yahoo 日線收盤缺值，用當天最後成交價補（和 CNBC 收盤一致）"
+        else:
+            note = (note + "；" if note else "") + "Yahoo 日線收盤缺值，用當天最後成交價補；" + \
+                (f"CNBC 為 {f2(q['last'], 2)}，要確認" if q else "CNBC 查無，要用第二來源確認")
     return f"| {name} | {sym} | {last['date']} 收盤 | {cl} | {dchg} | {wchg} | {ytd} | {note} |"
+
+
+def yield_rows(cutoff):
+    """美債殖利率：CNBC 日線收盤（美東約 15:00，債市收盤；和 CBOE 指數同口徑）。
+    只用「截止時已收盤」的日線，不用 CNBC 報價的 last（那是美東 17:05 前後的最後成交，和日線收盤不同口徑）。
+    CNBC 日線抓不到時退回 CBOE 指數並標明。"""
+    ce = to_et(cutoff)
+    expd = ce.date() if (ce.hour, ce.minute) >= (15, 5) else ce.date() - timedelta(days=1)
+    while expd.weekday() >= 5:
+        expd -= timedelta(days=1)
+    alt = {"US3M": "^IRX", "US5Y": "^FVX", "US10Y": "^TNX", "US30Y": "^TYX"}
+
+    def bp(a, b):
+        return sg((a - b) * 100, 1, " bp") if (a is not None and b is not None) else "—"
+    for sym, name in CNBC_YIELDS:
+        hist = [h for h in cnbc_hist(sym, expd) if h[0] <= expd]
+        if len(hist) < 2:
+            if sym in alt:
+                cells = [c.strip() for c in rowday(alt[sym], name, cutoff, True).strip().strip("|").split("|")]
+                cells[-1] = (cells[-1] + "；" if cells[-1] else "") + ("CNBC 日線抓取失敗，改列 ^IRX（貼現基礎，和 CNBC 口徑不同，只當參考）" if sym == "US3M"
+                                                                     else "CNBC 日線抓取失敗，改列 CBOE 指數（同為美東約 15:00 收盤）")
+                emit("| " + " | ".join(cells) + " |")
+            else:
+                emit(f"| {name} | {sym} | 查無 | | | | | CNBC 日線抓取失敗 |")
+            continue
+        (d0, last), prev = hist[-1], hist[-2][1]
+        base = next((c for d, c in reversed(hist) if d <= d0 - timedelta(days=7)), None)
+        yb = next((c for d, c in reversed(hist) if d.year < d0.year), None)
+        label = "CNBC 日線收盤（美東約 15:00）"
+        if d0 < expd:
+            label += f"；**可能過期**：最新是美東 {d0}，預期 {expd}（或美債休市）"
+        emit(f"| {name} | {sym} | {d0} 收盤 | {last:.3f} | {bp(last, prev)} | {bp(last, base)} | {bp(last, yb)} | {label} |")
 
 
 def quotes(cutoff, extra):
@@ -184,15 +314,25 @@ def quotes(cutoff, extra):
         emit(f"**注意：抓取時間晚於截止時間超過 30 分鐘。** 腳本已排除截止後的價格，但 Yahoo 的資料可能在截止後被修正，引用時以截止時間為準。\n")
     emit("來源：Yahoo Finance chart API（https://query1.finance.yahoo.com/v8/finance/chart/代號）。\n")
     emit("- 「資料時間」寫「YYYY-MM-DD 收盤」的，是該市場當地的交易日收盤；寫「MM/DD HH:MM 台北」的，是 24 小時商品在截止時的價格。")
-    emit("- 美債殖利率是 CBOE 指數，和財政部、CNBC 會差幾個 bp，只當參考；報告的殖利率口徑照 RULES.md 4.7（CNBC 收盤，2、10、30 年同一來源）。")
+    emit("- 美債殖利率用 CNBC 日線收盤（美東約 15:00，債市收盤；和 CBOE 指數同口徑；RULES.md 4.7），只列截止時已收盤的那一天；CNBC 報價頁的 17:05 最後成交不用。")
+    emit("- 股票與指數：Yahoo 日線比「截止時應該已收盤的交易日」舊時，改用 CNBC 報價並在備註寫明；CNBC 也沒有時標「可能過期」（休市日也會被標，要自己確認）。")
     emit("- 美元兌新台幣是國際報價，不是官方收盤；報告的新台幣收盤用台北外匯經紀公司 16:00 收盤價。\n")
     groups = list(GROUPS)
     if extra:
         groups.append(("其他", [tuple(x.split("=", 1)) for x in extra.split(",") if "=" in x]))
+    cnbc_load([cnbc_sym(sym) for _, items in groups if isinstance(items, list) for sym, _ in items])
     for title, items in groups:
         yld = "殖利率" in title
         emit(f"## {title}\n")
         emit("| 名稱 | 代號 | 資料時間 | 價格 | 日漲跌 | 週漲跌 | 今年以來 | 備註 |\n|---|---|---|---|---|---|---|---|")
+        if items == "CNBC_YIELDS":
+            try:
+                yield_rows(cutoff)
+            except Exception as e:  # noqa
+                emit(f"| 美債殖利率 | CNBC | 查無 | | | | | 腳本錯誤：{type(e).__name__} |")
+            emit("")
+            flush()
+            continue
         for sym, name in items:
             try:
                 emit(row24(sym, name, cutoff) if is24(sym) else rowday(sym, name, cutoff, yld))

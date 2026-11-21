@@ -112,8 +112,13 @@ def am_table(a):
         dt = r["資料時間"].split(" ")[0]
         row(label, r["價格"], r["日漲跌"], r["週漲跌"], f"{int(dt[5:7])}/{int(dt[8:10])}")
     out.append('        <tr class="grp"><td colspan="5">利率、匯率、商品</td></tr>')
-    row("美債 10 年", "【待填：CNBC 收盤】", "【待填】", "—", "【待填】", color=False)
-    row("美債 2 年", "【待填：CNBC 收盤】", "【待填】", "—", "【待填】", color=False)
+    for name, label in (("10 年", "美債 10 年"), ("2 年", "美債 2 年")):  # usdata.py 已輸出 CNBC 日線收盤
+        r = us.get(name)
+        if not r or r.get("價格") in (None, "") or "CNBC 日線收盤" not in r.get("備註", ""):
+            row(label, "【待填：CNBC 日線收盤】", "【待填】", "—", "【待填】", color=False)
+            continue
+        dt = r["資料時間"].split(" ")[0]
+        row(label, r["價格"] + "%", r["日漲跌"].replace(" bp", "bp"), r["週漲跌"].replace(" bp", "bp"), f"{int(dt[5:7])}/{int(dt[8:10])}", color=False)
     for name, label, color in (("美元指數", "美元指數", False), ("美元兌日圓", "美元／日圓", False), ("布蘭特原油", "布蘭特原油", True),
                                ("WTI 原油", "WTI 原油", True), ("黃金", "黃金", True), ("比特幣", "比特幣", True), ("VIX", "VIX", True)):
         r = us.get(name)
@@ -127,7 +132,7 @@ def am_table(a):
     row("美元／新台幣", "【待填：16:00 官方收盤】", "【待填】", "—", "【待填】", color=False)
     out.append("      </tbody>")
     out.append("    </table></div>")
-    out.append('    <p class="cap">資料來源：證交所、櫃買中心、期交所、Yahoo Finance（twdata.py、usdata.py）；美債殖利率為 CNBC 收盤；新台幣為台北外匯經紀 16:00 收盤。'
+    out.append('    <p class="cap">資料來源：證交所、櫃買中心、期交所、Yahoo Finance（twdata.py、usdata.py）；美債殖利率為 CNBC 日線收盤（美東約 15:00）；新台幣為台北外匯經紀 16:00 收盤。'
                '商品、匯率為台北 07:00 的價格，日變動和 24 小時前比、週變動和約 7 天前比；其他項目的週變動和 5 個交易日前的收盤比。</p>')
     print("\n".join(out))
 
