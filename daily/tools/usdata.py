@@ -103,14 +103,29 @@ def cnbc_hist(sym, end):
         return []
 
 
+# 美國休市日（只列確定的；不確定的不列，最多多一個「可能過期」標示，不會把舊數字當新的）。表只到 2027 年底，週報規則檢視要補下一年。
+# 本程式的截止時間（台北 07:00、15:30、10:00）都不在美東 13:00–16:00 之間，提早收盤日不影響判斷。
+US_HOLIDAYS = {"2026-11-26", "2026-12-25", "2027-01-01", "2027-01-18", "2027-02-15", "2027-03-26", "2027-05-31",
+               "2027-06-18", "2027-07-05", "2027-09-06", "2027-11-25", "2027-12-24"}
+# 美債（SIFMA 建議休市）：比股市多哥倫布日、退伍軍人節；耶穌受難日每年不同，不列。
+US_BOND_HOLIDAYS = {"2026-11-26", "2026-12-25", "2027-01-01", "2027-01-18", "2027-02-15", "2027-05-31", "2027-06-18",
+                    "2027-07-05", "2027-09-06", "2027-10-11", "2027-11-11", "2027-11-25", "2027-12-24"}
+
+
+def is_us(meta):
+    return meta.get("exchangeTimezoneName") in ("America/New_York", "America/Chicago") or (
+        not meta.get("exchangeTimezoneName") and meta.get("gmtoffset") in (-14400, -18000))
+
+
 def expected_date(meta, cutoff):
-    """截止時該市場「應該已經收盤」的最後一個平日。不知道各國假日，休市日會被當成過期（備註會寫「或休市」）。"""
+    """截止時該市場「應該已經收盤」的最後一個交易日。美國市場會跳過 US_HOLIDAYS；其他國家不知道假日，休市日會被當成過期（備註會寫「或休市」）。"""
     xtz = timezone(timedelta(seconds=meta.get("gmtoffset", 0)))
     reg = (meta.get("currentTradingPeriod") or {}).get("regular") or {}
     close_t = datetime.fromtimestamp(reg["end"], xtz).time() if reg.get("end") else datetime.strptime("16:00", "%H:%M").time()
     c = cutoff.astimezone(xtz)
     d = c.date() if c.time() >= close_t else c.date() - timedelta(days=1)
-    while d.weekday() >= 5:
+    hol = US_HOLIDAYS if is_us(meta) else set()
+    while d.weekday() >= 5 or d.isoformat() in hol:
         d -= timedelta(days=1)
     return d, close_t
 
@@ -279,7 +294,7 @@ def yield_rows(cutoff):
     CNBC 日線抓不到時退回 CBOE 指數並標明。"""
     ce = to_et(cutoff)
     expd = ce.date() if (ce.hour, ce.minute) >= (15, 5) else ce.date() - timedelta(days=1)
-    while expd.weekday() >= 5:
+    while expd.weekday() >= 5 or expd.isoformat() in US_BOND_HOLIDAYS:
         expd -= timedelta(days=1)
     alt = {"US3M": "^IRX", "US5Y": "^FVX", "US10Y": "^TNX", "US30Y": "^TYX"}
 

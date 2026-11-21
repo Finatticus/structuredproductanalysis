@@ -10,8 +10,8 @@
 
 1. 讀本檔全文，以及 RULES.md 的：一、最高原則；4.3 立場與機率；4.6 常見錯誤；4.7 分析方法細則（含口徑固定）；5.1 版面原則；5.5 專題與視覺工具；5.7 行事曆；5.8 新聞卡片格式；5.9 HTML 與 class 規格（含手機檢查）；第六節寫作標準；步驟 5 查核、步驟 6 發布。讀 `daily/state/lessons.md` 全文。Read 顯示 PARTIAL 時用 offset 讀完。
 2. **確認日期與時間：** 報告日期 D＝觸發排程的那個週六。**現在不是週六、或已晚於週六 20:00：不產出**，回報「週報略過」。不補做過去的週報。
-3. **上鎖與同步：** `python daily/tools/runlock.py wait wk`（最多等 9 分鐘，仍 BUSY 就停止回報），最後一定 `release wk`。`git status`、`git pull --rebase --autostash origin main`。`daily/reports/D-wk.html` 已存在或 `reports.js` 已有 D 的週報：停止，回報「已產出」。
-4. 讀 `daily/state/view-log.md` 本週所有節（週一早報到週五午報）；讀最近一份早報與最近一份午報的觀點頁（用 Grep 找「情境」「翻轉條件」只讀那幾段）；讀最近一份週報（`reports/*-wk.html`，第一份沒有）的「下週展望」與隱藏區塊的「規則檢視」，本週成績單要檢驗它的判斷，也要追蹤上週建議的處理結果。讀 `daily/RULES.md`、`daily/RULES-PM.md` 全文（規則檢視要用）、`daily/state/changelog.md` 本週的條目。
+3. **上鎖與同步：** `python daily/tools/runlock.py wait wk`（最多等 9 分鐘，仍 BUSY 就停止回報），最後一定 `release wk`。接著執行 `python daily/tools/runlock.py stash wk`：前一次中斷留下的未 commit 殘檔（含已 add 未 commit 的、規則檔與 `daily/tools/` 的改動、沒做完的 rebase）會存到 `_research/interrupted/`，再還原成最新 commit。印出 STASHED 時在回報寫一句「前一次中斷的殘檔已收存到 …」，照常產出（週報會在流程檢討裡記錄）；訊息裡有「還原後仍有殘檔」就停止並回報。然後 `git status`、`git pull --rebase --autostash origin main`。防重複只認已 commit 的：`git ls-files daily/reports/D-wk.html` 有輸出或 `reports.js` 已有 D 的週報：停止，回報「已產出」。
+4. 讀 `daily/state/view-log.md` 本週所有節（週一早報到週五午報）；讀最近一份早報與最近一份午報的觀點頁（用 Grep 找「情境」「翻轉條件」只讀那幾段）；讀最近一份週報（`reports/*-wk.html`，第一份沒有）的「下週展望」與隱藏區塊的「規則檢視」，本週成績單要檢驗它的判斷，也要追蹤上週建議的處理結果。讀 `daily/state/changelog.md` 本週的條目。`RULES.md`、`RULES-PM.md` 全文只交給 AI 自我檢討子代理讀（規則檢視要用）；主筆到第八節真的要改時，才讀要改的那幾節。
 
 ## 一、定位
 
@@ -28,7 +28,8 @@
 
 ```bash
 cd /c/Users/User/Desktop/news
-python daily/tools/twdata.py market 本週五日期 --cutoff "D 10:00" --out _research/D-wk     # 本週逐日收盤、開高低與缺口、法人逐日、融資（當天）、期貨、P/C
+python daily/tools/twdata.py market 本週五日期 --cutoff "D 10:00" --out _research/D-wk     # 本週逐日收盤、開高低與缺口、法人逐日與本週累計、融資（當天）、期貨、P/C
+python daily/tools/usdata.py quotes --cutoff "D 09:30" --out _research/D-wk/prep            # 開始時先跑：週五美股收盤已確定，給成績單與深度主題子代理用（報告數字用 10:05 的正式版）
 python daily/tools/waituntil.py 10:05                                                       # 10:05 以後才跑 usdata（截止 5 分鐘後）
 python daily/tools/usdata.py quotes --cutoff "D 10:00" --out _research/D-wk                 # 美股、跨資產、其他市場（含週漲跌）
 ```
@@ -37,24 +38,26 @@ python daily/tools/usdata.py quotes --cutoff "D 10:00" --out _research/D-wk     
 - **Yahoo 週末常見問題：** 週五日線的收盤欄可能是空值；usdata.py 會改用當天最後成交價（regularMarketPrice）並在備註寫明，這些數字至少挑幾個用第二來源（鉅亨網、CNBC、Reuters）確認。
 - 新台幣用台北外匯經紀 16:00 收盤（週五與上週五）；美債殖利率用 usdata.py 輸出的 CNBC 日線收盤（RULES.md 4.7）；腳本退回 CBOE 時照備註標明。
 
-## 三、作業流程（目標約 60 分鐘，內容不減）
+## 三、作業流程（09:30 開始準備，10:00 截止，10:45 上線）
 
-1. 步驟〇 → 跑腳本（背景）→ 同時開 4 個研究子代理（背景平行，筆記與 HTML 片段放 `_research/D-wk/`，不可改 `daily/`、不可開預覽伺服器或瀏覽器、不可自己抓行情）：
+**時間預算（RULES.md 核心目標②）：** 09:30–10:00 讀檔、跑 twdata 與 prep 版 usdata、開 5 個研究子代理、主筆寫一週回顧的台股部分；10:05 跑正式 usdata；10:20 子代理全部交回（指示寫明交回期限，過期未交的主筆用已有內容寫）；10:25 整合完成、開查核；10:33 查核交回（8 分鐘）；10:36 修正完；10:43 複核（1 輪，7 分鐘）完成；10:45 上線。一週大事子代理在 10:00 後再掃一次 09:30–10:00 的新消息，只收 10:00 前發布的。任一節點落後 5 分鐘以上，深度主題與跨資產寫短，不壓縮查核。
+
+1. 步驟〇 → 跑腳本（背景）→ 同時開 5 個研究子代理（背景平行，筆記與 HTML 片段放 `_research/D-wk/`，不可改 `daily/`、不可開預覽伺服器或瀏覽器、不可自己抓行情）：
 
 | 子代理 | 交付 |
 | --- | --- |
 | 一週大事 | `week-news.md`；`top10.html`（本週十大事件，`ol.keys` 格式，每則附日期、所以呢、原文連結）；`fri.html`（週五美股與到週六 10:00 的重大消息，3–6 張 `details.news`） |
-| AI 成績單 | `score.md`；`score.html`（本頁摘要、逐項對照表、統計長條 `div.bars`、檢討 3–5 點）。檢驗本週每份早報、午報（以及上一份週報的下週展望）最關鍵的 1–3 個判斷：原文判斷（含機率）、實際結果（官方數字＋來源）、評分「說中／部分說中／說錯／尚無法判斷」，評分標準寫在表下且每一列一致。不能只挑說中的，檢討要誠實具體。行情檔要用截止 5 分鐘後重跑的版本。 |
-| AI 自我檢討 | `selfreview.md`；`proc.html`（流程與品質檢討）與 `prompt.html`（規則檢視），內容見第四節「AI 成績單與檢討」。上線時間用 `git log --format="%ad %s" --date=format:"%m/%d %H:%M" -- daily/reports` 取得；錯誤類型取自 `lessons.md` 本週新增與補充的條目；規則檢視要逐條對照 RULES.md、RULES-PM.md 的現行條文，引用條號。 |
+| AI 成績單 | `score.md`；`score.html`（本頁摘要、逐項對照表、統計長條 `div.bars`、檢討 3–5 點）。檢驗本週每份早報、午報（以及上一份週報的下週展望）最關鍵的 1–3 個判斷：原文判斷（含機率）、實際結果（官方數字＋來源）、評分「說中／部分說中／說錯／尚無法判斷」，評分標準寫在表下且每一列一致。不能只挑說中的，檢討要誠實具體。行情先用 prep 版（週五收盤已確定），10:05 後用正式檔核對並更新。 |
+| AI 自我檢討 | `selfreview.md`；`proc.html`（流程與品質檢討）與 `prompt.html`（規則檢視），內容見第四節「AI 成績單與檢討」。上線時間用 `git log --format="%ad %s" --date=format:"%m/%d %H:%M" -- daily/reports` 取得；錯誤類型取自 `lessons.md` 本週新增與補充的條目；規則檢視要逐條對照 RULES.md、RULES-PM.md 的現行條文，引用條號；每項建議附第八節第 1 項的評估（證據、效果、對時間與 token 的影響）與建議狀態。另外統計本週各報告 view-log「製作時間」，找出最慢的步驟。 |
 | 下週行事曆 | `cal.md`；`cal.html`（下週一到週六，台北時間，RULES.md 5.7 格式：篩選列、`tr.grp` 依日期分組、`tr.hl` 標重要事件、分析欄 2–3 句） |
 | 深度主題 | `theme.md`；`theme.html`（RULES.md 5.5 專題格式：摘要、主視覺、`div.essay` 5–6 段、1–2 張視覺、view-box、關鍵數字表、情境表、觀察清單）。題目選「這週最重要、平日篇幅寫不透」的一件事，不和本週早報專題重複抄背景，要有歷史比較或結構分析。 |
 
 2. 主筆在等子代理時寫：總覽的一週行情表與觀點矩陣、一週回顧的台灣與美國頁（數據列、逐日表、`stockviz.py bars` 圖）、跨資產與其他市場表、下週展望的台股與美股觀點頁。
 3. 子代理交回後：整合片段（只改錯、統一數字口徑、寫摘要），寫總覽摘要。整合時跨片段搜尋同一事件、同一數字的寫法，矛盾先查原文。
 4. `reports.js` 最前面加一筆（第五節）、`view-log.md` 最上面加週報一節（第六節）。
-5. 查核：照 RULES.md 步驟 5，兩個查核員平行（數字、內容）。數字查核員第一步跑 `python daily/tools/crosscheck.py 報告.html "_research/D-wk/official-*.md" _research/D-wk/其他官方整理.md`。修正後複核最多 2 輪。發布前 `residue.py`（和上一份週報比；第一份不用）、`grep -c '【待'` 為 0、`python daily/tools/mobilecheck.py 報告.html` 為 OK。查核發現的問題類型寫進 `lessons.md`。**排程中不可修改規則檔與 `daily/tools/`。**
-6. 發布：只 add `daily/reports/D-wk.html`、`daily/reports.js`、`daily/state/view-log.md`（與有更新的 `lessons.md`）；commit 訊息「daily: YYYY-MM-DD 週報」加 Co-Authored-By；pull --rebase、push、curl 確認 200（RULES.md 步驟 6）；`release wk`。
-7. 回報 5 行以內：一句話結論、成績單統計、立場變化、報告連結、查核修正了幾處；規則檢視有新建議時，寫「有 N 項規則修改建議待決定」。
+5. 查核：照 RULES.md 步驟 5，兩個查核員平行（數字、內容）。數字查核員第一步跑 `python daily/tools/crosscheck.py 報告.html "_research/D-wk/official-*.md" _research/D-wk/其他官方整理.md`。修正後複核 1 輪（規則同 RULES.md 步驟 5）。發布前 `residue.py`（和上一份週報比；第一份不用）、`grep -c '【待'` 為 0、`python daily/tools/mobilecheck.py 報告.html` 為 OK。查核發現的問題類型寫進 `lessons.md`。發布前不可修改規則檔與 `daily/tools/`（規則的修改在發布後照第八節做）。
+6. 發布：只 add `daily/reports/D-wk.html`、`daily/reports.js`、`daily/state/view-log.md`（與有更新的 `lessons.md`）；commit 訊息「daily: YYYY-MM-DD 週報」加 Co-Authored-By；pull --rebase、push、curl 確認 200（RULES.md 步驟 6）。接著做第八節（規則檢視的自行採用與維護），做完才 `release wk`。
+7. 回報 5 行以內：一句話結論、成績單統計、立場變化、報告連結、查核修正了幾處；規則檢視自行採用了哪幾項、不採用哪幾項（一句原因）、有沒有「需要使用者」的項目。
 
 ## 四、版面
 
@@ -76,7 +79,7 @@ python daily/tools/usdata.py quotes --cutoff "D 10:00" --out _research/D-wk     
   1. 摘要（第一層）：判斷、根本原因、流程、運作、規則檢視各一條。
   2. 子分頁 `wk-score` 判斷成績單：本頁摘要、逐項對照表（報告、判斷、實際結果、評分）、統計長條、檢討 3–5 點（錯在哪、哪些方法有效、之後怎麼改）。
   3. 子分頁 `wk-proc` 流程與品質檢討：上線時間表（目標、實際上線、差距、主要原因）；一再出現的錯誤類型表（本週次數、出現在哪幾份、對策）；運作上的問題（排程卡住、中斷、資料限制等）。
-  4. 子分頁 `wk-prompt` 規則（prompt）檢視：**每週檢視一次早報、午報、週報的規則檔是否要優化**。建議表欄位：#、建議、改哪裡（檔名與條號）、本週的證據、優先（高／中／低）、狀態（待使用者決定／已採用／不採用）；上一週的建議要追蹤狀態與效果。另列「不用改規則，AI 下週自己先做的」。排程執行時不可修改規則檔與腳本：建議只寫在這一頁，並在 `lessons.md`「待使用者處理」加一行指向本週週報的建議，由使用者在對話中決定。
+  4. 子分頁 `wk-prompt` 規則（prompt）檢視：**每週檢視一次早報、午報、週報的規則檔是否要優化**。建議表欄位：#、建議、改哪裡（檔名與條號）、本週的證據、優先（高／中／低）、狀態（已採用（AI，MM/DD）／不採用（原因）／需要使用者）；上一週的建議要追蹤狀態與效果。另列「不用改規則，AI 下週自己先做的」。評估標準、可以改的範圍與改法見第八節。
 - 隱藏區塊的內容不放進總覽、首頁卡片與 `reports.js`（`keys`、`points`、`summary`）。
 - 週報不放「理性檢查」分頁。
 - 每張數據表後面要有解讀；成績單的評分顏色要在表下註明意義。
@@ -105,11 +108,33 @@ python daily/tools/usdata.py quotes --cutoff "D 10:00" --out _research/D-wk     
 4. 一週關鍵數字（週漲跌、法人與融資一週、外資期貨淨空）
 5. 下週待追蹤事件（日期、台北時間）
 6. 週六 10:00 之後已知的事件（給週一早報當線索，使用前重新查證）
+7. 製作時間（一行，格式同 RULES.md 第八節第 10 項）與規則檢視採用的項目
 
 下週一早報的觀點比較基準：台股短期與美股各期，若週報有更新立場，就對照週報（括號註明「對照 MM/DD 週報」）。
 
 ## 七、排程
 
-- 每週六 10:00（台北）由 Claude 桌面版排程任務執行（系統會加幾分鐘延遲）；資料截止 10:00，約 11:00 上線。
+- 每週六 09:30（台北）由 Claude 桌面版排程任務開始準備（系統會延遲約 10 分鐘）；資料截止 10:00，約 10:45 上線；之後做第八節的規則檢視與維護。
 - 週六晚於 20:00 才開始就不產出；不補做過去的週報。
 - 排程中不可使用任何會跳出「允許」視窗的工具（預覽伺服器、瀏覽器面板、Chrome、問使用者），規則同 RULES.md 第九節。
+
+## 八、規則檢視的自行採用與每週維護
+
+使用者不介入日常運作（2026-11-21）：規則（prompt）要不要改，由週報的 AI 自己理性評估、自己改。中心思想是 RULES.md 第一節第 11 條的三個核心目標：資料要對、要精確；截止到上線 45 分鐘內；不浪費 token。**評估在寫週報時做（寫進 `wk-prompt`），實際修改在週報發布之後才做，不算在 45 分鐘內；開始前再執行一次 `runlock.py acquire wk` 刷新鎖的時間。**
+
+1. **評估：** 規則檢視的每一項建議、`lessons.md`「待週報處理」的每一條、`_research/interrupted/` 的中斷紀錄、本週各報告 view-log 的「製作時間」，逐項判斷：
+   - **採用**要同時符合：(a) 有證據：同類錯誤累計 2 次以上、確定的資料錯誤，或上線超過 45 分鐘而且找得到原因；(b) 能直接讓資料更正確，或讓製作更快、更省 token；(c) 不會讓報告變慢、變長，也不降低查核標準。
+   - **不採用**：證據只有 1 次、效果不確定，或會增加時間與 token 卻沒有對應的正確性好處。寫明原因，之後有新證據再評估。
+2. **AI 可以自己改的範圍：** `RULES.md`、`RULES-PM.md`、`RULES-WK.md` 的分析方法、查核項目、子代理分工與字數、時間預算的分配；`daily/tools/` 的腳本（修正錯誤、增加輸出）；`lessons.md`、`view-log.md` 的整理。
+   **不可以自己改**（建議表狀態寫「需要使用者」，同時寫進 `lessons.md`「需要使用者（不阻擋）」，不用每週重提）：資料截止時間與排程時間、報告的主分頁結構、首頁與 `daily/assets/`、發布與 git 流程、`runlock.py`、`newreport.py`、`residue.py`、`mobilecheck.py`、`crosscheck.py`（鎖、骨架與查核用的工具）、安全限制（只動 `daily/`、排程不用會跳出「允許」視窗的工具）、三個核心目標，以及本節。
+3. **改法：**
+   - 每週最多採用 3 項。改之前先讀現行條文，改成一條清楚的規則，不疊加例外。**規則檔只能變精簡：** 新增一條時，同時刪掉或合併已過時、重複的條文；三份規則檔合計字元數（`wc -m daily/RULES*.md`）不可以超過改之前（每週淨增加 ≤ 0），而且絕對上限 150,000 字元（2026-11-21 約 149,000）。
+   - 改腳本：先把原檔複製到 `_research/D-wk/bak/`；改完先 `python -m py_compile`，再用最近兩個截止時間（一份早報、一份午報），改到哪個子指令就各跑一次新舊兩版，輸出一律指定 `--out _research/D-wk/test/old`、`--out _research/D-wk/test/new`（不可以寫進其他日期的研究資料夾），比對輸出，只有預期的地方不同才採用；語法錯誤或結果不對就還原，狀態改成「不採用（測試未過）」。
+   - **獨立審查：** 開一個新的子代理，檢查改過的條文和其他條文有沒有矛盾、是否符合第 1 項的標準、腳本測試結果；有問題就修正或還原。
+4. **記錄：** `changelog.md` 加一行（註明「週報 AI 自行採用」與證據）；狀態和週報寫的不同時（例如測試未過），在同一個 commit 裡改已發布週報的 `wk-prompt` 表。
+5. **追蹤：** 下一份週報檢驗上週採用的項目有沒有效（同類錯誤是否減少、時間是否縮短）；沒效或變差就還原或改寫。
+6. **每週維護（省 token）：**
+   - `lessons.md`（目標：一到五節合計 40 條、10,000 字元以內）：每條只留最新一個例子，舊例子移到 `daily/state/lessons-archive.md`（排程不讀）；已寫進規則或腳本、而且兩週內沒有再犯的整條移過去；相近條目合併。一次做不完可以分幾週，不可以為了達標刪掉還有用的教訓。「待週報處理」處理完的刪除。
+   - `view-log.md`：超過 21 天、而且不在最近 15 個交易日內的節移到 `daily/state/view-log-archive.md`（排程不讀，成績單需要時才查）。
+   - `usdata.py` 的美國假日表只到 2027 年底：每年 11 月的週報補下一年（只補確定的日期）。
+7. **commit：** 另開一個 commit「daily: 週報規則檢視 YYYY-MM-DD：採用 N 項（…）」，只 add `daily/` 裡改過的檔案；pull --rebase、push、curl 確認 200。週報已經發布，這一步失敗不影響週報：還原改動並寫進回報。最後才 `release wk`。

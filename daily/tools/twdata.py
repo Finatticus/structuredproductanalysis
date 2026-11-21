@@ -229,8 +229,14 @@ def market(d, cut):
         emit(f"\n52 週（最近 {len(w)} 個交易日，收盤）：最高 {fmt(hi['close'])}（{hi['date']}），最低 {fmt(lo['close'])}（{lo['date']}）；"
              f"收盤距高點 {sgn((closes[-1] / hi['close'] - 1) * 100)}%。盤中高低請另查。")
         a = [r["amt"] for r in rows]
-        emit(f"成交金額：5 日均 {fmt(sum(a[-5:]) / 5)} 億、20 日均 {fmt(sum(a[-20:]) / 20)} 億。"
-             "午報抓到的當天成交金額是 15:30 前的數字，晚間可能因盤後交易併入而變大，隔天早報用最終值並註明。\n")
+        emit(f"成交金額：5 日均 {fmt(sum(a[-5:]) / 5)} 億、20 日均 {fmt(sum(a[-20:]) / 20)} 億（都含當天）。"
+             "午報抓到的當天成交金額是 15:30 前的數字，晚間可能因盤後交易併入而變大，隔天早報用最終值並註明。")
+        if len(a) >= 21:
+            p20 = sum(a[-21:-1]) / 20
+            emit(f"比較用均量（不含當天）：前 5 日均 {fmt(sum(a[-6:-1]) / 5)} 億、前 20 日均 {fmt(p20)} 億；"
+                 f"{rows[-1]['date']} {fmt(a[-1])} 億＝前 20 日均的 {a[-1] / p20:.2f} 倍。寫「量是均量的幾倍」一律用這一行。\n")
+        else:
+            emit("")
         emit(f"來源：https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?response=json&date={ymd(d)}\n")
 
     def s1b():
@@ -401,6 +407,17 @@ def market(d, cut):
             else:
                 mtd = sgn(sum(v[k] for _, _, v in mon)) + " 億元"
             emit(f"\n{label}：{streak}；{ds[:7]} 月累計 {mtd}。")
+        isow = lambda t: date.fromisoformat(t).isocalendar()[:2]  # noqa
+        wk = [(td, st, v) for td, st, v in vals if isow(td) == isow(ds)]
+        wk_first = next((r["date"] for r in rows if isow(r["date"]) == isow(ds)), ds)
+        if wk and wk[0][0] == wk_first and all(st == "ok" for _, st, _ in wk):
+            tot = lambda f: sgn(sum(f(v) for _, _, v in wk))  # noqa
+            emit(f"\n本週累計（{wk[0][0]} 到 {ds}，{len(wk)} 個交易日，用未四捨五入的原始值加總，億元）：外資 {tot(lambda v: v['外資及陸資'])}、"
+                 f"投信 {tot(lambda v: v['投信'])}、自營商 {tot(lambda v: v['自營商(自行'] + v['自營商(避險'])}"
+                 f"（自行 {tot(lambda v: v['自營商(自行'])}、避險 {tot(lambda v: v['自營商(避險'])}）、三大法人 {tot(lambda v: v['合計'])}。"
+                 "一週合計一律用這一行，不要把表格裡四捨五入後的日數字相加。")
+        else:
+            emit("\n本週累計：無法確定（缺資料）。")
         emit(f"\n連續天數與月累計用最近 {len(vals)} 個交易日算（AI 推算）。來源：https://www.twse.com.tw/rwd/zh/fund/BFI82U?response=json&type=day&dayDate={ymd(d)}\n")
 
     def s5():
