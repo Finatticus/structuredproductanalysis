@@ -188,7 +188,7 @@ def section(title, fn):
         fn()
     except Exception as e:  # noqa
         STATS["fail"] += 1
-        emit(f"**腳本錯誤（{type(e).__name__}: {e}）**：這一項請手動到官方網站抓取並確認；可能是官方網站改版。這次改用手動抓取的值，並寫進 lessons.md 最下面「待使用者處理」（排程中不可修改腳本）。\n")
+        emit(f"**腳本錯誤（{type(e).__name__}: {e}）**：這一項請手動到官方網站抓取並確認；可能是官方網站改版。這次改用手動抓取的值，並寫進 lessons.md 最下面「待週報處理」（早報、午報排程中不可修改腳本）。\n")
     flush()
 
 

@@ -30,7 +30,7 @@
 2. 確認 D 台股有開市（RULES.md 4.7「休市判斷」）；休市就不出午報，直接回報「台股休市，午報略過」。
 3. **上鎖：** 在 `C:\Users\User\Desktop\news` 執行 `python daily/tools/runlock.py acquire pm`。印出 BUSY 代表早報還在執行：改跑 `python daily/tools/runlock.py wait pm`（每次最多等 9 分鐘），最多 5 次；還是 BUSY 就停止並回報。上鎖後，之後不論發布成功或中途停止，最後都要執行 `python daily/tools/runlock.py release pm`。
    接著執行 `python daily/tools/runlock.py stash pm`：前一次中斷留下的未 commit 殘檔（含已 add 未 commit 的、規則檔與 `daily/tools/` 的改動、沒做完的 rebase）會存到 `_research/interrupted/`，再還原成最新 commit。印出 STASHED 時在回報寫一句「前一次中斷的殘檔已收存到 …」，照常產出（週報會在流程檢討裡記錄）；訊息裡有「還原後仍有殘檔」就停止並回報。然後 `git status`、`git pull --rebase --autostash origin main`。
-   - 防重複只認已 commit 的：`git ls-files daily/reports/D-pm.html` 有輸出、或 `reports.js` 已有 D 的午報：停止，回報「已產出」。
+   - 防重複只認已 commit 的：`git ls-files daily/reports/D-pm.html` 有輸出、或 `reports.js` 已有 D 的午報：停止，回報「已產出」；停止前先看 `git status -sb`：有 ahead（已 commit 但上次 push 失敗），就先 `git pull --rebase` 再 push，並用 curl 確認網址 200，然後才回報「已產出（補推送）」。stash 的輸出不是 CLEAN 或 STASHED 開頭（例如指令出錯），也停止並回報。
 4. **當天沒有早報時**（早報沒出或還沒推送）：以最近一份早報＋其後的午報與 view-log 為起點；「觀點更新」分頁改成對照最近一份早報，並在摘要寫明「當天無早報，對照 MM/DD 早報」。view-log 的寫法見第七節。
 
 ### 0.3 不適用午報的早報規則
@@ -159,6 +159,7 @@
    先讀 C:\Users\User\Desktop\news\daily\state\lessons.md（查核教訓筆記），特別檢查裡面列過的錯誤類型有沒有再出現。
    逐項檢查：（列出下面 1–12 項）
    回報格式：錯誤（必改）／越過時間界線（必改）／無法確認（加註或刪除），每項寫位置、原文、正確值與來源。
+   只列有問題的項目，確認無誤的不用寫。{HH:MM}（開始後 8 分鐘）前交回；做不完的項目列在最後「未檢查」，由主筆補查。
    ```
 
    查核項目：

@@ -45,7 +45,7 @@
 1. 讀本檔全文，以及 **`daily/state/lessons.md`（查核教訓筆記）全文**：過去查核抓到的錯誤類型，寫作時主動避開。讀規則檔時，Read 工具如果顯示「PARTIAL view」或只讀到一部分，一定要用 offset 分段讀完，不能只讀前半。
 2. **確認日期與時間：** 用系統時間確認今天日期、星期與現在時間。報告日期 D ＝ 觸發排程的那個平日（補跑規則見第九節）。**現在早於 06:20，代表是前一天漏跑的補跑：不產出，回報「早報略過（補跑時間不對）」。現在已晚於 14:00：不產出，回報「早報略過，當天交給午報」。**（排程 06:30 開始準備，時間界線仍是 07:00，見步驟 1「早報分兩段」。）確認 D 與前一個美國交易日是否休市（4.7「休市判斷」）。
 3. **上鎖、收存殘檔、同步、防重複（依這個順序）：** 先在 `C:\Users\User\Desktop\news` 執行 `python daily/tools/runlock.py acquire am`：印出 BUSY 代表別的報告正在執行，停止並回報。上鎖後，之後不論發布成功或中途停止，最後都要執行 `python daily/tools/runlock.py release am`。接著執行 `python daily/tools/runlock.py stash am`：前一次中斷留下的未 commit 殘檔（含已 add 未 commit 的、規則檔與 `daily/tools/` 的改動、沒做完的 rebase）會存到 `_research/interrupted/`，再還原成最新 commit。印出 STASHED 時在回報寫一句「前一次中斷的殘檔已收存到 …」，照常產出（週報會在流程檢討裡記錄）；訊息裡有「還原後仍有殘檔」就停止並回報。然後 `git status`、`git pull --rebase --autostash origin main`。
-   - 防重複只認已 commit 的：`git ls-files daily/reports/D.html` 有輸出、或 `reports.js` 已有 D 的早報：停止，回報「已產出」。
+   - 防重複只認已 commit 的：`git ls-files daily/reports/D.html` 有輸出、或 `reports.js` 已有 D 的早報：停止，回報「已產出」；停止前先看 `git status -sb`：有 ahead（已 commit 但上次 push 失敗），就先 `git pull --rebase` 再 push，並用 curl 確認網址 200，然後才回報「已產出（補推送）」。stash 的輸出不是 CLEAN 或 STASHED 開頭（例如指令出錯），也停止並回報。
 4. 讀 `daily/state/view-log.md` 最上面一節：前一份的立場、機率、關鍵數字、翻轉條件、待追蹤事件、「明天要補查的」、「午報更新」、「之後已知的事件」。
 5. **讀最近一份午報**（`reports/` 裡最新的 `*-pm.html`）。把它對台股觀點的更新、情境與翻轉條件當成今天的起點。觀點延續以 view-log 為主；報告 HTML 很大，只讀需要的段落（用 Grep 找到「觀點更新」「情境」「翻轉條件」的位置再讀那幾行），不要整份讀。如果它的日期早於最近一份早報（例如前一天午報沒出），改以最近一份早報＋view-log 為起點。
 6. **最近一份早報**（`reports/` 裡最新、檔名不含 `-pm` 的 HTML）是今天的版型範本，沿用它的 HTML 結構和 class（第五節有完整規格）。複製後只在要改某一段時讀那一段。

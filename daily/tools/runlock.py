@@ -46,8 +46,7 @@ def git(*args, check=False):
 
 def stash(kind):
     """前一次中斷的殘檔：存到 _research/interrupted/，再把工作目錄與 index 還原成 HEAD（只限下面這些路徑）。"""
-    paths = ["daily/reports.js", "daily/state", "daily/reports", "daily/tools"] + \
-        [f"daily/{f}" for f in os.listdir("daily") if f.startswith("RULES") and f.endswith(".md")]
+    paths = ["daily/reports.js", "daily/state", "daily/reports", "daily/tools", ":(glob)daily/RULES*.md"]
     gd = git("rev-parse", "--git-dir").stdout.strip() or ".git"
     note = []
     if os.path.isdir(os.path.join(gd, "rebase-merge")) or os.path.isdir(os.path.join(gd, "rebase-apply")):
@@ -73,7 +72,10 @@ def stash(kind):
     os.makedirs(d, exist_ok=True)
     with open(os.path.join(d, "tracked.diff"), "w", encoding="utf-8") as fh:
         fh.write(git("diff", "HEAD", "--", *paths).stdout)
-    in_head = set(git("ls-tree", "-r", "-z", "--name-only", "HEAD", "--", *paths).stdout.split("\0"))
+    lt = git("ls-tree", "-r", "-z", "--name-only", "HEAD", "--", "daily")  # ls-tree 不支援 :(glob)，直接列整個 daily/
+    if lt.returncode != 0 or not lt.stdout:
+        sys.exit("ERROR 讀不到 HEAD 的檔案清單，沒有還原任何檔案（殘檔已存到 " + d + "），要停止並回報：" + lt.stderr.strip())
+    in_head = set(lt.stdout.split("\0"))
     for code, f in ent:
         if os.path.isfile(f):
             shutil.copy2(f, os.path.join(d, f.replace("/", "__")))

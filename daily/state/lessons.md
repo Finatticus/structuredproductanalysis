@@ -90,7 +90,7 @@
 - **圖上的標籤不能壓到線或其他標籤。** 最後價格放在價格軸上；兩條折線時，較高的標籤放在點的上方，較低的放在下方。
 - **長串沒有空白的數列（例如「39,331→44,062→…」）在手機上不會斷行，會撐寬整頁。** 例：2026-11-20 午報，輝達基本面註腳的逐季數列讓 mobilecheck 375px 頁面變成 434px，而且工具列不出元素；在箭頭後加 `<wbr>` 修好。mobilecheck FAIL 又沒列元素時，逐段刪除子分頁二分搜尋。 2026-11-21 週報（第 2 次）：成績單檢討的「25→25→30→…→40」又撐寬到 379px；改成「依序 25、25、30…」。mobilecheck.py 已改成元素都沒超寬時，會列出溢出的文字節點，可以直接定位。
 
-- **改腳本時不要用 shell heredoc 寫 Python：** 字串裡的跳脫字元（例如 `"\\0"`、`\\n`）經過 shell 和 Python 兩層轉換，可能寫出真的 NUL 或換行，腳本直接無法執行。改用 Write 工具寫成檔案再執行，改完一定 `python -m py_compile`。例：2026-11-21 改 runlock.py stash，heredoc 寫入的分隔字元讓第 76 行出現 null byte，SyntaxError。
+- **改腳本時不要用 shell heredoc 寫 Python：** 字串裡的跳脫字元（例如 `"\\0"`、`\\n`）經過 shell 和 Python 兩層轉換，可能寫出真的 NUL 或換行，腳本直接無法執行。改用 Write 工具寫成檔案再執行，改完一定 `python -m py_compile`。例：2026-11-21 改 runlock.py stash，heredoc 寫入的分隔字元讓第 76 行出現 null byte，SyntaxError。**測試會刪檔的腳本時，輸出要完整看，不要用 grep 篩掉**：同一天 stash 改用 git glob 後，`git ls-tree` 不支援 glob 回傳空清單，會把已追蹤檔當新增檔刪掉，篩過的輸出差點漏看。
 - **改腳本要測邊界狀態，改流程要排順序**：腳本先在暫存 repo 或 `_research/D-wk/test/` 測過各種狀態（已 add 未 commit、新增、刪除、改名、中文檔名），流程的步驟順序要逐步推演（收存殘檔要在 pull 與防重複之前）。例：2026-11-21 runlock.py stash 第一版用 `git checkout --` 從 index 還原（已 add 的殘檔還原不掉），中文檔名被 git 加引號導致誤刪，防重複又排在收存之前（審查子代理抓到）。
 
 ## 待週報處理
