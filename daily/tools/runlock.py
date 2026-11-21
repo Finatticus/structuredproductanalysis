@@ -3,9 +3,9 @@
 
 鎖檔：C:\\Users\\User\\Desktop\\news\\_research\\.lock（不進 git）。超過 120 分鐘的鎖視為過期（中途當掉沒解鎖時，下一次執行不會被卡住）。
 用法（在 C:\\Users\\User\\Desktop\\news 執行）：
-  python daily/tools/runlock.py acquire am|pm    # 沒有別人的鎖就上鎖，印出 OK（結束碼 0）；有別人的有效鎖就印出 BUSY（結束碼 3）
-  python daily/tools/runlock.py wait am|pm        # 等最多 9 分鐘，每 60 秒檢查一次；等到就上鎖印 OK，否則印 BUSY（結束碼 3）
-  python daily/tools/runlock.py release am|pm     # 發布完成（或決定不產出）後解鎖
+  python daily/tools/runlock.py acquire am|pm|wk # 沒有別人的鎖就上鎖，印出 OK（結束碼 0）；有別人的有效鎖就印出 BUSY（結束碼 3）
+  python daily/tools/runlock.py wait am|pm|wk     # 等最多 9 分鐘，每 60 秒檢查一次；等到就上鎖印 OK，否則印 BUSY（結束碼 3）
+  python daily/tools/runlock.py release am|pm|wk  # 發布完成（或決定不產出）後解鎖
   python daily/tools/runlock.py status
 """
 import json

@@ -78,13 +78,23 @@ def chart(sym, rng="1y", interval="1d"):
     tz = timezone(timedelta(seconds=r["meta"].get("gmtoffset", 0)))
     q = r["indicators"]["quote"][0]
     bars = []
-    for i, t in enumerate(r.get("timestamp") or []):
+    ts = r.get("timestamp") or []
+    meta = r["meta"]
+    for i, t in enumerate(ts):
         c = q["close"][i]
         if c is None:
+            # Yahoo 有時收盤後很久，最後一根日線的收盤仍是空值（週末常見）。
+            # 只在「最後一根」且最後成交時間就在同一天時，改用 regularMarketPrice，並標記 filled。
+            rmt, rmp = meta.get("regularMarketTime"), meta.get("regularMarketPrice")
+            if interval == "1d" and i == len(ts) - 1 and rmt and rmp and \
+                    datetime.fromtimestamp(rmt, tz).date() == datetime.fromtimestamp(t, tz).date():
+                bars.append({"ts": t, "date": datetime.fromtimestamp(t, tz).date(), "open": q["open"][i] or rmp,
+                             "high": q["high"][i] or rmp, "low": q["low"][i] or rmp, "close": rmp,
+                             "volume": q["volume"][i] or 0, "filled": True})
             continue
         bars.append({"ts": t, "date": datetime.fromtimestamp(t, tz).date(), "open": q["open"][i], "high": q["high"][i],
                      "low": q["low"][i], "close": c, "volume": q["volume"][i] or 0})
-    return r["meta"], bars
+    return meta, bars
 
 
 def completed(meta, bars, cutoff):
@@ -160,6 +170,8 @@ def rowday(sym, name, cutoff, yld):
         wchg = sg(pc(last["close"], wk["close"])) if wk else "—"
         ytd = sg(pc(last["close"], yb["close"])) if yb else "—"
         cl = f2(last["close"], 2)
+    if last.get("filled"):
+        note = (note + "；" if note else "") + "Yahoo 日線收盤缺值，改用當天最後成交價（regularMarketPrice），要用第二來源確認"
     return f"| {name} | {sym} | {last['date']} 收盤 | {cl} | {dchg} | {wchg} | {ytd} | {note} |"
 
 

@@ -572,3 +572,33 @@ section.panel.vault { border: 1px dashed var(--ink-3); }
 @media (max-width: 860px) { .vault-badge { position: static; margin-top: 10px; flex-basis: 100%; } }
 .vault-badge button { font: inherit; font-size: .76rem; color: #fff; background: transparent; border: 1px solid #c9d6e6; padding: 2px 8px; cursor: pointer; }
 .vault-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--navy); color: #fff; font-size: .88rem; padding: 8px 16px; z-index: 50; }
+
+/* ===== 首頁 v2（2026-11-21）：三種報告並排、清單改分頁 ===== */
+.sched { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 22px; padding-right: 0 !important; margin-top: 10px; }
+.sched > span { border-left: 2px solid rgba(201,214,230,.45); padding-left: 10px; }
+.sched b { display: block; font-size: .9rem; letter-spacing: .04em; }
+.sched .sd { margin-top: 1px; }
+.home-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.hcard { padding: 16px 18px; gap: 10px; }
+.hcard h2 { font-size: 1.08rem; line-height: 1.5; }
+.hcard .keys-s { color: var(--ink-2); font-size: .86rem; padding-left: 1.1em; }
+.hcard .keys-s li + li { margin-top: .15em; }
+.hc-badge { font-size: .9rem; padding: 2px 10px; }
+.hc-date { font-size: 1.15rem; }
+.hcard .cta { padding: 6px 16px; font-size: .86rem; }
+.vlines { font-size: .8rem; gap: 4px; padding-top: 8px; }
+.vline { gap: 3px 8px; }
+.vline b { min-width: 2.2em; }
+.hcard.wk { border-top: 5px solid var(--teal); }
+.hcard.wk .hc-badge, .hcard.wk .cta { background: var(--teal); }
+.archive#archive { margin-top: 20px; }
+.arc-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--rule); margin-bottom: 4px; }
+.arc-tabs button { font: inherit; font-family: var(--serif); font-weight: 700; font-size: 1.05rem; background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -2px; padding: 6px 16px 8px; color: var(--ink-3); cursor: pointer; }
+.arc-tabs button small { font-family: var(--num); font-weight: 400; font-size: .74rem; margin-left: 6px; color: var(--ink-3); }
+.arc-tabs button[aria-selected="true"].am { color: var(--navy); border-bottom-color: var(--navy); }
+.arc-tabs button[aria-selected="true"].pm { color: var(--pm); border-bottom-color: var(--pm); }
+.arc-tabs button[aria-selected="true"].wk { color: var(--teal); border-bottom-color: var(--teal); }
+.arc-list[hidden] { display: none; }
+@media (max-width: 1000px) { .home-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 860px) { .sched { grid-template-columns: minmax(0, 1fr); gap: 8px; } }
+@media (max-width: 600px) { .arc-tabs button { font-size: .92rem; padding: 6px 10px 8px; } .arc-tabs button small { margin-left: 3px; } }

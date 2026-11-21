@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>市場日報</title>
-<meta name="description" content="平日 07:00 早報、15:30 盤後午報：台灣與美國市場的短中長期看法、總經、全球重大事件與新聞分析。">
+<meta name="description" content="平日 07:00 早報、15:30 盤後午報，週六週報：台灣與美國市場的短中長期看法、總經、全球重大事件與新聞分析。">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/icons/favicon-64.png">
 <link rel="apple-touch-icon" href="assets/icons/icon-180.png">
@@ -23,18 +23,28 @@
     <div class="mast-l">
       <div class="kicker">Market Daily</div>
       <div class="ttl"><h1>市場日報</h1><span class="tsub">台灣、美國為主，兼顧全球重大事件</span></div>
-      <div class="sched"><span><b>早報</b>　平日｜資料截至 07:00，約 07:45 上線｜全市場，最完整<span class="sd">台美同等權重：隔夜美股、總經與央行、行事曆；專題是當下的重大事件</span></span><span><b>盤後午報</b>　平日｜資料截至 15:30，約 16:15 上線｜全市場，以台股為主<span class="sd">台股收盤的盤勢、籌碼、技術面，對照早報更新觀點；專題是台美各一檔個股的深度分析</span></span></div>
+      <div class="sched">
+        <span><b>早報</b>平日 07:00 截止｜約 07:45 上線<span class="sd">台美同等權重：隔夜美股、總經、行事曆，專題是當下大事</span></span>
+        <span><b>盤後午報</b>平日 15:30 截止｜約 16:15 上線<span class="sd">台股收盤的盤勢與籌碼、更新觀點，台美各一檔個股深度分析</span></span>
+        <span><b>週報</b>週六 10:00 截止｜約 11:00 上線<span class="sd">一週回顧、AI 觀點成績單、下週展望與深度主題</span></span>
+      </div>
     </div>
     <a class="mlink" href="method.html">分析 Prompt 說明</a>
   </div>
 </header>
 <div class="wrap body" id="home">
   <section class="home-grid" id="latest"><p class="muted">載入中…</p></section>
-  <div class="archives">
-    <section class="archive am"><h2>所有早報</h2><div id="list-am"></div></section>
-    <section class="archive pm"><h2>所有盤後午報</h2><div id="list-pm"></div></section>
-  </div>
-  <p class="foot">清單上的標籤是短期（1–2 週）立場：早報為台股與美股，午報為台股。內容由 Claude 依公開資訊整理分析，僅供參考，不構成投資建議。</p>
+  <section class="archive" id="archive">
+    <div class="arc-tabs" role="tablist">
+      <button type="button" data-kind="am" class="am">所有早報</button>
+      <button type="button" data-kind="pm" class="pm">所有盤後午報</button>
+      <button type="button" data-kind="wk" class="wk">所有週報</button>
+    </div>
+    <div id="list-am" class="arc-list" data-kind="am"></div>
+    <div id="list-pm" class="arc-list" data-kind="pm"></div>
+    <div id="list-wk" class="arc-list" data-kind="wk"></div>
+  </section>
+  <p class="foot">清單上的標籤是短期（1–2 週）立場：早報、週報為台股與美股，午報為台股。內容由 Claude 依公開資訊整理分析，僅供參考，不構成投資建議。</p>
 </div>
 <script src="reports.js"></script>
 <script src="assets/report.js"></script>

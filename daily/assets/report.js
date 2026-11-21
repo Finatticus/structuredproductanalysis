@@ -211,7 +211,7 @@
     if (!prev && !next) return;
     var id = document.body.getAttribute('data-report'), i = -1;
     var me = reports.filter(function (r) { return r.id === id; })[0];
-    var kind = me ? (me.kind || 'am') : (/-pm$/.test(id) ? 'pm' : 'am');
+    var kind = me ? (me.kind || 'am') : (/-pm$/.test(id) ? 'pm' : /-wk$/.test(id) ? 'wk' : 'am');
     reports = reports.filter(function (r) { return (r.kind || 'am') === kind; });
     reports.forEach(function (r, k) { if (r.id === id) i = k; });
     function wire(el, r) {
@@ -229,9 +229,9 @@
     MKTS.forEach(function (m) {
       var x = v[m[0]]; if (!x) return;
       h += '<div class="vline"><b>' + m[1] + '</b>' +
-        (x.s ? '<span>短期 ' + chip(x.s) + '</span>' : '') +
-        (x.m ? '<span>中期 ' + chip(x.m) + '</span>' : '') +
-        (x.l ? '<span>長期 ' + chip(x.l) + '</span>' : '') + '</div>';
+        (x.s ? '<span>短 ' + chip(x.s) + '</span>' : '') +
+        (x.m ? '<span>中 ' + chip(x.m) + '</span>' : '') +
+        (x.l ? '<span>長 ' + chip(x.l) + '</span>' : '') + '</div>';
     });
     return h;
   }
@@ -239,12 +239,13 @@
     var tag = '<div class="hc-tag"><span class="hc-badge">' + label + '</span>' + (r ? '<span class="hc-date">' + esc(r.date.slice(5).replace('-', '/')) + '（' + esc(r.weekday) + '）</span><span class="hc-year">' + esc(r.date.slice(0, 4)) + '</span>' : '') + '</div>';
     if (!r) return '<div class="hcard ' + kind + '">' + tag + '<p class="muted">尚無報告。</p></div>';
     var href = 'reports/' + r.id + '.html';
-    var pts = (r.points || []).map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('');
+    // 首頁只放 2–3 條短重點（keys）；沒有 keys 的舊報告只顯示標題
+    var keys = (r.keys || []).slice(0, 3).map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('');
     return '<div class="hcard ' + kind + '">' + tag +
       '<h2><a href="' + href + '">' + esc(r.headline) + '</a></h2>' +
-      (pts ? '<ul class="pts">' + pts + '</ul>' : '<p class="sum">' + esc(r.summary) + '</p>') +
+      (keys ? '<ul class="keys-s">' + keys + '</ul>' : '') +
       '<div class="vlines">' + line(r.views) + '</div>' +
-      '<a class="cta" href="' + href + '">閱讀完整' + label + '</a></div>';
+      '<a class="cta" href="' + href + '">閱讀' + label + '</a></div>';
   }
   function list(arr) {
     if (!arr.length) return '<p class="muted small">尚無報告。</p>';
@@ -262,8 +263,24 @@
   function buildHome(reports) {
     var am = reports.filter(function (r) { return (r.kind || 'am') === 'am'; });
     var pm = reports.filter(function (r) { return r.kind === 'pm'; });
-    document.getElementById('latest').innerHTML = card(am[0], '早報', 'am') + card(pm[0], '盤後午報', 'pm');
+    var wk = reports.filter(function (r) { return r.kind === 'wk'; });
+    document.getElementById('latest').innerHTML = card(am[0], '早報', 'am') + card(pm[0], '盤後午報', 'pm') + card(wk[0], '週報', 'wk');
     document.getElementById('list-am').innerHTML = list(am);
     document.getElementById('list-pm').innerHTML = list(pm);
+    var lw = document.getElementById('list-wk'); if (lw) lw.innerHTML = list(wk);
+    // 清單分頁：早報／午報／週報，記住上次選的（瀏覽器不允許時就用預設）
+    var arc = document.getElementById('archive'); if (!arc) return;
+    var n = { am: am.length, pm: pm.length, wk: wk.length };
+    function show(k) {
+      $all('.arc-tabs button', arc).forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-kind') === k ? 'true' : 'false'); });
+      $all('.arc-list', arc).forEach(function (l) { l.hidden = l.getAttribute('data-kind') !== k; });
+      try { localStorage.setItem('md-arc', k); } catch (e) {}
+    }
+    $all('.arc-tabs button', arc).forEach(function (b) {
+      b.insertAdjacentHTML('beforeend', '<small>' + n[b.getAttribute('data-kind')] + '</small>');
+      b.addEventListener('click', function () { show(b.getAttribute('data-kind')); });
+    });
+    var k0 = 'am'; try { k0 = localStorage.getItem('md-arc') || 'am'; } catch (e) {}
+    show(n[k0] !== undefined ? k0 : 'am');
   }
 })();

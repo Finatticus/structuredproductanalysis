@@ -50,6 +50,19 @@ PROBE = r"""
                    right: Math.round(r.right), text: (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60) });
       });
     }
+    if (sw > W && bad.length === 0) {
+      // 元素本身沒有超寬時，可能是元素裡的文字溢出（例如不能斷行的長字串），逐一檢查文字節點
+      var tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), nd, rg = document.createRange();
+      while ((nd = tw.nextNode()) && bad.length < 15) {
+        if (!nd.textContent.trim() || !nd.parentElement || clipped(nd.parentElement)) continue;
+        rg.selectNodeContents(nd);
+        var rr = rg.getBoundingClientRect();
+        if (rr.width === 0 || rr.right <= W + 1) continue;
+        var p = nd.parentElement, sec2 = p.closest('.subpanel') || p.closest('section.panel');
+        bad.push({ where: sec2 ? sec2.id : '-', tag: '文字於 ' + p.tagName.toLowerCase() + (typeof p.className === 'string' && p.className ? '.' + p.className.trim().replace(/\s+/g, '.') : ''),
+                   right: Math.round(rr.right), text: nd.textContent.replace(/\s+/g, ' ').trim().slice(0, 60) });
+      }
+    }
     var msg = JSON.stringify({ innerWidth: W, scrollWidth: sw, bad: bad });
     if (window.parent !== window) window.parent.postMessage(msg, '*');
   }
