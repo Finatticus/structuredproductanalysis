@@ -574,7 +574,8 @@ section.panel.vault { border: 1px dashed var(--ink-3); }
 .vault-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--navy); color: #fff; font-size: .88rem; padding: 8px 16px; z-index: 50; }
 
 /* ===== 首頁 v2（2026-11-21）：三種報告並排、清單改分頁 ===== */
-.sched { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 22px; padding-right: 0 !important; margin-top: 10px; }
+.sched { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 22px; margin-top: 10px; }
+@media (min-width: 861px) { .sched { padding-right: 10em !important; } }  /* 右下角留給「分析 Prompt 說明」，避免和週報說明重疊 */
 .sched > span { border-left: 2px solid rgba(201,214,230,.45); padding-left: 10px; }
 .sched b { display: block; font-size: .9rem; letter-spacing: .04em; }
 .sched .sd { margin-top: 1px; }

@@ -6,7 +6,7 @@
 
 做法：在報告同一個資料夾放一份暫存副本（.mc-*.html，跑完自動刪掉），加一段檢查程式，
 用無頭模式的 Chrome（找不到就用 Edge）在 375×812 的 iframe 裡開啟（無頭視窗最窄只有 500px）；把所有主分頁、子分頁同時打開，
-確認頁面寬度 document.documentElement.scrollWidth 不超過視窗寬度。
+確認頁面寬度 document.documentElement.scrollWidth 不超過視窗寬度（隱藏權限區塊也會打開一起檢查）。
 超過時列出造成超寬的元素（已在可左右捲動容器裡的元素不算）。
 結果第一行是 OK 或 FAIL；瀏覽器開不起來時印 ERROR，並以結束代碼 2 結束。
 """
@@ -29,6 +29,7 @@ PROBE = r"""
 <script>
 (function () {
   function run() {
+    document.documentElement.classList.add('vault-on');  // 隱藏區塊（理性檢查、AI 成績單）也要檢查
     document.querySelectorAll('section.panel, .subpanel').forEach(function (p) { p.classList.add('on'); });
     var W = window.innerWidth, sw = document.documentElement.scrollWidth, bad = [];
     function clipped(el) {
