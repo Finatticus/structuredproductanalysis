@@ -49,6 +49,12 @@ GROUPS = [
 ]
 
 
+# 理性市場資訊用：美股產業（SPDR 產業 ETF 加半導體、軟體、區域銀行）
+SECTORS = [("XLK", "科技"), ("SMH", "半導體"), ("IGV", "軟體"), ("XLC", "通訊服務"), ("XLY", "非必需消費"), ("XLP", "必需消費"),
+           ("XLF", "金融"), ("KRE", "區域銀行"), ("XLV", "醫療保健"), ("XLE", "能源"), ("XLI", "工業"), ("XLB", "原物料"),
+           ("XLU", "公用事業"), ("XLRE", "不動產")]
+
+
 # Yahoo 代號 → CNBC 代號（Yahoo 日線過期時的備援、補值時的交叉確認）。美股個股代號兩邊相同。
 CNBC_MAP = {"^GSPC": ".SPX", "^IXIC": ".IXIC", "^DJI": ".DJI", "^RUT": ".RUT", "^SOX": ".SOX", "^VIX": ".VIX",
             "^STOXX": ".STOXX", "^STOXX50E": ".STOXX50E", "^GDAXI": ".GDAXI", "^FTSE": ".FTSE", "^FCHI": ".FCHI",
@@ -358,6 +364,44 @@ def quotes(cutoff, extra):
         flush()
 
 
+def strength(cutoff, extra=""):
+    """美股產業 ETF、AI 與大型科技股（加上 --extra 的個股）：近 5、20 個交易日漲跌與相對 S&P 500。
+    只用截止前已收盤的日線，所以早報第一段（06:30 以後）就可以跑。"""
+    def rets(sym):
+        meta, bars = chart(sym, "3mo")
+        bars, _ = completed(meta, bars, cutoff) if bars else ([], "")
+        if len(bars) < 21:
+            return None
+        c = bars[-1]["close"]
+        return bars[-1]["date"], c, (c / bars[-6]["close"] - 1) * 100, (c / bars[-21]["close"] - 1) * 100
+    spx = rets("^GSPC")
+    emit("## 近 5、20 個交易日強弱（理性市場資訊用；依近 20 日排序）\n")
+    if spx:
+        emit(f"基準 S&P 500（{spx[0]} 收盤）：近 5 日 {sg(spx[2])}、近 20 日 {sg(spx[3])}。相對＝近 20 日減 S&P 500 近 20 日（百分點）。\n")
+    sets = [("美股產業 ETF", SECTORS), ("AI 與大型科技股", dict(GROUPS)["AI 與大型科技股"])]
+    if extra:
+        sets.append(("其他個股（--extra）", [tuple(x.split("=", 1)) for x in extra.split(",") if "=" in x]))
+    for title, items in sets:
+        out = []
+        for sym, name in items:
+            try:
+                r = rets(sym)
+            except Exception:  # noqa
+                r = None
+            out.append((sym, name, r))
+            time.sleep(0.25)
+        out.sort(key=lambda x: -(x[2][3] if x[2] else -999))
+        emit(f"### {title}\n")
+        emit("| 名稱 | 代號 | 資料日期 | 收盤 | 近 5 日 | 近 20 日 | 相對 S&P 500 |\n|---|---|---|---|---|---|---|")
+        for sym, name, r in out:
+            if not r:
+                emit(f"| {name} | {sym} | 查無 | | | | |")
+                continue
+            rel = sg(r[3] - spx[3], 1, "") if spx and r[0] == spx[0] else ("—（日期和 S&P 500 不同）" if spx else "—")
+            emit(f"| {name} | {sym} | {r[0]} | {f2(r[1])} | {sg(r[2])} | {sg(r[3])} | {rel} |")
+        emit("")
+
+
 def nasdaq_closes(sym, start, end):
     url = f"https://api.nasdaq.com/api/quote/{sym}/historical?assetclass=stocks&fromdate={start}&todate={end}&limit=60"
     try:  # Nasdaq 會擋 Python 內建的連線，改用 curl
@@ -515,6 +559,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = p.add_subparsers(dest="cmd", required=True)
     s = sp.add_parser("quotes"); s.add_argument("--cutoff", required=True); s.add_argument("--out"); s.add_argument("--extra", default="")
+    s = sp.add_parser("strength"); s.add_argument("--cutoff", required=True); s.add_argument("--out"); s.add_argument("--extra", default="")
     s = sp.add_parser("stock"); s.add_argument("sym"); s.add_argument("--cutoff", required=True); s.add_argument("--out")
     s = sp.add_parser("fund"); s.add_argument("sym"); s.add_argument("--cutoff", required=True); s.add_argument("--out")
     a = p.parse_args()
@@ -524,6 +569,11 @@ def main():
     if a.cmd == "quotes":
         FN[0] = os.path.join(out, f"official-us-{cut:%Y%m%d}.md")
         quotes(cut, a.extra)
+    elif a.cmd == "strength":
+        FN[0] = os.path.join(out, f"strength-us-{cut:%Y%m%d}.md")
+        emit(f"# 美股產業與個股強弱（usdata.py strength，{datetime.now(TPE):%Y-%m-%d %H:%M} 台北抓取；截止 {cut:%Y-%m-%d %H:%M} 台北）\n")
+        emit("來源：Yahoo Finance 日線（只用截止前已收盤的交易日）。\n")
+        strength(cut, a.extra)
     elif a.cmd == "fund":
         FN[0] = os.path.join(out, f"fund-us-{a.sym}.md")
         fund(a.sym, cut, out)

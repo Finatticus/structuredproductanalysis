@@ -9,7 +9,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function $all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
 
-  // ---- 隱藏區塊（理性檢查）：依序輸入密碼開啟，瀏覽器記住；手機可連點刊頭小字 5 下輸入 ----
+  // ---- 隱藏區塊（理性市場資訊、AI 成績單）：依序輸入密碼開啟，瀏覽器記住；手機可連點刊頭小字 5 下輸入 ----
   var VAULT_KEY = 'md-vault', VAULT_CODE = 'xu06rmp4';
   function vaultOn() { try { return localStorage.getItem(VAULT_KEY) === '1'; } catch (e) { return false; } }
   function setVault(on) {

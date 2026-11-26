@@ -29,7 +29,7 @@ PROBE = r"""
 <script>
 (function () {
   function run() {
-    document.documentElement.classList.add('vault-on');  // 隱藏區塊（理性檢查、AI 成績單）也要檢查
+    document.documentElement.classList.add('vault-on');  // 隱藏區塊（理性市場資訊、AI 成績單）也要檢查
     document.querySelectorAll('section.panel, .subpanel').forEach(function (p) { p.classList.add('on'); });
     var W = window.innerWidth, sw = document.documentElement.scrollWidth, bad = [];
     function clipped(el) {

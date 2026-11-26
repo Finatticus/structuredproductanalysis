@@ -320,6 +320,41 @@ def market(d, cut):
         for n_, c, p, pc in items:
             emit(f"| {n_} | {fmt(c)} | {sgn(p)} | {sgn(pc)}% |")
         emit(f"\n來源：https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?response=json&date={ymd(d)}&type=IND\n")
+        # 近 5、20 個交易日（理性市場資訊用）：和 5、20 個交易日前的類股指數收盤比；出錯只影響這一段
+        try:
+            past = {}
+            dates = [r["date"] for r in rows if r["date"] < ds]
+            for n in (5, 20):
+                if len(dates) < n:
+                    continue
+                pd_ = dates[-n].replace("-", "")
+                jj = getj(f"{TWSE}afterTrading/MI_INDEX?response=json&date={pd_}&type=IND", f"MI_IND_{pd_}.json")
+                if chk(jj, pd_) != "ok":
+                    continue
+                m = {}
+                for t in jj.get("tables", []):
+                    if (t.get("title") or "").endswith("價格指數(臺灣證券交易所)"):
+                        for r in t["data"]:
+                            if num(r[1]) is not None:
+                                m[r[0]] = num(r[1])
+                past[n] = (dates[-n], m)
+            if 5 in past and 20 in past:
+                base = next((x for x in items if x[0] == "發行量加權股價指數"), None)
+                chg = lambda x, n: (x[1] / past[n][1][x[0]] - 1) * 100 if past[n][1].get(x[0]) else None  # noqa
+                b20 = chg(base, 20) if base else None
+                rows_ = [(x, chg(x, 5), chg(x, 20)) for x in items]
+                rows_ = [r for r in rows_ if r[1] is not None and r[2] is not None and r[0][1] and not r[0][0].startswith("未含")]
+                rows_.sort(key=lambda r: -r[2])
+                emit(f"### 3a. 類股近 5、20 個交易日（和 {past[5][0]}、{past[20][0]} 收盤比；依近 20 日排序）\n")
+                emit("| 指數 | 當日 | 近 5 日 | 近 20 日 | 近 20 日相對加權（百分點） |\n|---|---|---|---|---|")
+                for x, c5, c20 in rows_:
+                    rel = "—" if b20 is None or x[0] == "發行量加權股價指數" else sgn(c20 - b20)
+                    emit(f"| {x[0]} | {sgn(x[3])}% | {sgn(c5)}% | {sgn(c20)}% | {rel} |")
+                emit("\n理性市場資訊的「強勢、弱勢產業」以這張表為基準（再加上消息與籌碼），不要只看單日漲跌。已排除「未含…」指數；「其他類」「其他電子類」不算產業，不要寫成強弱產業。\n")
+            else:
+                emit("類股近 5、20 個交易日：無法計算（缺過去的類股指數資料）。\n")
+        except Exception as e:  # noqa
+            emit(f"類股近 5、20 個交易日：無法計算（腳本錯誤 {type(e).__name__}），這一段要手動查；上面的當日表不受影響。\n")
 
     def s3b():
         j = getj(f"{TWSE}afterTrading/MI_INDEX?response=json&date={ymd(d)}&type=ALLBUT0999", f"MI_ALL_{ymd(d)}.json")
@@ -347,6 +382,34 @@ def market(d, cut):
         for i, x in enumerate(lst[:20], 1):
             emit(f"| {i} | {x[1]}（{x[0]}） | {fmt(x[2])} | {sgn(x[3])}% | {fmt(x[4])} |")
         top = lst[:100]
+        try:
+            dates = [r["date"] for r in rows if r["date"] < ds]
+
+            def closes_on(dt):
+                pd_ = dt.replace("-", "")
+                jj = getj(f"{TWSE}afterTrading/MI_INDEX?response=json&date={pd_}&type=ALLBUT0999", f"MI_ALL_{pd_}.json")
+                if chk(jj, pd_) != "ok":
+                    return {}
+                tt = next((t for t in jj["tables"] if "證券代號" in (t.get("fields") or [])), None)
+                if not tt:
+                    return {}
+                fi = {k: tt["fields"].index(k) for k in ("證券代號", "收盤價")}
+                return {r[fi["證券代號"]].strip(): num(r[fi["收盤價"]]) for r in tt["data"]}
+            for n in (5, 20):
+                if len(dates) < n:
+                    continue
+                old = closes_on(dates[-n])
+                rn = [(x, (x[2] / old[x[0]] - 1) * 100) for x in top if old.get(x[0])]
+                if not rn:
+                    emit(f"\n成交金額前 100 名的近 {n} 個交易日漲跌：無法計算（缺 {dates[-n]} 的資料）。")
+                    continue
+                emit(f"\n成交金額前 100 名的近 {n} 個交易日漲跌（和 {dates[-n]} 收盤比，未調整除權息）：")
+                emit("漲最多：" + "、".join(f"{x[1]}（{x[0]}）{sgn(v)}%" for x, v in sorted(rn, key=lambda z: -z[1])[:8]))
+                emit("跌最多：" + "、".join(f"{x[1]}（{x[0]}）{sgn(v)}%" for x, v in sorted(rn, key=lambda z: z[1])[:8]))
+                emit("成交金額前 20 名：" + "、".join(f"{x[1]} {sgn(v)}%" for x, v in rn if x in lst[:20]))
+            emit("理性市場資訊的台股個股只從這幾份清單（以及成交金額前 20 名、外資買賣超前 10 名）挑，產業別由子代理確認。")
+        except Exception as e:  # noqa
+            emit(f"\n成交金額前 100 名的近 5、20 個交易日漲跌：無法計算（腳本錯誤 {type(e).__name__}），上面的當日表不受影響。")
         up = sorted(top, key=lambda x: -x[3])[:5]
         dn = sorted(top, key=lambda x: x[3])[:5]
         emit("\n成交金額前 100 名裡漲幅最大：" + "、".join(f"{x[1]} {sgn(x[3])}%" for x in up))
