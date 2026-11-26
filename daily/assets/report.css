@@ -564,7 +564,7 @@ svg.cv { display: block; width: 100%; max-width: 680px; height: auto; margin: 0 
 }
 
 
-/* ---- 隱藏區塊（理性市場資訊、AI 成績單）：未開啟時完全不顯示（含列印）；開啟後以虛線框區分 ---- */
+/* ---- 隱藏區塊（週報 AI 成績單）：未開啟時完全不顯示（含列印）；開啟後以虛線框區分 ---- */
 html:not(.vault-on) .vault { display: none !important; }
 .maintabs button.vault { font-style: italic; }
 section.panel.vault { border: 1px dashed var(--ink-3); }
