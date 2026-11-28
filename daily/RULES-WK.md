@@ -30,8 +30,7 @@
 cd /c/Users/User/Desktop/news
 python daily/tools/twdata.py market 本週五日期 --cutoff "D 10:00" --out _research/D-wk     # 本週逐日收盤、開高低與缺口、法人逐日與本週累計、融資（當天）、期貨、P/C
 python daily/tools/usdata.py quotes --cutoff "D 09:30" --out _research/D-wk/prep            # 開始時先跑：週五美股收盤已確定，給成績單與深度主題子代理用（報告數字用 10:05 的正式版）
-python daily/tools/waituntil.py 10:05                                                       # 10:05 以後才跑 usdata（截止 5 分鐘後）
-python daily/tools/usdata.py quotes --cutoff "D 10:00" --out _research/D-wk                 # 美股、跨資產、其他市場（含週漲跌）
+python daily/tools/waituntil.py 10:05 && python daily/tools/usdata.py quotes --cutoff "D 10:00" --out _research/D-wk   # 用 &&（RULES.md 步驟 1）；美股、跨資產、其他市場
 ```
 
 - 腳本沒有的一週資料，主筆用官方端點補抓並存成 `_research/D-wk/*.md`（附來源網址）：每天的上市融資（證交所 MI_MARGN）與上櫃融資（櫃買中心 margin/balance）、上週五外資台指期淨未平倉（期交所 futContractsDate）、美股主要指數逐日收盤（Yahoo 日線）、台積電逐日（證交所 STOCK_DAY）。
